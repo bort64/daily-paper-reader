@@ -1,0 +1,1299 @@
+Title: SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking
+
+URL Source: https://arxiv.org/pdf/2608.25104v1
+
+Published Time: Thu, 27 Aug 2026 00:15:57 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking 
+
+# Yuanhao Pu ∗† 
+
+puyuanhao@mail.ustc.edu.cn University of Science and Technology of China Hefei, Anhui, China 
+
+# Chenghao Zhang ∗
+
+zhangchenghao03@kuaishou.com Kuaishou Technology Beijing, China 
+
+# Chao Feng ∗
+
+fengchao08@kuaishou.com Kuaishou Technology Beijing, China 
+
+# Xunyong Yang 
+
+yangxunyong@kuaishou.com Kuaishou Technology Beijing, China 
+
+# Xiang Li 
+
+lixiang44@kuaishou.com Kuaishou Technology Beijing, China 
+
+# Yongqi Liu 
+
+liuyongqi@kuaishou.com Kuaishou Technology Beijing, China 
+
+# Defu Lian †
+
+liandefu@ustc.edu.cn University of Science and Technology of China Hefei, Anhui, China 
+
+# Kaiqiao Zhan 
+
+zhankaiqiao@kuaishou.com Kuaishou Technology Beijing, China 
+
+# Kun Gai 
+
+gai.kun@qq.com Unaffiliated Beijing, China 
+
+## Abstract 
+
+Modern industrial recommender systems have increasingly adopted the Generator-Evaluator (G-E) framework for the re-ranking stage. Within this paradigm, the generator produces candidate item lists from a pool filtered by upstream retrieval and ranking modules, while the evaluator scores these lists and selects the highest-scoring one for final exposure per request. However, on sequential platforms (e.g., short-video apps), users consume items continuously, ignor-ing artificial list boundaries. Conventional evaluators score lists by aggregating point-wise values, implicitly assuming exposure inde-pendence. This fails to capture critical session-level dynamics, such as contextual dependencies, user continuation, and diminishing marginal utility from repetitive content. To bridge this gap, we propose SWIM (Step-Wise Integrated 
+
+Measure), a list-level evaluator that models user behaviors as a finite-horizon prefix session-level survival process. SWIM estimates the prefix-conditioned contribution of the current list to the session-level objective by factorizing it into a recursive survival distribution and reached-position conditional rewards. Leveraging a causally-masked Transformer, SWIM efficiently estimates continuation prob-abilities and utilities in parallel, satisfying strict industrial latency constraints. Extensive experiments demonstrate that SWIM signifi-cantly outperforms baselines in listwise reranking tasks, yielding substantial improvements in overall recommendation engagement. 
+
+> ∗These authors contributed equally to this research.
+> †Also affiliated with State Key Laboratory of Cognitive Intelligence
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840732
+
+## CCS Concepts 
+
+• Information systems → Recommender systems ; Retrieval models and ranking .
+
+## Keywords 
+
+Recommender Systems, Listwise Evaluation, Generative Re-ranking, Survival Analysis 
+
+ACM Reference Format: 
+
+Yuanhao Pu, Chenghao Zhang, Chao Feng, Xunyong Yang, Xiang Li, Yongqi Liu, Defu Lian, Kaiqiao Zhan, and Kun Gai. 2026. SWIM: Step-Wise In-tegrated Measure for Session-supervised List Evaluation in Generative Re-ranking. In Proceedings of the 35th ACM International Conference on In-formation and Knowledge Management (CIKM ’26), November 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 12 pages. https://doi.org/10.1145/ 3799682.3840732 
+
+## 1 Introduction 
+
+Recommender systems are widely deployed to alleviate information overload in diverse scenarios, such as short-video feeds [13], news applications [6, 7], and e-commerce platforms [11, 16]. To ensure both efficiency and effectiveness, modern industrial RS typically employs a multi-stage cascade architecture consisting of retrieval, ranking, and re-ranking. In this pipeline, the retrieval stage filters a massive item pool down to thousands of candidates, which are then scored by complex ranking models to yield a refined candidate set of hundreds of items. Finally, the re-ranking stage determines the ultimate sequence of items presented to the user [19]. Recently, to better capture list-wise interactions, re-ranking has evolved into the Generator-Evaluator (G-E) [8, 26, 31, 34] framework. Under this generative paradigm, the generator produces a diverse collection of candidate lists from the refined item set, while the evaluator assesses each list and selects the optimal one for final exposure. This paper focuses on the re-ranking evaluator within sequential content consumption platforms (e.g., short-video applications like arXiv:2608.25104v1 [cs.IR] 25 Aug 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Pu et al. 
+
+Figure 1: A recommendation session consists of multiple requests, the user’s willingness to continue evolves with the preceding browsing history and accumulated feedback. 
+
+TikTok). In such settings, items within a list are exposed sequen-tially, and the list for the next request is seamlessly presented once the current one is consumed. We define a session as the complete sequence of requests spanning from the initiation to the termina-tion of a user’s browsing activity. Although the underlying system inherently chunks items into discrete lists per request, users per-ceive an uninterrupted, boundary-less browsing feed. However, existing literature on re-ranking evaluators largely ignores this con-tinuity. Conventional methods [8, 34] evaluate candidate lists inde-pendently at the request level by simply accumulating point-wise utilities. By omitting crucial session-level contextual dependencies, these approaches fail to accurately model the user’s continuation probability, leading to suboptimal list evaluation. Notably, our task fundamentally differs from traditional session-based recommenda-tion (SBR) [12, 24, 29] and sequential next-item prediction (NTP) tasks [5, 35, 36]. While SBR and NTP aim to predict the interaction probability of the next individual item, our re-ranking evaluator is designed to assess the long-term cumulative value of a given, deterministic candidate list within a continuous session. To address these limitations, we propose the Step-Wise Integrated 
+
+Measure ( SWIM ), a principled evaluation framework that explicitly captures the sequential continuity of user browsing by modeling it as a finite-horizon survival process. Specifically, SWIM reformu-lates the total list value as the expected cumulative utility over step-wise interaction prefixes. It mathematically decomposes this expected value into two core components: a recursive survival dis-tribution , which models the probability of the user reaching each subsequent interaction step, and a conditional utility function ,which estimates the reward generated at each reached position. To ensure serving efficiency, we instantiate SWIM using a causally masked Transformer that estimates all step-wise continuation prob-abilities and utilities in a single forward pass for a given candidate list. This architectural design bypasses the need for explicit autore-gressive rollouts across positions, enabling highly efficient parallel estimation. By circumventing the severe inference latency typically associated with autoregressive decoding, SWIM is ideally suited for real-world industrial deployment. Furthermore, extensive experi-ments on large-scale industrial datasets demonstrate that SWIM consistently outperforms strong baselines, driving significant im-provements in long-horizon reward metrics such as total dwell time and overall session engagement. The main contributions of this work are summarized as follows: 
+
+• Session-level value formulation under serving con-straints. We formalize recommendation evaluation from the perspective of prefix session-aware value and charac-terize the mismatch between session-level supervision in offline training and request-level inference in online serving. 
+
+• A survival-based structured decomposition. We propose a finite-horizon survival-process formulation that decom-poses prefix-session value into a recursive survival distribu-tion and a cumulative reward function, enabling modeling of user continuation and long-horizon utility accumulation. 
+
+• A deployable non-autoregressive implementation. We utilize a causal-masked Transformer architecture that sup-ports parallel estimation of step-wise continuation probabil-ities and rewards, making the framework compatible with industrial latency requirements. 
+
+• Extensive industrial validation. We validate SWIM on public datasets and a large-scale industrial platform, which shows significant improvements over strong baselines on offline metrics and online evaluation. 
+
+## 2 Related Works 
+
+In this section, we first review list-wise re-ranking approaches, with a particular focus on the Generator-Evaluator (G-E) frame-work in recommender systems. Next, we discuss session-based and sequential recommendation paradigms, highlighting the fundamen-tal differences between these next-item prediction tasks and our list evaluation setting. Finally, we explore the application of survival and continuation analysis in recommender systems, which forms the theoretical foundation of our proposed method. SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Figure 2: The model architecture of SWIM. 
+
+## 2.1 Listwise Re-ranking and G-E Framework 
+
+List-wise re-ranking [19] aims to capture cross-item dependencies within a displayed list, overcoming the limitations of point-wise scoring. Existing methods broadly fall into generator-only (G-only) and G-E frameworks. G-only approaches [1, 2, 20–22, 33] directly model list-wise contexts to output a single sequence but often struggle with the exploration of the vast permutation space. To enhance exploration, modern systems adopt the G-E para-digm, where a generator proposes multiple candidate lists and an evaluator selects the optimal one. While recent works have signifi-cantly improved the generator’s diversity [9, 26, 31], the evaluator design remains a bottleneck. Existing evaluators [8, 34] typically score lists by aggregating request-level utilities, implicitly assuming independence across consecutive requests. Consequently, they fail to capture crucial session-level dynamics, such as cross-request dependencies and long-term user continuation. The most relevant baseline CAVE [34] also models user early-exit behavior. However, CAVE focuses strictly on the intra-request con-sumption value of the currently generated list. In contrast, SWIM targets the inter-request, session-level continuation value induced by the current list within the broader session. Technically, CAVE estimates current-list value by weighting sub-list values with user-specific exit probabilities, while SWIM rigorously parameterizes continuation via a recursive step-wise survival distribution. 
+
+## 2.2 Session-based and Sequential recommendation 
+
+Session-based recommendation (SBR) aims to infer short-term user intent from current interaction sequences [12, 24, 29]. Early neural approaches like GRU4Rec [11] utilize recurrent networks, while subsequent works enhance session representations via attention mechanisms (e.g., NARM [16], STAMP [17]) or graph structures (e.g., SR-GNN [30]). Beyond short sessions, sequential recommen-dation models incorporate long-term histories to capture evolv-ing preferences, ranging from self-attentive architectures such as SASRec [15] and BERT4Rec [28] to scalable long-sequence mod-els [3, 4, 23, 27, 32]. Target-aware sequence modeling has also been extensively validated in upstream ranking stages through models like DIN [36], DIEN [35], and BST [5]. Despite their success in modeling sequential dependencies, they fundamentally operate from a next-item prediction (NTP) or item-level scoring perspective. They aim to predict the interaction prob-ability of a single future item or estimate the point-wise relevance based on historical contexts. In contrast, SWIM tackles a fundamen-tally different list evaluation problem within a continuous session. Instead of asking " what item to recommend next ", SWIM assesses "how a deterministically given candidate list contributes to the long-term cumulative value of the entire session ". Consequently, directly applying SBR or NTP models fails to capture the complex intra-list interactions and the session-level continuation dynamics that our proposed framework explicitly models. 
+
+## 2.3 Survival and Continuation Modeling in Recommendation 
+
+Survival analysis provides a principled framework for modeling time-to-event and continuation processes, and has been increas-ingly explored in recommender systems. For instance, [14] apply survival modeling to predict user return times and subsequent ac-tivities. In the context of sequential feeds, C-3PO [13] models a user’s scrolling budget via a survival function to derive personal-ized, position-aware exposure probabilities. While these approaches share the core intuition of characterizing user continuation and early-exit behaviors, they primarily operate at the item or position level. SWIM advances this line from position-level estimation to list-wise session value evaluation. SWIM embeds survival-style behavioral modeling into the G-E re-ranking paradigm, achieving session-supervised optimization without violating strict request-level latency constraints. CIKM ’26, November 07–11, 2026, Rome, Italy Pu et al. 
+
+## 3 Preliminaries 
+
+Consider a recommendation session as a continuous user interac-tion process. Let {𝑣 𝑡 }𝑡 ≥1 denote the exposure-consumption stream within a session, where 𝑣 𝑡 is the item at the 𝑡 -th position of the ses-sion trajectory. Let 𝜏 ∈ N+ be a discrete stopping time representing the first position that is not reached or consumed by the user. Equiv-alently, the user interacts with exactly the prefix (𝑣 1, . . . , 𝑣 𝜏 −1), and the session terminates right before 𝜏 .For each position 𝑡 , let 𝑅 𝑡 ∈ R+ denote the reward generated at that position, which may summarize one or multiple engagement signals such as click, like, share, follow, and play time. We assume that the total expected utility is finite and well-defined. 
+
+Definition 3.1 (Total Session Value). The total value of a recom-mendation session is defined as the cumulative reward collected before the session terminates, i.e., 𝐺 = Í𝑡 ≥1 1{𝜏 > 𝑡 }𝑅 𝑡 . There-fore, we consider that the session-level objective is to optimize the expected total session value 𝑉 sess = E[𝐺 ].This formulation describes the user-centric behavioral process over a whole session. In industrial recommender systems, however, the serving interface is request-based : due to limited latency con-straint, the inference process cannot generate or optimize a list that is long enough to serve the entire session trajectory. Instead, the system serves the user through several request-level decision epochs. At each epoch 𝑘 , the system receives a candidate set from upstream retrieval or ranking stages and selects an ordered list with fixed length for the current request. Formally, let V𝑘 = {𝑣 𝑖 }𝑁 𝑘 
+
+> 𝑖 =1
+
+denote the candidate set transmitted from upstream stage at request 
+
+𝑘 . The re-ranking model selects a length-𝑇 ordered list 
+
+𝐿 𝑘 = (𝑣 𝑘, 1, 𝑣 𝑘, 2, . . . , 𝑣 𝑘,𝑇 ) ∈ Π𝑇 (V 𝑘 ), (1) where Π𝑇 (V 𝑘 ) denotes the set of all length-𝑇 ordered lists con-structed from V𝑘 . Let H − 
+
+> 𝑘
+
+denote the observable session prefix before request 𝑘 , including historical interactions, previous request feedback, cumulative in-session engagement, request index, and contextual information. Let c𝑘 ∈ C denote the decision state at 𝑘 ,which summarizes the information of the current request, including candidate-side features, user features, and request-level context. Under this formulation, 𝐿 𝑘 is a local list of the global session trajectory. The re-ranking problem is therefore not only to estimate the isolated utility of a standalone list, but also to characterize how the current list affects user survival and contributes to session-level objective through its prefix-conditioned current-list value. 
+
+## 3.1 Generator-Evaluator Re-ranking 
+
+Many practical re-ranking systems can be described through a G-E interface [9, 26, 31]. Given the candidate set V𝑘 and decision state 
+
+c𝑘 , a generator proposes a set of feasible candidate lists: 
+
+L𝑘 = G𝜃 (V 𝑘 , c𝑘 ) = {𝐿 (1) 
+
+> 𝑘
+
+, 𝐿 (2) 
+
+> 𝑘
+
+, . . . , 𝐿 (𝑀 ) 
+
+> 𝑘
+
+}, (2) where each 𝐿 (𝑚 ) 
+
+> 𝑘
+
+∈ Π𝑇 (V 𝑘 ). An evaluator then assigns a listwise score to each generated list 𝑠 (𝑚 ) 
+
+> 𝑘
+
+= E𝜙 (𝐿 (𝑚 ) 
+
+> 𝑘
+
+, c𝑘 ). The final exposed list is selected by 
+
+𝐿 ∗ 
+
+> 𝑘
+
+= arg max   
+
+> 𝐿 (𝑚 )
+> 𝑘 ∈ L 𝑘
+
+E𝜙 (𝐿 (𝑚 ) 
+
+> 𝑘
+
+, c𝑘 ). (3) In this work, SWIM focuses on the evaluator-side problem: esti-mating a session-aware cumulative value for a candidate list under request-level serving constraints. 
+
+## 3.2 Survival Process and Reward 
+
+We next introduce the notations to describe user survival process and expected reward within a request-level list. Let 𝐴 𝑘 ∈ { 0, 1}
+
+denote whether the user reaches request 𝑘 . The request-entry prob-ability is defined as 
+
+𝑞 𝑘, 0 = P(𝐴 𝑘 = 1 | H − 
+
+> 𝑘
+
+). (4) This quantity describes the probability that the user enters the current request from the preceding session prefix. For the first request in a session, we set 𝑞 1,0 = 1 by convention. Conditioned on 𝐴 𝑘 = 1, let 𝑌 𝑘,𝑡 ∈ { 0, 1}, 𝑡 = 1, . . . ,𝑇 + 1 denote whether the user reaches position 𝑡 within the current list. Here, 
+
+𝑌 𝑘,𝑡 = 1 for 𝑡 ≤ 𝑇 means that the user reaches the 𝑡 -th item in 𝐿 𝑘 ,while 𝑌 𝑘,𝑇 +1 = 1 indicates that the user finishes the current list and proceeds beyond the current list. Conditioned on the current request being reached, the first position is reached by convention: 
+
+𝑌 𝑘, 1 = 1 given 𝐴 𝑘 = 1. (5) Besides, the browsing process satisfies the monotonicity constraint 
+
+𝑌 𝑘,𝑡 = 0 ⇒ 𝑌 𝑘,𝑡 +1 = 0, 𝑡 = 1, . . . ,𝑇 . (6) For each position 𝑡 = 1, . . . ,𝑇 , the in-list step-wise survival probability is defined as 
+
+𝑞 𝑘,𝑡 (𝐿 𝑘 | c𝑘 ) = P  𝑌 𝑘,𝑡 +1 = 1 | 𝑌 𝑘,𝑡 = 1, c𝑘 , 𝐿 𝑘, 1: 𝑡 
+
+ , (7) where 𝐿 𝑘, 1: 𝑡 = (𝑣 𝑘, 1, . . . , 𝑣 𝑘,𝑡 ). This quantity represents the proba-bility that the user continues beyond position 𝑡 , conditioned on having reached that position and observed the prefix 𝐿 𝑘, 1: 𝑡 . The corresponding conditional in-list survival probability is defined as 
+
+𝑆 𝑘,𝑡 (𝐿 𝑘 | c𝑘 ) = P  𝑌 𝑘,𝑡 = 1 | 𝐴 𝑘 = 1, c𝑘 , 𝐿 𝑘, 1: 𝑡 −1
+
+ . (8) Note that 𝑆 𝑘, 1 = 1 and 
+
+𝑆 𝑘,𝑡 (𝐿 𝑘 | c𝑘 ) = 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =1
+
+𝑞 𝑘,𝑖 (𝐿 𝑘 | c𝑘 ), 𝑡 = 2, . . . ,𝑇 + 1. (9) Combining request-entry survival and in-list survival, the session-wise probability of reaching position 𝑡 in the current list is 
+
+𝑆 sess  
+
+> 𝑘,𝑡
+
+(𝐿 𝑘 | H − 
+
+> 𝑘
+
+, c𝑘 ) = 𝑞 𝑘, 0𝑆 𝑘,𝑡 (𝐿 𝑘 | c𝑘 ) = 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =0
+
+𝑞 𝑘,𝑖 (𝐿 𝑘 | c𝑘 ). (10) 
+
+Definition 3.2 (Conditional Reward). Let 𝑅 𝑘,𝑡 ∈ R+ denote the reward generated by the item 𝑣 𝑘,𝑡 at position 𝑡 of the current list. Define the conditional reward as 
+
+𝑟 𝑘,𝑡 (𝐿 𝑘 | c𝑘 ) = E 𝑅 𝑘,𝑡 | 𝑌 𝑘,𝑡 = 1, c𝑘 , 𝐿 𝑘, 1: 𝑡 
+
+ . (11) In practice, 𝑅 𝑘,𝑡 may correspond to a single feedback signal or a weighted combination of multiple engagement signals. Based on the above survival and reward variables, we define the value of the current request-level list. SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Definition 3.3 (Conditional Current-list Value). The conditional value of list 𝐿 𝑘 at request 𝑘 , conditioned on the current request being reached, is defined as 
+
+𝑉 𝑘 (𝐿 𝑘 | c𝑘 ) =
+
+> 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+𝑆 𝑘,𝑡 (𝐿 𝑘 | c𝑘 )𝑟 𝑘,𝑡 (𝐿 𝑘 | c𝑘 ). (12) This value measures the expected value generated within the cur-rent list, where each position-wise reward is weighted by the prob-ability that the user reaches that position. 
+
+Definition 3.4 (Session-wise Current-list Contribution). The session-wise contribution of list 𝐿 𝑘 is defined as 
+
+𝑉 sess  
+
+> 𝑘
+
+(𝐿 𝑘 | H − 
+
+> 𝑘
+
+, c𝑘 ) = 𝑞 𝑘, 0𝑉 𝑘 (𝐿 𝑘 | c𝑘 )
+
+=
+
+> 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+𝑆 sess  
+
+> 𝑘,𝑡
+
+(𝐿 𝑘 | H − 
+
+> 𝑘
+
+, c𝑘 )𝑟 𝑘,𝑡 (𝐿 𝑘 | c𝑘 ). (13) The session-wise value 𝑉 sess  
+
+> 𝑘
+
+additionally accounts for the prob-ability that request 𝑘 is reached from the preceding session prefix. 
+
+## 4 Methodology 
+
+In this section, we describe how SWIM utilizes these quantities to be parameterized, trained, and used for online re-ranking. As shown in Fig. 2, the SWIM evaluator estimates the session-wise value contributed by the current request-level chunk in Eq. 13. At request 𝑘 , the generator proposes a set of candidate lists 
+
+L𝑘 = {𝐿 (1) 
+
+> 𝑘
+
+, 𝐿 (2) 
+
+> 𝑘
+
+, . . . , 𝐿 (𝑀 ) 
+
+> 𝑘
+
+}.
+
+SWIM acts as the evaluator and assigns a score to each candidate list. During training, SWIM learns the session-wise score through probability and conditional reward supervision, ˆ𝑉 sess  
+
+> 𝑘
+
+(𝐿 (𝑚 ) 
+
+> 𝑘
+
+| H − 
+
+> 𝑘
+
+, c𝑘 ) = ˆ𝑞 𝑘, 0 ˆ𝑉 𝑘 (𝐿 (𝑚 ) 
+
+> 𝑘
+
+| c𝑘 ). (14) For online inference, however, the re-ranking model is invoked after request 𝑘 has already been sent. Therefore, the local decision is set to 𝑞 𝑘, 0 = 1 and the final exposed list is therefore simplified by 
+
+𝐿 ∗ 
+
+> 𝑘
+
+= arg max   
+
+> 𝐿 (𝑚 )
+> 𝑘 ∈ L 𝑘
+
+ˆ𝑉 𝑘 (𝐿 (𝑚 ) 
+
+> 𝑘
+
+| c𝑘 ). (15) 
+
+## 4.1 Prefix Encoder 
+
+For each candidate list proposed by the generator, SWIM encodes the observable prefix features and the candidate list into hidden states. Let g𝑘 = Encoder (H − 
+
+> 𝑘
+
+) denote a prefix representation con-structed from user history, request index, previous request feedback, cumulative in-session engagement, and contextual features. To unify request-entry modeling and in-list survival modeling, we introduce a prefix token at position 0. This token represents the session prefix before the current list is entered: 
+
+𝑥 𝑘, 0 = Proj (g𝑘 ) , (16) where Proj is a projection network that maps features into hidden dimension 𝑑 . For each item embedding 𝑣 𝑘,𝑡 in the candidate list, we construct the item representation as 
+
+𝑥 𝑘,𝑡 = Proj  [𝑣 𝑘,𝑡 ; g𝑘 ; epos  
+
+> 𝑡
+
+; c𝑘,𝑡 ] , 𝑡 = 1, . . . ,𝑇 . (17) where epos  
+
+> 𝑡
+
+is the position embedding. Stacking the prefix token and all item representations gives 
+
+𝑥 𝑘 = [𝑥 𝑘, 0, 𝑥 𝑘, 1, . . . , 𝑥 𝑘,𝑇 ]⊤ ∈ R(𝑇 +1) × 𝑑 . (18) Since 𝑞 𝑘,𝑡 and 𝑟 𝑘,𝑡 are defined with respect to the prefix 𝐿 𝑘, 1: 𝑡 ,SWIM utilizes a causal-masked Transformer to encode prefix-aware list representations. The prefix token at position 0 is used to estimate the boundary survival probability 𝑞 𝑘, 0, while the item token at position 𝑡 is used to estimate 𝑞 𝑘,𝑡 and 𝑟 𝑘,𝑡 . To ensure prefix-causal encoding, we use a lower-triangular causal attention mask 
+
+M𝑖,𝑗 =
+
+(
+
+0, 𝑗 ≤ 𝑖, 
+
+−∞ , 𝑗 > 𝑖, 𝑖, 𝑗 ∈ { 0, . . . ,𝑇 }. (19) The masked attention is then computed as Attn (Q, K, V) = softmax 
+
+ QK ⊤
+
+√𝑑 + M
+
+
+
+V. (20) After the Transformer layers, we obtain the hidden states 
+
+H𝑘 = [h𝑘, 0, h𝑘, 1, . . . , h𝑘,𝑇 ]⊤. (21) where h𝑘, 0 summarizes session prefixs before current request, and 
+
+h𝑘,𝑡 summarizes decision states and the list prefix 𝐿 𝑘, 1: 𝑡 for 𝑡 ≥ 1. 
+
+## 4.2 Survival Estimation 
+
+For each position 𝑡 = 0, . . . ,𝑇 , SWIM estimates the step-wise sur-vival probability by applying a shared sigmoid probability head: ˆ𝑞 𝑘,𝑡 = 𝜎  FFN prob (h𝑘,𝑡 ) , 𝑡 = 0, . . . ,𝑇 . (22) Here, ˆ 𝑞 𝑘, 0 is predicted from the prefix hidden state h𝑘, 0, and ˆ 𝑞 𝑘,𝑡 for 
+
+𝑡 ≥ 1 is predicted from the list-prefix hidden state h𝑘,𝑡 . The session-wise survival probability of reaching position 𝑡 in the current list is recovered by cumulative products: ˆ𝑆 sess  
+
+> 𝑘,𝑡
+
+= 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =0
+
+ˆ𝑞 𝑘,𝑖 , 𝑡 = 1, . . . ,𝑇 + 1. (23) For each logged request, let 𝑦 𝑘,𝑡 ∈ { 0, 1} denote whether the user reaches position 𝑡 . We define 𝑦 𝑘, 0 = 1 by convention, since the session prefix exists. The boundary label 𝑦 𝑘, 1 indicates whether request 𝑘 is reached from the preceding prefix. We set 𝑦 𝑘, 1 = 1for observed requests and 𝑦 𝑘, 1 = 0 for a sampled terminal request, padded to length 𝑇 if necessary. For 𝑡 ≥ 1, 𝑦 𝑘,𝑡 +1 indicates whether the user continues beyond position 𝑡 . The loss is defined as 
+
+Lprob =∑︁ 
+
+> 𝑘 𝑇
+
+∑︁ 
+
+> 𝑡 =0
+
+𝑦 𝑘,𝑡 BCE  𝑦 𝑘,𝑡 +1, ˆ𝑞 𝑘,𝑡 
+
+ , (24) which ensures that the survival loss at position 𝑡 is valid only when the user has reached that position. For 𝑡 = 𝑇 , the label 𝑦 𝑘,𝑇 +1
+
+indicates whether the user finishes the current list and proceeds beyond the current chunk. 
+
+## 4.3 Conditional Reward Estimation 
+
+For each reached position, SWIM estimates the conditional reward generated by the corresponding item. Reward prediction is defined only for item positions 𝑡 = 1, . . . ,𝑇 , not for the prefix token at 𝑡 = 0. For binary engagement objectives such as click, like, follow, or share, we use target-specific sigmoid heads: ˆ𝑟 (𝑚 ) 
+
+> 𝑘,𝑡
+
+= 𝜎 
+
+
+
+FFN (𝑚 ) 
+
+> rwd
+
+(h𝑘,𝑡 )
+
+
+
+, 𝑡 = 1, . . . ,𝑇 , (25) where 𝑚 indexes a specific engagement target. For continuous objectives such as play time, direct regression is usually unstable CIKM ’26, November 07–11, 2026, Rome, Italy Pu et al. 
+
+due to long-tailed distributions. We therefore discretize the target into 𝐵 ordered buckets and predict a categorical distribution: ˆ𝝅 𝑘,𝑡 = softmax  FFN pt (h𝑘,𝑡 ) ∈ R𝐵 . (26) Let {𝑤 𝑏 }𝐵 𝑏 =1 denote bucket representatives. The conditional ex-pected play-time is reconstructed as ˆ𝑟 pt  
+
+> 𝑘,𝑡
+
+=
+
+> 𝐵
+
+∑︁ 
+
+> 𝑏 =1
+
+𝑤 𝑏 ˆ𝜋 𝑘,𝑡,𝑏 . (27) When continuous and binary feedback are both used, ˆ 𝑟 𝑘,𝑡 is obtained by combining all selected reward heads with task-specific weights. Reward heads are trained only on reached positions, since 𝑟 𝑘,𝑡 is defined as a conditional reward given that the user reaches position 
+
+𝑡 . For a binary feedback target 𝑚 , let 𝑧 (𝑚 ) 
+
+> 𝑘,𝑡
+
+∈ { 0, 1} denote the observed feedback label. The binary reward loss is 
+
+L (𝑚 ) 
+
+> rwd
+
+=∑︁ 
+
+> 𝑘 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+𝑦 𝑘,𝑡 BCE 
+
+
+
+𝑧 (𝑚 ) 
+
+> 𝑘,𝑡
+
+, ˆ𝑟 (𝑚 )
+
+> 𝑘,𝑡
+
+
+
+. (28) For bucketized play-time prediction, let 𝑏 𝑘,𝑡 ∈ { 1, . . . , 𝐵 } be the bucket label. The corresponding loss is 
+
+Lpt =∑︁ 
+
+> 𝑘 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+𝑦 𝑘,𝑡 CE  𝑏 𝑘,𝑡 , ˆ𝝅 𝑘,𝑡 
+
+ . (29) We combine all reward losses as 
+
+Lrwd =
+
+> 𝑀
+
+∑︁ 
+
+> 𝑚 =1
+
+𝛼 𝑚 L (𝑚 ) 
+
+> rwd
+
++ 𝛼 pt Lpt . (30) 
+
+## 4.4 List Scoring and Training Objective 
+
+Given the estimated survival probabilities and conditional rewards, SWIM computes the session-wise current-list contribution as ˆ𝑉 sess  
+
+> 𝑘
+
+(𝐿 𝑘 | H − 
+
+> 𝑘
+
+, c𝑘 ) =
+
+> 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+ˆ𝑆 sess  
+
+> 𝑘,𝑡
+
+ˆ𝑟 𝑘,𝑡 =
+
+> 𝑇
+
+∑︁  
+
+> 𝑡 =1
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =0
+
+ˆ𝑞 𝑘,𝑖 
+
+!
+
+ˆ𝑟 𝑘,𝑡 . (31) This score includes the boundary transition ˆ 𝑞 𝑘, 0, and is used when session-wise request-entry calibration is available. For online re-ranking, the evaluator is invoked only after request 
+
+𝑘 has been triggered. Therefore, the boundary transition is fixed to ˆ𝑞 𝑘, 0 = 1, and candidate lists are compared by the conditional value ˆ𝑉 𝑘 (𝐿 𝑘 | c𝑘 ) =
+
+> 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+ˆ𝑆 𝑘,𝑡 ˆ𝑟 𝑘,𝑡 =
+
+> 𝑇
+
+∑︁  
+
+> 𝑡 =1
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =1
+
+ˆ𝑞 𝑘,𝑖 
+
+!
+
+ˆ𝑟 𝑘,𝑡 . (32) The final exposed list is selected as 
+
+𝐿 ∗ 
+
+> 𝑘
+
+= arg max   
+
+> 𝐿 (𝑚 )
+> 𝑘 ∈ L 𝑘
+
+ˆ𝑉 𝑘 (𝐿 (𝑚 ) 
+
+> 𝑘
+
+| c𝑘 ). (33) The overall training objective contains only the survival proba-bility loss and the conditional reward loss: 
+
+L = Lprob + L rwd . (34) This objective directly supervises the two main components of SWIM: the boundary-augmented survival chain ˆ 𝑞 𝑘, 0: 𝑇 and the reached-position conditional rewards ˆ 𝑟 𝑘, 1: 𝑇 .
+
+## 5 Theoretical Results 
+
+In this section, we theoretically analyze why the boundary-augmented survival parameterization of SWIM is suitable for session-supervised re-ranking. First, SWIM has a session-prefix representation advan-tage: by introducing the boundary transition 𝑞 0, it can represent prefix-conditioned session-wise list contribution, while request-level evaluators like CAVE [34] model the consumption value after the current request is entered. Then, unlike CAVE’s exit compo-nent, which is parameterized by a Weibull distribution, SWIM uses a distribution-free discrete survival parameterization that can rep-resent any valid finite-horizon survival behavior. For clarity, we omit the request index 𝑘 in this section. We intro-duce 𝑌 1 = 1 indicates that the current request is reached from the preceding prefix. For 𝑡 = 1, . . . ,𝑇 , the browsing process is mono-tone, i.e., 𝑌 𝑡 = 0 ⇒ 𝑌 𝑡 +1 = 0. SWIM parameterizes the boundary-augmented continuation chain as 
+
+𝑞 0 = P(𝑌 1 = 1 | H − ),𝑞 𝑡 = P (𝑌 𝑡 +1 = 1 | 𝑌 𝑡 = 1, H −, 𝐿 1: 𝑡 ) , 𝑡 = 1, . . . ,𝑇 . (35) SWIM estimates the session-wise current-list contribution as 
+
+𝑉 sess SWIM (𝐿, H − ) =
+
+> 𝑇
+
+∑︁  
+
+> 𝑡 =1
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =0
+
+𝑞 𝑖 
+
+!
+
+𝑟 𝑡 . (36) When the current request has been reached, the boundary transition is fixed to 𝑞 0 = 1, and the request-level current-list value becomes 
+
+𝑉 req SWIM (𝐿 ) =
+
+> 𝑇
+
+∑︁   
+
+> 𝑡 =1
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =1
+
+𝑞 𝑖 
+
+!
+
+𝑟 𝑡 . (37) 
+
+## 5.1 Session-prefix Advantage 
+
+We first show that the boundary transition 𝑞 0 gives SWIM a repre-sentation advantage for session-wise list contribution. This advan-tage is independent of the particular neural architecture used to estimate 𝑞 0. It follows from the fact that session-wise contribution depends not only on the value of the current list after the request is reached, but also on whether the request is reached from the preceding session prefix. Let c denote request-level information available to a request-only evaluator, such as the current candidate list and request-level con-text, and H − denote additional session-prefix information. Assume the true session-wise current-list contribution has the form 
+
+𝑉 ∗ 
+
+> sess
+
+= 𝑞 ∗ 
+
+> 0
+
+(H −, c)𝑉 ∗ 
+
+> req
+
+(c), (38) where 𝑞 ∗ 
+
+> 0
+
+(H −, c) ∈ [ 0, 1] is the true probability that the request is reached from the preceding prefix, and 𝑉 ∗ 
+
+> req
+
+(c) ≥ 0 is the true request-level value conditioned on the current request being reached. Theorem 5.1 (Irreducible error of reqest-only evalua-tors). Consider any request-only evaluator 𝑔 (c) that does not depend on the preceding session prefix H − . Under squared loss, the minimum achievable prediction risk for the session-wise target 𝑉 ∗ 
+
+> sess
+
+is 
+
+inf  
+
+> 𝑔
+
+E
+
+h 𝑔 (c) − 𝑉 ∗
+
+> sess
+
+2 i
+
+= E
+
+h
+
+Var 
+
+
+
+𝑞 ∗ 
+
+> 0
+
+(H −, c)𝑉 ∗ 
+
+> req
+
+(c) | c
+
+i 
+
+. (39) 
+
+Equivalently, 
+
+inf  
+
+> 𝑔
+
+E
+
+h 𝑔 (c) − 𝑉 ∗
+
+> sess
+
+2 i
+
+= E
+
+
+
+𝑉 ∗ 
+
+> req
+
+(c)
+
+2
+
+Var  𝑞 ∗ 
+
+> 0
+
+(H −, c) | c
+
+. (40) SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Therefore, if 𝑉 ∗ 
+
+> req
+
+(c) > 0 and the boundary transition 𝑞 ∗ 
+
+> 0
+
+varies across session prefixes with the same request-level information c, then every request-only evaluator has strictly positive irreducible error. SWIM can explicitly model the boundary transition 𝑞 0 from H − .
+
+Proof. For any function 𝑔 (c), the optimal predictor of 𝑉 ∗ 
+
+> sess
+
+un-der squared loss is the conditional expectation 
+
+𝑔 ∗ (c) = E 𝑉 ∗ 
+
+> sess
+
+| c . (41) The corresponding minimum risk is the conditional variance: inf  
+
+> 𝑔
+
+E
+
+h 𝑔 (c) − 𝑉 ∗
+
+> sess
+
+2 i
+
+= E Var  𝑉 ∗ 
+
+> sess
+
+| c . (42) Substituting 
+
+𝑉 ∗ 
+
+> sess
+
+= 𝑞 ∗ 
+
+> 0
+
+(H −, c)𝑉 ∗ 
+
+> req
+
+(c)
+
+and noting that 𝑉 ∗ 
+
+> req
+
+(c) is fixed when conditioning on c, we obtain Var  𝑉 ∗ 
+
+> sess
+
+| c =
+
+
+
+𝑉 ∗ 
+
+> req
+
+(c)
+
+2
+
+Var  𝑞 ∗ 
+
+> 0
+
+(H −, c) | c . (43) Thus, whenever 𝑞 ∗ 
+
+> 0
+
+has non-zero conditional variance given c, a request-only evaluator cannot eliminate the prediction error for the session-wise target. SWIM avoids this limitation by conditioning 
+
+𝑞 0 on the preceding session prefix. □
+
+This clarifies the difference between SWIM and request-level evaluators. SWIM fits session-wise signals that vary with previous browsing history, accumulated engagement, and user fatigue. 
+
+## 5.2 Prior-free Survival Modeling 
+
+We then compare the expressiveness of SWIM’s discrete survival formulation with the stochastic exit prior used by CAVE. CAVE decomposes user exit probability into an interest-driven compo-nent and a stochastic component, where the stochastic component is modeled by a continuous-time Weibull distribution to capture external factors [34]. This Weibull component provides a useful inductive bias when the true stochastic exit behavior is smooth and Weibull-like. However, it also restricts the stochastic survival pattern to a low-dimensional parametric family. On a finite list horizon, the Weibull survival curve sampled at discrete positions can be written as 
+
+𝑆 𝑊 𝑡 (𝜆, 𝜅 ) = exp 
+
+
+
+−
+
+ 𝑡 − 1
+
+𝜆 
+
+𝜅 
+
+, 𝜆 > 0, 𝜅 > 0, (44) where 𝜆 is the scale parameter and 𝜅 is the shape parameter. The induced step-wise continuation probability is 
+
+𝑞 𝑊 𝑡 (𝜆, 𝜅 ) = 𝑆 𝑊 𝑡 +1 (𝜆, 𝜅 )
+
+𝑆 𝑊 𝑡 (𝜆, 𝜅 ) = exp 
+
+
+
+−𝑡 𝜅 − ( 𝑡 − 1)𝜅 
+
+𝜆 𝜅 
+
+
+
+. (45) The Weibull exit prior defines a two-dimensional survival manifold 
+
+M𝑊 = 𝑞 𝑊  
+
+> 1: 𝑇
+
+(𝜆, 𝜅 ) : 𝜆 > 0, 𝜅 > 0 ⊂ [ 0, 1]𝑇 . (46) In contrast, SWIM directly parameterizes the discrete continua-tion sequence 
+
+𝑞 0: 𝑇 = (𝑞 0, 𝑞 1, . . . , 𝑞 𝑇 ) ∈ [ 0, 1]𝑇 +1, (47) where 𝑞 0 is the boundary transition from the session prefix to the current request and 𝑞 𝑡 , 𝑡 ≥ 1, is the in-list continuation probability. Therefore, SWIM is not restricted to any pre-specified time-to-exit family. It can represent arbitrary finite-horizon continuation patterns, including position-irregular drops, abrupt contextual dis-ruptions, repeated content, or session-stage-specific fatigue. Theorem 5.2 (Expressiveness gap of Weibull-restricted survival). Let 𝑞 ∗ 
+
+> 1: 𝑇
+
+∈ [ 0, 1]𝑇 be the data-generating continuation process, and let 𝑆 ∗ 
+
+> 𝑡
+
+= Î𝑡 −1 
+
+> 𝑖 =1
+
+𝑞 ∗ 
+
+> 𝑖
+
+be the corresponding survival profile. Let 𝑞 𝑊  
+
+> 1: 𝑇
+
+∈ M 𝑊 be the best Weibull-restricted projection of 𝑞 ∗ 
+
+> 1: 𝑇
+
+under a chosen fitting criterion, and define the local approximation residual 
+
+𝛿 𝑗 = 𝑞 ∗ 
+
+> 𝑗
+
+− 𝑞 𝑊 𝑗 . (48) 
+
+Then for any 𝑡 , the discrepancy between the true survival profile and the Weibull-restricted survival profile admits the exact expansion 
+
+𝑆 ∗ 
+
+> 𝑡
+
+− 𝑆 𝑊 𝑡 = 
+
+> 𝑡 −1
+
+∑︁ 
+
+> 𝑗 =1
+
+𝛿 𝑗 𝑆 ∗
+
+> 𝑗
+
+𝑆 𝑊 𝑡 
+
+𝑆 𝑊 𝑗 +1
+
+. (49) 
+
+Consequently, for the current-list utility 
+
+𝑉 (𝑞 ) =
+
+> 𝑇
+
+∑︁  
+
+> 𝑡 =1
+
+𝑆 𝑡 (𝑞 )𝑟 𝑡 , (50) 
+
+the value estimation discrepancy satisfies 
+
+𝑉 (𝑞 ∗) − 𝑉 (𝑞 𝑊 ) = 
+
+> 𝑇 −1
+
+∑︁ 
+
+> 𝑗 =1
+
+𝛿 𝑗 
+
+𝑆 ∗
+
+> 𝑗
+
+𝑆 𝑊 𝑗 +1
+
+> 𝑇
+
+∑︁ 
+
+> 𝑡 =𝑗 +1
+
+𝑆 𝑊 𝑡 𝑟 𝑡 
+
+!
+
+. (51) Proof. We first prove the survival discrepancy identity. For a fixed 𝑡 , define 
+
+𝐵 𝑗 = 
+
+> 𝑗 −1
+
+Ö
+
+> 𝑖 =1
+
+𝑞 ∗
+
+> 𝑖
+
+! 𝑡 −1Ö
+
+> 𝑖 =𝑗
+
+𝑞 𝑊 𝑖 
+
+!
+
+, 𝑗 = 1, . . . , 𝑡 . (52) Then 𝐵 1 = 𝑆 𝑊 𝑡 , 𝐵 𝑡 = 𝑆 ∗ 
+
+> 𝑡
+
+. By telescoping, 
+
+𝑆 ∗ 
+
+> 𝑡
+
+− 𝑆 𝑊 𝑡 = 𝐵 𝑡 − 𝐵 1 = 
+
+> 𝑡 −1
+
+∑︁ 
+
+> 𝑗 =1
+
+(𝐵 𝑗 +1 − 𝐵 𝑗 ). (53) For each 𝑗 ,
+
+𝐵 𝑗 +1 − 𝐵 𝑗 = (𝑞 ∗ 
+
+> 𝑗
+
+− 𝑞 𝑊 𝑗 ) 
+
+> 𝑗 −1
+
+Ö
+
+> 𝑖 =1
+
+𝑞 ∗
+
+> 𝑖
+
+! 𝑡 −1Ö
+
+> 𝑖 =𝑗 +1
+
+𝑞 𝑊 𝑖 
+
+!
+
+. (54) Using 𝛿 𝑗 = 𝑞 ∗ 
+
+> 𝑗
+
+− 𝑞 𝑊 𝑗 , we have  
+
+> 𝑗 −1
+
+Ö
+
+> 𝑖 =1
+
+𝑞 ∗ 
+
+> 𝑖
+
+= 𝑆 ∗ 
+
+> 𝑗
+
+, 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =𝑗 +1
+
+𝑞 𝑊 𝑖 = 𝑆 𝑊 𝑡 
+
+𝑆 𝑊 𝑗 +1
+
+,
+
+we obtain 
+
+𝑆 ∗ 
+
+> 𝑡
+
+− 𝑆 𝑊 𝑡 = 
+
+> 𝑡 −1
+
+∑︁ 
+
+> 𝑗 =1
+
+𝛿 𝑗 𝑆 ∗
+
+> 𝑗
+
+𝑆 𝑊 𝑡 
+
+𝑆 𝑊 𝑗 +1
+
+. (55) Then we substitute this identity into the value difference: 
+
+𝑉 (𝑞 ∗) − 𝑉 (𝑞 𝑊 ) =
+
+> 𝑇
+
+∑︁  
+
+> 𝑡 =1
+
+(𝑆 ∗ 
+
+> 𝑡
+
+− 𝑆 𝑊 𝑡 )𝑟 𝑡 =
+
+> 𝑇
+
+∑︁   
+
+> 𝑡 =1
+> 𝑡 −1
+
+∑︁ 
+
+> 𝑗 =1
+
+𝛿 𝑗 𝑆 ∗
+
+> 𝑗
+
+𝑆 𝑊 𝑡 
+
+𝑆 𝑊 𝑗 +1
+
+!
+
+𝑟 𝑡 . (56) Exchanging the order of summation gives 
+
+𝑉 (𝑞 ∗) − 𝑉 (𝑞 𝑊 ) = 
+
+> 𝑇 −1
+
+∑︁ 
+
+> 𝑗 =1
+
+𝛿 𝑗 
+
+𝑆 ∗
+
+> 𝑗
+
+𝑆 𝑊 𝑗 +1
+
+> 𝑇
+
+∑︁  
+
+> 𝑡 =𝑗 +1
+
+𝑆 𝑊 𝑡 𝑟 𝑡 
+
+!
+
+, (57) which proves Eq. (51). □CIKM ’26, November 07–11, 2026, Rome, Italy Pu et al. 
+
+The theorem reveals how local Weibull misspecification prop-agates into list evaluation. A local approximation residual 𝛿 𝑗 at step 𝑗 is not isolated: it is weighted by the downstream residual value Í𝑇 𝑡 =𝑗 +1 𝑆 𝑊 𝑡 𝑟 𝑡 . Therefore, an early survival mismatch can affect the estimated contribution of all downstream positions. When the true continuation pattern contains non-Weibull deviations, such as abrupt position-level drop-offs or prefix-dependent irregularities, the low-dimensional Weibull manifold M𝑊 cannot generally set all residuals 𝛿 𝑗 to zero simultaneously. This can be formalized as a representation-level approximation gap. The Weibull family M𝑊 is a two-dimensional smooth manifold embedded in the (𝑇 + 1)-dimensional discrete continuation space 
+
+[0, 1]𝑇 +1. For 𝑇 + 1 > 2, M𝑊 is a strict lower-dimensional subset which cannot cover all valid finite-horizon continuation sequences. Consequently, for a generic continuation process 𝑞 ∗ 
+
+> 0: 𝑇
+
+∉ M𝑊 , every Weibull-restricted estimator has non-zero structural residuals. SWIM avoids this approximation bias by operating in the full finite-horizon discrete survival space. For any valid survival profile 1 = 𝑆 0 ≥ 𝑆 1 ≥ · · · ≥ 𝑆 𝑇 +1 ≥ 0, (58) there exists a discrete continuation sequence 𝑞 0: 𝑇 ∈ [ 0, 1]𝑇 +1 s.t. 
+
+𝑆 𝑡 = 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑖 =0
+
+𝑞 𝑖 , 𝑡 = 1, . . . ,𝑇 + 1. (59) Specifically, whenever 𝑆 𝑡 > 0, one can set 
+
+𝑞 𝑡 = 𝑆 𝑡 +1
+
+𝑆 𝑡 
+
+; (60) if 𝑆 𝑡 = 0, downstream 𝑞 𝑡 values can be chosen arbitrarily because all later survival probabilities are already zero. Thus, in the finite-horizon setting considered by request-level re-ranking, SWIM can represent any valid discrete survival profile. This does not imply that the Weibull prior is always harm-ful. When the true stochastic exit behavior is indeed smooth and Weibull-like, the parametric prior may provide useful regulariza-tion and improve sample efficiency. However, SWIM has a strictly more flexible structural parameterization when user continuation is driven by irregular effects. It can reduce the parametric misspecifi-cation risk introduced by a fixed Weibull stochastic exit prior, while remaining fully compatible with session-supervised list evaluation. 
+
+## 6 Experiments 
+
+The experiments are designed to answer the following questions: 
+
+• RQ1: Does the proposed evaluator (SWIM) improve re-ranking performance compared with representative pointwise, list-wise, G-only, and G-E baselines? 
+
+• RQ2: How important are the key components of SWIM, including prefix conditioning, survival modeling, and condi-tional reward modeling? 
+
+• RQ3: Can SWIM bring measurable online improvements in a real industrial system? The code is available at https://github.com/yuanhao53/SWIM. 
+
+## 6.1 Datasets 
+
+We evaluate SWIM empirically on RecFlow and KuaiRand, and conduct online experiments on Kuaishou’s real traffic. As pub-lic datasets lack complete prefix features, we select RecFlow and 
+
+Table 1: Availability of SWIM-required signals in public datasets. ✓ indicates directly available, △ indicates partially available or reconstructed, and × indicates unavailable. SWIM-required signal RecFlow KuaiRand                      
+
+> User ID / user history ✓✓
+> Request-level grouping ✓△
+> Ordered list ✓△
+> Candidate set for re-ranking ✓△
+> Multi-stage serving information ✓×
+> Previous-request feedback △△
+> Cumulative in-session engagement △△
+> In-list continuation signal 𝑞 𝑘,𝑡 ✓△
+> Binary feedback, e.g., click/like/share ✓✓
+> Continuous feedback, e.g., play/view time ✓✓
+
+Table 2: Dataset statistics after task construction. Dataset #User #Session #Requests #Items Cand. size List length             
+
+> RecFlow 34,574 965,634 3,308,233 14,181,768 120 6KuaiRand 27,285 3,339,426 54,805,516 31,922,917 66
+
+KuaiRand for their maximal coverage of required signals among available benchmarks (Table 1). 
+
+RecFlow [18] is a public industrial recommendation dataset collected from a real-world recommendation pipeline. It provides request-level or stage-level recommendation signals, candidate items, user feedback, and multi-type engagement labels. Since RecFlow contains relatively rich request-level information, it is the closest public dataset to the generator-evaluator re-ranking setting considered in this work. 
+
+KuaiRand [10] is a public short-video recommendation dataset. It contains user behavior sequences, timestamps, user/item features, random exposure signals, and multiple user feedback signals. 
+
+Kuaishou ’s online experiment is conducted on Kuaishou APP with more than 400 million DAUs. Different from public datasets, it contains real online request-level candidate sets, generated slates, item positions, previous-request feedback, session-prefix features, multi-objective rewards, and online serving logs. Therefore, it pro-vides the most faithful evaluation environment for SWIM. 
+
+## 6.2 Task Construction 
+
+At each request 𝑘 , a re-ranking model receives a candidate set V𝑘 
+
+and outputs an ordered list 𝐿 𝑘 = (𝑣 𝑘, 1, . . . , 𝑣 𝑘,𝑇 ). In all datasets, we set the target list length to 𝑇 = 6. For RecFlow , we directly use the candidate set provided by the upstream ranking stage. Each request contains |V 𝑘 | = 120 candidate items, and the model selects and orders a length-6 list from this can-didate set. This setting is closest to the standard generator-evaluator re-ranking protocol. For KuaiRand , the upstream candidate set is not available. We therefore segment each user’s behavior sequence into sessions according to timestamp and further split each session into fixed-length request lists. Since only the observed interaction sequence is available, we construct a 6-to-6 re-ordering task: each list contains six observed items, and the model evaluates different SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+orderings of these items. This setting is weaker than full candidate-set re-ranking, but it still allows us to evaluate whether SWIM can better model in-list continuation and reward under sequential short-video consumption. For Kuaishou ’s online experiments, we directly use the candi-date sets, generated lists, item positions, and request-level context features from the production serving logs. During training, we use all available feedback signals to provide supervision. For each reached item position, we construct binary targets for engagements such as video view, click, like, follow, com-ment, or share when available. For continuous feedback such as play time, we discretize the signal into several ordered buckets and use the bucket label to train the play-time prediction head. 
+
+## 6.3 Baselines 
+
+We compare SWIM with representative baselines from pointwise ranking, listwise re-ranking, G-only re-ranking, and G-E re-ranking: 
+
+• DNN independently predicts the score of each candidate item and outputs the final list obtained by sorting. 
+
+• Seq2Slate [2] formulates a seq-to-seq slate generation prob-lem which generates the output list autoregressively. 
+
+• DLCM [1] encodes the local ranking context of the input list and adjusts item scores accordingly. 
+
+• SetRank [21] uses self-attention to model interactions among candidates and learns permutation-invariant listwise scores. 
+
+• PRM [22] is a Transformer-based re-ranking model that captures item-item interactions within the candidate list. 
+
+• SORT-Gen [20] is an efficient generative re-ranking model which uses a Sequential Ordered Regression Transformer to estimate multi-objective values for variable-length sub-lists, and a mask-driven fast generation algorithm to produce the final list efficiently. We implement a SORT-Gen-style generative re-ranking baseline following the main design. 
+
+• NAR4Rec [25] is a non-autoregressive generative re-ranking model that generates the target list in parallel rather than decoding items one by one. 
+
+• PIER [26] is a permutation-level interest-based end-to-end re-ranking framework. It follows a two-stage architecture: a permutation selection module first generates candidate permutations according to permutation-level user interest, and a context-aware prediction module then evaluates the generated permutations. 
+
+• MultiG [31] is a multi-generator re-ranking framework that uses multiple complementary generators to produce more comprehensive and diverse candidate lists before evaluation. 
+
+• CAVE [34] is a consumption-aware list value estimation Evaluator for generator-evaluator re-ranking. It considers that users may exit before consuming the full generated list and estimates list value by weighting sub-list values with user-specific exit probabilities. Both CAVE and SWIM utilize the same Generator architecture as MultiG. For fair comparison, all methods follow the same data construc-tion and evaluation protocol. We split each dataset by request times-tamp, using the earliest 90% of requests for training and the latest 10% for prediction/testing. This temporal split prevents future in-formation leakage and mimics the online serving setting. For G-E methods including MultiG, CAVE and SWIM, we utilize a combina-tion of Generators including DNN, Seq2Slate, PRM and NAR4Rec, which produces a total of 20 candidate lists (5 of each) with length 
+
+𝑇 = 6 from the same candidate pool (120 for RecFlow and 6 for KuaiRand), then the Evaluator scores all of them and output Top-1. 
+
+## 6.4 Evaluation Metrics 
+
+We report two offline metrics computed w.r.t. the video-view label. 
+
+NDCG (@6) evaluates the quality of the final ordered list. For each request, we use the binary video-view label 𝑧 view as the rel-evance signal and compute NDCG over the 𝑛 = 6 positions. This metric measures whether items that receive positive video-view feedback are ranked higher in the final list. 
+
+AUC evaluates the model’s ability to distinguish video-view-positive and video-view-negative candidate items. For each re-quest, candidate items are scored by the corresponding model, and AUC is computed using 𝑧 view as the binary label. For generative or generator-evaluator methods that output an ordered list, we use the scalar ranking or evaluator score used to produce the final ordering. 
+
+## 6.5 Main Results 
+
+Table 3 reports the offline re-ranking performance on RecFlow and KuaiRand. SWIM achieves the best performance on both datasets and both metrics, consistently outperforming pointwise, listwise, G-only, and G-E baselines. These results indicate that explicitly modeling user continuation and reached-position conditional re-ward provides a stronger evaluator for request-level re-ranking. 
+
+Analysis. According to the offline results, listwise re-ranking methods such as DLCM, SetRank, and PRM consistently outperform the pointwise DNN baseline, confirming that modeling cross-item dependencies and positional context is important for listwise re-ranking. Besides, recent generative and generator-evaluator meth-ods, including PIER, SORT-Gen, and MultiG, further improve by exploring richer permutation spaces or by using stronger list-level evaluators. CAVE achieves the strongest performance among all baselines, suggesting that explicitly considering user early-exit be-havior is beneficial for list evaluation. SWIM further improves over CAVE, which meets our theoretical understandings of its advantage. Besides, we also observe that the improvement on RecFlow is larger than that on KuaiRand. This is expected because RecFlow pro-vides richer request-level and candidate-set information, making it closer to the generator-evaluator re-ranking scenario considered by SWIM. KuaiRand provides fewer request-level serving signals and requires reconstructed request chunks, but SWIM still obtains con-sistent gains, indicating that survival-weighted reward aggregation remains effective even under weaker data approximations. 
+
+## 6.6 Ablation Study 
+
+We conduct ablation studies on RecFlow to analyze the contribution of SWIM’s main components. Specifically, we examine whether the performance gain comes from session-prefix modeling, boundary transition modeling, or the survival-based decomposition itself. 
+
+• w/o Prefix Features : remove the session-prefix features from the prefix encoder. The model still receives the current candidate list and item-side features, but cannot explicitly condition on the preceding session context. CIKM ’26, November 07–11, 2026, Rome, Italy Pu et al. 
+
+Table 3: Offline re-ranking performance on RecFlow and KuaiRand dataset. The best result is shown in bold. Model RecFlow KuaiRand NDCG AUC NDCG AUC 
+
+DNN 0.1584 ± 0.0004 0.6591 ± 0.0003 0.6907 ± 0.0003 0.7150 ± 0.0003 Seq2Slate 0.1693 ± 0.0023 0.6732 ± 0.0021 0.6984 ± 0.0018 0.7184 ± 0.0020 DLCM 0.1747 ± 0.0006 0.6771 ± 0.0003 0.7025 ± 0.0002 0.7252 ± 0.0003 SetRank 0.1823 ± 0.0006 0.6845 ± 0.0009 0.7095 ± 0.0012 0.7481 ± 0.0014 PRM 0.1841 ± 0.0005 0.6866 ± 0.0008 0.7132 ± 0.0008 0.7554 ± 0.0007 SORT-Gen 0.1892 ± 0.0007 0.6973 ± 0.0011 0.7204 ± 0.0010 0.7632 ± 0.0016 NAR4Rec 0.1793 ± 0.0011 0.6816 ± 0.0017 0.7076 ± 0.0020 0.7358 ± 0.0016 PIER 0.1873 ± 0.0014 0.6907 ± 0.0017 0.7186 ± 0.0025 0.7562 ± 0.0018 MultiG 0.1911 ± 0.0018 0.7024 ± 0.0014 0.7231 ± 0.0019 0.7677 ± 0.0012 CAVE 0.1957 ± 0.0013 0.7083 ± 0.0016 0.7313 ± 0.0016 0.7756 ± 0.0010 
+
+SWIM 0.2031 ± 0.0015 0.7185 ± 0.0017 0.7375 ± 0.0011 0.7804 ± 0.0013 
+
+Table 4: Ablation study on RecFlow dataset. Variant NDCG AUC 
+
+w/o Prefix Features 0.1975 0.7093 w/o Boundary 𝑞 𝑘, 0 0.2014 0.7128 w/o Survival 0.1952 0.7071 
+
+SWIM 0.2031 0.7185 
+
+• w/o Boundary 𝑞 𝑘, 0: remove the boundary transition from the session prefix to the current request. The survival chain starts from the first item in the current list, and the model only estimates in-list continuation probabilities 𝑞 𝑘, 1: 𝑇 .
+
+• w/o Survival : remove the recursive survival chain and di-rectly aggregate the predicted conditional rewards. This vari-ant keeps the reward heads but does not weight each position by its estimated reachability probability, reducing SWIM to a reward-aggregation evaluator. 
+
+Analysis. Table 4 shows that each component contributes to the final performance. The ablations verify the necessity of SWIM’s design choices: prefix conditioning improves session-aware rep-resentation, the boundary transition introduces prefix-to-request survival supervision, and the recursive survival chain provides the key reachability-aware weighting mechanism for list evaluation. 
+
+## 6.7 Online A/B Test 
+
+We conducted a 7-day online A/B test on Kuaishou’s main feed reranking pipline (>400M DAU, >2 hour avg. stay time per user each day) with 5% traffic allocation. The control group follows the production re-ranking pipeline, while the treatment replaces CAVE [34] with SWIM, leaving upstream retrieval, ranking, and generator modules intact. Specifically, the generator produces ∼70 lists from 60 candidates, and the evaluator selects the optimal one. Relative improvements over the baseline are reported in Table 5. 
+
+Analysis. The online A/B test evaluates whether offline ranking improvements translate into tangible gains in real-world user en-gagement and retention. We report two core online metrics: App 
+
+Table 5: Online A/B test results on the Industrial reranking system. Relative lifts are reported against the baseline. Metric Relative lift Confidence Interval 
+
+App stay time +0.351% [0.27%, 0.42%] Retention (LT7) +0.048% [0.01%, 0.09%] stay time and the 7-day retention rate (LT7). App stay time mea-sures the total duration a user spends within the application. LT7 denotes the 7-day user lifetime, which serves as a key indicator for evaluating long-term DAU stability and retention benefits in the subsequent week. Both metrics exhibit positive relative lifts, with 95% confidence intervals reported. 
+
+## 7 Conclusion 
+
+In this paper, we proposed SWIM, a session-supervised evaluator for generative re-ranking. SWIM models a candidate list through a boundary-augmented survival process, which captures both the transition from the session prefix to the current request and the step-wise continuation behavior within the list. By combining recursive survival probabilities with reached-position conditional rewards, SWIM estimates the prefix-conditioned contribution of the current list to the session-level objective. Looking forward, the SWIM framework opens promising av-enues for future research. One critical direction involves develop-ing robust counterfactual and off-policy evaluation protocols for generative list spaces. Furthermore, extending our session-prefix modeling to accommodate longer and more heterogeneous brows-ing trajectories presents an exciting challenge. 
+
+## Acknowledgements 
+
+This work was supported by Kuaishou Technology and the National Natural Science Foundation of China (No. U24A20253). SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+## GenAI Usage Disclosure 
+
+Generative AI was used solely for editorial purposes, including grammar checking, sentence refinement, and improving concise-ness. It was not used for generating content or making substantive intellectual contributions. 
+
+## References 
+
+[1] Qingyao Ai, Keping Bi, Jiafeng Guo, and W. Bruce Croft. 2018. Learning a Deep Listwise Context Model for Ranking Refinement. In The 41st International ACM SIGIR Conference on Research & Development in Information Retrieval, SIGIR 2018, Ann Arbor, MI, USA, July 08-12, 2018 , Kevyn Collins-Thompson, Qiaozhu Mei, Brian D. Davison, Yiqun Liu, and Emine Yilmaz (Eds.). ACM, 135–144. doi:10.1145/3209978.3209985 [2] Irwan Bello, Sayali Kulkarni, Sagar Jain, Craig Boutilier, Ed Huai-hsin Chi, Elad Eban, Xiyang Luo, Alan Mackey, and Ofer Meshi. 2018. Seq2Slate: Re-ranking and Slate Optimization with RNNs. CoRR abs/1810.02019 (2018). arXiv:1810.02019 http://arxiv.org/abs/1810.02019 [3] Zheng Chai, Qin Ren, Xijun Xiao, Huizhi Yang, Bo Han, Sijun Zhang, Di Chen, Hui Lu, Wenlin Zhao, Lele Yu, Xionghang Xie, Shiru Ren, Xiang Sun, Yaocheng Tan, Peng Xu, Yuchao Zheng, and Di Wu. 2025. LONGER: Scaling Up Long Sequence Modeling in Industrial Recommenders. In Proceedings of the Nineteenth ACM Conference on Recommender Systems, RecSys 2025, Prague, Czech Republic, September 22-26, 2025 , Mária Bieliková, Pavel Kordík, Markus Schedl, Marco de Gemmis, Sole Pera, Rodrigo Alves, Olivier Jeunen, and Vito Ostuni (Eds.). ACM, 247–256. doi:10.1145/3705328.3748065 [4] Jianxin Chang, Chenbin Zhang, Zhiyi Fu, Xiaoxue Zang, Lin Guan, Jing Lu, Yiqun Hui, Dewei Leng, Yanan Niu, Yang Song, and Kun Gai. 2023. TWIN: TWo-stage Interest Network for Lifelong User Behavior Modeling in CTR Prediction at Kuaishou. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining, KDD 2023, Long Beach, CA, USA, August 6-10, 2023 ,Ambuj K. Singh, Yizhou Sun, Leman Akoglu, Dimitrios Gunopulos, Xifeng Yan, Ravi Kumar, Fatma Ozcan, and Jieping Ye (Eds.). ACM, 3785–3794. doi:10.1145/ 3580305.3599922 [5] Qiwei Chen, Huan Zhao, Wei Li, Pipei Huang, and Wenwu Ou. 2019. Behavior Sequence Transformer for E-commerce Recommendation in Alibaba. CoRR 
+
+abs/1905.06874 (2019). arXiv:1905.06874 http://arxiv.org/abs/1905.06874 [6] Gabriel de Souza Pereira Moreira, Felipe Ferreira, and Adilson Marques da Cunha. 2018. News Session-Based Recommendations using Deep Neural Networks. In Proceedings of the 3rd Workshop on Deep Learning for Recommender Systems, DLRS@RecSys 2018, Vancouver, BC, Canada, October 6, 2018 , Balázs Hidasi, Alexan-dros Karatzoglou, Oren Sar Shalom, Bracha Shapira, Domonkos Tikk, Flavian Vasile, and Sander Dieleman (Eds.). ACM, 15–23. doi:10.1145/3270323.3270328 [7] Gabriel de Souza Pereira Moreira, Dietmar Jannach, and Adilson Marques da Cunha. 2019. Contextual Hybrid Session-Based News Recommendation With Recurrent Neural Networks. IEEE Access 7 (2019), 169185–169203. doi:10.1109/ ACCESS.2019.2954957 [8] Chao Feng, Yuanhao Pu, Chenghao Zhang, Shanqi Liu, Shuchang Liu, Xiang Li, Yongqi Liu, Lantao Hu, Kaiqiao Zhan, Han Li, and Kun Gai. 2026. FlashEvaluator: Expanding Search Space with Parallel Evaluation. CoRR abs/2603.02565 (2026). arXiv:2603.02565 doi:10.48550/ARXIV.2603.02565 [9] Yufei Feng, Yu Gong, Fei Sun, Qingwen Liu, and Wenwu Ou. 2021. Revisit Recommender System in the Permutation Prospective. CoRR abs/2102.12057 (2021). arXiv:2102.12057 https://arxiv.org/abs/2102.12057 [10] Chongming Gao, Shijun Li, Yuan Zhang, Jiawei Chen, Biao Li, Wenqiang Lei, Peng Jiang, and Xiangnan He. 2022. KuaiRand: An Unbiased Sequential Recom-mendation Dataset with Randomly Exposed Videos. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management, Atlanta, GA, USA, October 17-21, 2022 , Mohammad Al Hasan and Li Xiong (Eds.). ACM, 3953–3957. doi:10.1145/3511808.3557624 [11] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2016. Session-based Recommendations with Recurrent Neural Networks. In 4th International Conference on Learning Representations, ICLR 2016, San Juan, Puerto Rico, May 2-4, 2016, Conference Track Proceedings , Yoshua Bengio and Yann LeCun (Eds.). http://arxiv.org/abs/1511.06939 [12] Dietmar Jannach, Massimo Quadrana, and Paolo Cremonesi. 2022. Session-Based Recommender Systems. In Recommender Systems Handbook , Francesco Ricci, Lior Rokach, and Bracha Shapira (Eds.). Springer US, 301–334. doi:10.1007/978-1-0716-2197-4_8 [13] Olivier Jeunen. 2023. A Probabilistic Position Bias Model for Short-Video Recom-mendation Feeds. In Proceedings of the 17th ACM Conference on Recommender Systems, RecSys 2023, Singapore, Singapore, September 18-22, 2023 , Jie Zhang, Li Chen, Shlomo Berkovsky, Min Zhang, Tommaso Di Noia, Justin Basilico, Luiz Pizzato, and Yang Song (Eds.). ACM, 675–681. doi:10.1145/3604915.3608777 [14] How Jing and Alexander J. Smola. 2017. Neural Survival Recommender. In 
+
+Proceedings of the Tenth ACM International Conference on Web Search and Data Mining, WSDM 2017, Cambridge, United Kingdom, February 6-10, 2017 , Maarten de Rijke, Milad Shokouhi, Andrew Tomkins, and Min Zhang (Eds.). ACM, 515–524. doi:10.1145/3018661.3018719 [15] Wang-Cheng Kang and Julian J. McAuley. 2018. Self-Attentive Sequential Rec-ommendation. In IEEE International Conference on Data Mining, ICDM 2018, Singapore, November 17-20, 2018 . IEEE Computer Society, 197–206. doi:10.1109/ ICDM.2018.00035 [16] Jing Li, Pengjie Ren, Zhumin Chen, Zhaochun Ren, Tao Lian, and Jun Ma. 2017. Neural Attentive Session-based Recommendation. In Proceedings of the 2017 ACM on Conference on Information and Knowledge Management, CIKM 2017, Singa-pore, November 06 - 10, 2017 , Ee-Peng Lim, Marianne Winslett, Mark Sanderson, Ada Wai-Chee Fu, Jimeng Sun, J. Shane Culpepper, Eric Lo, Joyce C. Ho, Debora Donato, Rakesh Agrawal, Yu Zheng, Carlos Castillo, Aixin Sun, Vincent S. Tseng, and Chenliang Li (Eds.). ACM, 1419–1428. doi:10.1145/3132847.3132926 [17] Qiao Liu, Yifu Zeng, Refuoe Mokhosi, and Haibin Zhang. 2018. STAMP: Short-Term Attention/Memory Priority Model for Session-based Recommendation. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining, KDD 2018, London, UK, August 19-23, 2018 , Yike Guo and Faisal Farooq (Eds.). ACM, 1831–1839. doi:10.1145/3219819.3219950 [18] Qi Liu, Kai Zheng, Rui Huang, Wuchao Li, Kuo Cai, Yuan Chai, Yanan Niu, Yiqun Hui, Bing Han, Na Mou, Hongning Wang, Wentian Bao, Yunen Yu, Guorui Zhou, Han Li, Yang Song, Defu Lian, and Kun Gai. 2025. RecFlow: An Industrial Full Flow Recommendation Dataset. In The Thirteenth International Conference on Learning Representations, ICLR 2025, Singapore, April 24-28, 2025 . OpenReview.net. https://openreview.net/forum?id=vVHc8bGRns [19] Weiwen Liu, Yunjia Xi, Jiarui Qin, Fei Sun, Bo Chen, Weinan Zhang, Rui Zhang, and Ruiming Tang. 2022. Neural Re-ranking in Multi-stage Recommender Sys-tems: A Review. In Proceedings of the Thirty-First International Joint Conference on Artificial Intelligence, IJCAI 2022, Vienna, Austria, 23-29 July 2022 , Luc De Raedt (Ed.). ijcai.org, 5512–5520. doi:10.24963/IJCAI.2022/771 [20] Yue Meng, Cheng Guo, Yi Cao, Tong Liu, and Bo Zheng. 2025. A Generative Re-ranking Model for List-level Multi-objective Optimization at Taobao. In Pro-ceedings of the 48th International ACM SIGIR Conference on Research and Develop-ment in Information Retrieval, SIGIR 2025, Padua, Italy, July 13-18, 2025 , Nicola Ferro, Maria Maistro, Gabriella Pasi, Omar Alonso, Andrew Trotman, and Suzan Verberne (Eds.). ACM, 4213–4218. doi:10.1145/3726302.3731935 [21] Liang Pang, Jun Xu, Qingyao Ai, Yanyan Lan, Xueqi Cheng, and Jirong Wen. 2020. SetRank: Learning a Permutation-Invariant Ranking Model for Information Retrieval. In Proceedings of the 43rd International ACM SIGIR conference on research and development in Information Retrieval, SIGIR 2020, Virtual Event, China, July 25-30, 2020 , Jimmy X. Huang, Yi Chang, Xueqi Cheng, Jaap Kamps, Vanessa Murdock, Ji-Rong Wen, and Yiqun Liu (Eds.). ACM, 499–508. doi:10.1145/3397271.3401104 [22] Changhua Pei, Yi Zhang, Yongfeng Zhang, Fei Sun, Xiao Lin, Hanxiao Sun, Jian Wu, Peng Jiang, Junfeng Ge, Wenwu Ou, and Dan Pei. 2019. Personalized re-ranking for recommendation. In Proceedings of the 13th ACM Conference on Recommender Systems, RecSys 2019, Copenhagen, Denmark, September 16-20, 2019 ,Toine Bogers, Alan Said, Peter Brusilovsky, and Domonkos Tikk (Eds.). ACM, 3–11. doi:10.1145/3298689.3347000 [23] Qi Pi, Guorui Zhou, Yujing Zhang, Zhe Wang, Lejian Ren, Ying Fan, Xiaoqiang Zhu, and Kun Gai. 2020. Search-based User Interest Modeling with Lifelong Sequential Behavior Data for Click-Through Rate Prediction. In CIKM ’20: The 29th ACM International Conference on Information and Knowledge Management, Virtual Event, Ireland, October 19-23, 2020 , Mathieu d’Aquin, Stefan Dietze, Claudia Hauff, Edward Curry, and Philippe Cudré-Mauroux (Eds.). ACM, 2685–2692. doi:10.1145/3340531.3412744 [24] Massimo Quadrana, Paolo Cremonesi, and Dietmar Jannach. 2018. Sequence-Aware Recommender Systems. ACM Comput. Surv. 51, 4 (2018), 66:1–66:36. doi:10.1145/3190616 [25] Yuxin Ren, Qiya Yang, Yichun Wu, Wei Xu, Yalong Wang, and Zhiqiang Zhang. 2024. Non-autoregressive Generative Models for Reranking Recommendation. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining, KDD 2024, Barcelona, Spain, August 25-29, 2024 , Ricardo Baeza-Yates and Francesco Bonchi (Eds.). ACM, 5625–5634. doi:10.1145/3637528.3671645 [26] Xiaowen Shi, Fan Yang, Ze Wang, Xiaoxu Wu, Muzhi Guan, Guogang Liao, Yongkang Wang, Xingxing Wang, and Dong Wang. 2023. PIER: Permutation-Level Interest-Based End-to-End Re-ranking Framework in E-commerce. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining, KDD 2023, Long Beach, CA, USA, August 6-10, 2023 , Ambuj K. Singh, Yizhou Sun, Leman Akoglu, Dimitrios Gunopulos, Xifeng Yan, Ravi Kumar, Fatma Ozcan, and Jieping Ye (Eds.). ACM, 4823–4831. doi:10.1145/3580305.3599886 [27] Zihua Si, Lin Guan, Zhongxiang Sun, Xiaoxue Zang, Jing Lu, Yiqun Hui, Xingchao Cao, Zeyu Yang, Yichen Zheng, Dewei Leng, Kai Zheng, Chenbin Zhang, Yanan Niu, Yang Song, and Kun Gai. 2024. TWIN V2: Scaling Ultra-Long User Behavior Sequence Modeling for Enhanced CTR Prediction at Kuaishou. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management, CIKM 2024, Boise, ID, USA, October 21-25, 2024 , Edoardo Serra and Francesca Spezzano (Eds.). ACM, 4890–4897. doi:10.1145/3627673.3680030 CIKM ’26, November 07–11, 2026, Rome, Italy Pu et al. 
+
+[28] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential Recommendation with Bidirectional Encoder Repre-sentations from Transformer. In Proceedings of the 28th ACM International Con-ference on Information and Knowledge Management, CIKM 2019, Beijing, China, November 3-7, 2019 , Wenwu Zhu, Dacheng Tao, Xueqi Cheng, Peng Cui, Elke A. Rundensteiner, David Carmel, Qi He, and Jeffrey Xu Yu (Eds.). ACM, 1441–1450. doi:10.1145/3357384.3357895 [29] Shoujin Wang, Longbing Cao, Yan Wang, Quan Z. Sheng, Mehmet A. Orgun, and Defu Lian. 2022. A Survey on Session-based Recommender Systems. ACM Comput. Surv. 54, 7 (2022), 154:1–154:38. doi:10.1145/3465401 [30] Shu Wu, Yuyuan Tang, Yanqiao Zhu, Liang Wang, Xing Xie, and Tieniu Tan. 2019. Session-Based Recommendation with Graph Neural Networks. In The Thirty-Third AAAI Conference on Artificial Intelligence, AAAI 2019, The Thirty-First Innovative Applications of Artificial Intelligence Conference, IAAI 2019, The Ninth AAAI Symposium on Educational Advances in Artificial Intelligence, EAAI 2019, Honolulu, Hawaii, USA, January 27 - February 1, 2019 . AAAI Press, 346–353. doi:10.1609/AAAI.V33I01.3301346 [31] Hailan Yang, Zhenyu Qi, Shuchang Liu, Xiaoyu Yang, Xiaobei Wang, Xiang Li, Lantao Hu, Han Li, and Kun Gai. 2025. Comprehensive List Generation for Multi-Generator Reranking. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval, SIGIR 2025, Padua, Italy, July 13-18, 2025 , Nicola Ferro, Maria Maistro, Gabriella Pasi, Omar Alonso, Andrew Trotman, and Suzan Verberne (Eds.). ACM, 2298–2308. doi:10.1145/3726302.3729933 [32] Chenghao Zhang, Chao Feng, Yuanhao Pu, Xunyong Yang, Wenhui Yu, Xiang Li, Yongqi Liu, Lantao Hu, Kaiqiao Zhan, Han Li, and Kun Gai. 2026. SOLAR: SVD-Optimized Lifelong Attention for Recommendation. CoRR abs/2603.02561 (2026). arXiv:2603.02561 doi:10.48550/ARXIV.2603.02561 [33] Kaike Zhang, Xiaobei Wang, Shuchang Liu, Hailan Yang, Xiang Li, Lantao Hu, Han Li, Qi Cao, Fei Sun, and Kun Gai. 2025. GoalRank: Group-Relative Optimiza-tion for a Large Ranking Model. CoRR abs/2509.22046 (2025). arXiv:2509.22046 doi:10.48550/ARXIV.2509.22046 [34] Kaike Zhang, Xiaobei Wang, Xiaoyu Yang, Shuchang Liu, Hailan Yang, Xiang Li, Fei Sun, and Qi Cao. 2025. From Generation to Consumption: Personalized List Value Estimation for Re-ranking. CoRR abs/2508.02242 (2025). arXiv:2508.02242 doi:10.48550/ARXIV.2508.02242 [35] Guorui Zhou, Na Mou, Ying Fan, Qi Pi, Weijie Bian, Chang Zhou, Xiaoqiang Zhu, and Kun Gai. 2019. Deep Interest Evolution Network for Click-Through Rate Prediction. In The Thirty-Third AAAI Conference on Artificial Intelligence, AAAI 2019, The Thirty-First Innovative Applications of Artificial Intelligence Conference, IAAI 2019, The Ninth AAAI Symposium on Educational Advances in Artificial Intelligence, EAAI 2019, Honolulu, Hawaii, USA, January 27 - February 1, 2019 .AAAI Press, 5941–5948. doi:10.1609/AAAI.V33I01.33015941 [36] Guorui Zhou, Xiaoqiang Zhu, Chengru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. 2018. Deep Interest Network for Click-Through Rate Prediction. In Proceedings of the 24th ACM SIGKDD Inter-national Conference on Knowledge Discovery & Data Mining, KDD 2018, London, UK, August 19-23, 2018 , Yike Guo and Faisal Farooq (Eds.). ACM, 1059–1068. doi:10.1145/3219819.3219823

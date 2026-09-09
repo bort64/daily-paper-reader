@@ -1,0 +1,567 @@
+Title: EAGER: Enrich-and-Align Generative Query Recommendation from Clicked Items in E-commerce Search
+
+URL Source: https://arxiv.org/pdf/2609.07143v1
+
+Published Time: Wed, 09 Sep 2026 01:58:08 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# EAGER: Enrich-and-Align Generative Query Recommendation from Clicked Items in E-commerce Search 
+
+Shuwei Yuan * Mingqian Ding * Luxin Liu Rong Xiao Xiaoyi Zeng 
+
+Alibaba International Digital Commerce Group 
+
+{yuanshuwei.ysw, dingmingqian.dmq, xique.llx}@alibaba-inc.com {xiaorong.xr, yuanhan}@taobao.com 
+
+Abstract 
+
+E-commerce platforms increasingly display clickable query suggestions alongside items in the user feed, enabling users to refine or expand their intent without manually reformulating queries. Existing approaches either mine sug-gestions from historical logs—limited to past behavior and blind to long-tail, personalized in-tents or rely on off-the-shelf LLMs whose lack of platform-specific knowledge yields fluent but generic queries disconnected from real click behavior. We propose EAGER (Enrich-and-
+
+Ali Gn g Enerative Query Recommendation), a two-stage framework for generating query suggestions from clicked items. In the en-richment stage, supervised fine-tuning (SFT) follows a four-stage curriculum that scales in-formation richness (from item-only to user-conditioned) and reasoning depth (from di-rect to chain-of-thought). Each stage incor-porates rationale augmentation, diversity reg-ularization, and self-distillation. In the align-ment stage, we post-train via GRPO with a hybrid reward of multiple rule-based business signals and a preference-aware click reward. Extensive offline experiments and online A/B test demonstrate the effectiveness of EAGER, which has been deployed in production at a major e-commerce platform. 
+
+1 Introduction 
+
+Query Recommendation (Xu et al., 2026; Min et al., 2025b) is a core module in modern e-commerce search that helps users quickly express their shop-ping intents (Yin et al., 2026; Chen et al., 2025b). Beyond traditional query completion (Shao et al., 2025) and suggestion (Guo et al., 2026) in the search box, industrial platforms increasingly pro-vide context-aware query recommendation at key user touchpoints (Min et al., 2025a) to naturally support subsequent exploration in recommendation scenarios.  
+
+> *Equal contribution. Before Click After Click
+
+Figure 1: Query recommendation from clicked items. When a user clicks an item in the recommendation feed, the system presents a set of query suggestions to capture their immediate search intent. 
+
+Among these touchpoints, a particularly high-value scenario arises when a user clicks an item and returns to the recommendation feed (Figure 1): the system presents a set of query suggestions to capture the user’s immediate search intent. We refer to this task as item-to-query (I2Q) recommen-dation throughout this paper. Existing online methods (Bie et al., 2026) mainly rely on collaborative-filtering-based statisti-cal features (Papadakis et al., 2022), mining item-query correlations through historical behavior co-occurrence and depending on pre-existing query pools (Si et al., 2022). They perform well in data-sufficient scenarios but cannot model fine-grained semantics or user-personalized preferences. For long-tail and new items, the recommended queries tend to be biased toward generic head queries and fail to fully capture users’ potential intents. Our online traffic logs further reveal a clear positive correlation between query-pool richness and down-stream conversion, motivating an approach that ex-pands the candidate space beyond what log-based mining can reach. Recent advances in large language models (Team et al., 2026b; Zeng et al., 2026; DeepSeek-AI arXiv:2609.07143v1 [cs.IR] 7 Sep 2026 et al., 2025) have spurred industrial exploration into generative query recommendation. Existing studies (Sun et al., 2026; Guo et al., 2026; Bi et al., 2026) have applied LLMs to search intent under-standing and query generation, achieving promis-ing results in general query recommendation tasks. However, generating query recommendations from clicked items presents two core challenges. First, a single item click reveals only one explicit choice, yet the system must produce a diverse query set covering the user’s multiple latent intents. Vanilla LLMs (Team et al., 2026a; Yang et al., 2025) pro-duce fluent but generic queries without personaliza-tion or priority ordering, and cannot bridge this gap. Second, the generated query set must simultane-ously satisfy multiple conflicting objectives—real user click-through rates and downstream conver-sion on the one hand, and deployment constraints such as format compliance, diversity on the other. These heterogeneous objectives span both user pref-erence alignment and business rule enforcement, and cannot be jointly optimized through standard likelihood training alone. To address these challenges, we propose a two-stage framework. The first stage enriches the query generation space through supervised fine-tuning with multi-source intent supervision, curriculum learning, and self-distillation, enabling the model to cover diverse user intents. The second stage aligns generation with online deployment constraints and user click preferences via GRPO (Guo et al., 2025) with hybrid rewards combining rule-based and preference-aware click rewards. The two stages are complementary: SFT maximizes intent cover-age offline, while GRPO post-training ensures the generated queries meet online deployment criteria without sacrificing the diversity established in the first stage. Our main contributions are summarized as follows: • We propose EAGER, a generative I2Q rec-ommendation framework that bridges item recommendation and search in e-commerce by generating personalized query sets from clicked items and user context, deployed in production at a large-scale e-commerce plat-form. • We design a two-stage training framework: SFT enhances intent coverage and query di-versity through multi-source supervision, cur-riculum learning, and self-distillation; GRPO further aligns generation with user preferences and online business constraints via hybrid reward optimization. A shared Preference-Aware Reward Model (PARM) anchors both stages on the same production click signal, ensuring training consistency. • Extensive offline evaluations and online A/B tests confirm that our framework substantially improves core production metrics including user engagement and payment conversion. 
+
+2 Preliminary 
+
+We study user-contextualized generative query rec-ommendation in the I2Q setting. Given a recently clicked item i, user context u, and online serving constraints c, the model aims to generate a query set 
+
+Y = {q1, . . . , q K } of size K. Unlike pool-based retrieval, which selects candidates from a prede-fined query inventory, our task requires the model to generate queries directly from item semantics and immediate user behavior, subject to constraints on accuracy, diversity, and online deployability. 
+
+3 Methodology 
+
+We describe the two stages below: supervised fine-tuning for query enrichment (§3.1) and reinforce-ment learning with hybrid rewards for online align-ment (§3.2). 
+
+3.1 Supervised Fine-Tuning for Query Enrichment 
+
+The goal of this stage is to generate a diverse set of queries from the clicked item and user context to cover users’ latent search intents and provide a richer candidate space for subsequent reinforce-ment learning and online ranking. To this end, we design the SFT pipeline from three aspects: su-pervision construction, task design, and training augmentation. 
+
+3.1.1 Multi-source Intent-ordered Supervision 
+
+A key challenge in the I2Q task is that a user’s real click usually reflects only one explicit choice, and thus cannot fully capture the user’s latent in-tents. Moreover, relying solely on clicked queries leads to sparse supervision. To better mine poten-tial user intents, we construct multi-source intent-ordered supervision labels consisting of three types of queries: 
+
+Y = [ qclick ; Qpost ; Qllm ], (1) EAGER 
+
+. . . 𝑞 ! 𝑞 " 𝑞 # 𝑞 $ 𝑞 %  
+
+> Task Desc Item Info User Info
+
+It Item Title Item Category Item Brand Item Attrbutes 
+
+> Item Info
+
+It User Profile History Query Items Seq Categories Seq     
+
+> User Info
+> Click Logs Search Logs Item Info Qwen3-235B
+> winter slipper sale slippers fluffy plush winter slippers thick sole slippers indoor fur slippers
+> . . . Output :
+> Yes / No Top-k
+> PARM Input : Item + User + query
+> Score :
+> 1 − 𝐿𝑜𝑔𝑖𝑡(𝑁𝑜)
+> Latent Intent User Interest Language Strategy
+> User Clicked Query Post-Click Search Query
+> 𝑞 !
+> 𝑞 "
+> 𝑞 #
+> 𝑞 $
+> 𝑞 %
+> Chain of Thought
+> I2Q
+> Item -> Query
+> Enhanced I2Q
+> Item -> CoT+Query
+
++
+
+> UI2Q
+> Item+User-> Query
+
++
+
+> Enhanced UI2Q
+> Item+User->CoT+Query
+
++ + 
+
+> 𝐿 = 𝐿 !"# + 𝜆 𝐿 $%&
+> 𝑞 "
+> 𝑞 %
+> 𝑞 !
+> ...
+
++ 𝑞 " 
+
+> 𝑞 %
+> 𝑞 !
+> ...
+> Diversity constraint Self-Distillation Curriculum Learning
+
+... 
+
+> Rollout 1
+
+... 
+
+> Rollout 2
+
+... 
+
+> Rollout N
+
++ 
+
+> Rule-based Reward Preference-Aware Reward
+
++   
+
+> Quantity Length Fluency Overlap Diversity Penalty
+
+...              
+
+> PARM
+> 𝑞 !"𝑞 ""𝑞 #"𝑞 $"
+> 𝑞 !!𝑞 "!𝑞 #!𝑞 $!Item + Query
+> Logits :
+> Yes / No
+> Model Reward
+> Hybrid Reward
+> 𝑅 = 𝛼𝑅 '()* +𝛽𝑅 +,$*)
+> GRPO
+> Stage 2
+> Top-p Temperature
+> Stage 1
+> thick sole slippers plush winter slippers womens pull on slippers
+> 𝑞 !&𝑞 "&𝑞 #&𝑞 $&
+
+Figure 2: Overview of EAGER. The framework consists of two stages: (1) supervised fine-tuning with multi-source supervision, curriculum learning, and self-distillation for query enrichment; (2) GRPO-based alignment with hybrid rewards for online deployment. 
+
+where qclick denotes the query the user clicked on the recommendation panel, serving as the strongest supervision signal. Qpost denotes the queries ac-tively issued by the user shortly after clicking a rec-ommended query, which further reflects the user’s immediate post-click intent. To alleviate the sparsity of click logs, we fur-ther perform offline query expansion for popular items using a large language model. Specifically, we prompt the LLM with the item title, category, attributes, and possible usage scenarios to generate a set of candidate queries, denoted as Qllm .However, LLM-generated queries do not inher-ently have reliable priorities. Directly append-ing them to the labels may cause the model to treat queries of different quality as equally impor-tant supervision, thereby introducing noise. To address this issue, we score the LLM-generated queries with the Preference-Aware Reward Model (PARM) —a generative click predictor fine-tuned from Qwen-4B on production click logs—which also serves as the model-based re-ward in GRPO (§3.2.2), unifying supervision se-lection and reward optimization under the same production preference signal. Training details are in Appendix B. 
+
+3.1.2 Rationale-Augmented Curriculum Learning 
+
+After constructing the SFT data, we design a rationale-enhanced curriculum learning strategy. Specifically, we organize training into four tasks with increasing difficulty. The first task is item-to-query ( I2Q ), which takes only item information as input and generates item-related queries. This task aims to establish a basic mapping between item attributes and e-commerce search queries. Different from standard I2Q, En-hanced I2Q incorporates rationales generated by a 235B teacher LLM. The model first analyzes the key item attributes, usage scenarios, and possi-ble search directions, and then generates the target 
+
+queries .The third task is user-item-to-query ( UI2Q ), which further introduces personalized user infor-mation. This task guides the model to move from generic item-level query generation to personalized query generation. The fourth task is Enhanced UI2Q , which jointly incorporates item information, user context, and rationale supervision. By rea-soning over the user’s historical preferences and current click behavior, the model learns to gener-ate queries that better match the user’s immediate intent. The overall SFT stage is optimized with the stan-dard autoregressive negative log-likelihood objec-tive: 
+
+LSFT = −
+
+> T
+
+X
+
+> t=1
+
+log pθ
+
+ yt | y<t , x . (2) 
+
+3.1.3 Diversity-aware SFT Enhancement 
+
+To further improve query diversity, we intro-duce two SFT enhancement strategies: diversity-regularized SFT and self-distillation. First, to mitigate the homogenization problem in multi-query generation, we continue fine-tuning the model on a set of high-quality samples and add a diversity regularization term to the autoregressive loss. The objective is defined as: 
+
+L = LSFT + λLdiv , (3) where λ controls the weight of the diversity loss. The diversity loss penalizes excessive similarity among queries within the same output sequence: 
+
+Ldiv = 1
+
+K(K − 1) 
+
+X
+
+> i̸=j
+
+sim (qi, q j ), (4) Second, we introduce a self-distillation mech-anism to expand the model’s generation space. Specifically, we use the diversity-enhanced model to perform sampled inference on a subset of prompts. During inference, we increase the temper-ature and top-p values to encourage the model to generate more diverse candidate queries. We then filter the generated results by removing queries with invalid formats, abnormal lengths, or business rule violations. The remaining high-quality outputs are used to reconstruct additional training data for the next round of SFT. 
+
+3.2 Reinforcement Learning with Hybrid Rewards 
+
+Although the SFT stage enhances the richness of generated queries, it is fundamentally suited to of-fline supervision data. To further align the genera-tive model with the online recommendation objec-tives of the I2Q task, we introduce a GRPO-based reinforcement learning approach with hybrid re-wards. 
+
+3.2.1 Verifiable Rule-Based Reward 
+
+The rule-based reward is designed to enforce deter-ministic business constraints in the I2Q scenario. Given an input x and a set of generated queries 
+
+Y = {q1, q 2, . . . , q K }, we define this reward as a weighted sum of multiple sub-rewards: 
+
+Rrule (x, Y ) = 
+
+> M
+
+X
+
+> m=1
+
+wmrm(x, Y ), (5) where rm(x, Y ) denotes the m-th rule reward and 
+
+wm is its corresponding weight. We design eight verifiable rule rewards mainly from the perspec-tives of user experience, compliance, and fluency. Detailed definitions are provided in the appendix. These rewards enforce basic display require-ments and business constraints, reducing format errors and redundant generation. 
+
+3.2.2 Model-based Reward via PARM 
+
+While rule-based rewards can enforce deterministic constraints, they cannot directly estimate whether a generated query is attractive to a specific user under the current item context. To align the reward signal with real user feedback in the I2Q scenario, we adopt PARM (introduced in §3.1.1) as the model-based reward, which scores each generated query by its predicted click likelihood given the item and user context. Given an item i, user context u, and candidate query q, PARM estimates the likelihood that the user would click q under the current exposure con-text. We train the model to generate a natural lan-guage label: a ∈ { yes , no }. The training details are provided in the Appendix. During inference, we use the probability of the “no” label to construct the click reward. Intuitively, if the model is less likely to predict “no”, the query is more likely to match the user’s current click preference. The reward for a query is defined as: 
+
+rmodel (i, u, q ) = 1 − pPARM (no | i, u, q ). (6) The set-level model reward is computed as the average click reward over all queries: 
+
+Rmodel (i, u, Y ) = 1
+
+K
+
+> K
+
+X
+
+> k=1
+
+rmodel (i, u, q k). (7) As described in §3.1.1, the same scoring func-tion 1 − pPARM (no | i, u, q ) is used to rank LLM-generated candidates during SFT data construction, converting unordered queries into weakly ordered supervision. Method Hard HR Soft HR Diversity Rule 
+
+@1 @all @1 @all APD Distinct-2 Gemini 3.1 0.42 0.52 70.04 93.08 69.46 76.59 7.83 GPT-5.2 0.32 0.58 75.73 94.52 67.74 77.17 8.57 Qwen3-1.7B 0.00 0.04 0.09 34.59 41.82 63.94 3.55 Qwen3-4B 0.08 0.34 31.56 56.06 52.33 70.75 5.39 Qwen3-8B 0.14 0.37 52.83 73.97 54.49 72.83 5.72 Qwen3.5-397B-A17B 0.08 0.10 69.08 87.98 64.91 76.33 8.19 SFT 0.33 0.67 74.04 86.85 53.05 76.79 7.65 GRPO 0.27 0.61 66.58 79.36 62.84 76.48 7.73 SFT-GRPO 0.36 0.68 74.19 86.91 53.34 78.65 7.88 EAGER-base 0.65 1.27 74.83 93.27 72.13 83.75 9.04 EAGER 0.44 0.87 77.96 93.82 72.96 83.04 9.16 
+
+> Table 1: Offline Experimental Results. EAGER and its variants are implemented based on Qwen3-1.7B. Best results are in bold and the second-best results are underlined.
+
+Model HardHR SoftHR APD 
+
+EAGER-1.7B 0.44 77.96 72.96 EAGER-4B 0.54 78.39 79.13 EAGER-8B 0.56 78.65 78.84 
+
+> Table 2: Experimental results with different Large Lan-guage Model backbones.
+
+3.2.3 GRPO Policy Optimization 
+
+We combine the two rewards to construct the over-all reward function for reinforcement learning: 
+
+R(x, Y ) = αR rule (x, Y ) + βR model (i, u, Y ). (8) Driven by the hybrid reward, GRPO optimization further guides the model to generate query lists that better satisfy business constraints, align with real user click preferences. 
+
+4 Experiment 
+
+4.1 Experimental Setup Metrics. Offline, we evaluate along three axes: relevance, diversity, and compliance. Soft HR@ K
+
+is our primary relevance metric: a generated query counts as a hit if it exactly matches the logged clicked query, or if at least 60% of its terms appear in the title of the item the user clicked after entering search. Soft HR is thus grounded in the second-hop item click, which is the objective of this scenario. 
+
+Hard HR@ K requires an exact string match with the single logged query and is reported only as a diagnostic of exact-expression reproduction: be-cause I2Q is open-vocabulary and one-to-many, a single logged query is only one of many valid ver-balizations, so a low Hard HR does not by itself indicate low query quality. Diversity is measured by APD and Distinct-2 , and business compliance by the Rule score. All HR values are reported in percent. Online, we report UCTR and PCTR for engagement, and DAC, Pay Count, and L2P for downstream conversion. 
+
+Baselines To evaluate the effectiveness of our method, we compare it with open-source and closed-source LLMs of varying scales and capa-bilities, using them to assess the generative query recommendation ability of general-purpose LLMs without task-specific adaptation. We also include several model variants under different training and inference settings to provide a comprehensive com-parison of recall performance. 
+
+4.2 Offline Experiments 
+
+Table 1 reports the offline results. Closed-source LLMs achieve competitive Soft HR but relatively weak Hard HR, indicating that they can gener-ate semantically related queries yet fail to pre-cisely match real user expressions. Zero-shot open-source models perform poorly across all metrics, confirming the necessity of task-specific training for the I2Q task. We compare several framework variants: SFT uses multi-source supervision with-out curriculum staging or diversity enhancement; 
+
+GRPO applies hybrid-reward policy optimization Method Hard HR Soft HR Diversity Rule 
+
+@1 @all @1 @all APD Distinct-2 EAGER 0.44 0.87 77.96 93.82 72.96 83.04 9.16 
+
+w/o GRPO 0.36 0.64 77.45 93.76 72.84 81.77 7.21 
+
+w/o Self-Distill 0.41 0.65 75.60 93.42 69.62 81.73 8.53 
+
+w/o DIV 0.38 0.56 78.34 93.49 68.24 78.86 8.42 
+
+w/o DIV + Self-Distill 0.37 0.51 78.07 92.03 65.05 78.23 8.17 
+
+> Table 3: The experimental results of the ablation study.
+
+Category Metric ∆
+
+First UCTR +0.83% PCTR +1.28% Second DAC +2.98% Pay Count +3.49% L2P +2.38% 
+
+> Table 4: Online Experimental Results of EAGER.
+
+directly on the backbone; SFT-GRPO chains the two; and EAGER-base adds curriculum learning, diversity regularization, and self-distillation atop SFT-GRPO but omits PARM-based query ranking. SFT and SFT-GRPO significantly outperform the backbone, while GRPO alone improves diversity but degrades relevance without SFT initialization. EAGER-base achieves the highest Hard HR and Distinct-2, confirming that curriculum learning and self-distillation expand the generation space. The full EAGER trades moderate Hard HR decrease for gains in Soft HR@1, APD, and Rule score—a favorable trade-off for online deployment where downstream ranking reorders candidates. Table 2 shows that EAGER scales well across backbone sizes, with EAGER-4B achieving the highest APD and EAGER-8B the best Soft HR. 
+
+4.3 Ablation Study 
+
+Table 3 presents the ablation results. Two ob-servations deserve emphasis. First, removing DIV slightly raises Soft HR@1 (78.34 vs. 77.96) while sharply reducing APD (68.24 vs. 72.96) and Distinct-2 (78.86 vs. 83.04). This is the expected coverage–diversity trade-off: concentrating prob-ability mass on the single most likely verbaliza-tion improves exact relevance against the logged query but yields a homogeneous query set. Since the scenario exposes K queries simultaneously and a downstream ranker reorders them, conced-
+
+Configuration Soft HR APD Dist-2 
+
+@1 @all I2Q 71.39 90.85 65.99 79.23 
+
++ Enh. I2Q 73.03 92.84 69.16 80.50 
+
++ UI2Q 77.09 93.42 71.72 82.57 
+
++ Enh. UI2Q 77.96 93.82 72.96 83.04 
+
+> Table 5: Incremental ablation of the four curriculum subtasks: I2Q (item only), Enhanced I2Q ( +rationale), UI2Q ( +user context), and Enhanced UI2Q (both). All other components—diversity regularization, self-distillation, GRPO, the backbone, and optimization settings—are held fixed. Soft HR is in percent.
+
+ing 0.38 Soft HR@1 for +4.72 APD and +4.18 Distinct-2 is favorable, and the online results con-firm that the more diverse set converts better. Sec-ond, removing GRPO leaves relevance essentially unchanged (Soft HR@All 93.76 vs. 93.82) but de-grades Rule from 9.16 to 7.21 and Distinct-2 from 83.04 to 81.77, indicating that GRPO’s primary role is business-rule compliance rather than rele-vance. Removing self-distillation reduces Hard HR@All from 0.87% to 0.65% and APD from 72.96 to 69.62, confirming that model-generated high-quality data broadens the training distribution. Table 5 isolates the curriculum by adding its four subtasks in order while holding every other compo-nent fixed. Rationale supervision (Enhanced I2Q) gives the largest single-step APD gain (+3.17), indi-cating that reasoning helps the model explore mul-tiple plausible search directions rather than imitate one query; user context (UI2Q) gives the largest Soft HR@1 gain (+4.06), confirming personaliza-tion as the dominant driver of second-hop rele-vance. In total the curriculum contributes +6.57 Soft HR@1 and +6.97 APD. This isolates the marginal contribution of each subtask, not the ef-fect of sequential ordering versus randomly mixed multi-task training. 0.01 0.05 0.1 0.2 0.5 10.2 0.4 0.6 0.8 1.0 HardHR(%)       
+
+> HHR@1 HHR@All SHR@1 SHR@All 0.4 0.6 0.8 0.9 11.2 0.0 0.2 0.4 0.6 0.8 1.0 HardHR(%)
+> @1(K=0.8) @All(K=0.8) @1(K=0.7) @All(K=0.7)
+> 70 75 80 85 90 95 SoftHR(%) (a) Diversity Weight (b) Temperature & Top-P
+
+Figure 3: Impact of hyperparameters on performance. (a) Effect of the diversity loss weight λ. (b) Effect of temperature and top-p in self-distillation. 
+
+4.4 Hyper-parameter Analysis 
+
+Figure 3 presents the sensitivity of key hyperparam-eters. For diversity loss weight (Figure 3(a)), per-formance peaks around λ = 0 .1; further increasing 
+
+λ degrades relevance, suggesting overly strong reg-ularization hurts the balance between diversity and accuracy. For self-distillation (Figure 3(b)), per-formance improves as temperature increases and peaks around 0.9–1.0, with a larger top-k consis-tently yielding better results. 
+
+4.5 Online Experiments 
+
+We deployed EAGER as an additional query rec-ommendation source in our production system and conducted a 9-day online A/B test with 5% of traffic. The control uses the existing production system; the treatment augments it with EAGER-generated query suggestions while all downstream components remain identical. As shown in Table 4, UCTR and PCTR improve by 0.83% and 1.28%, while DAC, Pay Count, and L2P increase by 2.98%, 3.49%, and 2.38%, con-firming that engagement gains translate to down-stream conversion (all p < 0.05, stable throughout the test period). 
+
+5 Conclusion 
+
+We present EAGER, a two-stage framework that generates personalized query recommendations from clicked items, bridging item recommenda-tion and search in e-commerce. The key insight is that intent coverage and deployment alignment are complementary objectives best addressed in se-quence: the first stage expands the generation space to capture diverse user intents, while the second constrains it to meet online business requirements without sacrificing diversity. Production deploy-ment and A/B tests confirm consistent gains in both user engagement and downstream conversion. 
+
+Limitations 
+
+This work has several limitations. First, our method is developed and evaluated in a real-world e-commerce search scenario, where user behavior patterns, item distributions, and business rules may differ across platforms. Therefore, its generaliza-tion to other search or recommendation scenarios requires further validation. Second, PARM relies on historical exposure and click logs, which may in-herit existing position bias and exposure bias from the online system. Although rule-based rewards help improve compliance, they are manually de-signed and may need adaptation when business re-quirements change. Finally, our current framework mainly focuses on query-level generation and does not jointly optimize downstream ranking or conver-sion objectives. Future work will explore more gen-eral reward modeling, debiased user feedback, and end-to-end optimization with downstream search modules. 
+
+References 
+
+Ricardo Baeza-Yates, Carlos Hurtado, and Marcelo Mendoza. 2004. Query recommendation using query logs in search engines. In International conference on extending database technology , pages 588–596. Springer. Shuxian Bi, Chenxu Wang, Wenjie Wang, Yueqi Mou, Fuli Feng, Tang Biao, and Peng Yan. 2026. ReList: A multi-objective reasoning framework for diversified listwise query recommendation. In Proceedings of the 64th Annual Meeting of the Association for Com-putational Linguistics (Volume 6: Industry Track) ,pages 1392–1405, San Diego, California, USA. As-sociation for Computational Linguistics. Shifu Bie, Jiangxia Cao, Zixiao Luo, Yichuan Zou, Lei Liang, Lu Zhang, Linxun Chen, Zhaojie Liu, Xuan-ping Li, Guorui Zhou, and 1 others. 2026. Pushgen: Push notifications generation with llm. In Proceed-ings of the Nineteenth ACM International Conference on Web Search and Data Mining , pages 1073–1077. Ben Chen, Xian Guo, Siyuan Wang, Zihan Liang, Yue Lv, Yufei Ma, Xinlong Xiao, Bowen Xue, Xuxin Zhang, Ying Yang, and 1 others. 2025a. Onesearch: A preliminary exploration of the unified end-to-end generative framework for e-commerce search. arXiv preprint arXiv:2509.03236 .Jiale Chen, Xuelian Dong, Wenxiu Xie, Ru Peng, Kun Zeng, and Tianyong Hao. 2025b. Llm-enhanced query generation and retrieval preservation for task-oriented dialogue. In Findings of the Association for Computational Linguistics: ACL 2025 , pages 14307– 14321. Junyi Chen, Lu Chi, Bingyue Peng, and Zehuan Yuan. 2024. Hllm: Enhancing sequential recommendations via hierarchical large language models for item and user modeling. arXiv preprint arXiv:2409.12740 .DeepSeek-AI, Aixin Liu, Aoxue Mei, Bangcai Lin, Bing Xue, Bingxuan Wang, Bingzheng Xu, Bochao Wu, Bowei Zhang, Chaofan Lin, Chen Dong, Chengda Lu, Chenggang Zhao, Chengqi Deng, Chen-hao Xu, Chong Ruan, Damai Dai, Daya Guo, Dejian Yang, and 245 others. 2025. Deepseek-v3.2: Pushing the frontier of open large language models. Preprint ,arXiv:2512.02556. Vianne R Gao, Chen Xue, Marc Versage, Xie Zhou, Zhongruo Wang, Chao Li, Yeon Seonwoo, Nan Chen, Zhen Ge, Gourab Kundu, and 1 others. 2025. Syn-ergen: Contextualized generative recommender for unified search and recommendation. arXiv preprint arXiv:2509.21777 .Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu Zhang, Shirong Ma, Xiao Bi, Xiaokang Zhang, Xingkai Yu, Yu Wu, Z. F. Wu, Zhibin Gou, Zhihong Shao, Zhu-oshu Li, Ziyi Gao, Aixin Liu, and 175 others. 2025. Deepseek-r1 incentivizes reasoning in llms through reinforcement learning. Nature , 645(8081):633–638. Xian Guo, Ben Chen, Siyuan Wang, Ying Yang, Mingyue Cheng, Chenyi Lei, Yuqing Ding, and Han Li. 2026. Onesug: The unified end-to-end gener-ative framework for e-commerce query suggestion. In Proceedings of the AAAI Conference on Artificial Intelligence , volume 40, pages 14774–14782. Eugenie Yujing Lai, Zainab Zolaktaf, Mostafa Milani, Omar AlOmeir, Jianhao Cao, and Rachel Pottinger. 2023. Workload-aware query recommendation using deep learning. In EDBT , volume 23, pages 53–65. Jingzhe Liu, Liam Collins, Jiliang Tang, Tong Zhao, Neil Shah, and Clark Mingxuan Ju. 2025. Under-standing generative recommendation with seman-tic ids from a model-scaling view. arXiv preprint arXiv:2509.25522 .Erxue Min, Hsiu-Yuan Huang, Xihong Yang, Min Yang, Xin Jia, Yunfang Wu, Hengyi Cai, Junfeng Wang, Shuaiqiang Wang, and Dawei Yin. 2025a. Ctr-guided generative query suggestion in conversational search. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing: Industry Track , pages 2624–2634. Erxue Min, Hsiu-Yuan Huang, Xihong Yang, Min Yang, Xin Jia, Yunfang Wu, Hengyi Cai, Junfeng Wang, Shuaiqiang Wang, and Dawei Yin. 2025b. From prompting to alignment: A generative frame-work for query recommendation. arXiv preprint arXiv:2504.10208 .Harris Papadakis, Antonis Papagrigoriou, Costas Panagiotakis, Eleftherios Kosmas, and Paraskevi Fragopoulou. 2022. Collaborative filtering recom-mender systems taxonomy. Knowledge and informa-tion systems , 64(1):35–74. Ninglu Shao, Jinshan Wang, Chenxu Wang, Qingbiao Li, and Xiaoxue Zang. 2025. Great: Guiding query generation with a trie for recommending related search about video at kuaishou. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 2 , pages 4818–4826. Zihua Si, Xueran Han, Xiao Zhang, Jun Xu, Yue Yin, Yang Song, and Ji-Rong Wen. 2022. A model-agnostic causal learning framework for recommenda-tion using search data. In Proceedings of the ACM web conference 2022 , pages 224–233. Alessandro Sordoni, Yoshua Bengio, Hossein Vahabi, Christina Lioma, Jakob Grue Simonsen, and Jian-Yun Nie. 2015. A hierarchical recurrent encoder-decoder for generative context-aware query suggestion. In 
+
+proceedings of the 24th ACM international on con-ference on information and knowledge management ,pages 553–562. Qi Sun, Kejun Xiao, Huaipeng Zhao, Tao Luo, and Xiaoyi Zeng. 2026. Quality over clicks: Intrin-sic quality-driven iterative reinforcement learning for cold-start e-commerce query suggestion. arXiv preprint arXiv:2603.22922 .Core Team, Bangjun Xiao, Bingquan Xia, Bo Yang, Bofei Gao, Bowen Shen, Chen Zhang, Chenhong He, Chiheng Lou, Fuli Luo, Gang Wang, Gang Xie, Hailin Zhang, Hanglong Lv, Hanyu Li, Heyu Chen, Hongshen Xu, Houbin Zhang, Huaqiu Liu, and 107 others. 2026a. Mimo-v2-flash technical report. 
+
+Preprint , arXiv:2601.02780. Kimi Team, Tongtong Bai, Yifan Bai, Yiping Bao, SH Cai, Yuan Cao, Y Charles, HS Che, Cheng Chen, Guanduo Chen, and 1 others. 2026b. Kimi k2. 5: Visual agentic intelligence. arXiv preprint arXiv:2602.02276 .Weixun Wang, Shaopan Xiong, Gengru Chen, Wei Gao, Sheng Guo, Yancheng He, Ju Huang, Jiaheng Liu, Zhendong Li, Xiaoyang Li, and 1 others. 2025. Rein-forcement learning optimization for large-scale learn-ing: An efficient and user-friendly scaling library. 
+
+arXiv preprint arXiv:2506.06122 .Jingcao Xu, Jianyun Zou, Renkai Yang, Zili Geng, Qiang Liu, and Haihong Tang. 2026. Aigq: An end-to-end hybrid generative architecture for e-commerce query recommendation. arXiv preprint arXiv:2603.19710 .An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, Chujie Zheng, Day-iheng Liu, Fan Zhou, Fei Huang, Feng Hu, Hao Ge, Haoran Wei, Huan Lin, Jialong Tang, and 41 others. 2025. Qwen3 technical report. Preprint ,arXiv:2505.09388. Junhao Yin, Haolin Wang, Peng Bao, Ju Xu, and Yongliang Wang. 2026. From clicks to preference: A multi-stage alignment framework for generative query suggestion in conversational system. In Pro-ceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 1 , pages 2539–2550. Aohan Zeng, Xin Lv, Zhenyu Hou, Zhengxiao Du, Qinkai Zheng, Bin Chen, Da Yin, Chendi Ge, Chenghua Huang, Chengxing Xie, and 1 others. 2026. Glm-5: from vibe coding to agentic engineering.   
+
+> arXiv preprint arXiv:2602.15763 .Guorui Zhou, Jiaxin Deng, Jinghao Zhang, Kuo Cai, Lejian Ren, Qiang Luo, Qianqian Wang, Qigen Hu, Rui Huang, Shiyao Wang, Weifeng Ding, Wuchao Li, Xinchen Luo, Xingmei Wang, Zexuan Cheng, Zixing Zhang, Bin Zhang, Boxuan Wang, Chaoyi Ma, and 46 others. 2025a. Onerec technical report. Preprint ,arXiv:2506.13695. Guorui Zhou, Hengrui Hu, Hongtao Cheng, Huanjie Wang, Jiaxin Deng, Jinghao Zhang, Kuo Cai, Lejian Ren, Lu Ren, Liao Yu, Pengfei Zheng, Qiang Luo, Qianqian Wang, Qigen Hu, Rui Huang, Ruiming Tang, Shiyao Wang, Shujie Yang, Tao Wu, and 56 others. 2025b. Onerec-v2 technical report. Preprint ,arXiv:2508.20900.
+
+A Related Work 
+
+Query Recommendation Traditional query rec-ommendation methods rely on heuristic rules and statistical models derived from query logs, term co-occurrence, and user behavior. They work well in narrow settings but often suffer from sparse data and struggle to adapt to changing user in-tents (Baeza-Yates et al., 2004; Sordoni et al., 2015). Neural approaches improve on this by mod-eling sequential patterns to provide better contex-tual recommendations (Lai et al., 2023), yet they still struggle with long-tail queries. Recently, the field has moved toward generative methods using LLMs. For example, Cold-EQS (Sun et al., 2026) proposes an iterative reinforcement learning frame-work for ColdStart E-commerce Query Suggestion. PushGen (Bie et al., 2026) introduces a control-lable category-prompting technique to guide LLM outputs toward desired styles. GQR (Min et al., 2025b) unifies diverse query recommendation tasks by a universal prompt framework. ReList (Bi et al., 2026) further recasts related-search recom-mendation as a reasoning-enhanced listwise gener-ation task, combining chain-of-thought supervision with multi-objective reinforcement learning. All of these methods condition on a user-typed query, whereas I2Q must generate a personalized query set from a clicked item alone. 
+
+Generative Recommendation Generative rec-ommendation leverages LLMs to produce rec-ommendations as sequences, either as semantic IDs (SIDs) or in natural language. For instance, HLLM (Chen et al., 2024) employs a hierarchical structure to model user interests and item repre-sentations separately. In industrial practice, the OneRec family (Zhou et al., 2025a,b) establishes end-to-end generative frameworks that integrate reasoning and reinforcement learning for video and e-commerce recommendations. Concurrently, Syn-erGen (Gao et al., 2025) and OneSearch (Chen et al., 2025a) unify search and recommendation tasks under generative paradigms. However, recent work suggests natural language itself can serve as a more expressive alternative to SIDs (Liu et al., 2025). Unlike SID-based approaches, EAGER op-erates entirely in the natural language space, di-rectly generating contextually persuasive queries without discrete indexing, thereby fully harness-ing the generative capacity of LLMs for pre-search query recommendation. 
+
+B PARM Training Details 
+
+PARM is trained from user behavior logs in the I2Q scenario. Its goal is to estimate whether a candidate query is likely to be clicked under a given item-user context. PARM is used both to rank offline LLM-generated queries during SFT data construction and to provide the model-based reward in GRPO optimization. 
+
+Data Construction. For the I2Q task in e-commerce search, the system displays an ordered list of candidate queries. To avoid a severe imbal-ance between positive and negative samples, we adopt a position-aware sampling strategy based on user clicks. If the user clicks the first exposed query, we discard this event because users tend to click the first suggestion more often due to positional bias, which may distort the modeling of true user preferences. If the user clicks the second query, the clicked query is treated as a positive sample, while the first query is treated as a negative sample. Similarly, if the user clicks the third query, that query is used as the positive sample, and the first two queries are used as negative samples; if the user clicks the fourth query, the preceding three queries are used as negative samples. Queries after the clicked position are ignored, since they may not have been sufficiently examined by user. Each training instance consists of the clicked PARM                           
+
+> Task Desc Item Info User Info
+> It Item Title Item Category Item Brand Item Attrbutes
+> Item Info
+> It User Profile History Query His Items His Categories
+> User Info
+> Yes/ No
+> Query
+> 𝑞 !𝑞 "𝑞 #𝑞 $
+> 𝑞 "𝑞 #𝑞 $
+> 𝑞 #𝑞 $
+> 𝑞 $
+> 𝑞 !
+> 𝑞 !𝑞 "
+> 𝑞 !𝑞 "𝑞 #
+> Positive: 𝑞 !
+> Negative: 𝑞 "
+> Positive: 𝑞 #
+> Negative: 𝑞 ",𝑞 !
+> Positive: 𝑞 $
+> Negative: 𝑞 ",𝑞 !,𝑞 #
+> Exposed Queries Sample Strategy Clicked
+> 𝑞 !
+> 𝑞 "
+> 𝑞 #
+> 𝑞 $
+> Candidate Query
+> Training Data
+> Discard
+> Bluetooth Speakers
+
+Figure 4: Training pipeline of PARM. 
+
+item information, user personalization features, and a candidate query. Positive samples are assigned the output label “yes”, while negative samples are assigned the output label “no”. 
+
+Training Strategy. Given item information i,user context u, and a candidate query q, the model estimates whether the user would click the query in the current exposure context. Instead of us-ing a conventional binary classifier, we formulate click prediction as a generative discrimination task and train the model with SFT. The input contains 
+
+(i, u, q ), and the target output is a natural language label a ∈ { yes , no }.The training objective follows the standard au-toregressive negative log-likelihood: 
+
+Lclick = − log pϕ(a | i, u, q ), (9) where ϕ denotes the parameters of PARM. This for-mulation allows the model to reuse LLMs’ seman-tic understanding and learn the matching relation-ships among item text, user context, and candidate queries. 
+
+Offline Ranking Agreement. To evaluate the quality of PARM as a reward signal, we measure its ranking agreement with the production ranker on a held-out sample of 210K click PVs. Specif-ically, for each exposure event, we compare the position rankings produced by PARM against those of the online production ranker. We report the top-
+
+k match rate, defined as the proportion of events where the top-k queries selected by PARM exactly match the top-k set selected by the production ranker. PARM achieves a 79.8% top-1 match rate with the production ranker, indicating that it can reliably identify the most attractive query for a given user-item context. The top-2 to top-4 match rates re-
+
+Sample Size Top-1 Top-2 Top-3 Top-4 
+
+210K PVs 79.8% 74.1% 72.7% 72.7% 
+
+Table 6: Ranking agreement between PARM and the production ranker. 
+
+main above 72%, suggesting consistent alignment beyond the first position. These results confirm that PARM provides a sufficiently reliable reward signal for GRPO optimization. 
+
+C Rule Reward 
+
+We design verifiable rule-based rewards to ensure that generated queries satisfy the basic require-ments of the I2Q scenario. These rewards are com-puted offline using deterministic rules and linguis-tic features, without relying on online services or additional model-based evaluation. 
+
+Experience Compliance. This reward checks whether a generated query contains low-quality or experience-harmful expressions, such as “free item” or invalid prepositions. Queries containing such expressions are penalized to avoid unnatural or misleading search suggestions. 
+
+Quantity Compliance. This reward verifies whether the number of generated queries matches the required target number. It encourages the model to produce a stable and controllable number of can-didates. 
+
+Lexical Overlap. To ensure item relevance, we compute the lexical overlap between each gener-ated query and the item title. For queries shorter than three words, at least two words are required to match the item title; otherwise, at least 75% of the query terms should be covered. Title ：PU Leather Casual Tote Bags for Women Fashion Luxury Handbags Women Bags Designer Big Bag Shopper Shoulder Bag Brand       
+
+> Category :Bags #Shoulder Bags
+> Attributes :Material: PU Leather, Gender: Women, Style: Casual/Fashion, Size: Large
+> Preferred Language ：EN
+> Gender :Female
+> Country ：KR …
+> Recent Search Queries :
+> dumpling toy; mont bell; XXXX; XXXX…
+> Recently Clicked Items ：
+> korean sle large capaci tote bag women commuter bag versatile casual handbag oulder bag pu leather soft structure; Solid Color PU Leather Women's Handbag, Versatile Korean Single Shoulder Underarm Bag, Temperament Tote Bag for Women Daily Use…
+> large capacity tote bag designer PU leather handbag casual shopping bag big capacity tote bag PU leather shopper fashion designer tote bag luxury PU leather tote women designer tote tote bag leather tote bags for woman hand bags for ladies luxury 2025 luxury bags designers zara bags tote bag woman luxury designer 2025 bags for woman hand bag ladies
+
+User information EAGER Recall Queries Online I2Q Recall Queries Item information Figure 5: Qualitative comparison between the production I2Q baseline and EAGER, showing that EAGER captures fine-grained user preferences while the baseline produces generic queries 
+
+User Intent Alignment. This reward checks whether the generated query contains keywords from the user’s historical behaviors. It encourages the model to generate personalized queries that bet-ter reflect user interests. 
+
+Fluency. We evaluate query fluency using sim-ple linguistic features, including length constraints, token-type ratio, character validity, and bigram-level fluency. This reward encourages queries that are natural, readable, and consistent with search habits. 
+
+Diversity. To reduce redundant generation, we compute the Jaccard similarity among generated queries and reward lower similarity. This encour-ages the model to cover diverse search intents within the same output set. 
+
+Penalty Terms. We apply additional penalties for blacklisted or sensitive terms, including prohib-ited words, brand-infringing expressions, and other unsafe or low-quality content. These penalties help improve the safety and business compliance of gen-erated queries. 
+
+D Evaluation Metrics 
+
+We evaluate generated queries offline from four aspects: accuracy, relevance, diversity, and rule compliance. 
+
+Hard HR@K. Hard HR measures the exact matching accuracy between generated queries and the ground-truth clicked query. A hit is counted if any generated query exactly matches at the string level. HardHR@1 evaluates only the first gener-ated query, while HardHR@All evaluates the entire generated set. 
+
+Soft HR@K. Soft HR measures behavior-related relevance. A generated query is considered a soft hit if it exactly matches the ground-truth clicked query, or if at least 60% of its terms appear in the title of the target item clicked by the user on the search result page. Compared with Hard HR, Soft HR better captures whether the generated query can cover the semantic intent behind the user’s final clicked item. 
+
+Distinct-2. Distinct-2 evaluates lexical diversity by computing the ratio of unique 2-grams to all 2-grams in the generated query set: Distinct-2 = |Unique (2-grams (Y )) ||2-grams (Y )| . (10) A higher Distinct-2 indicates fewer repeated ex-pressions in the generated results. 
+
+APD. Average Pairwise Distance measures the average dissimilarity among generated queries. For each pair of generated queries, we compute their similarity sim (qi, q j ) and define the distance as 1 −
+
+sim (qi, q j ). APD is computed as: APD = 1
+
+K(K − 1) 
+
+X
+
+> i̸=j
+
+(1 − sim (qi, q j )) . (11) A higher APD indicates that the generated query set covers a more diverse set of potential search intents. 
+
+Rule. The Rule metric evaluates whether the gen-erated queries satisfy the basic display require-ments and business constraints of the I2Q scenario. We reuse the verifiable rules defined in the rule-based reward, including experience compliance, quantity compliance, lexical overlap, user intent alignment, and penalty terms. The final Rule score is computed as the weighted sum of all rule scores. A higher Rule score indicates better compliance with business requirements. 
+
+Online Metrics. We evaluate online deployment from two complementary stages of the user fun-nel. The first stage measures user engagement, i.e., whether the generated query suggestions at-tract user interaction. UCTR (User Click-Through Rate) is the proportion of users who click at least one query suggestion among those exposed in this scenario, while PCTR (PV-level Click-Through Rate) is the ratio of clicked query suggestions to total query exposures, measuring per-impression attractiveness. The second stage measures down-stream conversion, i.e., whether engagement trans-lates into commercial value after the user enters search via a clicked query. DAC (Daily Active Customers) is the number of unique users per day who complete at least one purchase through search sessions triggered in this scenario. Pay Count is the total number of paid orders attributable to this scenario L2P (Landing-to-Payment rate) is the con-version rate from clicking a query recommendation to completing payment, capturing the end-to-end commercial efficiency of the recommended queries. Together, these metrics cover the full funnel from query exposure to final conversion. 
+
+E Implementation Details 
+
+All experiments were conducted on 24 NVIDIA A100 80GB GPUs. We first performed SFT on Qwen3-1.7B (Yang et al., 2025) using the LLa-MAFactory framework with full-parameter up-dates, a maximum sequence length of 4096, an effective batch size of 64, a learning rate of 2e-5, bf16 precision, and 1 epoch of training. The resulting model was then used as the ini-tial policy for reinforcement learning via GRPO in the ROLL(Wang et al., 2025) framework. In the GRPO stage, each rollout response was scored by EAGER item_id         
+
+> I2Q
+> +. . .
+> Dense Retrieval
+> Rank Recall
+> . . .
+> 𝐀 4
+> 𝐀 3
+> ... 𝐀 11𝐀 21𝐀 𝐀 1
+> ... 𝐀 12𝐀 22𝐀 𝐀 2
+> ... 𝐀 1𝐀 𝐀 2𝐀 𝐀 𝐀 𝐀
+> Top-4
+> Context Features
+> ... 𝐀 1𝐀 𝐀
+> 𝐀 2
+> 𝐀 1
+> 𝐀 𝐀
+> 𝐀 2
+> I2I2Q
+
+Figure 6: Online serving architecture. EAGER serves as a third recall channel alongside log-based and dense retrieval; a shared ranker scores all candidates over con-text features and returns the top-4 queries. 
+
+verifiable rules and PARM to obtain a reward score. Our online inference is powered by the vLLM framework, which features a built-in multi-sampling generation mechanism. It independently generates 10 complete results, with no sharing be-tween the candidates. The compute and VRAM usage equals the total token volume of the N gen-erated sequences. Since they are independent, the pressure is lower than that of Beam Search. 
+
+Online Serving Architecture. Figure 6 shows the deployment of EAGER in our production query recommendation system. We deploy EAGER as a third recall channel alongside two existing ones: Log-based Retrieval , which mines item-to-query and item-to-similar-item-to-query associa-tions from historical click logs (I2Q and I2I2Q), and Dense Retrieval , which performs embedding-based approximate nearest neighbor search be-tween item and query representations. Candidates from all channels are merged and scored by a shared ranker over context features, and the top-K
+
+queries are returned to the user. EAGER comple-ments existing channels in two ways: it expands coverage on long-tail items where co-click statis-tics are sparse, and it provides higher-quality can-didates that compete with existing sources under the same ranker on head items. 
+
+F Case Study 
+
+To validate the efficacy of EAGER in integrating user profiles with item semantics, we analyze a representative case shown in Figure 5. The inter-acting user is an English-speaking female from South Korea whose recent behavioral sequence in-dicates a converging interest in “large capacity” and “designer-style” luggage. While traditional methods yield generic queries such as “tote bag” or “leather tote bags for woman,” failing to capture fine-grained preferences for capacity and design aesthetics, EAGER leverages click history and de-mographic attributes to synthesize highly specific queries like “large capacity tote bag” and “designer PU leather handbag.” This demonstrates that EA-GER effectively mitigates the limitations of statis-tical methods in personalized intent understanding, facilitating a transition from static attribute match-ing to dynamic interest alignment. 
+
+G Prompt Templates Offline Query Generation Prompt. 
+
+Role Definition: 
+
+You are an e-commerce search query generation assis-tant. Your primary objective is to generate high-intent, diverse, and commercially valuable search queries to guide users’ product discovery journey. 
+
+Task: 
+
+Generate User Search Queries for a Cross-Border E-commerce App based on the product details below. 
+
+Core Competencies: 
+
+1. Deep understanding of product info (titles, cate-gories, attributes). 2. Inferring user intent and usage scenarios. 3. Generating natural, diverse queries for different shopping stages. 
+
+Cognitive Framework (Do not output): 
+
+Core Identity: Direct term for the product? 
+
+Function & Scenario: Problem solved? Usage con-text? 
+
+Accessories & Compatibility: Needed add-ons? Com-patible devices? 
+
+Target Audience: Typical user profile? 
+
+Broad Exploration: Search behavior if model is un-known? 
+
+Constraints and Rules: 
+
+Relevance: Highly relevant to input. Do not fabricate attributes (e.g., color). 
+
+Diversity: Cover different intents (alternatives, acces-sories) and phrasing. 
+
+Format: Max 6 words. Use e-commerce keywords, not full sentences. 
+
+Language: Use {{language}}. Keep English brand names if applicable. 
+
+Attribute Filtering: Focus on physical traits, style, function. Ignore Origin, SKUs, specific models (e.g., M4A1), or dimensions. 
+
+Avoid Over-Inference: Be broad with ambiguous at-tributes (e.g., use "bed with storage" not "bed with drawers" unless specified). 
+
+Safety: No unsafe or prohibited content. 
+
+Input Parameters: 
+
+Output Language: {{language}} Number of Queries: {{count}} 
+
+Product Information: 
+
+{"title": {title\}, "category_path": {category_path}, "attributes": { "features": {features} }}
+
+Output Specification: You must return a single, valid JSON object. No text outside the JSON. 
+
+{"language": "", "generated_queries": [ { "query_text": "string" } ]}
+
+Supervised Fine-tuning Prompt. 
+
+Instruction: You are a world-class cross-border e-commerce search intent expert. Your task is to gener-ate 10 distinct, native, and high-intent search queries based on the user profile, behavior, and current prod-uct attributes. 
+
+Input: 
+
+Current Product Title :
+
+Category :
+
+Brand :
+
+User Nation/Market :
+
+Interface Language :
+
+User Demographics : Gender: 
+
+Age :
+
+Level :
+
+Recent Search History :
+
+Recent Click History :
+
+Click Category History :

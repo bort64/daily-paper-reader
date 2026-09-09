@@ -1,0 +1,415 @@
+Title: Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones
+
+URL Source: https://arxiv.org/pdf/2609.07273v1
+
+Published Time: Wed, 09 Sep 2026 02:06:10 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones 
+
+## Yuchen Wang ∗
+
+wang.yuchen@hellogroup.com Hello Group Beijing, China 
+
+## Feng Niu 
+
+niufeng25@mail.ustc.edu.cn University of Science and Technology of China Hefei, China 
+
+## Qing Tan 
+
+tanqing24@mails.ucas.ac.cn Institute of Software, Chinese Academy of Sciences Beijing, China University of Chinese Academy of Sciences Beijing, China 
+
+## Junting Lu 
+
+lujunting@bistu.edu.cn Beijing Information Science and Technology University Beijing, China 
+
+## Baoxin Wu 
+
+wu.baoxin@hellogroup.com Hello Group Beijing, China 
+
+## Jun Gao ∗
+
+gao.jun@hellogroup.com Hello Group Beijing, China 
+
+Abstract 
+
+Industrial ranking models for recommendation have scaled feature interaction and sequence modeling separately; recent architectures such as HyFormer and MixFormer unify both in a stackable back-bone. Real-world recommender systems, however, nearly always re-quire multi-task learning, yet existing unified architectures confine multi-task modeling to shallow post-backbone towers, leaving the backbone without task-aware information flow. We propose MORE (Multi-task cO-evolving Ranking modEl), which embeds multi-task information flow inside the backbone, enabling task-specific signals to co-evolve with sequence and feature representations at every layer rather than in a post-hoc fusion. It introduces Anchor Tokens that persist across backbone layers: Shared Anchors encode cross-task commonalities, while Private Anchors capture task-specific priors. In each block, Anchor Tokens (1) read task-conditioned sig-nals from behavior sequences, (2) mix with non-sequential features under a task-boundary mask, and (3) refine per-task representations through independent branches; as blocks stack, each task obtains a differentiated representation refined through all backbone layers. Experiments on large-scale industrial datasets show that MORE consistently outperforms baselines across all tasks under compa-rable parameter and FLOPs budgets, and scales well with model size. Online A/B tests on Momo, a leading Chinese social discovery platform with tens of millions of monthly active users, yield 3% improvement in usage duration, 3.6% in interaction rate, and 2% in deep-chat rate. MORE is deployed in production with request-level shared computation reducing scoring latency by about 30%. 
+
+> ∗Corresponding author.
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840113
+
+CCS Concepts 
+
+• Information systems → Recommender systems .
+
+Keywords 
+
+Recommender Systems, Multi-Task Learning, Ranking Model, Uni-fied Backbone, Scaling Law 
+
+ACM Reference Format: 
+
+Yuchen Wang, Feng Niu, Qing Tan, Junting Lu, Baoxin Wu, and Jun Gao. 2026. Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones. In Proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ’26), November 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 8 pages. https://doi.org/10.1145/ 3799682.3840113 
+
+1 Introduction 
+
+Industrial ranking models in recommender systems have evolved along two parallel directions. One direction focuses on feature in-teraction scaling. Representative methods such as Wukong [29] and RankMixer [33] scale the interaction backbone to improve high-order feature crossing. The other direction focuses on behavior sequence scaling. Representative methods such as HSTU [28] and LONGER [1] allow models to process much longer behavior his-tories via scalable generative architectures. These two directions remain architecturally separate, preventing bidirectional interac-tion between sequential and non-sequential features. Recent unified architectures therefore place sequence modeling and feature inter-action into the same stackable backbone, as in OneTrans [30], Hy-Former [11], and MixFormer [10], advancing both offline accuracy and online scalability. Yet none of these advances addresses another central require-ment in industrial ranking: multi-task learning. Industrial ranking scenarios are almost always multi-task, requiring a single model to jointly serve tasks with heterogeneous behavioral semantics. Al-though MMoE [16], PLE [21], and related methods have advanced multi-task modeling considerably, ranking backbones still isolate arXiv:2609.07273v1 [cs.IR] 7 Sep 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Yuchen Wang et al. 
+
+task information in post-backbone prediction heads. The backbone is therefore task-agnostic. Three limitations follow. 
+
+• Task-blind sequence reading and feature interaction :Task signals enter exclusively at prediction heads and never shape how the backbone organizes information internally. Se-quence reading cannot condition on which task it serves, nor can feature interaction adjust its aggregation to task-specific preferences. For instance, click-through rate depends on ex-posure recency and visual salience, whereas comment rate relies on content depth and topic relevance; a task-agnostic shared query conflates both needs into one undifferentiated reading of the same behavior history. 
+
+• Structural bottleneck before task differentiation : Be-cause all tasks share the same backbone output, task-specific feature preferences are compressed into a single semantic space before any task differentiation begins. Gate and ex-pert mechanisms in post-backbone towers (e.g., MMoE, PLE) perform shallow routing on this already-compressed rep-resentation; they can re-weight a fixed set of basis vectors but cannot reconstruct task-aware feature organizations that were never formed during backbone processing. The bottle-neck is structural, not a matter of routing capacity. 
+
+• Diminishing multi-task returns from scaling : Scaling depth, width, or sequence length primarily enlarges shared representational capacity; the additional parameters serve task-agnostic feature crossing rather than task-specific sig-nal separation. We empirically observe that a task-agnostic unified backbone converts parameter growth to multi-task GAUC gains at a substantially lower rate than a task-aware alternative, confirming a structural mismatch between generic scaling and multi-task needs. MORE (Multi-task cO-evolving Ranking modEl) is a task-aware backbone for large-scale recommendation ranking. As contrasted in Figure 1, its core design moves multi-task modeling from the prediction stage into the backbone. It introduces Anchor Tokens as task-aware information carriers that pass through all blocks. Shared Anchors encode cross-task semantics, while Private An-chors encode task-specific priors. In each block, Anchor Tokens interact with behavior sequences and non-sequential features in a task-aware manner, and explicit task boundaries reduce cross-task semantic interference. Through stacked blocks, task information and sequence states co-evolve layer by layer, making multi-task modeling a continuous information flow inside the backbone. To meet industrial deployment requirements, MORE also reduces on-line scoring latency by about 30% through parallel inference and request aggregation. Our contributions are summarized as follows: 
+
+• We identify a structural gap in unified ranking backbones: multi-task modeling is confined to post-backbone prediction heads while the backbone itself remains task-agnostic. We analyze the resulting limitations in task-specific information flow, representation capacity, and scaling efficiency. 
+
+• We propose MORE, a task-aware unified backbone that intro-duces Anchor Tokens, including Shared Anchors for cross-task semantics and Private Anchors for per-task priors, to Seq Features Non-Seq Features           
+
+> Backbone  Task  Task1 Task2 Task3 Task1 Task2 Task3
+> Seq Features Non-Seq Features
+> Task-Blind Backbone MORE
+> Input
+> ×
+> Sequence Modeling
+> Feature Interaction
+> Shared Rep
+> Task-blind information fl ow
+> Rep1 Rep2 Rep3
+> Shared Bottleneck
+> Multi-task information fl ow
+> Sequence Modeling Feature Interaction
+> Anchor Tokens
+> Task1 Task3 Task2 Shared
+> Task-speci fi crepresentation
+
+Figure 1: Comparison of information flow: Task-blind back-bone vs MORE. 
+
+co-evolve multi-task signals with sequence and feature rep-resentations across all backbone layers, with explicit task-boundary isolation in every block. Because the architecture separates user-level sequence states from per-candidate an-chor states, it further admits request-level parallel scoring that reduces online latency by about 30% with no model modification. 
+
+• Offline experiments on large-scale industrial data show that MORE achieves positive GAUC gains across all seven tasks under comparable FLOPs budgets and converts scaling of both parameters and compute into multi-task gains more efficiently than task-agnostic alternatives. Online A/B tests on a social platform with tens of millions of monthly active users report consistent improvements spanning browsing, interaction, and deep social engagement. MORE is deployed in production. 
+
+2 Related Work 
+
+Industrial ranking models follow the DLRM paradigm [17]: classic methods including Wide & Deep [5], DeepFM [8], xDeepFM [15], and DCN/DCN-V2 [24, 25] embed sparse features, model feature interactions through cross networks or MLPs, and attach prediction heads for multi-task scoring. In this feature-centric pipeline, later work extends backbone capacity along two independent routes. Feature interaction methods, including AutoInt [20], FiBiNET [9], HiFormer [7], InterFormer [27], and more recently Wukong [29] and RankMixer [33], scale high-order crossing with industrial ev-idence for deployability and scaling-law behavior [13]. Sequence modeling methods progress from target-attention with DIN [32] and DIEN [31] through self-attentive architectures [4, 12, 23] and retrieval-based lifetime-scale approaches such as SIM [19] and TWIN [2] to end-to-end ten-thousand-level designs such as LONGER [1] and STCA [6], and generative transduction with HSTU [28], sub-stantially improving long-term interest extraction. Despite this progress, the two routes remain decoupled in production pipelines, Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones CIKM ’26, November 07–11, 2026, Rome, Italy Anchor Token Construction 
+
+MORE Block 1   
+
+> Sequential Data Non-sequential Data
+
+Task N Task 1  Task 2  …
+
+MORE Block L 
+
+MORE  Block 2 
+
+Task-Aware Sequence Reading  
+
+> SFPrivate Anchor
+
+Selective Semantic Mixing 
+
+Task Enhancing 
+
+> S
+> Shared Anchor
+> FPrivate Anchor Shared Anchor
+
+Selective  Semantic Mixing 
+
+Per-token SwiGLU                                                                             
+
+> F Token Shared Anchor Private Anchor
+> Anchor Private
+> Private Anchor
+> Anchor Share
+> Shared Anchor
+> NS Token
+> F Token
+> Split & Transpose
+> Mask & Gate Task-boundary Mask
+> Private
+> Anchor
+> F &
+> Shared
+> Anchor
+> 1.279 0.050 0.550 0.446 1.473 1.353 1.784 0.174 0.844
+> 0.060 0.437 1.011 0.053 0.398 1.300 1.090 0.441 1.179
+> 1.619 0.013 1.612 1.396 0.681 0.311 1.914 0.673 0.185
+> 0.193 1.695 1.207 1.614 1.459 1.072 1.946 0.757 1.104
+> 1.659 1.237 1.723 1.155 1.409 0.092 0.456 0.579 0.160
+> 0.466 0.202 0.556 1.271 0.730 0.740 0.419 0.534 1.873
+> 1.296 1.218 0.342 1.458 0.327 0.759 1.979 1.280 1.114
+> 1.369 1.686 1.552 0.458 0.064 0.631 0.535 0.422 1.886
+> 1.753 0.629 1.311 0.791 1.829 0.918 0.530 0.493 1.123
+> Gating
+> FFN 2*Sigmod
+> 1.279
+> 0.185
+> 0.579
+
+Task Enhancing 
+
+> Concat
+
+Per-task MLP  Private Anchor 
+
+> Private Anchor
+> Private Anchor
+> F Token
+> S Token
+
+Cross Attention 
+
+KV Encoding   
+
+> QKV
+> Next S Token
+
+Task-Aware Sequence Reading   
+
+> Shared Anchor Private Anchor
+> Shared Anchor Private Anchor
+
+Figure 2: Overview of MORE. MORE consists of Anchor Token Construction, stacked MORE Blocks, and task-specific predic-tion heads. Each MORE Block contains three modules: Task-Aware Sequence Reading, Selective Semantic Mixing, and Task Enhancing. Specifically, Task-Aware Sequence Reading strengthens sequential signal modeling, Selective Semantic Mixing enhances shared semantics and task-boundary awareness, and Task Enhancing improves the task-discriminative capacity of Private Anchors. This design enables MORE to jointly model shared and task-specific information within a unified backbone. 
+
+yielding late fusion of heterogeneous signals, and multi-task mod-eling remains confined to post-backbone prediction heads. To bridge this separation, recent unified architectures place se-quence modeling and feature interaction within a single stackable backbone. HyFormer [11] introduces Global Tokens as a semantic interface between sequential and non-sequential signals, alternat-ing cross-attention over long sequences with MLP-Mixer [22]-style token mixing for bidirectional information flow. MixFormer [10] identifies the co-scaling challenge, where dense capacity and se-quence capacity compete for the same compute budget, and unifies both within a single parameterization that exhibits better scaling behavior over FLOPs and sequence length. OneTrans [30] maps both signal types into a common token space through a unified tokenizer and progressively compresses sequence information via pyramid stacking. These designs improve accuracy and scalability, yet their backbones remain task-agnostic: task preferences over sequences and features are expressed only by prediction heads, while sequence reading and feature interaction inside the backbone lack awareness of per-task distinctions. Multi-task learning in ranking has advanced through founda-tional frameworks such as MMoE [16], which uses mixture-of-experts with task-specific gating, and PLE [21], which applies pro-gressive expert separation against negative transfer, and subsequent refinements such as AITM [26] and PEPNet [3], yet all confine task differentiation to post-backbone towers, leaving the backbone itself to produce a task-agnostic shared representation. Recent attempts to inject task signals into earlier backbone layers [14] still share interaction parameters across all tasks and leave behavior-sequence updates undifferentiated per task, so that per-task sequence read-ing and explicit cross-task isolation within the backbone remain unaddressed in unified ranking architectures. 
+
+3 Method 3.1 Problem Statement 
+
+Let U and C denote the user space and item space respectively. For a given user 𝑢 ∈ U , the behavior history consists of a sequence with multiple behavior types, and the candidate set is {𝑐 1, . . . , 𝑐 𝐶 }.Let S denote the user’s historical behavior sequence features. Non-sequential features NS comprise user profiles, candidate attributes, and context features. The system is required to output prediction scores for 𝑇 tasks, such as click, like, comment, greet, and chat. Formally, the ranking model outputs: ˆ𝑦 1, . . . , ˆ𝑦 𝑇 = 𝑓 (S, NS ; Θ). (1) The model parameters Θ are optimized by minimizing the weighted binary cross-entropy loss, where 𝜆 𝑡 is the task-specific loss weight: 
+
+L =
+
+𝑇 ∑︁ 
+
+𝑡 =1
+
+𝜆 𝑡 LBCE ( ˆ𝑦 𝑡 , 𝑦 𝑡 ). (2) 
+
+3.2 Framework Overview 
+
+As shown in Figure 2, MORE comprises an input representation layer, 𝐿 stackable MORE blocks, and 𝑇 prediction towers. Each MORE block contains three submodules that update Anchor Tokens sequentially: Task-Aware Sequence Reading extracts task-aware signals from behavior sequences via cross-attention; Selective Se-mantic Mixing enables global semantic interaction between An-chor Tokens and F, with a task-boundary mask applied to isolate task boundaries; Task Enhancing embeds discriminative informa-tion into each Private Anchor through task-specific independent branches. After stacking 𝐿 such blocks, each task tower receives the corresponding Private Anchor together with shared semantics CIKM ’26, November 07–11, 2026, Rome, Italy Yuchen Wang et al. 
+
+from Shared Anchors and non-sequential tokens for multi-task pre-diction. MORE uses request-level shared computation to maintain industrial deployment efficiency. 
+
+3.3 Input Representation 
+
+MORE organizes ranking-request signals into two token types: se-quential tokens encoding multi-behavior history, and non-sequential tokens encoding user profiles, candidate attributes, and context for each candidate, both mapped into a shared 𝑑 -dimensional space. Anchor Tokens are further derived from these inputs to carry multi-task information as explicit states through the backbone. 
+
+Task-Aware Multi-Behavior Sequence Encoding. User behavior history comprises 𝑇 types (click, interact, chat, etc.). Encoding only item-level positions without behavior-type discrimination weakens per-task structure in later layers. MORE applies Cartesian product encoding: each item’s behavior combination is represented as a length-𝑇 binary indicator mapped to a unique action combination ID, and each item–ID pair yields a distinct sequence token 
+
+s𝑛 = eitem (𝑖 𝑛 ) + eaction (cid 𝑛 ) + etime , 𝑛 = 1, . . . , 𝑁 , (3) where eitem (𝑖 𝑛 ) is the embedding of item 𝑖 𝑛 , eaction (cid 𝑛 ) is the embedding of the action combination ID, and etime is a learnable positional embedding encoding temporal order. S ∈ R𝑁 ×𝑑 separates behavior-type combinations into distinct tokens, providing fine-grained input for Task-Aware Sequence Reading and mitigating cross-task gradient conflicts at each position. 
+
+Non-Sequential Semantic Tokens. For each candidate, user pro-files, candidate attributes, and context features are embedded and grouped into a non-sequential token matrix F ∈ R𝑀 ×𝑑 . In the back-bone, F provides contextual semantics for Anchor Tokens during Selective Semantic Mixing and injects discriminative information into Private Anchors during Task Enhancing. 
+
+Anchor Token Construction. MORE introduces Anchor Tokens as cross-module carriers of multi-task information through all back-bone layers. They are initialized by concatenating a mean-pooled behavior summary from S with flattened non-sequential semantics from F, then projecting and splitting via an MLP: 
+
+h = Concat  MeanPool (S), Flatten (F),
+
+A1, . . . , A𝐾 +𝑇 = Split  MLP (h). (4) The first 𝐾 outputs form Shared Anchors A𝑠 ∈ R𝐾 ×𝑑 for cross-task semantics; the remaining 𝑇 form Private Anchors A𝑝 ∈ R𝑇 ×𝑑 ,one per task. A learnable task prior embedding 𝝅 𝑡 ∈ R𝑑 is added to strengthen task discrimination: 
+
+A(𝑡 ) 
+
+> 𝑝
+
+= A(𝑡 ) 
+
+> 𝑝
+
++ 𝝅 𝑡 , 𝑡 = 1, . . . ,𝑇 . (5) 
+
+3.4 MORE Block 
+
+3.4.1 Task-Aware Sequence Reading. The same behavior history often carries task-dependent discriminative signals. Task-Aware Sequence Reading lets Anchor Tokens read the shared behavior se-quence at different levels, with Shared Anchors reading task-shared general information and Private Anchors reading task-relevant signals. Given the behavior sequence S ∈ R𝑁 ×𝑑 and Anchor Tokens 
+
+A = [A𝑠 ; A𝑝 ], each block updates the shared sequence and forms the current layer’s cross-attention key-value states: ˜S = SwiGLU (S), K = ˜SW 𝐾 , V = ˜SW 𝑉 . (6) Here W𝐾 , W𝑉 ∈ R𝑑 ×𝑑 are key and value projection matrices, and 
+
+K, V ∈ R𝑁 ×𝑑 denote the resulting sequence memory. The updated sequence ˜ S is forwarded to the next layer, so se-quence representations evolve with block depth. To provide Anchor Tokens with cross-block sequence memory, MORE maintains a se-quence register 𝜼 ∈ R𝑑 , initialized to zero. At the end of each block, 𝜼 accumulates a compressed summary of the current-layer sequence: 
+
+𝜼 ← LN  𝜼 + MLP (Pool ( ˜S)) . (7) Anchor Tokens then query the shared sequence memory. After cross-attention, each Shared Anchor and each Private Anchor is augmented by the register through its own independent SwiGLU gate, so that every position interprets the shared sequence summary differently: ˆA(𝑘 ) 
+
+> 𝑠
+
+= CrossAttn (A(𝑘 ) 
+
+> 𝑠
+
+, K, V) + SwiGLU 𝑘 (𝜼 ), 𝑘 = 1, . . . , 𝐾 . (8) ˆA(𝑡 ) 
+
+> 𝑝
+
+= CrossAttn (𝑡 ) 
+
+> 𝑝
+
+(A(𝑡 ) 
+
+> 𝑝
+
+, K, V) + SwiGLU 𝑡 (𝜼 ), 𝑡 = 1, . . . ,𝑇 . (9) Here SwiGLU 𝑘 and SwiGLU 𝑡 are per-anchor and per-task gated projections respectively. The shared register captures global se-quence evolution across blocks, while independent gating allows each anchor to selectively extract the signals most relevant to its role. 
+
+3.4.2 Selective Semantic Mixing. After sequence reading, Anchor Tokens have incorporated sequence information, but their interac-tion with non-sequential tokens F has not yet been established. If all tokens are fused without differentiation during mixing, task-specific semantics of different Private Anchors will dilute one another. In-spired by RankMixer [33], Selective Semantic Mixing applies a lightweight MLP-Mixer-style token-mixing operation to enrich sequence-aware anchors with non-sequential semantics while pre-serving task boundaries. The sequence-reading output and non-sequential tokens F are concatenated into a unified token matrix 
+
+G = (F; ˆ A𝑠 ; ˆ A(1) 
+
+> 𝑝
+
+, . . . , ˆA(𝑇 ) 
+
+> 𝑝
+
+) ∈ R𝐻 ×𝑑 , (10) where 𝐻 = 𝑀 + 𝐾 + 𝑇 and 𝑑 ℎ = 𝑑 /𝐻 . The embedding dimension of G is split into 𝐻 heads of size 𝑑 ℎ , and the head and token axes are transposed, yielding a three-dimensional tensor ˜ G ∈ R𝐻 ×𝐻 ×𝑑 ℎ
+
+whose axes are (head, token, subspace). The 𝑖 -th head slice ˜ g𝑖 =
+
+˜G𝑖, :,: ∈ R𝐻 ×𝑑 ℎ collects the representations of all 𝐻 tokens in the 𝑖 -th subspace. To adaptively calibrate the importance of each channel, each slice passes through an MLP gate to produce per-token scores: 
+
+𝑚 𝑖 = MLP 𝑖 ( ˜g𝑖 ) ∈ R𝐻 , Gate = (𝑚 1, . . . , 𝑚 𝐻 ) ∈ R𝐻 ×𝐻 . (11) To ensure that all Private Anchors are strictly invisible to each other throughout the entire iteration process, MORE constructs a task-boundary mask M ∈ { 0, 1}𝐻 ×𝐻 . As shown in Figure 2: F and Shared Anchors are visible to all tokens, while each Private Anchor is only visible to itself. For each head 𝑖 , the gate vector 𝑚 𝑖 and the 
+
+𝑖 -th row of the mask M𝑖, : are multiplied element-wise to form a joint weight ∈ R𝐻 , which is broadcast along 𝑑 ℎ and applied to the head Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+slice; all gated slices are then transposed back and concatenated across heads to recover the token layout: ˆg𝑖 = ˜g𝑖 ⊙ ( 𝑚 𝑖 ⊙ M𝑖, :) ∈ R𝐻 ×𝑑 ℎ , 𝑖 = 1, . . . , 𝐻, 
+
+ˆG = Reshape  ˆg1, . . . , ˆg𝐻 
+
+ ∈ R𝐻 ×𝑑 , (12) where Reshape concatenates all head slices along the embedding dimension to recover R𝐻 ×𝑑 .Global semantic fusion is then performed through two per-token FFN layers and residual connections: 
+
+Gmid = Norm  PFFN 1 ( ˆG) + G,
+
+Gout = Norm  PFFN 2 (Gmid ) + Gmid 
+
+. (13) Together with the task-boundary mask, PFFN allows global se-mantic flow without crossing task boundaries. The output Gout is then split along the token axis, reversing Eq. (10): 
+
+(F, A𝑠 , ¯A(1) 
+
+> 𝑝
+
+, . . . , ¯A(𝑇 ) 
+
+> 𝑝
+
+) = Split (Gout ). (14) 
+
+3.4.3 Task Enhancing. The mixing stage applies the same global mixing to all tokens. As task-specific anchors for downstream pre-diction, Private Anchors require richer task-specific semantics. In-spired by FiLM [18], Task Enhancing injects high-dimensional dis-criminative information from F into each Private Anchor through independent per-task enhancement branches, expanding the se-mantic capacity of task-specific representations. For the 𝑡 -th task, an independent MLP aggregates conditioning parameters from non-sequential features: 
+
+(𝝀 𝑡 , 𝜸 𝑡 ) = Split  MLP 𝑡 (Concat (F)) , 𝝀 𝑡 , 𝜸 𝑡 ∈ R𝑑 . (15) The Private Anchor is then updated via FiLM-style affine modu-lation with a residual connection: 
+
+A(𝑡 ) 
+
+> 𝑝
+
+= Norm  ( ¯A(𝑡 ) 
+
+> 𝑝
+
+⊙ 𝝀 𝑡 + 𝜸 𝑡 ) + ¯A(𝑡 )
+
+> 𝑝
+
+. (16) 
+
+3.4.4 Block Stacking. 𝐿 MORE blocks are stacked sequentially, and the Reading, Mixing and Enhancing submodules within each block recurrently update hidden states. The complete recurrence formu-lation at layer 𝑙 is: 
+
+( ˆA(𝑙 ) , S(𝑙 ) ) = Reading  A(𝑙 −1) , S(𝑙 −1) ,
+
+(F(𝑙 ) , A(𝑙 ) 
+
+> 𝑠
+
+, ¯A(𝑙 ) 
+
+> 𝑝
+
+) = Mixing  F(𝑙 −1) , ˆA(𝑙 ) ,
+
+A(𝑙 ) 
+
+> 𝑝
+
+= Enhancing  F(𝑙 ) , ¯A(𝑙 )
+
+> 𝑝
+
+.
+
+(17) After passing through 𝐿 MORE blocks, F and A𝑠 act as cross-task global representations, while A(𝑡 ) 
+
+> 𝑝
+
+encodes task-specific semantic features. Each task tower receives the corresponding Private Anchor together with shared semantics from F and A𝑠 , retaining cross-task context while preserving task-specific prediction. 
+
+3.5 Request-Level Training and Inference 
+
+In industrial ranking, a single request typically involves thousands of candidates. Under per-candidate deployment, each candidate is forwarded independently, causing user-side sequence encoding and shared feature computation to repeat 𝐶 times. Inspired by the request-level organization in HSTU [28], MORE adopts request-level shared computation to unify sample organi-zation across training and inference. The 𝐶 candidates under one request are aggregated into a single sample: the user-side sequence 
+
+S is encoded once and broadcast, while per-candidate F and Anchor Tokens are organized along the item dimension. At inference time, candidates are split into mini-batches, and within each mini-batch user-side computation is shared across all candidates. This organization aligns with the internal state structure of MORE Blocks. S is a user-level shared state that evolves through layer-wise transformations without depending on candidate in-formation (Eq. 6), while per-candidate differences are expressed through F and Anchor Tokens and do not participate in the se-quence forward computation. Request-level shared computation therefore requires no architectural adaptation of the backbone, re-ducing online scoring latency by about 30%. 
+
+4 Experiment 4.1 Experimental Setup 
+
+4.1.1 Dataset. The offline experiments are conducted in Nearby Feed, a social multimedia feed on Momo where users discover posts from nearby strangers and connect with those who interest them. The dataset is derived from online recommendation logs spanning 90 consecutive days for training and the immediately following day for evaluation. Input features include sequential and non-sequential features. Sequential features record the user’s recent multi-type behavior history. Non-sequential features include user profiles, candidate content attributes, and scenario context. 
+
+4.1.2 Tasks and Metrics. The model jointly optimizes thirteen tasks covering browsing, interaction, and social engagement, including click, like, comment, follow, greet, reply, avatar-click, and deep chat (conversations reaching at least five rounds), among others. We use GAUC (Group AUC) as the primary offline metric, which computes AUC per user and averages across users to reflect individual-level ranking quality. 
+
+4.1.3 Baselines. Our baselines span two paradigms. Two-stage baselines separate sequence encoding from feature interaction: the reference uses Transformer + RankMixer [33]; variants swap the feature-interaction module for Wukong [29] or DCN-v2 [25], and the sequence encoder for HSTU [28]. STCA [6] is listed separately as its architecture integrates sequence encoding and RankMixer-style feature interaction into one pipeline. Unified-backbone base-lines include MixFormer [10], HyFormer [11], and OneTrans [30]; their architectures are described in Section 2. All methods are reim-plemented in the same framework with identical training data, schedule, evaluation protocol, and hyperparameter budget. 
+
+4.1.4 Implementation Details. MORE uses 𝐿 block = 2 MORE Blocks by default, hidden dimension 𝑑 = 256, 𝑀 = 15 non-sequential tokens in F, and 17 Anchor Tokens, including 8 Shared Anchors and 9 Private Anchors corresponding to the core tasks. The model is optimized with Adam using a batch size of 1024 and trained on a multi-GPU data-parallel cluster. Section 4.4 scales layers and hidden dimension, expanding parameters from about 0.1B to about 0.9B and forward FLOPs from about 1.4G to about 11G per example, to study MORE’s scaling behavior. 
+
+4.2 Overall Performance 
+
+The main results for MORE and the baselines are summarized in Table 1. We take a closer look at each model group. Separately CIKM ’26, November 07–11, 2026, Rome, Italy Yuchen Wang et al. 
+
+Table 1: Offline GAUC comparison on seven tasks. Transformer+RankMixer reports absolute GAUC, and other rows report relative change. Params denote dense parameters; FLOPs denote forward-pass compute per example.                                                                                                     
+
+> Method Category Click Like Comment Greet Reply Avatar-click Deep Chat Params FLOPs/Ex.
+> Transformer+RankMixer Two-Stage 0.7863 0.6892 0.6979 0.7279 0.8388 0.7073 0.8444 77.85M 1.92G Transformer+Wukong Two-Stage +0.03% -0.27% -0.65% -0.53% -0.15% -0.36% -0.46% 79.01M 1.90G HSTU+RankMixer Two-Stage +0.09% -0.23% -0.57% -0.34% -0.10% -0.25% -0.24% 77.19M 1.76G Transformer+DCN-v2 Two-Stage +0.12% +0.53% -0.04% -0.02% -0.16% +0.17% -0.47% 111.78M 1.68G STCA Two-Stage +0.13% +0.66% +0.38% -0.01% +0.02% +0.06% -0.07% 88.21M 2.36G MixFormer Unified +0.29% +1.13% +0.89% +1.25% +0.49% +0.70% +0.15% 98.68M 4.65G HyFormer Unified +0.43% +0.89% +1.09% +1.32% +0.42% +0.82% +0.08% 153M 2.16G OneTrans Unified +0.38% +1.15% +0.80% +1.44% +0.58% +0.86% +0.11% 108.65M 1.73G MORE Task-Aware Unified +0.44% +1.47% +1.26% +1.58% +0.62% +1.02% +0.33% 132M 1.85G
+
+swapping the feature-interaction or sequence-modeling component yields limited and unstable gains for multi-task ranking: replacing RankMixer with Wukong or DCN-v2 degrades most tasks—DCN-v2 hurts Deep Chat by -0.47%—confirming RankMixer’s advantage as a feature-interaction backbone, while replacing Transformer with HSTU for sequence encoding benefits only Click and degrades all other tasks. STCA integrates sequence encoding and feature interaction into a single pipeline, improving interaction-level tasks (Like +0.66%, Comment +0.38%) over the fully separated baselines, but its backbone remains task-agnostic and deeper social tasks such as Greet and Deep Chat show negligible or negative change. Unified sequence-feature backbones further alleviate this limitation by placing sequential and non-sequential features in one backbone: MixFormer, HyFormer, and OneTrans all improve on every task, with OneTrans reaching +1.44% on Greet and HyFormer +1.09% on Comment. However, the improvement pattern across tasks is similar for the three methods, consistent with their task-agnostic backbones that differentiate tasks only at prediction heads. As a result, these methods reduce sequence-feature separation but do not provide differentiated task-level information flow during sequence reading and semantic interaction. MORE further moves multi-task information flow into the back-bone. It leads all tasks in Table 1 (e.g., Greet +1.58%, Like +1.47%, Deep Chat +0.33%), with particularly strong incremental gains on in-teraction and social tasks where behavior-sequence signals require task-specific reading. Shared Anchors read cross-task evidence, Private Anchors use task-conditioned queries for task-specific sig-nals, and semantic mixing preserves task boundaries through the task-boundary mask. All tasks benefit, confirming that task-aware anchors and task boundaries improve multi-task ranking beyond what a task-agnostic shared representation provides. MORE also achieves a favorable accuracy-efficiency trade-off. Despite introducing task-aware capacity that increases parameters to 132M (still below HyFormer’s 153M), its per-example FLOPs (1.85G) are lower than the reference baseline (1.92G) and substan-tially lower than STCA (2.36G), HyFormer (2.16G), and MixFormer (4.65G). Compared with OneTrans, which has lower FLOPs (1.73G), MORE adds only 0.12G per example through per-task query pro-jections and task-boundary isolation while outperforming it on all tasks. This efficiency comes from injecting multi-task capacity through a compact set of Anchor Tokens rather than duplicating the backbone or substantially increasing token mixing. 
+
+Table 2: Ablation study on MORE components. Interaction denotes the average GAUC of like, comment, and greet. Av-erage is the arithmetic mean of the Click, Interaction, and Chat columns.                                 
+
+> Configuration Click Interaction Chat Average Ablation of Token Process
+> w/o Cartesian Encoding -0.06% -0.10% -0.08% -0.08% w/o Anchor From Context -0.08% -0.04% -0.17% -0.10%
+> Ablation of Seq Reading
+> w/o Private Seq Reading -0.15% -0.19% -0.12% -0.15% w/o Seq Register -0.02% -0.01% -0.13% -0.05%
+> Ablation of Mixing and Enhancing
+> w/o Boundary Gating Mask -0.16% -0.34% -0.11% -0.21% w/o Task Enhancing -0.11% -0.13% -0.17% -0.14%
+> Ablation of all Components
+> BaseArch -0.23% -0.38% -0.39% -0.33%
+
+4.3 Ablation Study 
+
+Table 2 shows ablation results for core components of MORE. Com-ponents are removed by module group and relative changes in GAUC on click, interaction (average of like, comment, and greet), deep chat, and their average are reported. The two Token Process components enable the model to acquire multi-task awareness from the initial stage, and their removal leads to consistent GAUC drops of 0.04%–0.10% across reported tasks. Private Seq Reading leverages per-task independent parameters to boost behavioral sequence perception for each private anchor. Seq Register establishes sequence registers, maintaining low-level se-quence details. Both components enhance the multi-task capability during the reading stage. Boundary Gating Mask isolates informa-tion flow among different Private Anchors in Eq. (12), preventing semantic contamination across tasks while preserving global se-mantic interaction. Task Enhancing injects discriminative informa-tion into each Private Anchor through lightweight independent per-task branches, contributing 0.11%–0.17% GAUC improvement across tasks. Among individual components, Boundary Gating Mask causes the largest average degradation when removed, with a 0.34% Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Figure 3: Scaling comparison on average GAUC improvement relative to the online production model. (a) GAUC vs. param-eters; (b) GAUC vs. per-example forward FLOPs. 
+
+drop on Interaction. Without the mask, gradient signals from high-frequency tasks dominate shared mixing weights, diluting the repre-sentations that interaction and social tasks rely on. Task-boundary control in the mixing stage thus proves more critical than per-task capacity in either the reading or enhancing stage alone. When all six components are removed, the model degenerates to BaseArch, a task-agnostic unified backbone that retains only multiple prediction heads for multi-task scoring, and average GAUC decreases by 0.33%. This result shows the cumulative contribution of the components to final performance. 
+
+4.4 Scaling Analysis 
+
+To examine whether the task-aware mechanism of MORE remains effective under different model capacities, the scaling study jointly adjusts the number of MORE Blocks and the hidden dimension, covering model sizes from about 0.1B to about 0.9B parameters. The task-agnostic baseline is a unified backbone that alternates sequence cross-attention with token mixing following the HyFormer [11] design, scaled to the same parameter ranges but without task-aware components. Each configuration is trained independently on the same data and evaluated under the same protocol. Figure 3 reports the average GAUC improvement across all tasks relative to the online production model, plotted against both parameter count and per-example forward FLOPs. The fitted trends show that MORE scales more effectively across both parameters and compute, remaining above the task-agnostic unified backbone at comparable budgets. The task-agnostic base-line also improves with scale, but its slower growth suggests that additional capacity and compute are converted less efficiently into multi-task GAUC gains. The consistent advantage across all tested scales confirms that the task-aware capacity introduced by Anchor Tokens is productively leveraged at every model size, converting additional parameters and compute into multi-task gains more effi-ciently than the task-agnostic design. At the smallest configuration both approaches yield comparable GAUC; as capacity grows the gap widens, confirming that task-agnostic scaling alone cannot substitute for per-task signal separation. 
+
+4.5 Online A/B Test 
+
+MORE is evaluated in the Nearby Feed recommendation scenario of Momo against the production DLRM-style ranking model. A 
+
+Table 3: Online A/B test results on Momo Nearby Feed over two weeks. MORE replaces the production ranking model.        
+
+> Metric Relative Lift
+> Usage Duration +3.0% Click +2.8% Like +2.0% Comment +3.6% Greet +2.5% Deep Chat +2.0%
+
+two-week online A/B experiment is conducted with balanced traffic splitting; metrics remain stable throughout the experiment with no degradation trend. Table 3 reports relative improvements on six primary online evaluation metrics—usage duration, click, like, comment, greet, and deep chat—spanning session-level engage-ment, shallow interaction, and deep social connection. All reported improvements are statistically significant (p<0.05). MORE achieves positive improvements across all six metrics. Usage duration increases by 3.0%, reflecting overall improvement in user engagement within the social discovery scenario. Click (+2.8%), like (+2.0%), and comment (+3.6%) indicate that the model surfaces more relevant content, improving interaction quality. Greet (+2.5%) and deep chat (+2.0%) represent stronger social matching— the model surfaces people that users find more appealing and are more likely to sustain conversations with, demonstrating improved multi-task ranking across content interaction and social connection. With the request-level shared computation strategy described in Section 3.5, MORE reduces P99 scoring latency by approximately 30% compared to its per-candidate serving baseline, satisfying the latency constraints of high-concurrency recommendation serving. The reduction stems from sharing user-side sequence computation across candidates within each mini-batch, effectively amortizing the per-candidate cost of the unified backbone. MORE is deployed in production and serves online traffic in this scenario. 
+
+5 Conclusion 
+
+Recent unified backbones merge sequence modeling with feature interaction, yet multi-task modeling remains confined to post-backbone towers. MORE embeds multi-task information flow into the backbone through Shared and Private Anchor Tokens that per-sist across all blocks. Each block performs task-aware sequence reading, selective semantic mixing under a task-boundary mask, and per-task enhancement, so task signals co-evolve with backbone states at every layer. Offline, MORE leads all seven tasks against both two-stage and unified baselines. Scaling from 0.1B to 0.9B parameters, MORE converts additional capacity into multi-task GAUC gains more efficiently than task-agnostic alternatives. Online A/B tests yield consistent improvements from browsing to deep social engagement; with request-level shared computation, P99 latency drops about 30%. MORE is deployed in production on Momo. The principle of task-aware information flow inside a stackable backbone is not inherently scenario-specific; future work will test generalization across diverse recommendation settings, larger pa-rameter scales, and dynamic task configurations. CIKM ’26, November 07–11, 2026, Rome, Italy Yuchen Wang et al. 
+
+References 
+
+[1] Zheng Chai, Qin Ren, Xijun Xiao, Huizhi Yang, Bo Han, Sijun Zhang, Di Chen, Hui Lu, Wenlin Zhao, Lele Yu, Xionghang Xie, Shiru Ren, Xiang Sun, Yaocheng Tan, Peng Xu, Yuchao Zheng, and Di Wu. 2025. LONGER: Scaling Up Long Sequence Modeling in Industrial Recommenders. In Proceedings of the 19th ACM Conference on Recommender Systems . 247–256. doi:10.1145/3705328.3748065 [2] Jianxin Chang, Chenbin Zhang, Zhiyi Fu, Xiaoxue Zang, Lin Guan, Jing Lu, Yiqun Hui, Dewei Leng, Yanan Niu, Yang Song, and Kun Gai. 2023. TWIN: TWo-stage Interest Network for Lifelong User Behavior Modeling in CTR Prediction at Kuaishou. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 3785–3794. doi:10.1145/3580305.3599922 [3] Jianxin Chang, Chenbin Zhang, Yiqun Hui, Dewei Leng, Yanan Niu, Yang Song, and Kun Gai. 2023. PEPNet: Parameter and Embedding Personalized Network for Infusing with Personalized Prior Information. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 3795–3804. doi:10.1145/3580305.3599759 [4] Qiwei Chen, Huan Zhao, Wei Li, Pipei Huang, and Wenwu Ou. 2019. Behavior Se-quence Transformer for E-commerce Recommendation in Alibaba. In Proceedings of the 1st International Workshop on Deep Learning Practice for High-Dimensional Sparse Data . doi:10.1145/3326937.3341261 [5] Heng-Tze Cheng et al. 2016. Wide & Deep Learning for Recommender Systems. In Proceedings of the 1st Workshop on Deep Learning for Recommender Systems .7–10. doi:10.1145/2988450.2988454 [6] Lin Guan, Jia-Qi Yang, Zhishan Zhao, Beichuan Zhang, Bo Sun, Xuanyuan Luo, Jinan Ni, Xiaowen Li, Yuhang Qi, Zhifang Fan, Hangyu Wang, Qiwei Chen, Yi Cheng, Feng Zhang, and Xiao Yang. 2025. Make It Long, Keep It Fast: End-to-End 10k-Sequence Modeling at Billion Scale on Douyin. arXiv:2511.06077 [cs.LG] [7] Huan Gui, Ruoxi Wang, Ke Yin, Long Jin, Maciej Kula, Taibai Xu, Lichan Hong, and Ed H. Chi. 2023. HiFormer: Heterogeneous Feature Interactions Learning with Transformers for Recommender Systems. arXiv:2311.05884 [cs.IR] [8] Huifeng Guo, Ruiming Tang, Yunming Ye, Zhenguo Li, and Xiuqiang He. 2017. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction. In Proceedings of the 26th International Joint Conference on Artificial Intelligence .1725–1731. [9] Tongwen Huang, Zhaozi Zhang, and Junlin Zhang. 2019. FiBiNET: Combining Feature Importance and Bilinear Feature Interaction for Click-Through Rate Prediction. In Proceedings of the 13th ACM Conference on Recommender Systems .169–177. doi:10.1145/3298689.3347033 [10] Xu Huang, Hao Zhang, Zhifang Fan, Yunwen Huang, Zhuoxing Wei, Zheng Chai, Jinan Ni, Yuchao Zheng, and Qiwei Chen. 2026. MixFormer: Co-Scaling Up Dense and Sequence in Industrial Recommenders. arXiv:2602.14110 [cs.IR] [11] Yunwen Huang, Shiyong Hong, Xijun Xiao, Jinqiu Jin, Xuanyuan Luo, Zhe Wang, Zheng Chai, Shikang Wu, Yuchao Zheng, and Jingjian Lin. 2026. HyFormer: Revis-iting the Roles of Sequence Modeling and Feature Interaction in CTR Prediction. arXiv:2601.12681 [cs.IR] [12] Wang-Cheng Kang and Julian McAuley. 2018. Self-Attentive Sequential Recom-mendation. In Proceedings of the IEEE International Conference on Data Mining .197–206. [13] Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei. 2020. Scaling Laws for Neural Language Models. arXiv:2001.08361 [cs.LG] [14] Kaiyuan Li, Dongdong Mao, Yongxiang Tang, Yanhua Cheng, Yanxiang Zeng, Chao Wang, Xialong Liu, and Peng Jiang. 2025. INFNet: A Task-aware Information Flow Network for Large-Scale Recommendation Systems. arXiv:2508.11565 [cs.IR] [15] Jianxin Lian, Xiaohuan Zhou, Fuzheng Zhang, Zhongxia Chen, Xing Xie, and Guangzhong Sun. 2018. xDeepFM: Combining Explicit and Implicit Feature Interactions for Recommender Systems. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining . 1754–1763. doi:10.1145/3219819.3220023 [16] Jiaqi Ma, Zhe Zhao, Xinyang Yi, Jilin Chen, Lichan Hong, and Ed H. Chi. 2018. Modeling Task Relationships in Multi-Task Learning with Multi-Gate Mixture-of-Experts. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining . 1930–1939. doi:10.1145/3219819.3220007 [17] Maxim Naumov et al. 2019. Deep Learning Recommendation Model for Person-alization and Recommendation Systems. arXiv:1906.00091 [cs.IR] [18] Ethan Perez, Florian Strub, Harm de Vries, Vincent Dumoulin, and Aaron Courville. 2018. FiLM: Visual Reasoning with a General Conditioning Layer. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 32. [19] Qi Pi, Guorui Ge, Zhoujian Zhang, Xiaoqiang Zhu, Han Zhu, Kun Gai, Ren Zhang, and Xiao Han. 2020. Search-based User Interest Modeling with Lifelong Sequential Behavior Data for Click-Through Rate Prediction. In Proceedings of the 29th ACM International Conference on Information and Knowledge Management .2685–2692. doi:10.1145/3340531.3344273 [20] Weiping Song, Chence Shi, Zhiping Xiao, Zhijian Duan, Yong Xu, Ming Zhang, and Jian Tang. 2019. AutoInt: Automatic Feature Interaction Learning via Self-Attentive Neural Networks. In Proceedings of the 28th ACM International Confer-ence on Information and Knowledge Management . 1165–1174. doi:10.1145/3357384. 3357906 [21] Hongyu Tang, Junning Liu, Ming Zhao, and Xudong Gong. 2020. Progressive Lay-ered Extraction (PLE): A Novel Multi-Task Learning (MTL) Model for Personalized Recommendations. In Proceedings of the 14th ACM Conference on Recommender Systems . 269–278. doi:10.1145/3383313.3412236 [22] Ilya O. Tolstikhin, Neil Houlsby, Alexander Kolesnikov, Lucas Beyer, Xiaohua Zhai, Thomas Unterthiner, Jessica Yung, Andreas Steiner, Daniel Keysers, Jakob Uszkoreit, Mario Lucic, and Alexey Dosovitskiy. 2021. MLP-Mixer: An All-MLP Architecture for Vision. In Advances in Neural Information Processing Systems ,Vol. 34. 24261–24272. [23] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is All You Need. In Advances in Neural Information Processing Systems , Vol. 30. [24] Ruoxi Wang, Bin Fu, Gang Fu, and Mingliang Wang. 2017. Deep & Cross Network for Ad Click Predictions. In Proceedings of the ADKDD’17 . 12. doi:10.1145/3124749. 3124754 [25] Ruoxi Wang, Rakesh Shivanna, Derek Cheng, Sagar Jain, Dandelion Lin, Lichan Hong, and Ed Chi. 2021. DCN V2: Improved Deep & Cross Network and Practical Lessons for Web-scale Learning to Rank Systems. In Proceedings of the Web Conference 2021 . 1785–1797. doi:10.1145/3442381.3450078 [26] Dongbo Xi, Zhen Chen, Peng Yan, Yinger Zhang, Yongchun Zhu, Fuzhen Zhuang, and Yu Chen. 2021. Modeling the Sequential Dependence among Audience Multi-step Conversions with Multi-task Learning in Targeted Display Advertising. In Proceedings of the 27th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining . 3745–3755. doi:10.1145/3447548.3467071 [27] Zhichen Zeng, Xiaolong Liu, Mengyue Hang, Xiaoyi Liu, Qinghai Zhou, Chaofei Yang, Yiqun Liu, Yichen Ruan, Laming Chen, Yuxin Chen, et al. 2024. InterFormer: Towards Effective Heterogeneous Interaction Learning for Click-Through Rate Prediction. arXiv:2411.09852 [cs.IR] [28] Jiahui Zhai, Jiayu Liao, Liang Zhao, Cheng Lin, Xinxing Wang, Zhen Xu, Kun Zhang, Min-Jae Kim, Chengxing Yu, Weirui Zhao, Priya Jasin, Yinfei Hu, Alan Shapiro, Weijie Yu, Minmin Zheng, Yiqiao Guan, James Li, Xiaotong Ju, Yuyan Gong, Jing Liu, Shuang Zhang, Zhao Ma, Yuxin Zhao, Lei Pao, Hui Li Liang, Susheel Kharbanda, Pratik Jain, Hongyi Jiang, Aihan Elibol, Lucas Klobuchar, Kent Langman, Mehmet fethi Erensoy, Muralidhar Shiraishi, Da-Cheng Lee, Ellie Deng, Jihoon Cho, Nam Yu, Yuzheng Liu, Zhengyu Zhao, Sumit Bhatnagar, Xiaolong Liu, Yuekai Noghabaei, Karthik Parthasarathy, Otto Lang, Aditya Krishnan, Han Nguyen, Wei Chen, Chuan Xu, Yong Jia, and Lijuan Wang. 2024. Actions Speak Louder than Words: Trillion-Parameter Sequential Transducers for Generative Recommendations. In Proceedings of the 41st International Conference on Machine Learning (Proceedings of Machine Learning Research, Vol. 235) .[29] Qi Zhang, Kush Bhatia, Aviral Gupta, Apurv Yadav, Adnan Li, Zhiyi Zhang, Youlong Bao, Borui Chen, Nikita Trushkin, Mohammadhossein Bateni, Peiran Han, Rathin Singh, Tong Bui, Keigo Kojima, Nikolay Zhelev, James Li, Jiayi He, Iesh Sharan, Srinivas Gopalakrishnan, Bing Yang, Paul Covington, and Ed H. Chi. 2024. Wukong: Towards a Scaling Law for Large-Scale Recommendation. In 
+
+Proceedings of the 41st International Conference on Machine Learning (Proceedings of Machine Learning Research, Vol. 235) .[30] Zhaoqi Zhang, Haolei Pei, Jun Guo, Tianyu Wang, Yufei Feng, Hui Sun, Shaowei Liu, and Aixin Sun. 2025. OneTrans: Unified Feature Interaction and Sequence Modeling with One Transformer in Industrial Recommender. arXiv:2510.26104 [cs.IR] [31] Guorui Zhou et al. 2019. Deep Interest Evolution Network for Click-Through Rate Prediction. In Proceedings of the AAAI Conference on Artificial Intelligence ,Vol. 33. 5941–5948. [32] Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yang Tang, Hui Jin, Kun Li, and Kun Gai. 2018. Deep Interest Network for Click-Through Rate Prediction. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining . 1059–1068. doi:10.1145/ 3219819.3219823 [33] Jie Zhu, Zhifang Fan, Xiaoxie Zhu, Yuchen Jiang, Hangyu Wang, Xintian Han, Haoran Ding, Xinmin Wang, Wenlin Zhao, Zhen Gong, Huizhi Yang, Zheng Chai, Zhe Chen, Yuchao Zheng, Qiwei Chen, Feng Zhang, Xun Zhou, Peng Xu, Xiao Yang, Di Wu, and Zuotao Liu. 2025. RankMixer: Scaling Up Ranking Models in Industrial Recommenders. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management . doi:10.1145/3746252.3761507

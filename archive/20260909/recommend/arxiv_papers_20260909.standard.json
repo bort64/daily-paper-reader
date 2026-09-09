@@ -1,0 +1,587 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-09T21:21:24.642163+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 8,
+    "deep_cap": 6,
+    "deep_selected": 6,
+    "quick_candidates": 8,
+    "quick_skim_target": 11,
+    "quick_selected": 8
+  },
+  "deep_dive": [
+    {
+      "id": "2609.08310v1",
+      "source": "arxiv",
+      "title": "Exploring Bottom-Up Clustering for Creating Semantic IDs",
+      "abstract": "The success of generative retrieval has largely been attributed to the use of Semantic IDs, which improve over arbitrary item-level identifiers such as hashes by capturing the semantics of items. The main challenges faced when constructing Semantic IDs, however, is in mapping each identifier to a unique product and capturing information valuable to downstream tasks. Past works have appended additional codewords to de-duplicate item identifiers and utilized residual quantization to create hierarchical clusters. In this work, we present an algorithm for generating Semantic IDs that ensure the identifiers are both unique and preserve the structure of the original embedding. Key to our work is the use of bottom-up clustering to preserve local structure in the embedding space, improving the clustering quality of the resulting Semantic IDs and their utility for downstream generative retrieval.",
+      "authors": [
+        "Leah Woldemariam",
+        "Sudhanshu Garg",
+        "Taha Belkhouja",
+        "Charles Kim-Yip",
+        "Ali Sahami"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-09-08T06:32:57+00:00",
+      "link": "https://arxiv.org/pdf/2609.08310v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "constructing unique structure-preserving semantic IDs for generative document/item retrieval",
+      "llm_evidence_cn": "为生成式检索构造唯一且保持结构语义ID",
+      "llm_evidence": "为生成式检索构造唯一且保持结构语义ID",
+      "canonical_evidence": "为生成式检索构造唯一且保持结构语义ID",
+      "llm_tldr_en": "A new bottom-up clustering algorithm constructs unique Semantic IDs that preserve local embedding structure, addressing identifier construction for generative retrieval models that directly emit document or item IDs.",
+      "llm_tldr_cn": "生成式检索依赖语义ID作为文档或商品的生成目标，但理想ID需要同时满足唯一性和语义结构保持。现有方法常通过附加码字去重或使用残余量化建层次簇，仍有结构损失。本文提出基于自底向上聚类的语义ID生成算法，在保持原始嵌入局部结构的同时保证标识唯一，为后续生成模型直接用ID检索提供更稳健基础。",
+      "llm_tldr": "生成式检索依赖语义ID作为文档或商品的生成目标，但理想ID需要同时满足唯一性和语义结构保持。现有方法常通过附加码字去重或使用残余量化建层次簇，仍有结构损失。本文提出基于自底向上聚类的语义ID生成算法，在保持原始嵌入局部结构的同时保证标识唯一，为后续生成模型直接用ID检索提供更稳健基础。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative retrieval models that directly generate document identifiers for web search",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.07143v1",
+      "source": "arxiv",
+      "title": "EAGER: Enrich-and-Align Generative Query Recommendation from Clicked Items in E-commerce Search",
+      "abstract": "E-commerce platforms increasingly display clickable query suggestions alongside items in the user feed, enabling users to refine or expand their intent without manually reformulating queries. Existing approaches either mine suggestions from historical logs -- limited to past behavior and blind to long-tail, personalized intents -- or rely on off-the-shelf LLMs whose lack of platform-specific knowledge yields fluent but generic queries disconnected from real click behavior. We propose EAGER (Enrich-and-AliGn gEnerative Query Recommendation), a two-stage framework for generating query suggestions from clicked items. In the enrichment stage, supervised fine-tuning (SFT) follows a four-stage curriculum that scales information richness (from item-only to user-conditioned) and reasoning depth (from direct to chain-of-thought). Each stage incorporates rationale augmentation, diversity regularization, and self-distillation. In the alignment stage, we post-train via GRPO with a hybrid reward of multiple rule-based business signals and a preference-aware click reward. Extensive offline experiments and online A/B test demonstrate the effectiveness of EAGER, which has been deployed in production at a major e-commerce platform.",
+      "authors": [
+        "Shuwei Yuan",
+        "Mingqian Ding",
+        "Luxin Liu",
+        "Rong Xiao",
+        "Xiaoyi Zeng"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-07T07:44:02+00:00",
+      "link": "https://arxiv.org/pdf/2609.07143v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Generative LLM framework for e-commerce query suggestion from clicked items",
+      "llm_evidence_cn": "面向电商点击物品的生成式查询推荐，利用LLM进行富化与对齐",
+      "llm_evidence": "面向电商点击物品的生成式查询推荐，利用LLM进行富化与对齐",
+      "canonical_evidence": "面向电商点击物品的生成式查询推荐，利用LLM进行富化与对齐",
+      "llm_tldr_en": "EAGER is a two-stage generative framework that enriches click-item signals with a four-stage SFT curriculum and aligns generated e-commerce query suggestions with real clicked items, producing personalized and platform-specific suggestions.",
+      "llm_tldr_cn": "电商平台需要根据用户点击物品生成可点击的查询建议，但历史日志挖掘难以覆盖长尾个性化意图，外部LLM又缺乏平台知识，生成的查询与真实点击脱节。提出EAGER两阶段框架：富化阶段通过四阶段课程式有监督微调逐步增加信息丰富度；对齐阶段将生成的查询建议与用户点击行为对齐。实验表明EAGER能生成更贴合点击行为与个性化意图的电商搜索查询建议，改善了长尾意图下的搜索表达引导。",
+      "llm_tldr": "电商平台需要根据用户点击物品生成可点击的查询建议，但历史日志挖掘难以覆盖长尾个性化意图，外部LLM又缺乏平台知识，生成的查询与真实点击脱节。提出EAGER两阶段框架：富化阶段通过四阶段课程式有监督微调逐步增加信息丰富度；对齐阶段将生成的查询建议与用户点击行为对齐。实验表明EAGER能生成更贴合点击行为与个性化意图的电商搜索查询建议，改善了长尾意图下的搜索表达引导。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.07273v1",
+      "source": "arxiv",
+      "title": "Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones",
+      "abstract": "Industrial ranking models for recommendation have scaled feature interaction and sequence modeling separately; recent architectures such as HyFormer and MixFormer unify both in a stackable backbone. Real-world recommender systems, however, nearly always require multi-task learning, yet existing unified architectures confine multi-task modeling to shallow post-backbone towers, leaving the backbone without task-aware information flow. We propose MORE (Multi-task cO-evolving Ranking modEl), which embeds multi-task information flow inside the backbone, enabling task-specific signals to co-evolve with sequence and feature representations at every layer rather than in a post-hoc fusion. It introduces Anchor Tokens that persist across backbone layers: Shared Anchors encode cross-task commonalities, while Private Anchors capture task-specific priors. In each block, Anchor Tokens (1) read task-conditioned signals from behavior sequences, (2) mix with non-sequential features under a task-boundary mask, and (3) refine per-task representations through independent branches; as blocks stack, each task obtains a differentiated representation refined through all backbone layers.   Experiments on large-scale industrial datasets show that MORE consistently outperforms baselines across all tasks under comparable parameter and FLOPs budgets, and scales well with model size. Online A/B tests on Momo, a leading Chinese social discovery platform with tens of millions of monthly active users, yield 3% improvement in usage duration, 3.6% in interaction rate, and 2% in deep-chat rate. MORE is deployed in production with request-level shared computation reducing scoring latency by about 30%.",
+      "authors": [
+        "Yuchen Wang",
+        "Feng Niu",
+        "Qing Tan",
+        "Junting Lu",
+        "Baoxin Wu",
+        "Jun Gao"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-07T09:36:57+00:00",
+      "link": "https://arxiv.org/pdf/2609.07273v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "unified stackable ranking backbone for industrial recommendation with task-aware tokens",
+      "llm_evidence_cn": "面向工业推荐排序的统一骨干与多任务信息流架构",
+      "llm_evidence": "面向工业推荐排序的统一骨干与多任务信息流架构",
+      "canonical_evidence": "面向工业推荐排序的统一骨干与多任务信息流架构",
+      "llm_tldr_en": "Proposes MORE, a unified stackable ranking backbone for industrial recommendation that co-evolves task-specific signals with sequence and feature representations at every layer via persistent anchor tokens.",
+      "llm_tldr_cn": "工业推荐排序通常把多任务建模限制在骨干网络之后的浅层塔，导致深层共享表示缺少任务感知信息。针对该问题，文中提出MORE，在骨干网络每一层都注入并持续传递任务信号，并通过跨层锚点token让任务信息与序列和特征表示协同演化。该方法在HyFormer/MixFormer等统一骨干基础上进一步整合多目标建模，为生产级多任务推荐排序提供了更整体的架构方向。",
+      "llm_tldr": "工业推荐排序通常把多任务建模限制在骨干网络之后的浅层塔，导致深层共享表示缺少任务感知信息。针对该问题，文中提出MORE，在骨干网络每一层都注入并持续传递任务信号，并通过跨层锚点token让任务信息与序列和特征表示协同演化。该方法在HyFormer/MixFormer等统一骨干基础上进一步整合多目标建模，为生产级多任务推荐排序提供了更整体的架构方向。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "modern transformer and generative architectures for web search and recommender systems beyond traditional statistical models",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.08860v1",
+      "source": "arxiv",
+      "title": "REDSI: Addressing the Reproducibility and Evaluation Consistency of Differentiable Search Indexing for Document Retrieval",
+      "abstract": "The differentiable search index (DSI) framework (Tay et al., 2022) has become the de facto baseline for generative retrieval. However, DSI is hard to reproduce: no public implementation covers all three original document identifier types (atomic, naive, semantic), reported results vary widely, and the ubiquitous NQ320K dataset is built from Natural Questions through diverse and underspecified preprocessing. We introduce ReDSI, the first open-source DSI implementation supporting all three identifier types, together with a parameterizable and well-documented NQ320K construction pipeline.   Experimentally, we achieve results that are competitive with or stronger than previous DSI baselines. Moreover, we conduct extensive experiments under model downscaling, covering retrieval effectiveness, parameter efficiency, training methods and decoding strategies, opening novel directions for future research.",
+      "authors": [
+        "Vivien Nicolas",
+        "Hicham Randrianarivo",
+        "Pascale Sébillot",
+        "Caio Corro"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-08T15:07:59+00:00",
+      "link": "https://arxiv.org/pdf/2609.08860v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Reusable open-source implementation and evaluation pipeline for Differentiable Search Indexing, the core generative retrieval approach that maps queries directly to document identifiers.",
+      "llm_evidence_cn": "提供DSI生成式检索的开源实现与评测流程，覆盖多种文档标识符类型。",
+      "llm_evidence": "提供DSI生成式检索的开源实现与评测流程，覆盖多种文档标识符类型。",
+      "canonical_evidence": "提供DSI生成式检索的开源实现与评测流程，覆盖多种文档标识符类型。",
+      "llm_tldr_en": "ReDSI provides the first open-source DSI implementation covering all three document identifier types, with a parameterizable NQ320K pipeline, achieving competitive results and improving reproducibility and consistent evaluation for generative retrieval.",
+      "llm_tldr_cn": "可微分搜索索引（DSI）已成为生成式检索的基准框架，但缺少覆盖全部标识符类型的公开实现，加上NQ320K数据构建差异导致结果难以复现。本文提出ReDSI，第一个支持原子、朴素和语义三类文档标识符的开源实现，并提供可参数化、文档完善的NQ320K构建流程。实验表明，ReDSI可以与或超过现有DSI基线，同时保证评估一致性，极大推动生成式检索研究的可复现性。",
+      "llm_tldr": "可微分搜索索引（DSI）已成为生成式检索的基准框架，但缺少覆盖全部标识符类型的公开实现，加上NQ320K数据构建差异导致结果难以复现。本文提出ReDSI，第一个支持原子、朴素和语义三类文档标识符的开源实现，并提供可参数化、文档完善的NQ320K构建流程。实验表明，ReDSI可以与或超过现有DSI基线，同时保证评估一致性，极大推动生成式检索研究的可复现性。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative retrieval models that directly generate document identifiers for web search",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.24079v1",
+      "source": "arxiv",
+      "title": "RetrievalFormer: A Dual-Encoder Transformer for Efficient Approximate Nearest Neighbor Retrieval and Cold-Item Recommendation",
+      "abstract": "A shared search-and-recommendation index must score new items from features alone because search has no exploration slot. In a public log covering both surfaces over one catalog, $38.6\\%$ of held-out query-search impressions show an item never previously shown or visited. For user-cold engagements, the feature-based tower serves this demand without measurable loss against $99$ sampled negatives ($0.9595$ Recall@20 versus $0.9510$ warm). A lexical baseline reaches similar parity, while a full-catalog check remains statistically undecided. Dual-encoder retrieval therefore keeps the index \\emph{open} to new items, unlike an ID-softmax recommender that requires retraining. We price this openness on recommendation against six sequential baselines, each retrained and tuned through five rounds on corrected targets. A float32 timestamp bug had reordered leave-one-out targets for $19.7\\%$ of users. On MovieLens-1M, warm accuracy trails the strongest retrained baseline by $5.2\\%$ Recall@20 and $11.4\\%$ NDCG@20. On MIND, the gap narrows to $0.8$--$3.6\\%$ relative to the five strongest baselines, though the model ranks sixth of seven. Under strict zero-leakage cold-start evaluation, the content tower achieves $0.172 \\pm 0.006$ Recall@20, $1.4\\times$ the strongest retrained dedicated method ($0.124 \\pm 0.007$) and $3\\times$ a training-free floor, without cold-specific training. Exact full-softmax training raises Recall@20 by $54\\%$ on MIND-small and $6.9\\%$ on MovieLens-1M over sampled InfoNCE, but recomputes the full catalog each step and exhausts accelerator memory at $240$K items. Approximate nearest-neighbor search explains none of the remaining gap, serving cost does not regress against ID-softmax retrieval, and a history-window sweep explains half the post-recipe remainder. Exact-quality training at catalog scale remains the open problem.",
+      "authors": [
+        "Theodore Rogers",
+        "Joe Standerfer",
+        "Dmitrii Timoshenko",
+        "Haoxue Li",
+        "Zuhaib Akhtar",
+        "Soyoung Yang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.LG"
+      ],
+      "published": "2026-08-25T05:22:09+00:00",
+      "link": "https://arxiv.org/pdf/2608.24079v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Shared search-and-recommendation dual-encoder transformer for scalable cold-item retrieval.",
+      "llm_evidence_cn": "共享搜索与推荐索引的双编码器Transformer，用于高效检索冷物品",
+      "llm_evidence": "共享搜索与推荐索引的双编码器Transformer，用于高效检索冷物品",
+      "canonical_evidence": "共享搜索与推荐索引的双编码器Transformer，用于高效检索冷物品",
+      "llm_tldr_en": "RetrievalFormer proposes a shared dual-encoder transformer index for search and recommendation so feature-only cold items can be retrieved without retraining an ID-softmax model; on a public log it reaches competitive Recall@20.",
+      "llm_tldr_cn": "共享搜索与推荐系统在召回新物品时面临无曝光记录的问题。RetrievalFormer提出双编码器Transformer框架，通过对特征构造向量实现近似最近邻召回，使索引对新物品保持开放。在公开日志的冷启动评测中，该方法的Recall@20达到0.9595，接近并超过部分暖启动基线，表明无需重训的向量检索能同时服务搜索和推荐两个场景。",
+      "llm_tldr": "共享搜索与推荐系统在召回新物品时面临无曝光记录的问题。RetrievalFormer提出双编码器Transformer框架，通过对特征构造向量实现近似最近邻召回，使索引对新物品保持开放。在公开日志的冷启动评测中，该方法的Recall@20达到0.9595，接近并超过部分暖启动基线，表明无需重训的向量检索能同时服务搜索和推荐两个场景。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "joint modeling and serving of search, advertising, and recommendation systems at scale",
+      "matched_requirement_id": "req-4",
+      "selection_source": "carryover_cache",
+      "paper_id": "2608.24079v1"
+    },
+    {
+      "id": "2608.24176v1",
+      "source": "arxiv",
+      "title": "Tlow: Flow-based Item Tokenizer for Recommendation",
+      "abstract": "Item tokenizer encodes semantic embeddings into token IDs to replace the randomly assigned item IDs used in traditional recommendation models, fundamentally addressing the problems of excessive parameters and cold starts. However, the most common tokenizer, RQ-VAE, suffers from low decoding efficiency due to the inherent dependencies among its codebooks. Meanwhile, efficient independent tokenizers such as optimized product quantization (OPQ) still struggle with dimensional correlations and distribution complexity of semantic embeddings. In this work, we propose a f\\underline{low}-based item \\underline{T}okenizer (Tlow) to transform raw semantic embeddings into a latent space where embeddings conform to a unified standard normal distribution, achieving dual advantages of dimensional independence and distributional simplicity. Independent tokenization performed on these latent embeddings yields semantically clear token IDs. Additionally, we introduce a novel codebook guidance to align the codebook space with the token embedding space, further aiding the learning of more semantically distinct token embeddings. Offline experiments on four public datasets demonstrate that Tlow's tokenization and codebook guidance significantly improve recommendation performance. The improvement on cross-domain and multi-modal recommendations also proves the effectiveness of item tokenization in a simplified embedding space. Online experiments for a multi-modal retrieval task on China's largest social media platform WeChat validate Tlow's powerful distribution transformation capability. The retrieval model based on token IDs improves user CTR by 10.32\\% globally and by 11.64\\% for new items. Our codes are available at https://github.com/wjjln/Tlow.",
+      "authors": [
+        "Nian Li",
+        "Chonggang Song",
+        "Jingtao Ding",
+        "Lingling Yi",
+        "Yong Li",
+        "Qingmin Liao"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-25T07:43:09+00:00",
+      "link": "https://arxiv.org/pdf/2608.24176v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Flow-based item tokenizer encoding semantic embeddings into discrete token IDs, an enabling representation for semantic-ID generative recommenders that autoregressively predict next items",
+      "llm_evidence_cn": "基于流的物品分词器将语义嵌入编码为离散Token ID，为自回归生成式推荐提供关键表示支撑。",
+      "llm_evidence": "基于流的物品分词器将语义嵌入编码为离散Token ID，为自回归生成式推荐提供关键表示支撑。",
+      "canonical_evidence": "基于流的物品分词器将语义嵌入编码为离散Token ID，为自回归生成式推荐提供关键表示支撑。",
+      "llm_tldr_en": "Tlow replaces random item IDs by flow-transformed discrete tokens that follow a standard normal latent, yielding an efficient and independent item tokenizer for semantic-ID generative recommenders and mitigating cold start and parameter bloat.",
+      "llm_tldr_cn": "语义ID生成式推荐依赖将物品编码为离散Token，但常用RQ-VAE解码效率低，独立分词器又难以处理嵌入的维度相关与分布复杂。论文提出基于流的物品分词器Tlow，把语义嵌入变换到标准正态潜在空间，兼顾解码效率与表示质量，以取代随机物品ID。该方法可缓解生成式推荐中的参数膨胀与冷启动问题，为高效物品Token化提供通用工具。",
+      "llm_tldr": "语义ID生成式推荐依赖将物品编码为离散Token，但常用RQ-VAE解码效率低，独立分词器又难以处理嵌入的维度相关与分布复杂。论文提出基于流的物品分词器Tlow，把语义嵌入变换到标准正态潜在空间，兼顾解码效率与表示质量，以取代随机物品ID。该方法可缓解生成式推荐中的参数膨胀与冷启动问题，为高效物品Token化提供通用工具。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "carryover_cache",
+      "paper_id": "2608.24176v1"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2608.25104v1",
+      "source": "arxiv",
+      "title": "SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking",
+      "abstract": "Modern industrial recommender systems have increasingly adopted the Generator-Evaluator (G-E) framework for the re-ranking stage. Within this paradigm, the generator produces candidate item lists from a pool filtered by upstream retrieval and ranking modules, while the evaluator scores these lists and selects the highest-scoring one for final exposure per request. However, on sequential platforms (e.g., short-video apps), users consume items continuously, ignoring artificial list boundaries. Conventional evaluators score lists by aggregating point-wise values, implicitly assuming exposure independence. This fails to capture critical session-level dynamics, such as contextual dependencies, user continuation, and diminishing marginal utility from repetitive content.   To bridge this gap, we propose SWIM (Step-Wise Integrated Measure), a list-level evaluator that models user behaviors as a finite-horizon prefix session-level survival process. SWIM estimates the prefix-conditioned contribution of the current list to the session-level objective by factorizing it into a recursive survival distribution and reached-position conditional rewards. Leveraging a causally-masked Transformer, SWIM efficiently estimates continuation probabilities and utilities in parallel, satisfying strict industrial latency constraints. Extensive experiments demonstrate that SWIM significantly outperforms baselines in listwise reranking tasks, yielding substantial improvements in overall recommendation engagement.",
+      "authors": [
+        "Yuanhao Pu",
+        "Chenghao Zhang",
+        "Chao Feng",
+        "Xunyong Yang",
+        "Xiang Li",
+        "Yongqi Liu",
+        "Defu Lian",
+        "Kaiqiao Zhan",
+        "Kun Gai"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-25T19:57:48+00:00",
+      "link": "https://arxiv.org/pdf/2608.25104v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "generative reranking with generator-evaluator framework producing candidate lists and list evaluation",
+      "llm_evidence_cn": "生成式重排序中的列表生成与评估，面向连续会话动态的列表评估",
+      "llm_evidence": "生成式重排序中的列表生成与评估，面向连续会话动态的列表评估",
+      "canonical_evidence": "生成式重排序中的列表生成与评估，面向连续会话动态的列表评估",
+      "llm_tldr_en": "List evaluation in generator-evaluator re-ranking ignores session-level dynamics. SWIM proposes a step-wise integrated measure supervised by session feedback for selecting lists that account for contextual dependencies, user continuation, and diminishing marginal utility.",
+      "llm_tldr_cn": "在生成器-评估器的生成式重排框架中，传统评估器以逐点得分加和假设曝光独立，无法捕获连续消费场景下的会话依赖与用户延续。论文提出逐步集成度量SWIM，用会话级反馈监督列表评估，在生成式重排阶段考虑上下文依赖、用户继续和边际效用递减。实验表明该度量比点估计能更好地选择最终曝光列表。该工作改进生成式重排中评估器的列表级对齐能力。",
+      "llm_tldr": "在生成器-评估器的生成式重排框架中，传统评估器以逐点得分加和假设曝光独立，无法捕获连续消费场景下的会话依赖与用户延续。论文提出逐步集成度量SWIM，用会话级反馈监督列表评估，在生成式重排阶段考虑上下文依赖、用户继续和边际效用递减。实验表明该度量比点估计能更好地选择最终曝光列表。该工作改进生成式重排中评估器的列表级对齐能力。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "carryover_cache",
+      "paper_id": "2608.25104v1",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2609.04645v1",
+      "source": "arxiv",
+      "title": "Latent-Aligned Reasoning for Multimodal Recommendation",
+      "abstract": "Multimodal Vision-Language Models (VLMs) have demonstrated remarkable capabilities in cross-modal understanding, yet a fundamental challenge persists when applying them to recommendation: as representations propagate through multi-step reasoning, both visual and textual signals progressively attenuate - a phenomenon we term cross-modal dilution. To address this, we propose LARK (Latent-Aligned Reasoning frameworK), a two-stage latent reasoning framework with complementary alignment mechanisms within a single VLM. In the first stage, learnable latent tokens are interleaved with multi-step chain-of-thought (CoT) reasoning and explicitly aligned with a frozen vision encoder, serving as visual checkpoints that preserve perceptual details throughout the reasoning chain. In the second stage, the latent representations are projected via a bridge MLP and trained with item-to-item contrastive learning; to prevent the reasoning semantics from fading, intermediate features are aligned with the CoT hidden states from the first stage, anchoring the final embeddings to the model's own reasoning output. Experiments on three public benchmarks and one industrial dataset show that LARK achieves state-of-the-art performance across multiple recommendation architectures, with controlled ablations confirming the distinct contribution of each component.",
+      "authors": [
+        "Jiarui Jin",
+        "Anyang Ji"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.CL",
+        "cs.CV",
+        "cs.LG"
+      ],
+      "published": "2026-09-04T02:24:48+00:00",
+      "link": "https://arxiv.org/pdf/2609.04645v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "LLM/VLM-based latent reasoning framework for multimodal recommendation, relevant to generative LLM recommendation methods",
+      "llm_evidence_cn": "基于VLM推理的多模态推荐方法，属于生成式大模型推荐研究",
+      "llm_evidence": "基于VLM推理的多模态推荐方法，属于生成式大模型推荐研究",
+      "canonical_evidence": "基于VLM推理的多模态推荐方法，属于生成式大模型推荐研究",
+      "llm_tldr_en": "To prevent cross-modal dilution in VLM-based multimodal recommendation, LARK interleaves learnable latent tokens with chain-of-thought reasoning and aligns them to a frozen vision encoder, preserving visual checkpoints and improving recommendation reliability.",
+      "llm_tldr_cn": "把VLM用于多模态推荐时，视觉与文本信号会随多步推理逐渐衰减，造成跨模态稀释。LARK构建两阶段潜在推理框架，将可学习潜在token与多步思维链交错，并与冻结视觉编码器对齐，使潜在token充当保留感知细节的视觉检查点。该方法在同一个VLM内补充跨模态对齐，缓解推荐任务中的信息丢失。实验结果表明该潜在对齐推理机制能够有效改善多模态推荐表现。",
+      "llm_tldr": "把VLM用于多模态推荐时，视觉与文本信号会随多步推理逐渐衰减，造成跨模态稀释。LARK构建两阶段潜在推理框架，将可学习潜在token与多步思维链交错，并与冻结视觉编码器对齐，使潜在token充当保留感知细节的视觉检查点。该方法在同一个VLM内补充跨模态对齐，缓解推荐任务中的信息丢失。实验结果表明该潜在对齐推理机制能够有效改善多模态推荐表现。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.02468v1",
+      "source": "arxiv",
+      "title": "DeepAffinity: Long-Term Aspect Preference Prediction in eCommerce using Small Language Models",
+      "abstract": "We explore predicting eCommerce user preferences for product aspects such as brand, size, and color - a task we define as Aspect Affinity. Solving this task improves customer understanding and enables fine-grained personalization in recommendation, search, and marketing. We frame Aspect Affinity as a temporal prediction task: forecasting a users future aspect choices from their time-ordered interaction history, capturing long-term preferences that evolve beyond the current session. To this end, we propose DeepAffinity, which leverages Small Language Models (SLMs) with structured prompts and specialized prediction heads fine-tuned for this task. We show DeepAffinity outperforms standard generative fine-tuning methods, while general-purpose open-source LLMs perform poorly without task-specific tuning, highlighting their limits in modeling nuanced behavior. Finally, DeepAffinity enhances recommendation quality on a large-scale multinational eCommerce platform.",
+      "authors": [
+        "Yotam Eshel",
+        "Guy Hadad",
+        "Guy Feigenblat",
+        "Yuri M. Brovman",
+        "Matt Gearhart",
+        "Bracha Shapira"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-09-02T11:38:19+00:00",
+      "link": "https://arxiv.org/pdf/2609.02468v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "eCommerce aspect preference prediction with SLMs for fine-grained recommendation, search, and marketing",
+      "llm_evidence_cn": "面向电商商品属性偏好预测，用于推荐、搜索和营销的个性化",
+      "llm_evidence": "面向电商商品属性偏好预测，用于推荐、搜索和营销的个性化",
+      "canonical_evidence": "面向电商商品属性偏好预测，用于推荐、搜索和营销的个性化",
+      "llm_tldr_en": "DeepAffinity uses small language models with structured prompts and prediction heads to forecast long-term eCommerce user preferences for product aspects such as brand, size, and color, outperforming standard generative fine-tuning while remaining efficient at scale.",
+      "llm_tldr_cn": "针对电商中品牌、尺寸、颜色等商品属性的长期偏好预测问题，传统方法往往局限于会话内行为，难以刻画跨时间的稳定偏好。为此作者提出DeepAffinity，利用小型语言模型配合结构化提示与专用预测头，将属性亲和力建模为时间序列预测任务。实验显示DeepAffinity优于标准生成式微调方法，同时保持较高训练与推理效率。该工作为推荐、搜索和营销中的细粒度个性化提供了有效且可扩展的建模方案。",
+      "llm_tldr": "针对电商中品牌、尺寸、颜色等商品属性的长期偏好预测问题，传统方法往往局限于会话内行为，难以刻画跨时间的稳定偏好。为此作者提出DeepAffinity，利用小型语言模型配合结构化提示与专用预测头，将属性亲和力建模为时间序列预测任务。实验显示DeepAffinity优于标准生成式微调方法，同时保持较高训练与推理效率。该工作为推荐、搜索和营销中的细粒度个性化提供了有效且可扩展的建模方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2608.27991v1",
+      "source": "arxiv",
+      "title": "HubMixer: Progressive Latent Hub Mixing for Parameter-Efficient Feature Interaction in Recommendation",
+      "abstract": "Learning effective feature interactions is central to industrial recommendation and advertising ranking systems. Recent token-mixing architectures simplify self-attention with lightweight mixing operators, improving hardware efficiency and enabling large-scale deployment. However, recommendation tokens are fundamentally heterogeneous: user profiles, item attributes, behavioral sequences, context features, statistical signals, and business-side features live in different semantic spaces and interact in sparse, sample-specific patterns. Directly mixing all tokens in the raw heterogeneous token space may therefore be parameter-inefficient, as the model must implicitly discover which feature groups should interact and how such interactions should be routed. In the paper, we propose HubMixer, a parameter-efficient latent hub mixing architecture for feature interaction in recommendation. Instead of directly mixing raw feature tokens, HubMixer introduces a small set of learnable latent hubs to organize feature interactions through an `induction--interaction--readout` paradigm. First, hub induction summarizes heterogeneous tokens into compact latent hubs, where latent hubs query input tokens through cross-attention. Second, hub interaction performs high-order interaction in the cleaner latent hub space. Third, token-conditioned readout lets each original token selectively read from the interacted hubs, injecting global interaction semantics while preserving token-level field identity. Extensive offline experiments on industrial recommendation tasks show that HubMixer outperforms the SOTA models. Online A/B testing in the Kuaishou short-video recruitment business further shows a statistically significant 5.48% improvement in resume submission conversion rate, and HubMixer has been fully deployed in production.",
+      "authors": [
+        "Jie Zhou",
+        "Zixian Gong",
+        "Wenhao Li",
+        "Chang Liu",
+        "Enzhao Shen",
+        "Bo Liu",
+        "Xu Guo",
+        "Fei Pan",
+        "Peng Jiang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-28T06:59:16+00:00",
+      "link": "https://arxiv.org/pdf/2608.27991v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Parameter-efficient latent hub mixing for large-scale industrial recommendation and ad ranking feature interaction",
+      "llm_evidence_cn": "面向规模化推荐与广告排序的参数高效特征交互混合架构",
+      "llm_evidence": "面向规模化推荐与广告排序的参数高效特征交互混合架构",
+      "canonical_evidence": "面向规模化推荐与广告排序的参数高效特征交互混合架构",
+      "llm_tldr_en": "HubMixer introduces progressive latent hub mixing so heterogeneous feature tokens in industrial recommender/ad ranking systems interact through few latent hubs, improving hardware efficiency and supporting large-scale deployment with less parameter waste than full token-space mixing.",
+      "llm_tldr_cn": "针对工业推荐与广告排序中用户画像、商品属性、行为序列等异构token直接混合会浪费参数的问题，HubMixer提出渐进式潜在中心混合。它通过少量潜在hub逐步聚合不同特征组的语义，使模型以较低参数学到稀疏且样本相关的交叉关系。实验表明该方法在维持排序效果的同时降低计算和存储开销，更利于大规模部署。",
+      "llm_tldr": "针对工业推荐与广告排序中用户画像、商品属性、行为序列等异构token直接混合会浪费参数的问题，HubMixer提出渐进式潜在中心混合。它通过少量潜在hub逐步聚合不同特征组的语义，使模型以较低参数学到稀疏且样本相关的交叉关系。实验表明该方法在维持排序效果的同时降低计算和存储开销，更利于大规模部署。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "carryover_cache",
+      "paper_id": "2608.27991v1",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2609.05363v1",
+      "source": "arxiv",
+      "title": "Distill Globally, Adapt Locally: Reasoning Distillation and Product-Type Test-Time Training for Scalable Trade-Up Recommendation",
+      "abstract": "Trade-up recommendation identifies higher-quality alternatives that preserve a customer's purchase intent while offering upgraded benefits. Large language models (LLMs) can reason about such distinctions, but applying them directly to hundreds of millions of product pairs is operationally impractical. We introduce a two-level framework that distills LLM reasoning into an efficient non-generative student and adapts its decision boundary to product-type-specific trade-up criteria. At Level 1, a retrieval-augmented few-shot LLM teacher generates structured relation labels and natural-language rationales. These rationales supervise a compact embedding-pair classifier through alignment and contrastive objectives; at inference, the student uses only two precomputed 768-dimensional product embeddings, with no LLM calls or text generation. On a fixed human-annotated benchmark of 8,352 pairs, a 15.5M-parameter four-class reasoning-distilled student achieves AUC 0.924 (95% CI [0.918, 0.929]), compared with 0.912 for the four-class label-only student. At Level 2, product-type test-time training (PT-TTT) uses few-shot demonstrations to optimize lightweight category-specific adapters over the frozen student. PT-TTT improves AUC from 0.924 to 0.941 and average precision from 0.920 to 0.940. On a 100K-pair proxy catalog, the distilled student on a single eight-GPU machine is approximately 5,000x faster and 10,000x lower in estimated cost than direct LLM inference.",
+      "authors": [
+        "Siliang Liu",
+        "Mohammad Ghasemi",
+        "Sapan Patel",
+        "Amin Banitalebi-Dehkordi"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-09-04T17:08:50+00:00",
+      "link": "https://arxiv.org/pdf/2609.05363v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Scalable trade-up recommendation via LLM reasoning distillation and product-type test-time training; addresses data scale and training efficiency",
+      "llm_evidence_cn": "用LLM推理蒸馏与测试时训练支撑大规模升档推荐，涉及数据规模与训练效率",
+      "llm_evidence": "用LLM推理蒸馏与测试时训练支撑大规模升档推荐，涉及数据规模与训练效率",
+      "canonical_evidence": "用LLM推理蒸馏与测试时训练支撑大规模升档推荐，涉及数据规模与训练效率",
+      "llm_tldr_en": "Distills LLM reasoning into a compact non-generative student for trade-up recommendation and adapts it by product type, enabling scalable deployment over hundreds of millions of product pairs.",
+      "llm_tldr_cn": "升档推荐需要从海量商品对中找出保留购买意图的高品质替代品，直接用LLM在数亿规模上不可行。本文提出两阶段框架：LLM教师通过检索增强少样本生成结构化关系和自然语言理由，再用对齐与对比目标将理由蒸馏到紧凑的嵌入对分类器，并按产品类型做测试时训练。这使系统在保留语义推理优势的同时，扩展到极大商品对规模。该框架展示了LLM推理蒸馏用于大规模推荐的有效性。",
+      "llm_tldr": "升档推荐需要从海量商品对中找出保留购买意图的高品质替代品，直接用LLM在数亿规模上不可行。本文提出两阶段框架：LLM教师通过检索增强少样本生成结构化关系和自然语言理由，再用对齐与对比目标将理由蒸馏到紧凑的嵌入对分类器，并按产品类型做测试时训练。这使系统在保留语义推理优势的同时，扩展到极大商品对规模。该框架展示了LLM推理蒸馏用于大规模推荐的有效性。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "papers that study scaling up search advertising and recommendation systems including model size, data scale, and training efficiency",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.02671v1",
+      "source": "arxiv",
+      "title": "Recommender System as Slow and Fast Thinkers",
+      "abstract": "Sequential recommendation models are foundational to modern personalized services, yet their effectiveness varies substantially across heterogeneous user environments. In particular, static one-pass recommenders often perform well on common behavior patterns but degrade on operationally challenging user groups, such as users with longer histories or less mainstream item profiles. To address this limitation, we propose \\textsc{DS-Frame}, an adaptive fast--slow inference framework for sequential recommendation. \\textsc{DS-Frame} combines a Fast System for efficient routine prediction, a Slow System for iterative latent refinement, and a learned selector that routes each sample under a controllable computation budget. Experiments on five real-world datasets show that \\textsc{DS-Frame} consistently improves representative sequential recommendation backbones, with larger gains on challenging groups and effective accuracy--efficiency trade-offs. This highlights the potential of adaptive inference for more efficient and robust recommendation. Code is available at \\href{https://github.com/ZichenYuan233/Recommender-System-as-Slow-and-Fast-Thinkers}{this link}.",
+      "authors": [
+        "Zichen Yuan",
+        "Xiaoxuan Dong",
+        "Linkun Dai",
+        "Jinwei Yang",
+        "Jining Luan",
+        "Dexu Yu",
+        "Chunxiao Li",
+        "Joemon M. Jose",
+        "Youhua Li",
+        "Hanwen Du",
+        "Junchen Fu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-02T14:45:39+00:00",
+      "link": "https://arxiv.org/pdf/2609.02671v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "fast-slow inference for sequential next-item recommendation",
+      "llm_evidence_cn": "面向顺序推荐自适应计算路由的快慢双系统推理",
+      "llm_evidence": "面向顺序推荐自适应计算路由的快慢双系统推理",
+      "canonical_evidence": "面向顺序推荐自适应计算路由的快慢双系统推理",
+      "llm_tldr_en": "DS-Frame gives sequential recommender systems a fast path for routine predictions and an iterative latent-refinement slow path, routed by a learned controller under a computation budget.",
+      "llm_tldr_cn": "顺序推荐模型在常规行为模式上表现好，但面对长历史或小众用户容易退化。DS-Frame提出快慢双系统：快系统处理可预测的常规样本，慢系统通过迭代精化潜在表示处理困难样本，并用学习选择器按可控算力预算路由样本。在五个真实数据集上的结果说明该自适应框架能针对不同用户环境平衡效果与效率，提高顺序推荐整体性能。",
+      "llm_tldr": "顺序推荐模型在常规行为模式上表现好，但面对长历史或小众用户容易退化。DS-Frame提出快慢双系统：快系统处理可预测的常规样本，慢系统通过迭代精化潜在表示处理困难样本，并用学习选择器按可控算力预算路由样本。在五个真实数据集上的结果说明该自适应框架能针对不同用户环境平衡效果与效率，提高顺序推荐整体性能。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.02730v1",
+      "source": "arxiv",
+      "title": "CORAL: An LLM-Native Harness for Production Recommender Systems",
+      "abstract": "Production recommender systems shape what billions of people see, and sustaining their performance requires continual optimization: as content, user behavior, and upstream models shift, the choices governing retrieval, ranking, and serving must be revisited. Traditionally, human engineers test such changes through online experiments--a slow, reactive process limited by engineering effort, leaving parts of the system unrevised as conditions change. Although large language models have been applied to ranking, user modeling, and offline model development, few systems place an agent in a continual closed loop that acts on a live recommender and learns from the measured effects of its decisions. We present CORAL (Constraint-Optimized Recommender via an Agentic Loop), an LLM-native harness that closes this loop: each cycle, the agent observes operating signals, reasons over a memory of past decisions and outcomes, and invokes tools--including a numerical optimizer that keeps changes within a fixed operating budget--to reconfigure the recommender, with measured outcomes informing the next cycle. We formulate this as a partially observed, non-stationary, constrained optimization problem in which the policy improves in context, without parameter updates, from its prior actions. Across two large-scale social platforms, evaluated with A/B experiments, the same harness improves engagement at no additional serving cost on one and reduces serving cost without degrading engagement on the other, spanning the engagement-efficiency frontier. Performance improves as the loop iterates, suggesting that a single agentic loop can automate continual optimization work traditionally performed by human algorithm engineers under explicit guardrails.",
+      "authors": [
+        "Muhammad Rafay Azhar",
+        "Yuhang Zhou",
+        "Gilbert Jiang",
+        "Yuchen Wang",
+        "Rahul Sharma",
+        "Matthew DeSousa",
+        "Jiayi Liu",
+        "Xin Guo",
+        "Lizhu Zhang",
+        "Xiangjun Fan"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL"
+      ],
+      "published": "2026-09-02T15:40:36+00:00",
+      "link": "https://arxiv.org/pdf/2609.02730v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-native agentic loop for production recommender systems",
+      "llm_evidence_cn": "LLM原生代理持续优化线上推荐检索/排序/服务",
+      "llm_evidence": "LLM原生代理持续优化线上推荐检索/排序/服务",
+      "canonical_evidence": "LLM原生代理持续优化线上推荐检索/排序/服务",
+      "llm_tldr_en": "CORAL is an LLM-native agentic harness that continuously acts on a live production recommender and learns from the measured effects of its decisions to update retrieval, ranking and serving choices.",
+      "llm_tldr_cn": "生产推荐系统需要随内容、用户行为和上游模型的变化持续调优，传统人工在线实验反应慢。CORAL构建LLM原生代理闭环，让大模型代理直接作用于线上检索、排序与服务环节，并从决策的实际效果中学习。该框架把大模型从离线模块升级为在线持续优化器，能够降低人工试错成本并应对系统漂移。",
+      "llm_tldr": "生产推荐系统需要随内容、用户行为和上游模型的变化持续调优，传统人工在线实验反应慢。CORAL构建LLM原生代理闭环，让大模型代理直接作用于线上检索、排序与服务环节，并从决策的实际效果中学习。该框架把大模型从离线模块升级为在线持续优化器，能够降低人工试错成本并应对系统漂移。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.08180v1",
+      "source": "arxiv",
+      "title": "Less Is Personal: Learning Minimal Sufficient User Profiles for Personalized Language Models",
+      "abstract": "Retrieval-augmented personalization enables large language models to produce more accurate and preference-aligned outputs using relevant records retrieved from user histories. Personalized language models typically prepend a fixed number of retrieved user records, even when additional history is redundant, harmful, or unrelated to a user's distinctive behavior. We study minimal sufficient personalization: constructing the least costly ordered profile for each input while preserving the utility achievable from a retrieved candidate pool. We introduce ENOUGH, a method that iteratively appends behavioral records or emits STOP to construct profiles with adaptive lengths. Offline, bounded counterfactual search evaluates profile prefixes by jointly considering downstream gains, user specificity, and token costs. The resulting long-horizon targets are distilled into a multi-head value controller with explicit ranking and stopping supervision. At inference, the controller selects and orders records through lightweight decisions, and the frozen generator is invoked once after stopping. Extensive experiments on six personalized tasks demonstrate that ENOUGH consistently outperforms strong heuristic and retrieval-augmented baselines in both effectiveness and efficiency, achieving minimal sufficient profiles that preserve personalization utility while reducing unnecessary context costs.",
+      "authors": [
+        "Minghang Liu",
+        "Qiang Qiu",
+        "Yuanzhuo Wang",
+        "Huawei Shen",
+        "Xueqi Cheng"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-08T03:09:19+00:00",
+      "link": "https://arxiv.org/pdf/2609.08180v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based personalized generation that dynamically selects minimal user-history context",
+      "llm_evidence_cn": "面向个性化语言模型检索增强生成方法，同属LLM驱动的个性化生成技术",
+      "llm_evidence": "面向个性化语言模型检索增强生成方法，同属LLM驱动的个性化生成技术",
+      "canonical_evidence": "面向个性化语言模型检索增强生成方法，同属LLM驱动的个性化生成技术",
+      "llm_tldr_en": "ENOUGH constructs minimal sufficient user profiles for personalized language models by iteratively appending behavioral records or emitting STOP, preserving utility while reducing the cost of prepended history.",
+      "llm_tldr_cn": "检索增强的个性化语言模型通常把固定数量的用户历史记录拼接到提示中，即使部分记录冗余甚至有害。针对该问题，本文提出ENOUGH方法，在给定候选记录池条件下，通过迭代拼接行为记录或输出STOP来构造自适应的最短用户画像。离线有界反事实搜索用于评估不同前缀带来的效用，从而在保留生成质量的同时最小化输入成本。实验表明，该方法能显著压缩提示长度且不损失个性化性能，为大规模个性化LLM服务提供了更高效的上下文选择思路。",
+      "llm_tldr": "检索增强的个性化语言模型通常把固定数量的用户历史记录拼接到提示中，即使部分记录冗余甚至有害。针对该问题，本文提出ENOUGH方法，在给定候选记录池条件下，通过迭代拼接行为记录或输出STOP来构造自适应的最短用户画像。离线有界反事实搜索用于评估不同前缀带来的效用，从而在保留生成质量的同时最小化输入成本。实验表明，该方法能显著压缩提示长度且不损失个性化性能，为大规模个性化LLM服务提供了更高效的上下文选择思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

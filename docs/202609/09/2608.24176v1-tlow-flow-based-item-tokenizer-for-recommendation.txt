@@ -1,0 +1,583 @@
+Title: Tlow: Flow-based Item Tokenizer for Recommendation
+
+URL Source: https://arxiv.org/pdf/2608.24176v1
+
+Published Time: Wed, 26 Aug 2026 00:44:10 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Tlow: Flow-based Item Tokenizer for Recommendation 
+
+# Nian Li ∗
+
+Tsinghua University Shenzhen, China 
+
+# Chonggang Song ∗
+
+Tencent Inc. Shenzhen, China 
+
+# Jingtao Ding 
+
+Tsinghua University Beijing, China 
+
+# Lingling Yi 
+
+Tencent Inc. Shenzhen, China 
+
+# Yong Li 
+
+Tsinghua University Beijing, China 
+
+# Qingmin Liao 
+
+Shenzhen International Graduate School, Tsinghua University Shenzhen, China 
+
+## Abstract 
+
+Item tokenizer encodes semantic embeddings into token IDs to re-place the randomly assigned item IDs used in traditional recommen-dation models, fundamentally addressing the problems of excessive parameters and cold starts. However, the most common tokenizer, RQ-VAE, suffers from low decoding efficiency due to the inherent dependencies among its codebooks. Meanwhile, efficient indepen-dent tokenizers such as optimized product quantization (OPQ) still struggle with dimensional correlations and distribution complexity of semantic embeddings. In this work, we propose a flow-based item Tokenizer (Tlow) to transform raw semantic embeddings into a latent space where embeddings conform to a unified standard normal distribution, achieving dual advantages of dimensional in-dependence and distributional simplicity. Independent tokenization performed on these latent embeddings yields semantically clear token IDs. Additionally, we introduce a novel codebook guidance to align the codebook space with the token embedding space, further aiding the learning of more semantically distinct token embeddings. Offline experiments on four public datasets demonstrate that Tlow’s tokenization and codebook guidance significantly improve recom-mendation performance. The improvement on cross-domain and multi-modal recommendations also proves the effectiveness of item tokenization in a simplified embedding space. Online experiments for a multi-modal retrieval task on China’s largest social media plat-form WeChat validate Tlow’s powerful distribution transformation capability. The retrieval model based on token IDs improves user CTR by 10.32% globally and by 11.64% for new items. Our codes are available at https://github.com/wjjln/Tlow. 
+
+## CCS Concepts 
+
+• Information systems → Retrieval models and ranking .
+
+## Keywords 
+
+Recommender System; Item Tokenizer; Flow-based Model 
+
+ACM Reference Format: 
+
+Nian Li, Chonggang Song, Jingtao Ding, Lingling Yi, Yong Li, and Qing-min Liao. 2026. Tlow: Flow-based Item Tokenizer for Recommendation. In 
+
+> ∗Both authors contribute equally to this work.
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840087
+
+Proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ’26), November 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 8 pages. https://doi.org/10.1145/3799682.3840087 
+
+## 1 Introduction 
+
+Traditional recommender systems often assign a random ID em-bedding to each item, with learning embeddings as the model’s core objective. However, embeddings learned by ID-based models (GNNs [29], RNNs [3], or self-attention [8, 40]) are completely inde-pendent of one another, so the number of parameters grows linearly with the number of items, limiting model capacity in practical on-line recommender systems. Moreover, the cold-start issue is another significant drawback, i.e. , the model struggles to recommend new items with few interaction records. Inspired by the training paradigm of large language models, some studies now tokenize items based on their semantic embed-dings to generate a sequence of discrete token IDs (also called semantic IDs) [4, 5, 22], creating a globally shared token vocabulary. Sequential recommendation models then learn token embeddings by decoding the token IDs of the next item. This approach relies on token embeddings to model atomic information in the semantic space of all items, effectively constraining the model’s parameter size while naturally resolving the cold-start issue. A representative work, TIGER [22], uses residual-quantized variational auto-encoder (RQ-VAE) [33] as its tokenizer, applying hierarchical encoding to semantic embeddings. This creates strong correlations between codebooks, so decoding the next token ID relies on previously de-coded IDs, causing an efficiency bottleneck: the number of inference steps must equal the number of codebooks. Moreover, the codebook collapse and conflicts common in RQ-VAE [12] make its industrial application require substantial experience and expertise [39]. Pursu-ing independent tokenization to enable efficient parallel decoding is thus a natural next step, and this decoding-efficiency advantage over RQ-VAE-based sequential decoding has been empirically vali-dated in [5]. Existing methods using product quantization (PQ) [7] directly partition semantic embeddings and encode each part inde-pendently [4], but still face two critical challenges: 
+
+• Dimension correlations . The correlations between the dimen-sions of the semantic embeddings violate the dimensional-independence assumption required for independent tokenization. Although op-timized product quantization (OPQ) [2] alleviates this by decom-posing the raw space into subspaces via an orthogonal transfor-mation, dimensions within each subspace remain correlated [5]. When dimensions are correlated, embeddings lie on a complex, arXiv:2608.24176v1 [cs.IR] 25 Aug 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Nian Li et al. 
+
+skewed manifold, but independent quantization imposes a grid-like structure over it, leading to poor quantization [35]. 
+
+• Complex embedding distribution . The unknown, complex distribution harms the semantic representational ability of em-beddings [13] and causes large quantization errors when tok-enized directly. Specifically, these embeddings are often highly anisotropic, occupying a non-uniform cone rather than being evenly spread [7], making standard quantization codebooks an in-efficient fit, especially in cross-domain or multi-modal scenarios where embeddings from diverse sources form distinct, separated clusters. In this work, we propose Tlow, a flow-based item tokenizer that transforms raw semantic embeddings into latent embed-dings conforming to a standard normal distribution . Com-pared to the raw, correlated, and anisotropic embedding space, the transformed latent space better satisfies the dimensional-independence assumption underlying PQ-based independent quantization [2, 7], mitigating the quantization error induced by correlated and skewed distributions. The resulting latent embeddings combine dimensional independence with distributional simplicity, facilitating more accu-rate tokenization and more semantically distinct token embeddings. Specifically, Tlow processes semantic embeddings with a multi-scale architecture [9], built from basic units called “A Step of Flow”, each comprising three layers: Activation Normalization (ActNorm), Invertible Linear, and Affine Coupling. We apply PQ on the latent embeddings to generate token IDs for each item. Figure 1 compares 16-bit ( i.e. , 16-part) OPQ and Tlow tokenization on the “CDs and Vinyl” dataset from Amazon Reviews [17], showing albums sharing the same first-position token ID. Although these albums are all related to the “Pop” genre, OPQ groups in many albums of different genres ( e.g. , “Metal”, “British Invasion”, “Jazz”), whereas Tlow’s tokenization yields distinct, clear semantics, with most albums gen-uinely “Pop”. Tlow also exhibits significantly lower genre diversity than OPQ, as indicated by fewer categories and lower entropy. We then use user behavioral data to train the sequential recommenda-tion model and the globally shared token embeddings, introducing a novel codebook guidance that aligns the token embedding space with the codebook space so token embeddings capture distinct semantics and atomic information. We conduct extensive experiments on four Amazon Reviews datasets from different commodity categories. Tlow significantly improves recommendation performance given the same sequential model, validating the effectiveness of tokenization within a standard normal distribution space; ablation studies further confirm the importance of the latent embeddings’ semantic information and the codebook guidance. Performance gains in cross-domain and multi-modal recommendations further support Tlow’s effectiveness in simplifying complex semantic embedding distributions, although the improvement is not uniformly largest across every domain and modality metric. On China’s largest social media platform WeChat, we conduct online A/B testing for a multi-modal picture 1
+
+retrieval task, where replacing item IDs with Tlow’s token IDs yields significant gains in conversion metrics, especially for newly published pictures.                 
+
+> 1A typical user post consists of a few pictures and a brief caption. 80 ⋯⋯⋯⋯⋯
+> “Attica Blues”(Jazz)
+> “Under Wraps”(Metal)
+> “Revolver”(British Invasion)
+> “In My Mind”(Pop) “Dear 23”(Pop) “Mystic Fire”(Blues) “Hard Wired”(Pop) “Yesterday Once More”(Pop)
+> OPQ Tokenization Tlow Tokenization
+> ⋯⋯
+> Ø#category = 225
+> Øentropy = 4.11 75 ⋯⋯⋯⋯⋯
+> Ø#category = 97
+> Øentropy = 2.71
+
+Figure 1: A Comparison of semantic clarity of token IDs generated by OPQ and Tlow tokenization. 
+
+## 2 Tlow 
+
+In this work, we formulate the task as sequential recommenda-tions. Specifically, based on each user’s historical interaction se-quence {𝑖 1, 𝑖 2, · · · , 𝑖 𝑇 }, the recommendation model aims to predict the next interaction item 𝑖 𝑇 +1, where 𝑇 is the sequence length. Tra-ditional ID-based models assign a random ID for each item and learn ID embeddings through sequential models like Transformer decoder. However, ID-based models suffer from inherent problems of cold-start issues, excessive parameters, and so on. Item tokenizer leverages the semantic embedding x to transform each item into a sequence of token IDs, where x is obtained from pre-trained models with item features ( e.g. , title, cover image) as the input. In this way, tokenization-based sequential models have the objective of decod-ing token IDs of the next item, similar to the training paradigm of large language models. This approach overcomes the aforemen-tioned fundamental problems by learning a shared set of token embeddings. 
+
+## 2.1 Overview 
+
+As stated in the introduction, dimensional correlations and complex distribution of semantic embeddings lead to challenges of indepen-dent tokenization. In this work, we propose Tlow with a multi-scale architecture [9] to transform semantic embedding x ∈ R𝑑 𝑠 into latent embedding z ∈ R𝑑 𝑠 conforming to a standard normal distri-bution, where 𝑑 𝑠 is the embedding dimension. We can perform more accurate independent tokenization on z, generating token IDs with clearer semantics. Like all flow-based models, Tlow’s log-likelihood objective is also to minimize: 
+
+L𝑓 = − 1
+
+|X| ∑︁ x∈ X 
+
+log 𝑝 𝜽 (x), (1) where X denotes the set of semantic embeddings of all the items and 
+
+𝜽 are learnable model parameters. The probability density function of Tlow can be further written as: log 𝑝 𝜽 (x) = log 𝑝 𝜽 (z) + log | det (dz/dx)| , (2) where d z/dx is the Jacobian matrix of the transformation from x to 
+
+z, and det (·) denotes the matrix determinant. Tlow contains multiple blocks, each consisting of a multi-step flow where each step includes three transformation layers, i.e. ,Tlow: Flow-based Item Tokenizer for Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+ActNorm, Invertible Linear, and Affine Coupling layer. Figure 2 illustrates the model architecture of Tlow. 
+
+## 2.2 A Step of Flow 
+
+A step of flow consists of the following three transformation layers: 
+
+• ActNorm Layer . For the input x0 ∈ R𝑑 , this layer performs activation normalization for stable training as follows, 
+
+x1 = s ⊙ ( x0 + t), (3) where ⊙ denotes the element-wise product and s, t ∈ R𝑑 are learn-able scale and bias parameters, respectively. The log-determinant of this layer is: log | det (dx1/dx0)| =
+
+> 𝑑
+
+∑︁ 
+
+> 𝑗 =1
+
+log |s𝑗 |. (4) 
+
+• Invertible Linear Layer . For the input x1, this layer learns an invertible linear transformation to allow the dimensions of the embedding to influence one another: 
+
+x2 = Wx 1 = (PLU )x1. (5) The linear matrix W ∈ R𝑑 ×𝑑 is decomposed into the product of a permutation matrix P, a lower triangular matrix L, and an upper triangular matrix U to facilitate the computation of the determinant. We keep the diagonal elements of L as ones, while making the diagonal of U a set of learnable parameters w ∈ R𝑑 .In this way, the log-determinant of this layer is: log | det (dx2/dx1)| = log | det (W)| 
+
+= log | det (P)| + log | det (L)| + log | det (U)| 
+
+=
+
+> 𝑑
+
+∑︁ 
+
+> 𝑗 =1
+
+log |w𝑗 |.
+
+(6) 
+
+• Affine Coupling Layer . For the input x2, this layer first divides it into two halves x𝑎  
+
+> 2
+
+and x𝑏  
+
+> 2
+
+, and performs the transformation as follows: 
+
+x3 = [x𝑎  
+
+> 2
+
+, s𝑏 ⊙ ( x𝑏  
+
+> 2
+
++ t𝑏 )] ,
+
+[s𝑏 , t𝑏 ] = 𝑔 (x𝑎  
+
+> 2
+
+), (7) where 𝑔 : R 𝑑  
+
+> 2
+
+→ R𝑑 is a MLP to generate scale and bias param-eters based on x𝑎  
+
+> 2
+
+to transform x𝑏  
+
+> 2
+
+. The log-determinant of this layer is: log | det (dx3/dx2)| =
+
+> 𝑑 /2
+
+∑︁ 
+
+> 𝑗 =1
+
+log |s𝑏 𝑗 |. (8) Combining these three layers together, the log-determinant of a step of flow is: 
+
+Δ = log | det (dx1/dx0)| + log | det (dx2/dx1)| + log | det (dx3/dx2)| .
+
+(9) 
+
+## 2.3 Flow-based Tokenizer 
+
+Tlow contains 𝑁 blocks and each block consists of 𝑀 steps of flow. For the 𝑛 -th block, the output z𝑛 ∈ R 𝑑𝑠  
+
+> 2𝑛 −1
+
+is divided into two halves 
+
+z𝑎 𝑛 ∈ R 𝑑𝑠  
+
+> 2𝑛
+
+and z𝑏 𝑛 ∈ R 𝑑𝑠  
+
+> 2𝑛
+
+, which serve as the input of the next block and partial output ( i.e. , partial z) of Tlow, respectively. We estimate the log-likelihood of z𝑏 𝑛 as follows: log 𝑝 (z𝑏 𝑛 ) = log N ( z𝑏 𝑛 ; 𝝁 𝑛 , 𝝈 2 
+
+> 𝑛
+
+),
+
+[𝝁 𝑛 , 𝝈 2 
+
+> 𝑛
+
+] = ℎ(z𝑎 𝑛 ), (10) where ℎ : R 𝑑𝑠  
+
+> 2𝑛
+
+→ R 𝑑𝑠  
+
+> 2𝑛 −1
+
+is an MLP module to predict the mean 𝝁 𝑛 
+
+and variance 𝝈 2 
+
+> 𝑛
+
+of z𝑏 𝑛 based on z𝑎 𝑛 . Combining the outputs of all the blocks, we obtain final output of Tlow z = [z𝑏  
+
+> 1
+
+, z𝑏  
+
+> 2
+
+, · · · , z𝑏 𝑁 ] ∈ R𝑑 𝑠 .Note that z𝑏 𝑁 = z𝑁 since we do not need to divide the output of the last block. Moreover, the input of the first block is x. We then formulate: log 𝑝 𝜽 (z) =
+
+> 𝑁
+
+∑︁ 
+
+> 𝑛 =1
+
+log 𝑝 (z𝑏 𝑛 ). (11) In addition, the log-determinant of Tlow is calculated as follows: log | det (dz/dx)| =
+
+> 𝑁
+
+∑︁ 
+
+> 𝑛 =1
+> 𝑀
+
+∑︁ 
+
+> 𝑚 =1
+
+Δ𝑛,𝑚 , (12) where Δ𝑛,𝑚 denotes the log-determinant of the 𝑚 -th step of flow in the 𝑛 -th block. After training Tlow with the log-likelihood ob-jective L𝑓 , the semantic embedding x is transformed into a latent embedding z conforming to a standard normal distribution, where the dimensions are independent of each other. For item tokenization, we perform the PQ on z to obtain 𝐶 token IDs. Specifically, z is divided into 𝐶 parts [z1, z2, · · · , z𝐶 ], each of which is independently encoded using K-means to obtain a corre-sponding codebook C𝑘 = {c1 
+
+> 𝑘
+
+, c2 
+
+> 𝑘
+
+, · · · , c𝑆 𝑘 }. Here, c𝑗 𝑘 ∈ R 𝑑𝑠 𝐶 is the 
+
+𝑗 -th quantized codeword and 𝑆 denotes the codebook size. For the 
+
+𝑘 -th tokenization, the token ID is defined as: 
+
+𝑐 𝑘 = arg min    
+
+> 𝑗 ∈ { 1,2,··· ,𝑆 }
+
+∥z𝑘 − c𝑗 𝑘 ∥2. (13) In this way, Tlow tokenizes each item into discrete IDs [𝑐 1, 𝑐 2, · · · , 𝑐 𝐶 ].
+
+## 2.4 Token IDs for Recommendation 
+
+Given token IDs of all the items, a sequential model ( e.g. , Trans-former decoder) aims to generate the IDs of the next item, with a set of token embeddings learned. Specifically, there is a one-to-one correspondence between the token embeddings E ∈ R𝐶 ×𝑆 ×𝑑 𝑚 and codebooks C ∈ R𝐶 ×𝑆 × 𝑑𝑠 𝐶 , where 𝑑 𝑚 denotes the dimension of token embeddings. Traditional ID embedding can be replaced with the aggregated token embeddings e ∈ R𝑑 𝑚 for each item: 
+
+e = 1
+
+𝐶 
+
+> 𝐶
+
+∑︁ 
+
+> 𝑘 =1
+
+E𝑘,𝑐 𝑘 . (14) The sequential model further encodes the user’s historical em-bedding sequence e𝑖 1 , e𝑖 2 , · · ·  and outputs a final hidden state 
+
+h ∈ R𝑑 𝑚 . Following [5], we predict the log-likelihood of interaction with the target item 𝑖 𝑡 with token IDs 𝑐 𝑡 
+
+> 1
+
+, 𝑐 𝑡 
+
+> 2
+
+, · · · , 𝑐 𝑡 𝐶 
+
+ as follows: log 𝑝 (𝑖 𝑡 |h) =
+
+> 𝐶
+
+∑︁ 
+
+> 𝑘 =1
+
+log 𝑝  𝑐 𝑡 𝑘 |h =
+
+> 𝐶
+
+∑︁ 
+
+> 𝑘 =1
+
+log exp 
+
+
+
+E⊤
+
+> 𝑘,𝑐 𝑡 𝑘
+
+𝑔 𝑘 (h)/ 𝜏 
+
+Í𝑆 𝑗 =1 exp 
+
+
+
+E⊤ 
+
+> 𝑘,𝑗
+
+𝑔 𝑘 (h)/ 𝜏 
+
+ ,
+
+(15) where 𝜏 is the temperature hyperparameter. The 𝑘 -th project head 
+
+𝑔 𝑘 : R𝑑 𝑚 → R𝑑 𝑚 decodes the 𝑘 -th token ID of the next item. This CIKM ’26, November 07–11, 2026, Rome, Italy Nian Li et al. 𝐱0 
+
+> 𝐬
+> ⊙
+> +
+> 𝐭
+
+# ⋅ 𝐬 𝑏      
+
+> ⊙
+> +
+> 𝐭 𝑏
+> 𝑔
+> 𝐖 = 𝐏𝐋𝐔
+> A Step of Flow
+> 1. ActNorm 2. Invertible Linear 3. Affine Coupling
+> 𝐱1
+> 𝐱2 𝑎
+> 𝐱3
+> A Step of Flow
+> Block 1 Block 2 Block 3
+> 𝐱
+> 𝐳1 𝑏
+> 𝐳1 𝑎
+> 𝐳2 𝑏
+> 𝐳2 𝑎 𝐳3 𝑏
+> Tlow Architecture
+> 𝐱2 𝑏
+> A Step of Flow
+> A Step of Flow
+> A Step of Flow
+> A Step of Flow
+> A Step of Flow
+
+Figure 2: The illustration of Tlow Architecture with 𝑁 = 3 blocks and 𝑀 = 2 flows, where the dimension of semantic embedding is 𝑑 𝑠 = 4 (left). An example of “A Step of Flow” processing embedding with the dimension 𝑑 = 4 (right). 
+
+decoding approach owes to the independence between different parts of the latent embedding z. Furthermore, the training loss for recommendation can be formulated as: 
+
+L𝑟𝑒𝑐 = −∑︁  
+
+> (h,𝑖 𝑡 )
+
+log 𝑝 (𝑖 𝑡 |h). (16) 
+
+## 2.5 Learning Token Embeddings with Codebook Guidance 
+
+Since Tlow tokenizes items based on latent embeddings, the quan-tized codebooks imply clearer semantics contained in the whole set of items. In other words, each codeword in a codebook encodes atomic information derived from the decomposition of items’ se-mantics, as the illustration in Figure 1. Therefore, learning token embeddings with the codebook guidance will help enhance rec-ommendations. Unlike independent alignment for each item or behavior sequence used in existing works [14, 28], we propose to directly align two latent spaces spanned by token embeddings and codebooks. The token space Φ ∈ R𝐶 ×𝑆 ×𝑆 and codebook space 
+
+Ψ ∈ R𝐶 ×𝑆 ×𝑆 are defined based on cosine similarities between token embeddings and codewords as follows: 
+
+Φ𝑘,𝑖,𝑗 = E⊤ 
+
+> 𝑘,𝑖
+
+E𝑘,𝑗 
+
+∥E𝑘,𝑖 ∥ · ∥ E𝑘,𝑗 ∥ , Ψ𝑘,𝑖,𝑗 = C⊤ 
+
+> 𝑘,𝑖
+
+C𝑘,𝑗 
+
+∥C𝑘,𝑖 ∥ · ∥ C𝑘,𝑗 ∥ . (17) Furthermore, we implement the codebook guidance as a simple but effective MSE loss: 
+
+L𝑠𝑖𝑚 = MSE (| Φ − Ψ|) . (18) Finally, the sequential model and token embeddings are learned by training the combined loss L = L𝑟𝑒𝑐 + 𝜆 L𝑠𝑖𝑚 , where 𝜆 is the degree of codebook guidance. 
+
+## 3 Experiments 
+
+We conduct experiments under three scenarios to evaluate the ef-fectiveness of our proposed Tlow, including general, cross-domain, and multi-modal sequential recommendation. 
+
+## 3.1 Experimental Setup 
+
+3.1.1 Datasets. We use four commodity categories in Amazon Reviews dataset [17] for experiments, including “Sports and Out-doors (Sports), “Beauty”, “Toys and Games (Toys)”, and “CDs and Vinyl (CDs)”. Following existing works [4, 5, 22], users’ reviews are regarded as item interactions and arranged chronologically as historical item sequences. We also use a processed dataset “Cloth-Sports” from a state-of-the-art (SOTA) work [15] for cross-domain 
+
+Table 1: Statistics of used datasets. Datasets #Users #Items #Interactions Avg. Length Sports 35,598 18,357 260,739 8.32 
+
+Beauty 22,363 12,101 176,139 8.87 
+
+Toys 19,412 11,924 148,185 8.63 
+
+CDs 75,258 64,443 1,022,334 14.58 
+
+Cloth 9,933 3,278 97,741 10.71 
+
+Sports 4,263 1,021 11,879 sequential recommendation. This dataset is collected from “Cloth-ing Shoes and Jewelry” and “Sports and Outdoors” categories in Amazon dataset. Most of the users in this dataset overlap across two categories. The statistics of used datasets are shown in Ta-ble 1, where Avg. Length means the length of historical sequence averaged over all the users. The last item in a historical sequence is used for testing and the second-to-last item for validation, which is the widely adopted leave-one-out evaluation protocol in existing works [5, 8, 38]. 
+
+3.1.2 Baselines. We compare Tlow with two types of baselines following existing works [5, 14, 22]. Traditional ID-based models 
+
+include Caser [26], GRU4Rec [3], HGN [16], BERT4Rec [25], SAS-Rec [8], FDSA [37], and S 3-Rec [41], which adopt different neural ar-chitectures ( e.g. , CNNs, RNNs, and Transformers) to model user be-havior sequences with randomly assigned item IDs. Tokenization-based models include VQRec [4], TIGER [22], ETEGRec [14], RecJPQ [20], HSTU [34], and RPG [5], which leverage various quantization tech-niques ( e.g. , PQ, RQ-VAE, and OPQ) to tokenize item semantic embeddings for generative recommendation. 
+
+3.1.3 Evaluation Metrics. We use widely adopted ranking metrics Recall@ 𝑘 (R@ 𝑘 ) and NDCG@ 𝑘 (N@ 𝑘 ) for performance evaluation, where 𝑘 is set as 5 and 10 following [5, 22]. All the items are included for full ranking to avoid sampling bias when calculating evaluation metrics [11]. 
+
+3.1.4 Implementation Details. We implement our Tlow with Py-torch. All the experimental setups for training and evaluation follow RPG [5], thus we use baseline results from the original paper and re-run RPG. For a fair comparison, all the models use the extracted item semantic embeddings by the text encoder sentence-t5-base [18], leading to 𝑑 𝑠 = 768. We set the number of blocks and the steps of Tlow: Flow-based Item Tokenizer for Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+flow in Tlow as 𝑁 = 4 and 𝑀 = 4. In fact, the recommendation per-formance is not sensitive to the number of blocks and flows, because Tlow can easily transform the semantic embeddings into latent em-beddings conforming to a standard normal distribution. The number of codebooks 𝐶 ∈ { 16 , 32 , 64 , 96 , 128 } and the codebook size 𝑆 is fixed as 256 following RPG. The temperature 𝜏 ∈ { 0.03 , 0.05 , 0.07 }
+
+when decoding token IDs. For the hyperparameters of the sequen-tial model, we keep them consistent with those of RPG to ensure a similar number of model parameters: a 2-layer GPT-2 with the token embedding dimension of 𝑑 𝑚 = 448. Since Tlow decodes all 𝐶 
+
+token IDs of the next item independently within a single forward pass (Eq. 15), in the same manner as RPG, it retains the same de-coding parallelism as RPG and thus the same decoding-efficiency advantage over RQ-VAE-based sequential decoding ( e.g. , TIGER) that has already been empirically validated in [5]; we therefore do not repeat separate latency/throughput benchmarking in this work. 
+
+## 3.2 Overall Performance 
+
+The overall performance comparison is shown in Table 2. It is obvious that tokenization-based models using item semantics sig-nificantly outperform purely ID-based models. These results prove the effectiveness of item tokenization for more accurate modeling of user behaviors. Moreover, Tlow performs best on all the met-rics across four datasets, demonstrating better tokenization in the transformed latent space through a flow-based model. It is worth noting that when using the same semantic embeddings generated by sentence-t5-base , RPG with its independent tokenizer does not outperform TIGER consistently. This also demonstrates the cru-cial role of Tlow’s tokenization on latent embeddings conforming to a standard normal distribution. 
+
+## 3.3 Ablation Study 
+
+We conduct further experiments to validate the effectiveness of two critical modules in Tlow: the transformed latent embeddings z and the codebook guidance. 
+
+• Random z. Latent embeddings z are sampled directly from a standard normal distribution instead of being transformed from semantic embeddings by Tlow. 
+
+• w/o L𝑠𝑖𝑚 . The codebook guidance is removed by setting its cor-responding degree 𝜆 = 0. The results in Table 3 demonstrate the effectiveness of codebook guidance for enhanced recommendation through learning a seman-tically clearer latent space of token embeddings. Furthermore, the tokenization based on randomly sampled z leads to a significant performance drop. This confirms that Tlow retains rich semantic information necessary for behaviors modeling when transforming the embedding x.
+
+## 3.4 Cross-domain and Multi-modal Recommendation 
+
+In this section, we further validate the necessity and effectiveness of transforming semantic embeddings from different distributional spaces into a unified space for tokenization. 
+
+3.4.1 Cross-domain Recommendation. We choose the current SOTA cross-domain model LLM4CDSR [15] as our baseline, which lever-ages LLMs to bridge the domain gap with item semantic embed-dings and hierarchical user profiling. Besides, RPG is also included to demonstrate the effectiveness of Tlow when tokenizing items from different domains. For the implementation of RPG and Tlow, we directly use the mixed item sequences merged from two domains for model training. The results in Table 4 demonstrates the significant improvement of Tlow over both LLM4CDSR and RPG. It is effective for two reasons: first, tokenizing items to create a shared vocabulary of token IDs and training their embeddings naturally bridges the cross-domain gap. Second, Tlow’s ability to transform embedding distributions is highly effective for improving recommendations across different domains. 
+
+3.4.2 Multi-modal Recommendation. We chose the current SOTA multi-modal model HM4SR [36] as our baseline, which leverages interactive and temporal mixture of experts to capture user dy-namic interests. Since HM4SR utilizes a large amount of additional side-information (including interaction timestamp, item category, semantic embeddings as additional input), we replace the ID embed-dings in HM4SR with the token embeddings e generated by Tlow and RPG to directly compare the effectiveness of tokenization. We conduct experiments on the “Sports” dataset and gener-ate additional image embeddings using the advanced CLIP model 
+
+OpenCLIP ViT-H/14 [21], where the image is downloaded from product URLs of each item. The tokenization on text and image embeddings are performed independently, and both token IDs are merged as final token IDs. The results in Table 5 show that RPG’s tokenization brings limited and inconsistent gains over HM4SR in this setting with combined text-image distributions ( e.g. , it ties HM4SR on R@5 and underperforms on N@5 and N@10). In con-trast, Tlow consistently improves over both baselines on all four metrics after performing the distribution transformation, although the absolute margin over HM4SR ( e.g. , R@10 from 0.0469 to 0.0521) is moderate in this single-domain multi-modal setting; we expect larger gains with richer or more heterogeneous modalities. 
+
+## 3.5 Cold-Start Recommendation 
+
+Focusing on item semantics, tokenization-based models inherently have an advantage in cold-start recommendation. Therefore, we further investigate whether Tlow’s tokenization can enhance rec-ommendation performance in cold-start scenarios. We conduct our validation from both user and item perspectives. Specifically, users are grouped by their number of historical interactions (interaction depth), while items in the test set are grouped by their frequency in the training set (popularity). We then evaluate the recommendation performance for these different groups on the largest “CDs” dataset. Figure 3 shows the performance comparison between Tlow and RPG, where Tlow performs significantly better across all the groups. It indicates that due to Tlow’s ability to transform any embeddings (including long-tail ones) into a standard normal distribution, its tokenization on items across all popularity levels is more compre-hensive. This further leads to more accurate behavioral modeling for users with varying interaction depths. CIKM ’26, November 07–11, 2026, Rome, Italy Nian Li et al. 
+
+Table 2: Performance comparison on general recommendation. Underline denotes the best baseline and bold denotes better performance than the best baseline at a significance level of 𝑝 < 0.01 under paired t-test. 
+
+Model Sports and Outdoors Beauty Toys and Games CDs and Vinyl 
+
+R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 
+
+> ID
+
+Caser 0.0116 0.0072 0.0194 0.0097 0.0205 0.0131 0.0347 0.0176 0.0166 0.0107 0.0270 0.0141 0.0116 0.0073 0.0205 0.0101 GRU4Rec 0.0129 0.0086 0.0204 0.0110 0.0164 0.0099 0.0283 0.0137 0.0097 0.0059 0.0176 0.0084 0.0195 0.0120 0.0353 0.0171 HGN 0.0189 0.0120 0.0313 0.0159 0.0325 0.0206 0.0512 0.0266 0.0321 0.0221 0.0497 0.0277 0.0259 0.0153 0.0467 0.0220 BERT4Rec 0.0115 0.0075 0.0191 0.0099 0.0203 0.0124 0.0347 0.0170 0.0116 0.0071 0.0203 0.0099 0.0326 0.0201 0.0547 0.0271 SASRec 0.0233 0.0154 0.0350 0.0192 0.0387 0.0249 0.0605 0.0318 0.0463 0.0306 0.0675 0.0374 0.0351 0.0177 0.0619 0.0263 FDSA 0.0182 0.0122 0.0288 0.0156 0.0267 0.0163 0.0407 0.0208 0.0228 0.0140 0.0381 0.0189 0.0226 0.0137 0.0378 0.0186 S3-Rec 0.0251 0.0161 0.0385 0.0204 0.0387 0.0244 0.0647 0.0327 0.0443 0.0294 0.0700 0.0376 0.0213 0.0130 0.0375 0.0182 
+
+> Tokenization
+
+RecJPQ 0.0141 0.0076 0.0220 0.0102 0.0311 0.0167 0.0482 0.0222 0.0331 0.0182 0.0484 0.0231 0.0075 0.0046 0.0138 0.0066 VQ-Rec 0.0208 0.0144 0.0300 0.0173 0.0457 0.0317 0.0664 0.0383 0.0497 0.0346 0.0737 0.0423 0.0352 0.0238 0.0520 0.0292 TIGER 0.0264 0.0181 0.0400 0.0225 0.0454 0.0321 0.0648 0.0384 0.0521 0.0371 0.0712 0.0432 0.0492 0.0329 0.0748 0.0411 ETEGRec 0.0175 0.0114 0.0281 0.0149 0.0404 0.0277 0.0587 0.0337 0.0209 0.0136 0.0339 0.0178 0.0309 0.0204 0.0461 0.0253 HSTU 0.0258 0.0165 0.0414 0.0215 0.0469 0.0314 0.0704 0.0389 0.0433 0.0281 0.0669 0.0357 0.0417 0.0275 0.0638 0.0346 RPG 0.0296 0.0203 0.0428 0.0246 0.0533 0.0366 0.0753 0.0437 0.0509 0.0357 0.0765 0.0440 0.0486 0.0328 0.0693 0.0395 
+
+Tlow 0.0307 0.0207 0.0477 0.0261 0.0545 0.0377 0.0786 0.0454 0.0590 0.0395 0.0864 0.0482 0.0541 0.0362 0.0801 0.0446 
+
+Impr. (%) 3.72 1.97 11.45 6.10 2.25 3.01 4.38 3.89 11.52 9.70 9.80 11.36 9.96 10.03 7.09 8.52 
+
+Table 3: Ablation study of Tlow. 
+
+Model Sports Beauty Toys CDs 
+
+R@10 N@10 R@10 N@10 R@10 N@10 R@10 N@10 
+
+Tlow 0.0477 0.0261 0.0786 0.0454 0.0864 0.0482 0.0801 0.0446 
+
+w/o L𝑠𝑖𝑚 0.0449 0.0248 0.0764 0.0436 0.0826 0.0471 0.0756 0.0425 Random z 0.0202 0.0103 0.0623 0.0363 0.0571 0.0341 0.0147 0.0074 
+
+Table 4: Performance comparison on cross-domain recom-mendation. Model Overall Cloth Sports 
+
+R@10 N@10 R@10 N@10 R@10 N@10 LLM4CDSR 0.4620 0.2803 0.4220 0.2637 0.5507 0.3172 RPG 0.4766 0.3457 0.4487 0.3353 0.5385 0.3686 Tlow 0.5558 0.4395 0.5669 0.4568 0.5312 0.4014 Table 5: Performance comparison on multi-modal recom-mendation. 
+
+Model R@5 N@5 R@10 N@10 HM4SR 0.0326 0.0231 0.0469 0.0277 RPG 0.0326 0.0216 0.0501 0.0272 
+
+Tlow 0.0343 0.0233 0.0521 0.0290 
+
+## 3.6 Online Experiments 
+
+3.6.1 Online Setup. We verify Tlow’s online performance on China’s largest social media platform WeChat, in the picture recommenda-tion scenario involving image-text multi-modal features, comparing [3, 4] [5, 6] [7, 9] [10, 15] >15    
+
+> User Group
+> 0.035 0.040 0.045 0.050
+> NDCG@10  RPG Tlow [0, 5] [6, 10] [11, 15] [16, 20]
+> Item Group
+> 0.000 0.005 0.010 0.015
+> NDCG@10  RPG Tlow
+
+Figure 3: Performance comparison under different user and item groups. 
+
+sequential models that use Tlow’s tokenized embeddings e against those using randomly assigned item-ID embeddings. We construct users’ behavior sequences of length 500 with their recently clicked items, and feed the sequence of item embeddings into a 12-layer Transformer decoder to predict the user’s interaction tendency toward the next item. Both sequential models are integrated as retrieval pathways in addition to the primary DSSM-based real-time retrieval method, and the online serving scheme is shown in Figure 4. During the online serving phase, user embeddings and item embeddings are stored in dedicated embedding servers. Upon user access, the corresponding user embedding is retrieved via a real-time lookup operation, and candidate pictures with the highest similarity scores are then dynamically identified by the Similar-ity Server [1] to construct the retrieval results. We conduct both single-domain and cross-domain online experiments: 
+
+• Single-domain : Only users’ clicked pictures are used to con-struct behavior sequences for model training. 
+
+• Cross-domain : Both users’ clicked pictures and articles are mixed to construct behavior sequences for model training. This is to verify the effectiveness of Tlow’s tokenization in cross-domain scenarios. Tlow: Flow-based Item Tokenizer for Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Table 6: Online metrics improvement (%) of pathway com-parison in single-domain and cross-domain scenarios. Scenario Overall New Item 
+
+CTR UCTR CTR UCTR Single-domain 4.79 10.32 8.46 11.64 Cross-domain 6.23 7.20 9.09 9.45 
+
+3.6.2 Training and Inference. In the stage of training Tlow, we find that the model converges after training on embeddings of approximately 1 million items (pictures and articles). Then Tlow can generate token IDs for other unseen items by performing semantic tokenization. As a result, the training time of Tlow is negligible, and the inference efficiency is such that tokenization for tens of millions of newly published items per day can be completed in just a few minutes on a single GPU. In the deployment, we set the number of codebooks 𝐶 = 16 and codebook size 𝑆 = 256. Therefore, the number of token embeddings that the Tlow-based sequential model needs to learn is only 𝐶 × 𝑆 = 4096, far fewer than the tens of millions of item embeddings in the baseline model. The Tlow-based sequential model is initialized with all parameters of the baseline model except the item-ID embeddings. Before being deployed for online A/B test, both models are trained for two weeks on identical datasets with more than 70 and 200 million interaction records per day in single-domain and cross-domain scenarios, respectively. 
+
+3.6.3 Online Performance. After deploying the aforementioned Tlow-based and ID-based models as supplemental retrieval path-ways, we evaluate the conversion efficacy of both pathways across the entire picture corpus and specifically on cold-start pictures ex-posed on the same day as publication. The following metrics are reported: 
+
+• CTR (Click-Through Rate) measures the click-through rate of items exposed via this specific retrieval pathway. 
+
+• UCTR (User Click-Through Rate) averages all the users’ click-through rate of items exposed via this pathway. Results are shown in Table 6. Due to privacy considerations, we report only the relative difference for all metric comparisons between the models. As we can see, the sequential model employ-ing Tlow’s tokenization demonstrates 4 .79% and 6 .23% higher CTR compared to the one using random IDs in single-domain and cross-domain scenarios, respectively. Furthermore, we observe a more substantial improvement of 10 .32% and 7 .20% in UCTR, indicat-ing its effectiveness in retrieving potentially relevant content to a broader user base. These findings validate Tlow’s powerful capabil-ities on multi-modal and cross-domain embedding transformation in large-scale industrial recommender systems. To further validate Tlow’s effectiveness on cold-start recommendations, we perform evaluations exclusively on newly published pictures each day. The results reveal that the advantages of Tlow become markedly more pronounced when evaluated solely on these cold-start pictures, since random ID embeddings require extensive user interaction data for training, whereas Tlow utilizes inherent semantic features available immediately upon a picture’s publication. User Emb.             
+
+> Server
+> Similarity
+> Server
+> Item Emb.
+> Server ...
+> Retrieval Items
+> ... 𝑖 1𝑖 2𝑖 𝑇
+> User Behavior Seq.
+> 𝑐 1
+> Multi -modal Emb.
+> 𝑐 2𝑐 𝐶 ...
+> Transformer Layers
+> User Emb.
+> Embedding &Mean
+> Tlow
+> Tlow -based Item Emb.
+> Item Emb.
+
+Figure 4: Online serving of Tlow’s tokenization. 
+
+Beyond pathway comparisons, core online metrics from A/B testing also improve significantly: in the single-domain scenario, 24-hour overall and newly-published picture CTR increase by 0 .78% and 1 .94%, respectively; in the cross-domain scenario, per-capita picture CTR improves by 1 .05%, accompanied by a 1 .15% decrease in top-tier accounts’ exposure share, indicating that Tlow substantially benefits long-tail picture exposure. 
+
+## 4 Related Work 4.1 ID-based Recommendation 
+
+ID-based recommendation originates from collaborative filtering, evolving from matrix factorization [10] to GNN-based models [29]. For sequential recommendation, various architectures have been explored, including Markov Chains [23], RNNs and CNNs [3, 26, 31, 32], and self-attention mechanisms [8, 36, 40]. Multi-modal information such as text and images has also been incorporated to enrich item representations [27, 36]. 
+
+## 4.2 Tokenization-based Recommendation 
+
+TIGER [22] pioneers the use of RQ-VAE to tokenize item semantic embeddings, followed by works that introduce alignment strategies to enhance tokenization quality [14, 28, 30]. However, the hierar-chical nature of RQ-VAE leads to low decoding efficiency due to codebook correlations. To enable parallel decoding, PQ-based in-dependent tokenization methods have been proposed [4, 5], while parameter-free tokenizers based on heuristic algorithms remain lim-ited in performance [6, 19, 24]. Despite this progress, existing inde-pendent tokenizers still face challenges from non-independent em-bedding dimensions and complex embedding distributions, which motivates our flow-based approach. 
+
+## 5 Conclusion 
+
+We propose Tlow, a flow-based item tokenizer that transforms semantic embeddings into a standard normal distribution space, achieving dimensional independence and distributional simplicity for more accurate independent tokenization. Tlow significantly im-proves recommendation performance across general, cross-domain, multi-modal, and cold-start scenarios in both offline and online experiments. 
+
+## Acknowledgments 
+
+This work is supported by the National Natural Science Foundation of China under U24B20180. CIKM ’26, November 07–11, 2026, Rome, Italy Nian Li et al. 
+
+## References 
+
+[1] Matthijs Douze, Alexandr Guzhva, Chengqi Deng, Jeff Johnson, Gergely Szilvasy, Pierre-Emmanuel Mazaré, Maria Lomeli, Lucas Hosseini, and Hervé Jégou. 2024. The Faiss library. (2024). arXiv:2401.08281 [cs.LG] [2] Tiezheng Ge, Kaiming He, Qifa Ke, and Jian Sun. 2013. Optimized product quantization. IEEE transactions on pattern analysis and machine intelligence 36, 4 (2013), 744–755. [3] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2015. Session-based recommendations with recurrent neural networks. arXiv preprint arXiv:1511.06939 (2015). [4] Yupeng Hou, Zhankui He, Julian McAuley, and Wayne Xin Zhao. 2023. Learning vector-quantized item representation for transferable sequential recommenders. In Proceedings of the ACM Web Conference 2023 . 1162–1171. [5] Yupeng Hou, Jiacheng Li, Ashley Shin, Jinsung Jeon, Abhishek Santhanam, Wei Shao, Kaveh Hassani, Ning Yao, and Julian McAuley. 2025. Generating Long Semantic IDs in Parallel for Recommendation. arXiv preprint arXiv:2506.05781 
+
+(2025). [6] Wenyue Hua, Shuyuan Xu, Yingqiang Ge, and Yongfeng Zhang. 2023. How to index item ids for recommendation foundation models. In Proceedings of the Annual International ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region . 195–204. [7] Herve Jegou, Matthijs Douze, and Cordelia Schmid. 2010. Product quantization for nearest neighbor search. IEEE transactions on pattern analysis and machine intelligence 33, 1 (2010), 117–128. [8] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-mendation. In 2018 IEEE international conference on data mining (ICDM) . IEEE, 197–206. [9] Durk P Kingma and Prafulla Dhariwal. 2018. Glow: Generative flow with in-vertible 1x1 convolutions. Advances in neural information processing systems 31 (2018). [10] Yehuda Koren, Robert Bell, and Chris Volinsky. 2009. Matrix factorization tech-niques for recommender systems. Computer 42, 8 (2009), 30–37. [11] Walid Krichene and Steffen Rendle. 2020. On sampled metrics for item recom-mendation. In Proceedings of the 26th ACM SIGKDD international conference on knowledge discovery & data mining . 1748–1757. [12] Zhirui Kuai, Zuxu Chen, Huimu Wang, Mingming Li, Dadong Miao, Binbin Wang, Xusong Chen, Li Kuang, Yuxing Han, Jiaxing Wang, et al. 2024. Breaking the Hourglass Phenomenon of Residual Quantization: Enhancing the Upper Bound of Generative Retrieval. arXiv preprint arXiv:2407.21488 (2024). [13] Bohan Li, Hao Zhou, Junxian He, Mingxuan Wang, Yiming Yang, and Lei Li. 2020. On the sentence embeddings from pre-trained language models. arXiv preprint arXiv:2011.05864 (2020). [14] Enze Liu, Bowen Zheng, Cheng Ling, Lantao Hu, Han Li, and Wayne Xin Zhao. 2024. Generative Recommender with End-to-End Learnable Item Tokenization. 
+
+arXiv preprint arXiv:2409.05546 (2024). [15] Qidong Liu, Xiangyu Zhao, Yejing Wang, Zijian Zhang, Howard Zhong, Chong Chen, Xiang Li, Wei Huang, and Feng Tian. 2025. Bridge the Domains: Large Language Models Enhanced Cross-domain Sequential Recommendation. arXiv preprint arXiv:2504.18383 (2025). [16] Chen Ma, Peng Kang, and Xue Liu. 2019. Hierarchical gating networks for sequential recommendation. In Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining . 825–833. [17] Julian McAuley, Christopher Targett, Qinfeng Shi, and Anton Van Den Hengel. 2015. Image-based recommendations on styles and substitutes. In Proceedings of the 38th international ACM SIGIR conference on research and development in information retrieval . 43–52. [18] Jianmo Ni, Gustavo Hernandez Abrego, Noah Constant, Ji Ma, Keith B Hall, Daniel Cer, and Yinfei Yang. 2021. Sentence-t5: Scalable sentence encoders from pre-trained text-to-text models. arXiv preprint arXiv:2108.08877 (2021). [19] Aleksandr V Petrov and Craig Macdonald. 2023. Generative sequential recom-mendation with gptrec. arXiv preprint arXiv:2306.11114 (2023). [20] Aleksandr V Petrov and Craig Macdonald. 2024. RecJPQ: training large-catalogue sequential recommenders. In Proceedings of the 17th ACM International Conference on Web Search and Data Mining . 538–547. [21] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, et al. 2021. Learning transferable visual models from natural language supervision. In International conference on machine learning . PMLR, 8748–8763. [22] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, et al. 2023. Recommender systems with generative retrieval. Advances in Neural Information Processing Systems 36 (2023), 10299–10315. [23] Steffen Rendle, Christoph Freudenthaler, and Lars Schmidt-Thieme. 2010. Factor-izing personalized markov chains for next-basket recommendation. In Proceedings of the 19th international conference on World wide web . 811–820. [24] Zihua Si, Zhongxiang Sun, Jiale Chen, Guozhang Chen, Xiaoxue Zang, Kai Zheng, Yang Song, Xiao Zhang, Jun Xu, and Kun Gai. 2024. Generative retrieval with semantic tree-structured identifiers and contrastive learning. In Proceedings of the 2024 Annual International ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region . 154–163. [25] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential recommendation with bidirectional encoder rep-resentations from transformer. In Proceedings of the 28th ACM international conference on information and knowledge management . 1441–1450. [26] Jiaxi Tang and Ke Wang. 2018. Personalized top-n sequential recommenda-tion via convolutional sequence embedding. In Proceedings of the eleventh ACM international conference on web search and data mining . 565–573. [27] Zhulin Tao, Yinwei Wei, Xiang Wang, Xiangnan He, Xianglin Huang, and Tat-Seng Chua. 2020. Mgat: Multimodal graph attention network for recommendation. 
+
+Information Processing & Management 57, 5 (2020), 102277. [28] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable item tokenization for generative recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 2400–2409. [29] Xiang Wang, Xiangnan He, Meng Wang, Fuli Feng, and Tat-Seng Chua. 2019. Neural graph collaborative filtering. In Proceedings of the 42nd international ACM SIGIR conference on Research and development in Information Retrieval . 165–174. [30] Ye Wang, Jiahao Xun, Minjie Hong, Jieming Zhu, Tao Jin, Wang Lin, Haoyuan Li, Linjun Li, Yan Xia, Zhou Zhao, et al. 2024. Eager: Two-stream generative recommender with behavior-semantic collaboration. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 3245–3254. [31] Chengfeng Xu, Pengpeng Zhao, Yanchi Liu, Jiajie Xu, Victor S Sheng S. Sheng, Zhiming Cui, Xiaofang Zhou, and Hui Xiong. 2019. Recurrent convolutional neural network for sequential recommendation. In The world wide web conference .3398–3404. [32] An Yan, Shuo Cheng, Wang-Cheng Kang, Mengting Wan, and Julian McAuley. 2019. CosRec: 2D convolutional neural networks for sequential recommenda-tion. In Proceedings of the 28th ACM international conference on information and knowledge management . 2173–2176. [33] Neil Zeghidour, Alejandro Luebs, Ahmed Omran, Jan Skoglund, and Marco Tagliasacchi. 2021. Soundstream: An end-to-end neural audio codec. IEEE/ACM Transactions on Audio, Speech, and Language Processing 30 (2021), 495–507. [34] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhao-jie Gong, Fangda Gu, Michael He, et al. 2024. Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations. arXiv preprint arXiv:2402.17152 (2024). [35] Jin Zhang, Qi Liu, Defu Lian, Zheng Liu, Le Wu, and Enhong Chen. 2022. Anisotropic additive quantization for fast inner product search. In Proceedings of the AAAI conference on Artificial Intelligence , Vol. 36. 4354–4362. [36] Shengzhe Zhang, Liyi Chen, Dazhong Shen, Chao Wang, and Hui Xiong. 2025. Hierarchical Time-Aware Mixture of Experts for Multi-Modal Sequential Recom-mendation. In Proceedings of the ACM on Web Conference 2025 . 3672–3682. [37] Tingting Zhang, Pengpeng Zhao, Yanchi Liu, Victor S Sheng, Jiajie Xu, Deqing Wang, Guanfeng Liu, Xiaofang Zhou, et al. 2019. Feature-level deeper self-attention network for sequential recommendation.. In IJCAI . 4320–4326. [38] Wayne Xin Zhao, Zihan Lin, Zhichao Feng, Pengfei Wang, and Ji-Rong Wen. 2022. A revisiting study of appropriate offline evaluation for top-N recommendation algorithms. ACM Transactions on Information Systems 41, 2 (2022), 1–41. [39] Guorui Zhou, Jiaxin Deng, Jinghao Zhang, Kuo Cai, Lejian Ren, Qiang Luo, Qian-qian Wang, Qigen Hu, Rui Huang, Shiyao Wang, et al. 2025. OneRec Technical Report. arXiv preprint arXiv:2506.13695 (2025). [40] Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. 2018. Deep interest network for click-through rate prediction. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining . 1059–1068. [41] Kun Zhou, Hui Wang, Wayne Xin Zhao, Yutao Zhu, Sirui Wang, Fuzheng Zhang, Zhongyuan Wang, and Ji-Rong Wen. 2020. S3-rec: Self-supervised learning for se-quential recommendation with mutual information maximization. In Proceedings of the 29th ACM international conference on information & knowledge management .1893–1902.
