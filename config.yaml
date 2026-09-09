@@ -74,6 +74,53 @@ subscriptions:
           source: manual
           note: ''
       updated_at: '2026-09-09T09:36:51.086Z'
+    - tag: rank-mixer
+      description: 精排模型场景的mixer结构相关论文调研，用于与UniMixer等进行比较的Related Work部分
+      enabled: true
+      paper_sources:
+        - arxiv
+        - biorxiv
+      keywords:
+        - keyword: mixer architecture ranking
+          keyword_cn: 排序模型中的Mixer架构
+          query: mixer architecture for learning to rank
+        - keyword: feature interaction network
+          keyword_cn: 特征交互网络
+          query: feature interaction network for deep ranking models
+        - keyword: multilayer perceptron mixer
+          keyword_cn: 多层感知机Mixer
+          query: multilayer perceptron mixer for ranking models
+        - keyword: unified mixer model
+          keyword_cn: 统一Mixer模型
+          query: unified mixer architecture for ranking model
+        - keyword: recommendation ranking model
+          keyword_cn: 推荐排序模型
+          query: CTR prediction ranking model architecture with mixer
+        - keyword: attention free architecture
+          keyword_cn: 无注意力架构
+          query: attention free mixer architecture for ranking tasks
+      intent_queries:
+        - query: Find related work on mixer based architectures for deep learning ranking systems
+          query_cn: 查找深度学习排序系统中基于Mixer架构的相关工作
+          enabled: true
+          source: manual
+          note: ''
+        - query: Compare UniMixer with other mixer and Transformer based ranking models
+          query_cn: 比较UniMixer与其他基于Mixer和Transformer的排序模型
+          enabled: true
+          source: manual
+          note: ''
+        - query: Search for papers on feature interaction networks in recommender systems and ranking
+          query_cn: 搜索推荐系统和排序中特征交互网络的相关论文
+          enabled: true
+          source: manual
+          note: ''
+        - query: Identify key differences between ResNet and mixer layers for click through rate prediction
+          query_cn: 识别ResNet与Mixer层在点击率预测中的关键区别
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-09-09T12:23:56.960Z'
 source_backends:
   arxiv:
     papers_table: arxiv_papers
