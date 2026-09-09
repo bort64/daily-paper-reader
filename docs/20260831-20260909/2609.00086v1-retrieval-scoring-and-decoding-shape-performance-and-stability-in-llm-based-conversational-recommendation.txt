@@ -1,0 +1,221 @@
+Title: Retrieval, Scoring, and Decoding Shape Performance and Stability in LLM-based Conversational Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.00086v1
+
+Published Time: Wed, 02 Sep 2026 00:04:12 GMT
+
+Number of Pages: 5
+
+Markdown Content:
+# Retrieval, Scoring, and Decoding Shape Performance and Stability in LLM-based Conversational Recommendation 
+
+# Ante Kapetanovic ∗
+
+ankapetanovic@infobip.com Infobip Split, Croatia 
+
+# Tomislav Duricic ∗
+
+tduricic@infobip.com Infobip Zagreb, Croatia 
+
+# Andro Mercep 
+
+amercep@infobip.com Infobip Zagreb, Croatia 
+
+# Emanuel Lacic 
+
+emlacic@infobip.com Infobip Zagreb, Croatia 
+
+## Abstract 
+
+Large language models (LLMs) are increasingly used as rerankers in conversational recommender systems, yet measured gains de-pend strongly on the retrieval and inference protocol. On the Re-Dial conversational movie recommendation benchmark, we com-pare proprietary, open-weight, and fine-tuned LLM rerankers with collaborative-filtering and sequential baselines in a shared retrieve-then-rerank pipeline. We vary candidate-pool size, first-stage re-triever, and decoding temperature. With a shared semantic top-250 candidate pool and strict candidate-aware scoring, the best propri-etary reranker reaches NDCG@10 of 0.1497, compared with 0.0939 for the strongest non-LLM baseline. The same reranker reaches 0.2925 in zero-shot generation, showing that unconstrained scoring can yield a much larger apparent advantage than matched-pool evaluation. No evaluated open-weight LLM outperforms the tuned shallow autoencoder baseline under this protocol. For the strongest proprietary and open-weight rerankers, switching from semantic to collaborative-filtering candidates raises NDCG@10 by more than 50%, showing that measured reranker performance is highly sen-sitive to candidate generation. For the best proprietary reranker, raising temperature from 0 to 1.0 increases top-10 Jaccard distance from 0.0900 to 0.1240 while mean NDCG@10 changes negligibly, whereas weaker LLMs show larger degradation. These ReDial re-sults support treating candidate generation, candidate-pool size, scoring policy, and decoding configuration as required reporting fields rather than implementation details. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems ; Retrieval models and ranking ; Evaluation of retrieval results .
+
+## Keywords 
+
+conversational recommender systems, large language models, rerank-ing, candidate generation, evaluation, stability 
+
+ACM Reference Format: 
+
+Ante Kapetanovic, Tomislav Duricic, Andro Mercep, and Emanuel Lacic. 2026. Retrieval, Scoring, and Decoding Shape Performance and Stability in LLM-based Conversational Recommendation. In Proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ’26), November 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 5 pages. https://doi.org/10.1145/3799682.3840066 
+
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840066
+
+## 1 Introduction 
+
+Conversational recommender systems (CRS) infer preferences from dialogue rather than from dense interaction histories [12]. Large language models (LLMs) have shown promising zero-shot ranking ability on recommendation tasks [11] and can also be fine-tuned for the role [3], which is why recent CRS work increasingly relies on them at the ranking stage. Reported gains over earlier baselines are often substantial, but those numbers depend on pipeline choices that many tend to under-report, i.e., which items are retrieved as candidates, how many of them are shown to the LLM, whether eval-uation restricts credit to the candidate set or scores any generated catalog title, and how the model is decoded. On a single bench-mark, these choices can move ranking quality by more than the gap separating top systems, so the same model can appear strong or mediocre depending on how it is evaluated. Two-stage retrieve-then-rerank is standard for LLM-based rank-ing [27], and recent LLM rerankers add user-preference retrieval or graph signals on top of an explicit candidate stage [28, 31]. Yet, LLM CRS comparisons are seldom controlled for candidate genera-tion, and reproducibility studies show that recommender compar-isons are sensitive to such protocol choices as well as to baseline strength [5, 15]. Stochastic decoding further makes LLM outputs variable across repeated samples and sensitive to the order in which candidates appear in the prompt [4, 18], yet list-level stability is rarely reported alongside accuracy in LLM CRS evaluations. We study how these factors jointly shape observed effective-ness on ReDial [17], a CRS benchmark of seeker-recommender movie dialogues in which preferences must be inferred from the conversation alone. We compare proprietary, open-weight, and fine-tuned LLM rerankers against collaborative-filtering (CF) and sequential rerankers in a shared two-stage pipeline 1. Matched-pool comparisons hold the retrieved candidates fixed while we vary candidate-pool size, first-stage retriever, and decoding temperature. We answer the following research questions: 
+
+RQ1 Under a matched semantic candidate pool, how do LLM rerankers compare to CF and sequential rerankers? 
+
+RQ2 How sensitive is LLM reranking quality to candidate-pool size, from zero-shot generation to full-catalog reranking? 
+
+RQ3 How does the choice of first-stage retriever (i.e., semantic, CF, or sequential) affect the quality of an LLM reranker? 
+
+RQ4 How stable are LLM recommendation lists under decoding-temperature sampling, in terms of both ranking quality and list-level agreement?       
+
+> ∗Equal contribution.
+> 1Code, prompts, configurations, and outputs: https://github.com/infobip/crs-performance arXiv:2609.00086v1 [cs.CL] 31 Aug 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Ante Kapetanovic, Tomislav Duricic, Andro Mercep, and Emanuel Lacic
+
+Four proprietary LLMs significantly outperform EASE (0.0939), led by Claude Opus 4.6 at 0.1497, while every evaluated open-weight reranker falls below it. Expanding the semantic pool from 250 items to the full catalog raises proprietary NDCG@10 by 57–89%. Replac-ing semantic with EASE candidates raises NDCG@10 by 52–59% across the two tested rerankers. With higher temperature, Claude Opus 4.6 maintains mean accuracy while Jaccard distance@10 rises from 0.0900 to 0.1240, whereas for Llama-3.3-70B it rises from 0.0230 to 0.7600. These results identify retrieval strategy, candidate-pool size, scoring policy, and decoding configuration as core experimen-tal variables. 
+
+## 2 Methodology 2.1 Dataset and Task 
+
+We evaluate on ReDial’s standard test split (1,025 dialogues) and 6,924-movie catalog [17]. For each dialogue, accepted recommen-dations are masked and used as ground-truth targets. Each model returns ten ranked movie titles from family-specific inputs. LLM prompts contain liked titles, the masked dialogue, and, out-side zero-shot generation, a shuffled candidate list. We label settings by candidate count: c 𝐾 denotes 𝐾 candidates, c0 no candidate list, and cAll the full catalog. Candidate-aware prompts require outputs to use only listed titles. For CF models, liked movies form the im-plicit interaction history, while accepted recommendations define validation and test targets. For sequential models, we preserve item order by placing liked movies before accepted recommendations and expanding these histories into the pre-augmented RecBole sequence format [32]. The targets stay fixed while the input rep-resentation matches each model family. Matching pools controls item availability but not model information: LLMs use raw dialogue and pretrained knowledge, whereas CF and sequential models use interaction histories. Our comparisons therefore evaluate systems rather than reranking under identical information. 
+
+## 2.2 Two-stage Pipeline and Candidate Generation 
+
+We use a two-stage pipeline with two roles: a candidate generator returns a pool 𝐶 𝐾 𝑢 of 𝐾 catalog items for dialogue 𝑢 , and a reranker orders items from this pool and emits the top-10 recommendation list. The same model can fill either role. In our experiments, CF and sequential models act as rerankers over a matched semantic pool and also produce top-𝐾 pools that LLMs then rerank. The primary candidate generator is content-based filtering (CBF) over movie metadata. We embed each catalog item with all-mpnet-base-v2, a Sentence-BERT model [23], and L2-normalize the result-ing vectors e𝑖 . For dialogue 𝑢 with liked set 𝐿 𝑢 and disliked set 𝐷 𝑢 ,we form centroids 
+
+c+ 
+
+> 𝑢
+
+= norm 1
+
+|𝐿 𝑢 |∑︁ 𝑗 ∈𝐿 𝑢 
+
+e𝑗 
+
+!
+
+, c− 
+
+> 𝑢
+
+= norm 1
+
+|𝐷 𝑢 |∑︁ 𝑗 ∈𝐷 𝑢 
+
+e𝑗 
+
+!
+
+, (1) and score each catalog item 𝑖 ∉ 𝐿 𝑢 ∪ 𝐷 𝑢 by 
+
+𝑠 𝑢,𝑖 = 𝜆 + e𝑖 , c+ 
+
+> 𝑢
+
+− 𝜆 − e𝑖 , c− 
+
+> 𝑢
+
+, (2) with 𝜆 + = 1 and 𝜆 − = 0.5. The negative term is dropped when 𝐷 𝑢 
+
+is empty. The top-𝐾 items by 𝑠 𝑢,𝑖 form 𝐶 𝐾 𝑢 , which we shuffle before insertion into the <CANDIDATES> block of LLM prompts to reduce prompt-position effects. CBF pools of size 𝐾 = 250 drive the main reranker compar-ison. For candidate-pool sensitivity, we also evaluate zero-shot generation (no candidate list), CBF pools at 𝐾 ∈ { 500 , 1000 }, and full-catalog reranking, where all 6,924 catalog titles are placed in a single prompt. Additionally, we build top-250 pools with EASE as the CF retriever and SASRec as the sequential retriever for the same LLM rerankers, isolating first-stage effects. 
+
+## 2.3 Rerankers, Inference, and Evaluation 
+
+Rerankers. We compare proprietary API LLMs, open-weight LLMs, and a fine-tuned open-weight LLM against CF and sequential rerankers. LLM rerankers receive the dialogue context and candi-date titles then generate an ordered list of movie titles. CF rerankers score the same candidate items using collaborative signals learned from the RecBole interaction data [32]. Sequential rerankers score candidates using the corresponding ordered dialogue/user sequence. We also include the unreranked CBF order and a popularity base-line. The fine-tuned reranker is Qwen2.5-7B-Instruct adapted with LoRA (rank 16, 𝛼 = 32, 3 epochs, learning rate 2 ×10 −5) on the c250 training prompts. For the main reranking runs, LLMs are decoded with temperature 0 and top-p left at its default of 1.0. The repository contains full prompt templates, exact provider model identifiers, run configurations, outputs, and parsing code. 
+
+Metrics. Our primary metric is NDCG@10 [13] with binary rel-evance over the accepted target movies. We also report Hit@10, item coverage@10, and average training-set popularity@10. LLM outputs are parsed as ordered title lists and matched to ReDial cata-log items after Unicode-normalized, lowercased title matching with trailing punctuation stripped. Titles that cannot be matched to a catalog item are kept in the raw artifact but receive no metric credit. In candidate-constrained settings, the prompt instructs the LLM to choose only from the candidate list. Generated titles outside that list receive no metric credit, even if they match a catalog item. 
+
+Retrieval diagnostics and significance. CandRecall@250 is the mean fraction of ground-truth items retrieved into the top-250 candidate pool. Oracle NDCG@10 is the best NDCG@10 attainable by a reranker that can only rank items from that pool. Confidence intervals use bootstrap resampling over dialogue-level examples. For the main reranker comparison, we test NDCG@10 against EASE with paired Wilcoxon signed-rank tests and Holm correction [10]. 
+
+## 2.4 Temperature sensitivity and list stability 
+
+For each LLM reranker we run 20 generations per prompt at each temperature in {0, 0.5, 1.0, 2.0} over a fixed 30-prompt subset of the c250 test set, with top-𝑝 = 1.0. Anthropic models (Claude Opus 4.6, Claude Sonnet 4.6) are capped at 𝑇 = 1.0 by the provider. We re-port mean NDCG@10 and dialogue-level variation across repeated generations. List changes are measured with Jaccard distance@10 over the top-10 sets and position disagreement@10, the mean frac-tion of rank-aligned positions whose items differ across paired generations. Performance and Stability of LLM Rerankers in CRS CIKM ’26, November 07–11, 2026, Rome, Italy c0 c250 c500 c1000 cAll 
+
+> Candidate pool
+> 0.00 0.05 0.10 0.15 0.20 0.25 0.30
+> NDCG@10
+> Proprietary
+> Claude Opus 4.6 GPT-5.2 Claude Sonnet 4.6 GPT-4.1 GPT-4.1-mini
+> Open-weight
+> Llama-3.3-70B Gemma-2-9B Llama-3.1-8B Qwen2.5-7B Llama-3.2-3B
+
+Figure 1: NDCG@10 as a function of candidate-pool size across LLM rerankers with semantic retrieval. Settings span c0 (zero-shot, no candidates), strict candidate-aware top-𝑘 
+
+scoring at c250, c500, and c1000, and full-catalog (cAll). 
+
+## 3 Results 
+
+The results show three main patterns. Proprietary LLMs lead under a fixed semantic candidate pool, first-stage retrieval can change NDCG@10 as much as model choice, and decoding temperature affects list stability more than average ranking quality. 
+
+RQ1. Under the matched semantic top-250 pool (Table 1), Claude Opus 4.6 achieves the highest strict NDCG@10 at 0.1497, with GPT-5.2, Claude Sonnet 4.6, and GPT-4.1 clustered behind between 0.1283 and 0.1335. These four proprietary models are the only rerankers significantly above EASE (0.0939) after Holm correction. GPT-4.1 Mini is numerically higher than EASE but not significant, and every open-weight reranker falls below EASE. Zero-shot scoring changes this picture. Claude Opus 4.6 reaches 0.2925, nearly twice its strict c250 score, and additional models become significant against the EASE baseline. Table 1 also shows differences in coverage and popularity. Under c250, GPT-4.1 and GPT-4.1 Mini have the highest coverage among proprietary LLMs, while EASE has lower coverage and higher average popularity. The strongest proprietary rerankers improve NDCG without relying only on the most popular items. Open-weight models show mixed behavior: some cover a broad part of the catalog but still rank less accurately. 
+
+RQ2. Figure 1 shows how candidate access reshapes the same rerankers. Every proprietary model gains substantially as the pool expands. Strict NDCG@10 rises by 57% (GPT-4.1 Mini) to 89% (GPT-5.2) between c250 and cAll, and cAll is the best strict setting for each. c0, scored without a candidate list, lands in the same range and slightly exceeds cAll for Opus (0.2925 vs 0.2644) and GPT-4.1 Mini (0.1937 vs 0.1600). Open-weight rerankers do not benefit similarly, with NDCG dropping from c250 to c500 for every evaluated open-weight model. Because pool size simultaneously changes target availability, candidate composition, prompt length, and ranking difficulty, this experiment measures their combined pipeline effect rather than isolating reranking ability. 
+
+RQ3. Table 2 changes the first-stage retriever while holding candidate-pool size and reranker fixed. Semantic retrieval places 0.0 0.5 1.0 2.0
+
+Temperature 
+
+> 0.00 0.04 0.08 0.12
+> NDCG@10
+
+A   
+
+> 0.00.51.02.0
+
+Temperature 
+
+> 0.00.20.40.60.81.0
+> Jaccard distance@10
+
+B
+
+Proprietary 
+
+> Claude Opus 4.6 GPT-4.1 GPT-5.2 GPT-4.1-mini Claude Sonnet 4.6
+
+Open-weight 
+
+> Llama-3.3-70B Qwen2.5-7B Gemma-2-9B Llama-3.2-3B Llama-3.1-8B Qwen2.5-7B-FT
+
+Figure 2: NDCG@10 (A) and Jaccard distance@10 (B) as func-tions of decoding temperature on the fixed semantic c250 stability subset of 30 prompts. 
+
+only 28.8% of relevant items in the top-250 pool, versus 48.6% for EASE and 50.9% for SASRec. Oracle NDCG@10 follows the same order. Retriever choice carries through to the reranker. Switch-ing from semantic to EASE lifts Claude Opus 4.6 by 52% (0.1497 to 0.2277) and Llama-3.3-70B by 59% (0.0770 to 0.1223). SASRec has the highest recall and oracle ceiling, while EASE yields the best NDCG for both rerankers. Retrieval opportunity alone therefore does not determine downstream performance, though this design does not separate candidate composition from reranker–pool compatibility. 
+
+RQ4. Figure 2 reports the stability subset of 30 prompts, so abso-lute NDCG levels are not comparable to the full-test numbers in Table 1. Across API models, mean strict NDCG@10 is roughly flat in temperature while Jaccard distance@10 rises with each step. The Anthropic models cap at 𝑇 = 1.0 by the provider, so their traces stop there. Claude Opus 4.6 is the most stable. Its Jaccard distance moves from 0.0900 at 𝑇 = 0 to 0.1240 at 𝑇 = 1.0, position disagree-ment@10 rises from 0.2700 to 0.3500, and NDCG@10 changes little. Open-weight rerankers are less stable. Llama-3.3-70B begins al-most deterministic at 𝑇 = 0 (Jaccard 0.0230, position disagreement 0.0250) and reaches 0.7600 and 0.7930 at 𝑇 = 2.0. Its NDCG@10 also falls from 0.0750 to 0.0490. 
+
+## 4 Discussion and Conclusion 
+
+Retrieval choices are as important as the reranker. Switching first-stage retrievers improves NDCG@10 by 52–59% across both rerankers, while larger candidate pools also substantially improve proprietary models. Yet the higher-recall SASRec pool trails EASE after reranking, showing that candidate availability, composition, and reranker–pool compatibility jointly determine downstream quality. Treating candidate generation as an implementation detail thus conflates pipeline and reranker quality. CIKM ’26, November 07–11, 2026, Rome, Italy Ante Kapetanovic, Tomislav Duricic, Andro Mercep, and Emanuel Lacic 
+
+Table 1: Reranker effectiveness on ReDial under zero-shot scoring (c0, no candidate list) and strict candidate-aware scoring over the semantic top-250 pool (c250). Rows group LLM, collaborative-filtering, sequential, and popularity rerankers.  
+
+> NDCG@10
+
+↑ Hit@10 ↑ Cov.@10 ↑ Pop.@10 ↓                                                                                                                                                                                  
+
+> Reranker c0 c250 c0 c250 c0 c250 c0 c250 Semantic baseline Semantic rank [23] –0.0079 –0.0260 –0.4018 –13.25 Proprietary LLMs Claude Opus 4.6 [1] 0.2925 ∗0.1497 ∗0.4875 0.2713 0.2041 0.2639 52.12 42.80 GPT-5.2 [22] 0.2427 ∗0.1335 ∗0.4094 0.2523 0.2163 0.2858 44.63 36.64 Claude Sonnet 4.6 [2] 0.2207 ∗0.1325 ∗0.3814 0.2462 0.2169 0.2754 45.22 37.79 GPT-4.1 [21] 0.1983 ∗0.1283 ∗0.3453 0.2322 0.2185 0.3037 40.90 34.22 GPT-4.1 Mini [21] 0.1937 ∗0.1021 0.3554 0.1912 0.1999 0.3033 52.09 32.69 Open-weight LLMs Qwen2.5-7B-FT [30] –0.0792 –0.1502 –0.2711 –23.22 Llama-3.3-70B [20] 0.1154 0.0770 0.2503 0.1602 0.2114 0.2607 47.86 33.69 Gemma-2-9B [6] 0.1356 ∗0.0650 0.2913 0.1281 0.1932 0.3068 47.87 26.43 Llama-3.1-8B [7] 0.0815 0.0503 0.1992 0.1011 0.1749 0.2402 40.68 27.03 Qwen2.5-7B [30] 0.0622 0.0500 0.1952 0.1071 0.2064 0.2620 57.75 29.62 Llama-3.2-3B [19] 0.0603 0.0278 0.1622 0.0571 0.1989 0.2939 40.72 20.93 Collaborative filtering EASE [26] –0.0939 –0.2072 –0.2370 –59.99 ItemKNN [25] –0.0876 –0.1982 –0.3258 –43.86 LightGCN [8] –0.0833 –0.2042 –0.2139 –59.96 BPR [24] –0.0826 –0.1892 –0.2096 –63.60 Seqential models SASRec [14] –0.0705 –0.1802 –0.1592 –67.96 GRU4Rec [9] –0.0703 –0.1792 –0.2301 –57.82 NARM [16] –0.0686 –0.1612 –0.2402 –58.82 SRGNN [29] –0.0615 –0.1592 –0.1853 –64.44 Popularity baseline Pop [32] –0.0388 –0.1061 –0.0477 –107.68 Cov. is item coverage of the top-10 list. Pop. is mean training-set popularity of top-10 items. ∗marks NDCG@10 significantly above the EASE c250 baseline by paired Wilcoxon signed-rank test with Holm correction (
+
+𝑝 < 0.05 ). c0 and c250 LLM scores are tested separately against that baseline. CF, sequential, and popularity baselines require a candidate set and have no c0 entry. Qwen2.5-7B-FT was fine-tuned on c250 prompts and is reported only for that policy. 
+
+Table 2: Effect of the first-stage retriever on LLM reranking with a fixed top-250 candidate pool.  
+
+> NDCG@10
+
+↑  
+
+> Retriever CandR@250
+
+↑ Oracle Claude Opus 4.6 Llama-3.3-70B Semantic 0.2877 0.3165 0.1497 0.0770 EASE 0.4862 0.5222 0.2277 0.1223 SASRec 0.5093 0.5423 0.2119 0.1180 CandR@250 is the mean fraction of ground-truth movies retrieved into the candidate pool. Oracle NDCG@10 is the best NDCG@10 achievable by a perfect reranker re-stricted to that pool, and upper-bounds the downstream reranker columns. 
+
+Candidate access and scoring policy shape headline LLM gains. 
+
+Claude Opus 4.6 reaches 0.2925 in zero-shot generation but 0.1497 under strict candidate-aware scoring on the matched semantic top-250 pool. Because c0 and c250 differ in both candidate access and scoring policy, this contrast does not isolate either factor. It instead shows how strongly the evaluation protocol affects the apparent advantage over EASE. Under the matched c250 pool, only four proprietary models significantly outperform EASE, while every open-weight reranker falls below it. These are system-level com-parisons rather than tests of reranking under identical information. 
+
+Stability is a separate axis from accuracy. Mean accuracy and list identity respond differently to decoding temperature. For the strongest proprietary models, NDCG@10 changes little between temperature 0 and 1, while Jaccard distance@10 and position dis-agreement@10 increase. The model can therefore return lists with similar accuracy but different items and rankings. Llama-3.3-70B is more temperature-sensitive, with Jaccard distance@10 rising from 0.0230 to 0.7600 and NDCG@10 falling from 0.0750 to 0.0490. Re-porting only mean NDCG hides this deployment-relevant behavior. 
+
+Scope and future work. Our experiments use ReDial, a single movie-domain CRS benchmark with a 6,924-item catalog. Future work will test whether these findings generalize to larger catalogs, other domains, and conversational settings. We did not systemati-cally measure cost or latency. Future evaluations should compare quality, cost, and latency, particularly for large and full-catalog candidate pools. 
+
+Toward a reporting norm. LLM-based CRS evaluations should report the retriever, candidate-pool size, scoring policy for off-candidate and unmatched generations, decoding configuration, prompt template, and exact model and provider identifier. Headline results should be interpreted together with this protocol because pipeline choices can affect measured gains as much as model choice. 
+
+## Acknowledgments 
+
+This research was supported in part by the project Infobip Global Communication Platform (PK.1.1.07.0001), part of the Important Project of Common European Interest on Next Generation Cloud Infrastructure and Services (IPCEI-CIS) consortium. Performance and Stability of LLM Rerankers in CRS CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+## GenAI Usage Disclosure 
+
+Generative AI tools assisted in a supporting capacity: Claude Code (Opus 4.7) for code implementation and data analysis, ChatGPT 5.5 for L ATEX editing and grammar checking, and Google Scholar Labs for related-work identification. All AI-assisted outputs were reviewed and verified by the authors, who take full responsibility for the work. 
+
+## References 
+
+[1] Anthropic. 2026. Claude Opus 4.6 System Card. Technical report. https://www. anthropic.com/claude-opus-4-6-system-card Accessed: 2026-06-04. [2] Anthropic. 2026. Claude Sonnet 4.6 System Card. Technical report. https://www-cdn.anthropic.com/78073f739564e986ff3e28522761a7a0b4484f84.pdf Accessed: 2026-06-05. [3] Keqin Bao, Jizhi Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan He. 2023. TALLRec: An Effective and Efficient Tuning Framework to Align Large Language Model with Recommendation. In Proceedings of the 17th ACM Conference on Recommender Systems (RecSys ’23) . ACM, New York, NY, USA, 1007–1014. doi:10.1145/3604915.3608857 [4] Ethan Bito, Yongli Ren, and Estrid He. 2026. One Pass, Any Order: Position-Invariant Listwise Reranking for LLM-Based Recommendation. arXiv preprint arXiv:2604.27599. arXiv:2604.27599 [cs.IR] doi:10.48550/arXiv.2604.27599 To appear in SIGIR ’26. [5] Maurizio Ferrari Dacrema, Paolo Cremonesi, and Dietmar Jannach. 2019. Are We Really Making Much Progress? A Worrying Analysis of Recent Neural Recommen-dation Approaches. In Proceedings of the 13th ACM Conference on Recommender Systems (RecSys ’19) . ACM, New York, NY, USA, 101–109. doi:10.1145/3298689. 3347058 [6] Gemma Team. 2024. Gemma 2: Improving Open Language Models at a Practical Size. arXiv preprint arXiv:2408.00118. arXiv:2408.00118 [cs.CL] doi:10.48550/ arXiv.2408.00118 [7] Aaron Grattafiori, Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten, Alex Vaughan, Amy Yang, Angela Fan, Anirudh Goyal, Anthony Hartshorn, Aobo Yang, Archi Mitra, Archie Sravankumar, Artem Korenev, Arthur Hinsvark, Arun Rao, Aston Zhang, Aurélien Rodriguez, Austen Gregerson, Ava Spataru, Baptiste Rozière, et al. 2024. The Llama 3 Herd of Models. arXiv preprint arXiv:2407.21783. arXiv:2407.21783 [cs.AI] doi:10.48550/arXiv.2407.21783 [8] Xiangnan He, Kuan Deng, Xiang Wang, Yan Li, Yongdong Zhang, and Meng Wang. 2020. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation. In Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR ’20) . ACM, New York, NY, USA, 639–648. doi:10.1145/3397271.3401063 [9] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2016. Session-Based Recommendations with Recurrent Neural Networks. 4th International Conference on Learning Representations (ICLR 2016), San Juan, Puerto Rico. arXiv:1511.06939 [cs.LG] https://arxiv.org/abs/1511.06939 [10] Sture Holm. 1979. A Simple Sequentially Rejective Multiple Test Procedure. 
+
+Scandinavian Journal of Statistics 6, 2 (1979), 65–70. [11] Yupeng Hou, Junjie Zhang, Zihan Lin, Hongyu Lu, Ruobing Xie, Julian McAuley, and Wayne Xin Zhao. 2024. Large Language Models are Zero-Shot Rankers for Recommender Systems. In Advances in Information Retrieval (Lecture Notes in Computer Science, Vol. 14609) . Springer, Cham, Switzerland, 364–381. doi:10.1007/ 978-3-031-56060-6_24 [12] Dietmar Jannach, Ahtsham Manzoor, Wanling Cai, and Li Chen. 2021. A Survey on Conversational Recommender Systems. Comput. Surveys 54, 5, Article 105 (2021), 36 pages. doi:10.1145/3453154 [13] Kalervo Järvelin and Jaana Kekäläinen. 2002. Cumulated Gain-Based Evaluation of IR Techniques. ACM Transactions on Information Systems 20, 4 (Oct. 2002), 422–446. doi:10.1145/582415.582418 [14] Wang-Cheng Kang and Julian McAuley. 2018. Self-Attentive Sequential Recom-mendation. In 2018 IEEE International Conference on Data Mining . IEEE, Piscat-away, NJ, USA, 197–206. doi:10.1109/ICDM.2018.00035 [15] Walid Krichene and Steffen Rendle. 2020. On Sampled Metrics for Item Rec-ommendation. In Proceedings of the 26th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining (KDD ’20) . ACM, New York, NY, USA, 1748–1757. doi:10.1145/3394486.3403226 [16] Jing Li, Pengjie Ren, Zhumin Chen, Zhaochun Ren, Tao Lian, and Jun Ma. 2017. Neural Attentive Session-Based Recommendation. In Proceedings of the 2017 ACM on Conference on Information and Knowledge Management (CIKM ’17) . ACM, New York, NY, USA, 1419–1428. doi:10.1145/3132847.3132926 [17] Raymond Li, Samira Ebrahimi Kahou, Hannes Schulz, Vincent Michalski, Laurent Charlin, and Chris Pal. 2018. Towards Deep Conversational Recommendations. In Advances in Neural Information Processing Systems , Vol. 31. Curran Associates, Inc., Red Hook, NY, USA, 9748–9758. https://proceedings.neurips.cc/paper/2018/ hash/800de15c79c8d840f4e78d3af937d4d4-Abstract.html [18] Tianhui Ma, Yuan Cheng, Zhi Zheng, Hengshu Zhu, and Hui Xiong. 2025. Large Language Models Are Not Stable Recommender Systems: A Position Bias Per-spective. In Knowledge Science, Engineering and Management (Lecture Notes in Computer Science, Vol. 15919) . Springer, Singapore, 415–429. doi:10.1007/978-981-95-3001-4_31 [19] Meta. 2024. Llama 3.2 3B Instruct Model Card. Model card. https://huggingface. co/meta-llama/Llama-3.2-3B-Instruct Accessed: 2026-06-06. [20] Meta. 2024. Llama 3.3 70B Instruct Model Card. Model card. https://huggingface. co/meta-llama/Llama-3.3-70B-Instruct Accessed: 2026-06-05. [21] OpenAI. 2025. Introducing GPT-4.1 in the API. OpenAI blog. https://openai. com/index/gpt-4-1/ Accessed: 2026-06-05. [22] OpenAI. 2025. Update to GPT-5 System Card: GPT-5.2. Technical report. https: //openai.com/index/gpt-5-system-card-update-gpt-5-2/ Accessed: 2026-06-04. [23] Nils Reimers and Iryna Gurevych. 2019. Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing . Association for Computational Linguistics, Hong Kong, China, 3982–3992. doi:10.18653/v1/D19-1410 [24] Steffen Rendle, Christoph Freudenthaler, Zeno Gantner, and Lars Schmidt-Thieme. 2009. BPR: Bayesian Personalized Ranking from Implicit Feedback. In Proceedings of the Twenty-Fifth Conference on Uncertainty in Artificial Intelligence (UAI ’09) .AUAI Press, Arlington, Virginia, USA, 452–461. https://dl.acm.org/doi/10.5555/ 1795114.1795167 [25] Badrul Munir Sarwar, George Karypis, Joseph A. Konstan, and John Riedl. 2001. Item-Based Collaborative Filtering Recommendation Algorithms. In Proceedings of the 10th International Conference on World Wide Web (WWW ’01) . ACM, New York, NY, USA, 285–295. doi:10.1145/371920.372071 [26] Harald Steck. 2019. Embarrassingly Shallow Autoencoders for Sparse Data. In The World Wide Web Conference (WWW ’19) . ACM, New York, NY, USA, 3251–3257. doi:10.1145/3308558.3313710 [27] Weiwei Sun, Lingyong Yan, Xinyu Ma, Shuaiqiang Wang, Pengjie Ren, Zhumin Chen, Dawei Yin, and Zhaochun Ren. 2023. Is ChatGPT Good at Search? Investi-gating Large Language Models as Re-Ranking Agents. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing . Association for Computational Linguistics, Singapore, 14918–14937. doi:10.18653/v1/2023.emnlp-main.923 [28] Wei Wei, Xubin Ren, Jiabin Tang, Qingyong Wang, Lixin Su, Suqi Cheng, Junfeng Wang, Dawei Yin, and Chao Huang. 2024. LLMRec: Large Language Models with Graph Augmentation for Recommendation. In Proceedings of the 17th ACM International Conference on Web Search and Data Mining (WSDM ’24) . ACM, New York, NY, USA, 806–815. doi:10.1145/3616855.3635853 [29] Shu Wu, Yuyuan Tang, Yanqiao Zhu, Liang Wang, Xing Xie, and Tieniu Tan. 2019. Session-Based Recommendation with Graph Neural Networks. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 33. AAAI Press, Palo Alto, CA, USA, 346–353. doi:10.1609/aaai.v33i01.3301346 [30] An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chengyuan Li, Dayiheng Liu, Fei Huang, Haoran Wei, Huan Lin, Jian Yang, Jianhong Tu, Jianwei Zhang, Jianxin Yang, Jiaxi Yang, Jingren Zhou, Junyang Lin, Kai Dang, Keming Lu, Keqin Bao, Kexin Yang, Le Yu, Mei Li, Mingfeng Xue, Pei Zhang, Qin Zhu, Rui Men, Runji Lin, Tianhao Li, Tianyi Tang, Tingyu Xia, Xingzhang Ren, Xuancheng Ren, Yang Fan, Yang Su, Yichang Zhang, Yu Wan, Yuqiong Liu, Zeyu Cui, Zhenru Zhang, and Zihan Qiu. 2024. Qwen2.5 Technical Report. arXiv preprint arXiv:2412.15115. arXiv:2412.15115 [cs.CL] doi:10.48550/arXiv.2412.15115 [31] Haobo Zhang, Qiannan Zhu, and Zhicheng Dou. 2025. Enhancing Reranking for Recommendation with LLMs through User Preference Retrieval. In Proceedings of the 31st International Conference on Computational Linguistics . International Committee on Computational Linguistics, Abu Dhabi, UAE, 658–671. https: //aclanthology.org/2025.coling-main.45/ [32] Wayne Xin Zhao, Shanlei Mu, Yupeng Hou, Zihan Lin, Yushuo Chen, Xingyu Pan, Kaiyuan Li, Yujie Lu, Hui Wang, Changxin Tian, Yingqian Min, Zhichao Feng, Xinyan Fan, Xu Chen, Pengfei Wang, Wendi Ji, Yaliang Li, Xiaoling Wang, and Ji-Rong Wen. 2021. RecBole: Towards a Unified, Comprehensive and Efficient Framework for Recommendation Algorithms. In Proceedings of the 30th ACM International Conference on Information & Knowledge Management (CIKM ’21) .ACM, New York, NY, USA, 4653–4664. doi:10.1145/3459637.3482016

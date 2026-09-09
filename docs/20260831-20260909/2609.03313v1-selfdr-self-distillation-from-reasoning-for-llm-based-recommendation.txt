@@ -1,0 +1,421 @@
+Title: SelfDR: Self-Distillation from Reasoning for LLM-Based Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.03313v1
+
+Published Time: Fri, 04 Sep 2026 00:27:05 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# SelfDR : Self-Distillation from Reasoning for LLM-Based Recommendation 
+
+# Chumeng Jiang 
+
+DCST, Tsinghua University Quan Cheng Laboratory Beijing, China jcm24@mails.tsinghua.edu.cn 
+
+# Jiayin Wang 
+
+DCST, Tsinghua University Beijing, China jiayinwangthu@gmail.com 
+
+# Xinjie Lin 
+
+DCST, Tsinghua University Beijing, China lin-xj22@mails.tsinghua.edu.cn 
+
+# Zhiqiang Guo 
+
+DCST, Tsinghua University Beijing, China georgeguo.gzq.cn@gmail.com 
+
+# Hengliang Luo 
+
+Meituan Beijing, China luohengliang@meituan.com 
+
+# Min Zhang ∗
+
+Quan Cheng Laboratory DCST, Tsinghua University Beijing, China z-m@tsinghua.edu.cn 
+
+## Abstract 
+
+Large Language Models (LLMs) have recently emerged as powerful backbones for recommendation. To better elicit their capabilities, reasoning has been widely incorporated to help LLMs interpret rich textual signals and improve recommendation accuracy. However, explicitly generating intermediate reasoning traces often incurs substantial computational costs, which limits practical deployment in real-world recommender systems. To address this challenge, we propose SelfDR , a Self -Distillation from Reasoning framework for LLM-based Recommendation. 𝑆𝑒𝑙 𝑓 𝐷𝑅 distills an LLM’s own reasoning-enhanced predictions to produce recommendations di-rectly, improving recommendation effectiveness while maintaining inference efficiency. All components in the framework are built on the same base LLM, without relying on any external models. Specifically, the teacher recommender is constructed by training a reasoner with downstream performance as the reward, enabling it to generate targeted rationales that are later incorporated into the teacher’s input. A student recommender for direct recommenda-tion, with the same underlying model, then learns from the teacher through self-distillation with a dynamic weighting strategy. Ex-tensive experiments on three public datasets validate the effective-ness, rationality, and efficiency of 𝑆𝑒𝑙 𝑓 𝐷𝑅 . Codes are available at https://github.com/JiangDeccc/SelfDistillation. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems .
+
+## Keywords 
+
+Large Language Model, Recommender System, Distillation 
+
+> ∗
+
+Corresponding author. 
+
+This work is licensed under a Creative Commons Attribution 4.0 International License. 
+
+CIKM ’26, Rome, Italy 
+
+© 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840983 
+
+ACM Reference Format: 
+
+Chumeng Jiang, Jiayin Wang, Xinjie Lin, Zhiqiang Guo, Hengliang Luo, and Min Zhang. 2026. SelfDR : Self-Distillation from Reasoning for LLM-Based Recommendation. In Proceedings of the 35th ACM International Con-ference on Information and Knowledge Management (CIKM ’26), Novem-ber 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 12 pages. https: //doi.org/10.1145/3799682.3840983 
+
+## 1 Introduction 
+
+In recent years, LLM-based recommendation has attracted increas-ing attention and has demonstrated promising results across a variety of tasks [15, 21, 27, 46]. A wide range of mechanisms have been created to adapt the capabilities of LLMs to recommenda-tion settings, including in-context learning [44], supervised fine-tuning [2, 49] and so on. These approaches shed light on the po-tential of aligning the recommendation representation space with the semantic space, thereby harnessing the capabilities of LLMs to enhance recommendation performance. Training Inference 
+
+(a) (b) (c) 
+
+> Preference Extraction Profile Construction Preference Matching
+
+(a) Recom. with Multi-Step Reasoning (b) Reasoning-and-Recommendation 
+
+> Reasoning-and-Recom. Model
+> Self-Distilled Reasoning-Enhanced Model
+
+(c) Reasoning-Enhanced Recommendation       
+
+> Input Data Reasoning Trace Prediction Weaker LLM Stronger LLM
+> Training Signal
+> W1
+> �2
+> �3
+> �1
+> �2
+> �3
+> Phase 1 Phase 2 Reward �Reasoner
+> �Recom.
+
+High Inference Latency Low Inference Latency 
+
+> �Recom.
+> WRecom.
+> Reward
+
+Figure 1: Two previous typical reasoning paradigms: (a) multi-step reasoning and (b) reasoning-and-recommendation. Our proposed paradigm (c) self-distills from reasoning to enhance effectiveness while ensure inference efficiency. arXiv:2609.03313v1 [cs.IR] 3 Sep 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Chumeng Jiang, Jiayin Wang, Xinjie Lin, Zhiqiang Guo, Hengliang Luo, and Min Zhang 
+
+Furthermore, to help LLMs better understand the vast textual information in recommendation data, researchers have begun to explore the use of reasoning to enhance recommendation effective-ness, motivated by the success of incorporating explicit reasoning in general LLMs [20, 26]. One line of work follows a multi-step reasoning paradigm (Figure 1(a)), where the model sequentially reasons over user and item information and ultimately leverages the resulting profiles to support recommendation [11, 24]. Another direction adopts a reasoning-and-recommendation paradigm (Fig-ure 1(b)), which performs both within a single inference step by encouraging the generation of long reasoning traces or reasoning to-kens before the final output, thereby refining predictions [4, 42, 56]. These methods have achieved strong performance, highlighting the potential of reasoning-augmented recommendation. However, such paradigms inevitably impose substantial infer-ence overhead, which is often unacceptable in real-world recom-mender systems where responsiveness is crucial. To address this challenge, we argue for a paradigm that continues to focus on the 
+
+direct recommendation (Figure 1(c))—given the necessary inputs, such as user history, the model directly outputs the recommenda-tion results. This design minimizes inference costs and improves practical usability. Nevertheless, though we hope to maintain the brevity of the outputs, reasoning itself can be beneficial to improve the recommendation quality, as it helps LLMs to better interpret and organize the rich information in recommendation data. In this case, it raises the key research question of how to exploit the reasoning capability of LLMs without sacrificing inference efficiency. To tackle this, we propose a Self -Distillation from Reasoning framework for LLM-based Recommendation ( SelfDR ), which dis-tills the model’s own deliberated predictions to enable reasoning-enhanced recommendation without requiring explicit reasoning. To achieve this, first , we construct a teacher model equipped with an additional deliberation step. Specifically, we train a reasoner to generate high-quality rationales based on the user history and the next interacted item in the training set, which are then used as auxiliary input for a reasoning-enhanced teacher that produces more effective and deliberative responses. Next , we let a student recommender LLM, which performs direct recommendation, learn from the teacher and internalize the outputs enhanced by the delib-eration process. To ensure effective learning, a dynamic weighting mechanism is adopted to adapt the learning signals. Throughout the entire pipeline, the reasoner and the recommenders share the same underlying architecture. Our extensive experiments evaluate the effectiveness, rationality, and efficiency of 𝑆𝑒𝑙 𝑓 𝐷𝑅 in various scenarios. The 𝑆𝑒𝑙 𝑓 𝐷𝑅 reasoner achieves superior downstream per-formance compared to external large LLMs and after distillation, our method consistently delivers the best recommendation results with the lowest inference cost across all three datasets. Our main contributions are summarized as follows: 
+
+• We propose 𝑆𝑒𝑙 𝑓 𝐷𝑅 , a self-distillation framework that en-hances recommendation quality through self-improvement without relying on stronger external LLMs. 
+
+• Unlike previous self-distillation settings, 𝑆𝑒𝑙 𝑓 𝐷𝑅 distills from the reasoning process, thereby reducing the need for explicit intermediate reasoning outputs and improving both effec-tiveness and efficiency. 
+
+• Extensive experiments on three public datasets demonstrate the effectiveness, rationality, and efficiency of 𝑆𝑒𝑙 𝑓 𝐷𝑅 , show-casing the potential of reasoning-guided distillation to facili-tate the self-evolution of LLMs. 
+
+## 2 Related Work 2.1 LLM-Based Recommendation 
+
+Recent advances in large language models (LLMs) have driven their adoption in recommender systems. Existing approaches align LLMs with recommendation through (i) zero-shot prompting [30, 31, 44], (ii) fine-tuning on recommendation data [2, 49], and (iii) hybrid architectures that incorporate collaborative-filtering signals [29, 58, 59]. By leveraging LLMs’ language understanding and broad knowledge, these methods improve recommendation performance and help address challenges such as cold start [3, 25]. However, preference signals embedded in item metadata and user-generated text, such as reviews, are often subtle and difficult to interpret reliably. To help LLMs better exploit such information, inspired by the success of chain-of-thought reasoning in general tasks [20, 26, 48], recent studies introduce explicit reasoning into LLM-based recommendation. One line of work adopts multi-step pipelines that iteratively reason over user and item text. For ex-ample, EXP3RT [24] decomposes recommendation into preference extraction, profile construction, and reasoning-enhanced rating pre-diction, with a dedicated model trained for each stage. Often trained with detailed feedback, such methods improve both accuracy and explainability in rating prediction [11] and ranking [54]. Another line of work employs single-step test-time reasoning, generating intermediate reasoning traces before predictions to identify and revise suboptimal outputs. Some methods [4, 42] elicit chain-of-thought explanations for personalization, while others [28, 56] use reinforcement learning to acquire effective reasoning patterns from historical interactions. Despite their effectiveness, reasoning-based approaches incur substantial computational overhead. Multi-step pipelines and test-time reasoning traces increase latency and resource consumption, limiting their practicality in large-scale, time-sensitive recommender systems. In contrast, our work targets direct recommendation, pro-ducing results in a single pass while transferring the benefits of LLM reasoning to an efficient inference process. This design balances recommendation effectiveness with practical efficiency. 
+
+## 2.2 Knowledge Distillation 
+
+Knowledge distillation (KD) transfers knowledge from a high-capacity teacher model to a lightweight student [17], and has been widely adopted in computer vision (CV) [13] and natural language process-ing (NLP) [51] for model compression and acceleration. The key idea is to have the student mimic the teacher’s behavior, whether by matching its final predictions ( response-based ) [19], internal fea-ture representations ( feature-based ) [36, 38], or relational structures among samples or layers ( relation-based ) [35]. In recommender systems, KD is commonly used to reduce repre-sentation dimensionality and inference latency, typically by com-pressing a deep model into a shallower one [23, 39, 60]. With the rise of LLMs, KD has further been used to transfer their semantic reasoning into traditional recommenders, mitigating high inference SelfDR : Self-Distillation from Reasoning for LLM-Based Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy Reasoner 
+
+> Rationale
+> Ground -Truth
+> Recommender
+
+Learning Reasoning Capability for Teacher Construction  
+
+> Teacher Recommender Student Recommender
+
+Self-Distillation for Direct Recommendation       
+
+> Teacher’s Prob. Distrib. Ground-Truth
+> Student’s Prob. Distrib.
+> Supervised Learning Module Distillation Module Weight Scheduler
+> The Probability Distribution of Tokens
+> Next-Item Prediction Recom. List
+> B①②③
+> ...
+> Sampling Ranking
+> Learn From Ground-Truth Learn From Teacher
+> Reward Signal
+> User History
+> Cand. Pool
+> Rationale
+> The Probability Distribution of Tokens Recom. List Next-Item Predict.
+> ①②
+> B...
+> Ranking Sampling
+> Training Phase 1 Training Phase 2 Inference
+
+Direct Recom. w/o Explicit Reasoning  
+
+> User History
+> Cand. Pool
+> Trained Recommender
+> Trained Reasoner User History Candidate Pool
+> ③
+> No explicit rationale used in inference.
+
+Figure 2: The 𝑆𝑒𝑙 𝑓 𝐷𝑅 framework. A reasoner is trained with recommendation performance as the reward to generate high-quality rationales for a rationale-augmented teacher. A direct-recommendation student then learns from the teacher’s deliberative outputs for reasoning-enhanced ranking without explicit rationales. All LLMs share the same base model. 
+
+costs [45]: DLLM2Rec [8] combines importance-weighted ranking with collaborative embedding distillation to filter unreliable signals and align semantic spaces. Another paradigm instead distills a large LLM into a smaller, recommendation-oriented LLM—SLMRec [50] prunes redundant layers while retaining performance, and ALK-DRec [10] actively queries the teacher on informative samples to fine-tune the student for session recommendation. Overall, distill-ing LLM knowledge, whether into conventional recommenders or smaller LLMs, helps balance accuracy and efficiency. These ap-proaches, however, face two key limitations. First, they depend on powerful external LLMs: if the teacher is inaccessible or poorly aligned with the target domain, distillation may underperform, and better teachers do not always yield better students, making teacher selection non-trivial [9]. Second, keeping large LLMs in the training loop is computationally expensive. The above limitations motivate the exploration of self-distillation techniques. Self-distillation leverages the model’s own knowledge as the teaching signal, where a model’s deeper-layer features [53] or an ensemble of its snapshots [52] can serve as the teacher for the same model at a later stage. It has been successfully applied in CV [1, 57] and NLP [14] to improve model generalization and performance without extra model overhead. In recommendation, prior studies have also explored self-distillation for conventional recommender models, such as enriching user preference represen-tations by retrieving informative interactions from similar users as auxiliary self-supervision signals [33]. More recently, SOFT ex-plores LLM self-distillation by treating the outputs of a fine-tuned model as auxiliary easy-to-learn data to improve optimization on real recommendation data [41]. Despite these encouraging efforts, self-distillation, especially from reasoning process, remains largely unexplored in LLM-based recommendation. 
+
+## 3 Methodology 3.1 Overview 
+
+While introducing explicit reasoning steps can improve recommen-dation quality, it also incurs substantial inference costs. To balance these factors, we propose 𝑆𝑒𝑙 𝑓 𝐷𝑅 , a self-distillation framework that uses the model’s own deliberation-enhanced supervision to train a direct-recommendation (Sec. 3.2.1) model. Specifically, we first construct a reasoning-enhanced teacher model (Sec. 3.3) follow-ing the deliberative recommendation paradigm (Sec. 3.2.2): in the reason-only generation stage, we train a reasoner with the down-stream performance as reward to generate targeted explanations, which are then incorporated into the recommendation process to form the teacher recommender. Once the teacher is established, a direct-recommendation student model sharing the same underlying architecture as the teacher is trained to learn from the teacher’s de-liberative outputs with dynamic loss (Sec. 3.4), guiding the student to acquire reasoning-enhanced ranking behavior without relying on explicit rationales. The entire learning and evolution process can be accomplished by a same backbone LLM without relying on external LLMs. 
+
+## 3.2 Task Formulation 
+
+3.2.1 Direct Recommendation. We define the direct recommenda-tion task as producing the final recommendation output directly from the necessary input information (e.g. user history and can-didate set) without any intermediate steps. This is the task that we ultimately expect our model to perform, as it better ensures inference efficiency, which is often critical in recommender systems. Formally, let U denote a set of users and I a set of items. Each item 𝑖 ∈ I is associated with metadata, such as title and category, CIKM ’26, November 07–11, 2026, Rome, Italy Chumeng Jiang, Jiayin Wang, Xinjie Lin, Zhiqiang Guo, Hengliang Luo, and Min Zhang 
+
+denoted by M𝑖 . The user history 𝐻 𝑢 = (ℎ𝑢, 1, ℎ 𝑢, 2, . . . , ℎ 𝑢,𝑡 ) con-stitutes a chronologically ordered sequence of past records. Each record is defined as ℎ𝑢,𝑖 = (M 𝑖 , 𝑑 𝑢,𝑖 ), where 𝑑 𝑢,𝑖 denotes the interac-tion details of user 𝑢 with item 𝑖 , e.g., rating. The primary objective of the direct recommendation is to forecast the next item the user is most likely to interact with from the candidate set. This can be formalized as follows: 
+
+T𝑢,𝑖 = 𝑓 (𝐻 𝑢 , C𝑢,𝑖 ), (1) where C𝑢,𝑖 ⊆ I denotes the candidate set for user 𝑢 with respect to the ground-truth item 𝑖 . It can be constructed under either rank-ing or reranking settings: the former typically combines 𝑖 with randomly sampled negatives, while the latter uses the top-𝐾 items retrieved by a base ranker based on user 𝑢 ’s interaction history prior to item 𝑖 , where ground-truth item 𝑖 is not necessarily included. When employing an LLM for the task, we follow the prompt-ing strategy adopted in prior studies[32, 55], where the LLM is instructed to predict the unique character identifier of the item which the user is most likely to engage with. In this paradigm, we obtain both a single generated next-item prediction 𝑠 𝑢,𝑖 and a recom-mendation list R𝑢,𝑖 formed by ranking candidate items according to the LLM-generated log-probabilities of their index tokens. The task can now be formulated as: 
+
+𝑠 𝑢,𝑖 , R𝑢,𝑖 = 𝐿𝐿𝑀 (𝐻 𝑢 , C𝑢,𝑖 ). (2) 
+
+3.2.2 Deliberative Recommendation. In contrast to direct recom-mendation, the deliberative recommendation incorporates intermedi-ate stages of reasoning, where the model engages in understanding and reflecting on user history or item information before making a prediction. This paradigm extends the reasoning chain for improved effectiveness while inevitably increasing inference time. In this paper, our teacher recommender adopts this task para-digm on the training set to enhance performance through reasoning. To obtain a more effective teacher model, we decompose the task into two stages: reason-only generation and reason-enhanced rec-ommendation . In the reason-only generation stage, the Reasoner LLM takes the user history and a ground-truth item as input and is prompted to infer why the user is likely to engage with the item. Specifically, it generates an explicit reasoning trace given both the question and the answer, producing more substantive and informa-tive reasoning content that subsequently enhances the teacher’s recommendation quality. Formally, this step can be expressed as: 
+
+𝑟 𝑢,𝑖 = 𝐿𝐿𝑀 𝑅𝑒𝑎𝑠𝑜𝑛𝑒𝑟 (𝐻 𝑢 , M𝑖 ), (3) where 𝑟 𝑢,𝑖 represents the rationale for the user’s preference for the next item 𝑖 . Here we also adopt the prompting strategy that has been used in previous work [42]. Subsequently, the reason-enhanced recommendation stage is performed. In this stage, the input incorporates not only the user history and the candidate set, but also the previously generated reasoning content, which captures both the model’s understanding of the user’s past interactions and the characteristics of items the user is likely to engage with in the future, thereby assisting the LLM in producing more accurate recommendations: 
+
+𝑠 𝑢,𝑖 , R𝑢,𝑖 = 𝐿𝐿𝑀 (𝐻 𝑢 , C𝑢,𝑖 , 𝑟 𝑢,𝑖 ). (4) 
+
+## 3.3 Learning Reasoning Capability for Teacher Construction 
+
+We construct the teacher recommender LLM under the deliberative recommendation paradigm, which explicitly leverages the reason-ing capability of LLMs. In this setting, the first step is to obtain a Reasoner capable of generating explanations that are sufficiently targeted and useful for the recommendation task. A straightforward approach might be using the user’s reviews as reasons. However, not all datasets contain user reviews, and when reviews are avail-able, they often include substantial irrelevant information, leading to inferior performance. In this case, we employ Group Relative Policy Optimization (GRPO) [40], using the accuracy of the downstream task as the reward signal to train a Reasoner based on the same backbone LLM to produce more helpful explanations. GRPO is a reinforcement learning algorithm that offers more stable convergence and lower memory overhead, making it suitable for large-scale LLM training. Further, using the downstream recommendation performance as the reward signal avoids potential mismatch between separately defined reasoning evaluation metrics and the ultimate recommen-dation objective, thus ensuring that the generated reasoning can be aligned with the end task. Concretely, given the user history 𝐻 𝑢 
+
+and ground-truth item information M𝑖 , the Reasoner generates a reason 𝑟 𝑢,𝑖 (Eq. 3), which is then combined with the user history 𝐻 𝑢 
+
+and candidate set 𝐶 𝑢,𝑖 and fed into another frozen recommender LLM to perform reason-enhanced recommendation (Eq. 4). The correctness of the generated next-item prediction 𝑠 𝑢,𝑖 serves as the reward signal for guiding the Reasoner’s explanation generation: 
+
+𝑅𝑒𝑤𝑎𝑟𝑑 (𝑟 𝑢,𝑖 ) = Acc 𝑟𝑒𝑐 (𝑠 𝑢,𝑖 ), (5) where Acc 𝑟𝑒𝑐 can be instantiated as any metric that evaluates rec-ommendation accuracy. To make the reward better aligned with the intrinsic quality of the generated rationale, we explicitly prompt the Reasoner not to directly restate the input metadata, thereby mitigating direct information leakage. Moreover, before incorporating 𝑟 𝑢,𝑖 into the recommender input, we apply a fine-grained masking step: if the generated rationale contains three or more consecutive words that exactly overlap with the item title, these overlapping words are masked before reward computation. With the trained Reasoner, we instruction-tune a recommender LLM and concatenate the reasoning content generated by the Rea-soner with the recommendation input, forming the teacher LLM used for subsequent distillation. 
+
+## 3.4 Self-Distillation for Direct Recommendation 
+
+The ultimate goal of 𝑆𝑒𝑙 𝑓 𝐷𝑅 is to leverage the reasoning capacity to perform the direct recommendation more effectively. To this end, the next step is to enable a student LLM, which is designed for direct recommendation, to learn from the deliberative output of the teacher LLM, which incorporates reasoning as part of its in-put. Before distillation, both the teacher and student recommender LLMs are first instruction-tuned to familiarize them with the rec-ommendation task and enforce instruction adherence; at this stage, the student and teacher share identical model parameters. SelfDR : Self-Distillation from Reasoning for LLM-Based Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+During the self-distillation process, the key distinction between the two lies in the input: while the teacher recommender LLM additionally receives the Reasoner-generated rationale, the student recommender LLM does not: 
+
+𝑇 𝑒𝑎𝑐ℎ𝑒𝑟 : 𝑠 𝑡 𝑢,𝑖 , R𝑡 𝑢,𝑖 = 𝑓 (𝐻 𝑢 , C𝑢,𝑖 , 𝑟 𝑢,𝑖 ),𝑆𝑡𝑢𝑑𝑒𝑛𝑡 : 𝑠 𝑠 𝑢,𝑖 , R𝑠 𝑢,𝑖 = 𝑓 (𝐻 𝑢 , C𝑢,𝑖 ). (6) where 𝑓 (·) indicates the instruction-tuned recommender LLM. The purpose of this design is to allow the student to learn from the teacher’s deliberated outputs and gradually develop stronger rec-ommendation capabilities. It is also worth noting that concise out-puts keep the training cost modest compared to methods relying on long reasoning-based generations. In this case, the most valuable supervision from the teacher lies in its logits, since simply learning from its generated outputs may often be equivalent to learning the labels, causing the process to degenerate into standard fine-tuning. Therefore, we align the student’s predictive distribution with the teacher’s using the logits before the softmax layer, thereby providing a smoother and more informative training signal. Formally, the optimization objective can be expressed as: min 
+
+> Θ𝑠
+
+(1 − 𝛼 ) ∗ L 𝑐𝑒 (Θ𝑠 ) + 𝛼 ∗ D 𝑘𝑑 (Θ𝑡 , Θ𝑠 ), (7) where L𝑐𝑒 denotes the cross-entropy loss with respect to the ground-truth, and D𝑘𝑑 (Θ𝑡 , Θ𝑠 ) represents the distillation loss measuring the divergence between the logits of the teacher and the student. Our method follows an offline distillation scheme, keeping the teacher recommender LLM fixed during the distillation process. For the distillation objective, we employ the reverse KL divergence [12] as the loss function, which tends to encourage the student distribu-tion to concentrate on the high-probability regions of the teacher distribution. Accordingly, the distillation loss can be formulated as: 
+
+D𝑘𝑑 (Θ𝑡 , Θ𝑠 ) = LRKL (Θ𝑠 | Θ𝑡 )
+
+=∑︁  
+
+> 𝑗 ∈ C 𝑢,𝑖
+
+𝑝 Θ𝑡 (CI 𝑗 | 𝐻 𝑢 , C𝑢,𝑖 , 𝑟 𝑢,𝑖 ) log 𝑝 Θ𝑡 (CI 𝑗 | 𝐻 𝑢 , C𝑢,𝑖 , 𝑟 𝑢,𝑖 )
+
+𝑝 Θ𝑠 (CI 𝑗 | 𝐻 𝑢 , C𝑢,𝑖 ) , (8) where 𝑝 Θ𝑡 and 𝑝 Θ𝑠 denote the teacher and student’s output distribu-tions over the character identifiers of candidates CI 𝑗 , respectively, given the user history 𝐻 𝑢 with or without rationale 𝑟 𝑢,𝑖 .To make the self-distillation process more effective, we introduce a dynamic weighting scheme that adaptively adjusts the learning weight 𝛼 of the distillation loss, because the teacher, which incorpo-rates Reasoner-generated rationale, does not always produce reli-able or fully learnable outputs despite providing valuable guidance. The proposed dynamic weighting mechanism therefore balances supervision from the teacher and the ground-truth labels, assign-ing greater emphasis to the teacher when its predictions are more informative, and adapting automatically as training progresses. There are two primary reasons why the teacher’s outputs may be less instructive. First, the quality of the teacher’s own predictions may be suboptimal. While we expect the positive item to be ranked within the top-𝑘 positions, the teacher may fail to do so. We there-fore design an adjustment function based on the distance between the teacher-ranked position of the positive item and a threshold rank 𝑘 to modulate the learning weight accordingly. Second, the teacher may underperform the student on certain samples. In such cases, the learning weight from the teacher should be substantially reduced compared to instances where the teacher performs bet-ter. To this end, we introduce a decay function based on the rank difference between the teacher and the student, together with an additional penalty parameter to handle underperforming-teacher cases. The overall function is defined as: 
+
+𝛼 (𝑟𝑎𝑛𝑘 𝑡 𝑖 , 𝑟𝑎𝑛𝑘 𝑠 𝑖 )
+
+= 𝛼 𝑏𝑎𝑠𝑒 𝑓 (𝑟𝑎𝑛𝑘 𝑡 𝑖 − 𝑘 )𝜎 ( 𝑟𝑎𝑛𝑘 𝑠 𝑖 − 𝑟𝑎𝑛𝑘 𝑡 𝑖 
+
+𝜏 )𝛽 𝟙 (𝑟𝑎𝑛𝑘 𝑡 𝑖 >𝑟𝑎𝑛𝑘 𝑠 𝑖 ),𝑤ℎ𝑒𝑟𝑒 𝑓 (𝑥 ) = 1 + 𝑡𝑎𝑛ℎ (𝑥 /𝛾 ).
+
+(9) Here, 𝑟𝑎𝑛𝑘 𝑡 𝑖 and 𝑟𝑎𝑛𝑘 𝑠 𝑖 denote the ranks predicted by the teacher and student respectively, 𝜎 (·) is the sigmoid function, 𝜏 and 𝛾 are temperature coefficients. To illustrate, when the teacher produces a worse ranking than the student, we regard this case as not ben-eficial for distillation and apply a penalty term controlled by 𝛽 to substantially reduce 𝛼 . Meanwhile, the weighting function also con-siders the teacher rank relative to the threshold and the magnitude of the rank difference, for which we adopt soft gating functions to smoothly adjust the reliance on teacher guidance rather than impose hard selection. This design allows the optimization objec-tive to dynamically emphasize teacher guidance, improving both robustness and effectiveness of the self-distillation process. 
+
+## 4 Experiments 
+
+RQ1: How does 𝑆𝑒𝑙 𝑓 𝐷𝑅 perform compared with existing baseline methods? 
+
+RQ2: How does the performance of the 𝑆𝑒𝑙 𝑓 𝐷𝑅 Reasoner compare with that of an external large LLM Reasoner? 
+
+RQ3: How does self-distillation contribute to recommendation per-formance? 
+
+RQ4: What are the training cost and inference efficiency of 𝑆𝑒𝑙 𝑓 𝐷𝑅 
+
+relative to other methods? 
+
+## 4.1 Experimental Settings 
+
+4.1.1 Datasets. We conduct experiments on three common real-world datasets, Amazon Clothing Shoes and Jewelry (Clothing) ,
+
+Amazon Home and Kitchen (Home) and Movielens-1M (ML1M) . The Amazon datasets record user–item interactions across multiple sub-categories on the Amazon platform, accompanied by detailed product metadata and user reviews. ML1M contains over one mil-lion movie ratings along with rich user information and movie metadata. For data preprocessing, we adopt the widely used 5-core filtering and leave-one-out splitting strategy. The detailed statistics of these datasets are presented in Table 1. 
+
+Table 1: Statistics of the experimental datasets. 
+
+#User #Item #Inter Density (%) Clothing 39,387 23,033 278,677 0.0307 Home 66,519 28,237 551,682 0.0294 ML1M 6,040 3,416 999,611 4.8448 CIKM ’26, November 07–11, 2026, Rome, Italy Chumeng Jiang, Jiayin Wang, Xinjie Lin, Zhiqiang Guo, Hengliang Luo, and Min Zhang 
+
+Table 2: The Recommendation List Quality of 𝑆𝑒𝑙 𝑓 𝐷𝑅 compared with traditional models and LLM-based recommenders on three datasets. All LLM-based methods utilizing LLaMA-3.1-8B-Instruct as backbone. Bold and underlined indicate the best and the second-best performance, respectively. *( 𝑝 -value < 0.05 compared with best baseline). Traditional Recommenders LLM-Based Recommenders ID Content No Reason. Multi-Step Reason.-and-Recom. Ours                                                                                                                                                                                                                               
+
+> Base Rank PRM SetRank MIR BGE Jina ZSRanker SOFT EXP3RT COT4Rec RecSAVER RecR1 𝑆𝑒𝑙 𝑓 𝐷𝑅
+> Clothing  𝐻 𝑙 @1 0.0047 0.0063 0.0064 0.0072 0.0079 0.0069 0.0047 0.0113 0.0058 0.0112 0.0095 0.0114 0.0132*
+> 𝐻 𝑙 @3 0.0173 0.0182 0.0182 0.0198 0.0226 0.0213 0.0179 0.0240 0.0153 0.0238 0.0180 0.0204 0.0249*
+> 𝑁 𝑙 @3 0.0120 0.0130 0.0131 0.0144 0.0164 0.0151 0.0122 0.0187 0.0113 0.0186 0.0144 0.0166 0.0200*
+> 𝐻 𝑙 @5 0.0251 0.0275 0.0273 0.0291 0.0313 0.0297 0.0263 0.0314 0.0209 0.0315 0.0239 0.0263 0.0318*
+> 𝑁 𝑙 @5 0.0152 0.0169 0.0168 0.0182 0.0200 0.0186 0.0157 0.0217 0.0136 0.0217 0.0168 0.0191 0.0228*
+> Home  𝐻 𝑙 @1 0.0049 0.0067 0.0068 0.0066 0.0068 0.0053 0.0049 0.0136 0.0050 0.0142 0.0117 0.0128 0.0148*
+> 𝐻 𝑙 @3 0.0146 0.0150 0.0150 0.0150 0.0169 0.0159 0.0138 0.0247 0.0145 0.0256 0.0185 0.0201 0.0267*
+> 𝑁 𝑙 @3 0.0105 0.0114 0.0114 0.0114 0.0126 0.0114 0.0100 0.0200 0.0104 0.0208 0.0156 0.0170 0.0217*
+> 𝐻 𝑙 @5 0.0222 0.0218 0.0221 0.0217 0.0238 0.0223 0.0217 0.0311 0.0214 0.0325 0.0244 0.0256 0.0335*
+> 𝑁 𝑙 @5 0.0136 0.0142 0.0144 0.0141 0.0155 0.0141 0.0132 0.0226 0.0133 0.0236 0.0180 0.0193 0.0245*
+> ML1M  𝐻 𝑙 @1 0.0507 0.0543 0.0514 0.0640 0.0513 0.0640 0.0507 0.0753 -0.0717 0.0377 0.0496 0.0845*
+> 𝐻 𝑙 @3 0.1131 0.1200 0.1120 0.1258 0.1136 0.1337 0.1024 0.1500 -0.1487 0.0820 0.0979 0.1528*
+> 𝑁 𝑙 @3 0.0860 0.0917 0.0860 0.0993 0.0864 0.1039 0.0802 0.1186 -0.1154 0.0629 0.0770 0.1233*
+> 𝐻 𝑙 @5 0.1604 0.1659 0.1586 0.1732 0.1606 0.1838 0.1471 0.1947 -0.1959 0.1197 0.1433 0.2025*
+> 𝑁 𝑙 @5 0.1056 0.1105 0.1051 0.1187 0.1057 0.1245 0.0985 0.1369 -0.1347 0.0783 0.0956 0.1437*
+
+Table 3: The Top-1 Generation Accuracy ( 𝐻 𝑔 @1 ) of 𝑆𝑒𝑙 𝑓 𝐷𝑅 
+
+compared with baselines. For traditional recommenders, 
+
+𝐻 𝑔 @1 equals 𝐻 𝑙 @1 (both are 𝐻𝑅 @1 ). *( 𝑝 <0.05). Clothing Home ML1M 
+
+Base Rank 0.0047 0.0049 0.0507 Best ID-Based 0.0072 0.0068 0.0640 Best Content-Based 0.0079 0.0068 0.0640 LLM-Based ZSRanker 0.0050 0.0050 0.0466 SOFT 0.0097 0.0094 0.0546 EXP3RT 0.0058 0.0050 -COT4Rec 0.0100 0.0121 0.0575 RecSAVER 0.0108 0.0118 0.0438 RecR1 0.0114 0.0128 0.0515 
+
+𝑆𝑒𝑙 𝑓 𝐷𝑅 (Ours) 0.0118* 0.0136* 0.0735* 
+
+4.1.2 Evaluation. We adopt the reranking evaluation setting, where candidates are generated by a base ranker and the positive item is not guaranteed to be included in the candidate set. Compared with ranking over a small set of randomly sampled negatives, this setting better aligns with real-world recommendation scenarios. To more comprehensively evaluate the LLM performance, we assess its outputs from two perspectives. First, we evaluate the correctness of its generation 𝑠 𝑢,𝑖 . Since supervision in LLM training provides only a top-1 label in next-item prediction, generation is typically restricted to a single prediction; thus, we adopt HitRate@1 as the evaluation metric, denoted as 𝐻 𝑔 @1. Second, we obtain a full ranked list 𝑅 𝑢,𝑖 by sorting candidates according to the log-probabilities of the generated identifier token, and report HitRate and Normalized Discounted Cumulative Gain ( 𝑁 𝐷𝐶𝐺 ) metric as 𝐻 𝑙 and 𝑁 𝑙 .
+
+4.1.3 Baselines. For a comprehensive evaluation, we compare our method with traditional reranking models , including id-based 
+
+(PRM, SetRank, MIR) and content-based (BGE, Jina) approaches, as well as LLM-based recommenders . Among the LLM-based baselines, ZSRanker and SOFT perform direct recommendation ,
+
+EXP3RT and COT4Rec adopt multi-step reasoning , and RecSAVER 
+
+and RecR1 follow the reasoning-and-recom. paradigm. 
+
+• PRM [37]: uses a transformer to model item interactions and user-specific features. 
+
+• SetRank [34]: models item interactions for context-aware reranking beyond independent relevance estimation. 
+
+• MIR [47]: models multi-level interactions across candidate items and user history, employing SLAttention to integrate context for reranking. 
+
+• BGE [6]: a multilingual reranker supporting multi-granular and multi-functional retrieval. 
+
+• Jina [22]: a multilingual cross-encoder reranker scoring query–document relevance for retrieval. 
+
+• ZSRanker [18]: a prompting-based method using zero-shot LLM with sequential user histories as input. 
+
+• SOFT [41]: a self-optimized fine-tuning method that con-structs auxiliary easy-to-learn data with a fine-tuned model to augment real-world data and enhance model training. 
+
+• EXP3RT [24]: a review-based method that trains separate models for user/item profile construction and reasoning gen-eration before prediction. It predicts item ratings and reranks items based on the predicted scores. 
+
+• COT4Rec [54]: a multi-step reasoning method that uses K-means clustering to obtain labels for training an analyzer, then recommends based on the generated analyses. 
+
+• RecSAVER [42]: a test-time reasoning method that instructs LLMs to generate both reasoning and prediction in one step, with the reasoning label produced by a large LLM and sub-sequently self-verified. 
+
+• RecR1 [28]: a test-time reasoning method that directly opti-mizes LLM generation using feedback from recommendation results through reinforcement learning. SelfDR : Self-Distillation from Reasoning for LLM-Based Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+4.1.4 Implementation Details. Reranking Settings. We use SAS-Rec to generate the top-20 candidates in this section. Traditional ID-based baselines are implemented with ReChorus [43]. All LLM-based recommenders use LLaMA-3.1-8B-Instruct as the backbone, while methods requiring external reasoning labels (COT4Rec, EXP3RT, and RecSAVER) employ the closed-source DeepSeek-V3 to generate these labels. Results are averaged over three seeds. 
+
+Self-Distillation Settings. On the training set, we divide the chronologically earlier half for reasoner training and the latter half for distillation. Before distillation, LLMs are instruction-tuned for three epochs to ensure instruction adherence, followed by up to three distillation epochs with early stopping. Since our candidate set size is 20, we set the 𝑘 threshold to 5. Further details on baseline implementation and hyperparameters are provided in our repo. 
+
+## 4.2 Main Results (RQ1) 
+
+We evaluate LLM-based recommenders from two perspectives. Ta-ble 2 reports the ranking quality of the recommendation lists of our method compared with other baselines, while Table 3 focuses on the accuracy of top-1 generation. Since EXP3RT is review-based, it cannot be applied to ML1M, which lacks review data. 
+
+4.2.1 Recommendation List Quality. As shown in Table 2, our method consistently achieves significantly better performance across all metrics than both traditional and LLM-based recommenders on all three datasets. This demonstrates the effectiveness and robust-ness of our approach, highlighting the feasibility of achieving con-tinuous improvement through self-distillation from the reasoning process within a unified model architecture. For traditional recommenders, most methods yield noticeable gains over the base ranker. ID-based methods, benefiting from task-specific designs, further exploit collaborative-filtering signals and often improve top-ranked accuracy (e.g., @1). Content-based models additionally leverage semantic information from text, which generally strengthens overall ranking quality and brings consistent gains across all cutoffs. Nevertheless, their use of textual signals remains limited, and LLMs, with richer commonsense and world knowledge, have the potential to further improve performance. For LLM-based methods, appropriate design choices are crucial for eliciting LLMs’ recommendation capability. The performance of ZSRanker suggests that an off-the-shelf 8B model is not sufficiently reliable for direct recommendation. In comparison, SOFT obtains good ranking quality through an enhanced fine-tuning process that leverages both original labels and model-generated curriculum data, although incorporating reasoning still leaves room for fur-ther improvement. Regarding reasoning-based baselines, EXP3RT improves over the base results only at @1 but degrades at larger cutoffs, as it reranks candidates using LLM-predicted ratings that are often uniformly high, e.g., 4–5, limiting discriminability and list quality. The two reasoning-and-recommendation methods vary markedly across datasets, likely due to differences in textual signals: ML1M mainly provides abstract cues such as movie titles, while Amazon product data contains richer attributes such as gender, capacity and color. This makes reasoning-based learning more chal-lenging on ML1M but relatively easier on Amazon datasets, leading to domain-specific performance variations. COT4Rec is compar-atively strong, but its training relies on external-LLM-generated rationales, and such rationales from large closed-source LLMs may not always be recommendation-targeted, introducing noise that leads to suboptimal learning and keeps it below 𝑆𝑒𝑙 𝑓 𝐷𝑅 .
+
+4.2.2 Top-1 Generation Accuracy. Beyond recommended lists ob-tained by log-probability sorting, we also report the LLM’s top-1 generation accuracy, denoted as 𝐻 𝑔 @1 (Table 3). For traditional baselines and EXP3RT (which reranks by predicted ratings), 𝐻 𝑔 @1 equals 𝐻 𝑙 @1; therefore, we include only the best method from each traditional category on each dataset for comparison. Overall, 𝑆𝑒𝑙 𝑓 𝐷𝑅 consistently achieves the best performance, val-idating the effectiveness of our method under both ranking-based and generation-based evaluation metrics. Similar to the ranking-quality results, SOFT and COT4Rec still show reasonably good performance, while ZSRanker and EXP3RT remain relatively weak. In contrast to the ranking-quality results, the two reasoning-and-recommendation methods achieve strong top-1 generation accuracy on Clothing and Home, especially RecR1. This phenomenon echoes recent observations: reinforcement learning often improves the efficiency of sampling correct outputs, but may not necessarily expand the model’s underlying capability boundary [7]. Similarly, RecR1 appears more effective at optimizing the generation of the ground-truth token than improving the fine-grained ranking of the ground-truth item among all candidates. 
+
+## 4.3 Reasoner Performance Comparison (RQ2) 
+
+Figure 3: Post-Distillation Recommendation Performance of Different Reasoners (three external large LLMs, untrained LLaMA, and Ours trained LLaMA). 
+
+4.3.1 Post-Distillation Performance on Test Set. To examine the ef-fectiveness of the 𝑆𝑒𝑙 𝑓 𝐷𝑅 Reasoner, we conduct experiments where external large LLMs are directly employed as reasoning generators, producing rationales that serve as inputs for the subsequent distilla-tion stage. Specifically, we compare our trained Reasoner with three large LLMs, GPT-4o-mini , Claude-3-Haiku , and DeepSeek-V3 ,as well as the off-the-shelf LLaMA-3.1-8B-Instruct baseline. Figure 3 reports the final 𝐻 𝑔 @1 results after distillation when using different Reasoners across the three datasets. As shown, our trained Reasoner consistently achieves the best post-distillation performance on all datasets. As expected, the original LLaMA gen-erally leads to worse performance than large proprietary LLMs; however, once trained on the target dataset, it can generate more task-specific and informative explanations that significantly en-hance downstream recommendation accuracy after distillation. An example of the generated rationales is shown in Sec. 4.3.3. CIKM ’26, November 07–11, 2026, Rome, Italy Chumeng Jiang, Jiayin Wang, Xinjie Lin, Zhiqiang Guo, Hengliang Luo, and Min Zhang 
+
+Furthermore, we observe that a more powerful general-purpose LLM does not necessarily result in better post-distillation recom-mendation outcomes. Depending on the dataset, GPT, Claude, or DeepSeek may perform best. This may stem from different domain specialization—each LLM excels in different content domains—or from the cognitive gap between teacher and student models: al-though large LLMs possess richer knowledge and stronger reason-ing abilities, rationales that include knowledge overly unfamiliar or inaccessible to the student may not be easily learnable for a smaller student model. In contrast, our Reasoner performs consistently well across all datasets, suggesting that using the model itself as the teacher may provide a more balanced and learnable source of supervision for the student. 
+
+4.3.2 Teacher Performance on Training Set. We further report teacher performance on the training set across different Reasoners, using 2,000 randomly sampled training instances from Clothing due to computational cost. As shown in Table 4, all reasoning-enhanced teachers outperform the student before self-distillation regardless of the Reasoner, indicating that rationales generally provide use-ful auxiliary signals and improve recommendation accuracy. More importantly, this training-set trend largely matches the test-set per-formance of the distilled students in Figure 3: our trained Reasoner performs best, DeepSeek-V3 is competitive among external LLMs, and GPT-4o-Mini performs worst. This consistency suggests that a stronger reasoning-enhanced teacher can offer more effective supervision and better downstream generalization. In addition, we include GPT-5-Chat as a supplementary obser-vation. Although it outperforms GPT-4o-Mini, it is still not the most effective external Reasoner. This further suggests that a more advanced general-purpose LLM does not necessarily yield better downstream performance, possibly due to the mismatch between ex-ternal large LLMs and the smaller recommender LLM in reasoning style, output distribution, or recommendation-specific alignment. 
+
+Table 4: Teacher Performance on the Clothing training set when constructed with rationales generated by different Rea-soners on 2,000 randomly sampled training instances.                                                      
+
+> Reasoner 𝐻 𝑔 @1 𝐻 𝑙 @1 𝐻 𝑙 @3 𝑁 𝑙 @3 𝐻 𝑙 @5 𝑁 𝑙 @5 No (Student Before SD) 0.373 0.454 0.763 0.6336 0.876 0.6802 LLaMA 0.407 0.503 0.825 0.6916 0.911 0.7272 GPT-4o-Mini 0.416 0.505 0.820 0.6896 0.911 0.7271 Claude-3-Haiku 0.508 0.601 0.901 0.7805 0.963 0.8061 Deepseek-V3 0.478 0.572 0.848 0.7345 0.930 0.7684 GPT-5-Chat 0.429 0.508 0.809 0.6838 0.909 0.7253
+> Ours (trained LLaMA) 0.552 0.615 0.910 0.7908 0.968 0.8151
+
+4.3.3 Qualitative Comparison of Reasoner-Generated Rationales. 
+
+An example of the rationales generated by different Reasoners on Clothing is shown in Table 5. By summarizing the user’s histori-cal interactions, we observe several key preferences: the items are generally functional and stylish, and some of them are purchased as gifts. However, given the next item, the more relevant signals in this case are functionality and gift-oriented intent. The off-the-shelf LLaMA captures most characteristics from the user history, but fails to emphasize the aspects most relevant to the target item. Claude better connects the user history with the next item, yet still misses the important gift-related signal. In contrast, our trained Reasoner generates a rationale with the richest and most accu-rate information. This demonstrates its stronger ability to produce high-quality rationales, which further contributes to more effective teacher construction and better post-distillation performance. 
+
+Table 5: Rationales of one training instance on Clothing gen-erated by various Reasoners. Same-colored texts convey sim-ilar points, with Ours being more targeted and informative. Reasoner Generated Rationale                      
+
+> LLaMA Based on the user’s past purchase history, it can be inferred that they tend to purchase items related to fashion ... values high-quality, stylish items ... open to purchasing items as gifts for others . ... suggest that the user values practical or stylish items that would be appreciated by others. The new item ... is a casual and versatile piece of clothing, may also appeal to the user’s taste in practical and stylish items. Claude They seem to have a preference for versatile, everyday clothing items that are practical and functional . The high rating they gave to ... suggests they value products that can be easily incorpo-rated into their daily wardrobe. The new item aligns well with the user’s apparent preference for
+> simple, comfortable, and easy-to-wear clothing ...
+> Ours We can infer that the user tends to favor products that are func-tional and perhaps given as gifts . They purchased ... suggests that they appreciate quality and functionality. The new item shares similarities with the user’s past purchase. It is a practical, everyday item of clothing that can be worn in casual settings ... Additionally, ... suggests that the user may be
+> purchasing this item for a younger family member or friend ,aligning with their past behavior of giving gifts.
+
+## 4.4 Effect of Self-Distillation (RQ3) 
+
+4.4.1 Ablation on Self-Distillation. In this section, we conduct ab-lation experiments to validate the contribution of each compo-nent in the self-distillation stage. Specifically, we compare four set-tings: (1) Before Self-Distillation (Before SD) , where the model is only instruction-tuned without any further self-distillation; (2) 
+
+Supervised-only training (Sup-Only) , where the self-distillation stage uses only the cross-entropy loss; (3) Distillation-only train-ing (Dist-Only) , which applies only the knowledge distillation loss; and (4) Fixed-𝛼 , where dynamic weighting is disabled and 𝛼 is fixed to 0.5. For all settings involving self-distillation, we keep the number of training epochs consistent to ensure a fair comparison. Table 6 reports the recommendation results on Clothing, where our method achieves significantly better overall performance. We observe that continuing training with only the supervised CE loss tends to overfit the training data and degrades generalization. In contrast, distilling from the reasoning-augmented teacher provides additional informative signals for the student and yields further gains. However, because the teacher’s predictions are not always perfectly accurate, introducing supervision from the ground-truth labels helps stabilize learning and improves robustness. Notably, this combination requires careful design: a naïve mixture of dis-tillation and label supervision can underperform distillation-only training, whereas our dynamic weighting strategy enables a more effective balance between the two. SelfDR : Self-Distillation from Reasoning for LLM-Based Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Table 6: The Results of 𝑆𝑒𝑙 𝑓 𝐷𝑅 with Dynamic Weighting com-pared with other learning strategies on Clothing. Bold and underlined indicate the best and the second-best.                                         
+
+> 𝐻 𝑔 @1 𝐻 𝑙 @1 𝐻 𝑙 @3 𝑁 𝑙 @3 𝐻 𝑙 @5 𝑁 𝑙 @5 Before SD 0.0094 0.0112 0.0240 0.0186 0.0311 0.0215 Sup-Only 0.0092 0.0108 0.0236 0.0182 0.0313 0.0214 Dist-Only 0.0115 0.0132 0.0247 0.0198 0.0314 0.0226 Fixed-𝛼 0.0109 0.0124 0.0245 0.0194 0.0315 0.0223
+> 𝑆𝑒𝑙 𝑓 𝐷𝑅 0.0118 0.0132 0.0249 0.0200 0.0318 0.0228
+
+4.4.2 Impact of Self-Distillation on Output Confidence. To better understand how self-distillation affects the LLM, we further ex-amine the token-level probability distribution of its outputs. We group model outputs according to the position of the ground-truth identifier in the generated recommendation list R𝑢,𝑖 , and visualize the probability distribution, i.e., the model’s confidence, assigned to the ground-truth identifier within each group. Figure 4 reports the confidence distributions when the ground-truth identifier appears within the top-5 positions on the training and test sets of Clothing. In each violin plot, wider regions indi-cate that more samples are concentrated around the corresponding confidence values. As shown, SelfDR substantially increases the model’s confidence when the ground-truth item is ranked within the top-2 positions. This indicates that, after self-distillation, the model not only ranks correct items higher, as reflected in improved ranking metrics such as NDCG , but also becomes more confident in correct cases, both of which contribute to more accurate generation during inference. Moreover, this pattern remains consistent across the training and test sets, suggesting that the confidence adjustment is stable rather than an artifact of the training distribution, and providing evidence that the student model internalizes transferable ranking knowledge through self-distillation. 
+
+Figure 4: Confidence of the Ground-Truth Identifier ranked within the top-5 on Clothing. The left and right panels show the distributions on the training and test sets, respectively. 
+
+## 4.5 Training Cost & Inference Efficiency (RQ4) 
+
+To estimate the training cost and inference efficiency of LLM-based recommenders, we run both training and inference on a single NVIDIA A800 GPU. Training time is reported as the total wall-clock time required to obtain all models used in the final setup. For inference, we randomly sample 2,000 instances from Clothing and report the per-instance average inference time and token usage. As shown in Table 7, 𝑆𝑒𝑙 𝑓 𝐷𝑅 achieves the most efficient infer-ence, tied with SOFT, by producing only a single-character identifier, 
+
+Table 7: Training Cost and Inference Efficiency on Clothing (training time in hours; inference time in ms/instance). For EXP3RT and COT4Rec, totals across all steps are reported. Input Tok. Output Tok. Train. Time Inf. Time                             
+
+> ZSRanker 1253.13 24.07 -149.81 SOFT 1198.06 1.00 37.79 109.48 EXP3RT 1972.40 670.01 47.65 529.83 COT4Rec 1511.87 168.36 58.36 250.03 RecSAVER 1472.21 197.51 40.11 623.38 RecR1 1182.06 210.43 65.50 665.12
+> 𝑆𝑒𝑙 𝑓 𝐷𝑅 1198.06 1.00 54.18 109.46
+
+while keeping its training time comparable to most reasoning-based baselines without incurring a dramatic increase in training over-head. On the inference side, SOFT, which does not involve reasoning, achieves efficiency close to ours; however, all other baselines are substantially slower. Although ZSRanker does not generate ratio-nales, it still needs to output both identifiers and titles to prevent the zero-shot LLM from drifting to arbitrary answers, thereby in-creasing latency. Reasoning-based methods, whether multi-step or test-time approaches, inevitably introduce additional inference over-head. EXP3RT partially reduces per-step latency through shorter inputs and outputs, but its multi-stage pipeline still leads to higher overall inference cost. In terms of training, our reasoner converges quickly, and the recommender’s one-token output keeps both in-struction tuning and self-distillation lightweight. Meanwhile, ex-isting baselines often train multiple models or generate longer sequences, both of which increase training overhead. Consequently, despite using a two-stage pipeline, 𝑆𝑒𝑙 𝑓 𝐷𝑅 maintains a total train-ing time comparable to prior methods and is notably more efficient than RecR1, which requires a substantially longer GRPO procedure. Moreover, 𝑆𝑒𝑙 𝑓 𝐷𝑅 does not rely on external LLMs during training, whereas EXP3RT, COT4Rec, and RecSAVER incur additional costs by querying state-of-the-art LLMs for supervision signals. 
+
+## 5 Discussions 5.1 Hyperparameter Sensitivity Analysis 
+
+In this section, we study the sensitivity of the dynamic weight-ing strategy to 𝛼 base , 𝛽 , and the temperature coefficients 𝜏 and 𝛾 .Figure 5 reports results on Clothing, with similar trends on the other two datasets. Overall, the optimal 𝛼 base varies across datasets, 
+
+𝛽 ≈ 0.1 usually performs best, and the temperature coefficients have relatively minor effects, with best results typically in [1.0, 2.0].Specifically, on Clothing, 𝛼 base = 0.9 achieves the best overall performance. A smaller 𝛼 base pushes training toward supervised fine-tuning, increasing overfitting and causing a clear performance drop, while an overly large 𝛼 base pushes it toward a distillation-dominated regime near 𝛼 max . Although stronger self-distillation can still be competitive when 𝛽 properly suppresses noisy super-vision, a moderate amount of cross-entropy supervision remains beneficial. The parameter 𝛽 down-weights instances where the teacher underperforms the student, and 𝛽 = 0.1 usually provides ef-fective separation. A larger 𝛽 weakens this penalty and admits more noisy teacher signals, while a very small 𝛽 makes such instances rely mostly on label supervision. Even so, a worse-ranked teacher’s CIKM ’26, November 07–11, 2026, Rome, Italy Chumeng Jiang, Jiayin Wang, Xinjie Lin, Zhiqiang Guo, Hengliang Luo, and Min Zhang 
+
+Figure 5: Hyperparameter Analysis of the dynamic weighting strategy on Clothing. For each hyperparameter, we report its impact on 𝐻 𝑔 @1 and 𝐻 𝑙 @1 .
+
+soft token-level distribution may still offer useful information be-yond a hard label. The model is generally robust to the temperature coefficients. Since these two parameters control how the teacher rank and rank difference affect the adaptive weight 𝛼 , a moderate range suffices for strong performance. Overall, these results show that 𝑆𝑒𝑙 𝑓 𝐷𝑅 is stable under reasonable hyperparameter choices, confirming the robustness of the dynamic weighting strategy. 
+
+## 5.2 Candidate Generator Robustness 
+
+Table 8: Recommendation Performance of 𝑆𝑒𝑙 𝑓 𝐷𝑅 compared with the strongest baselines on Clothing using LightGCN and ComiRec as the candidate generator. *( 𝑝 <0.05).                                                                       
+
+> LightGCN 𝐻 𝑔 @1 𝐻 𝑙 @1 𝐻 𝑙 @3 𝑁 𝑙 @3 𝐻 𝑙 @5 𝑁 𝑙 @5 Base Rank 0.0066 0.0066 0.0161 0.0120 0.0235 0.0150 BGE 0.0094 0.0094 0.0212 0.0162 0.0292 0.0195 COT4Rec 0.0089 0.0107 0.0232 0.0178 0.0318 0.0214
+> 𝑆𝑒𝑙 𝑓 𝐷𝑅 0.0099* 0.0110* 0.0245* 0.0188* 0.0328* 0.0221*
+> ComiRec 𝐻 𝑔 @1 𝐻 𝑙 @1 𝐻 𝑙 @3 𝑁 𝑙 @3 𝐻 𝑙 @5 𝑁 𝑙 @5 Base Rank 0.0068 0.0068 0.0183 0.0134 0.0264 0.0168 BGE 0.0121 0.0121 0.0257 0.0200 0.0344 0.0235 COT4Rec 0.0131 0.0158 0.0316 0.0248 0.0398 0.0282
+> 𝑆𝑒𝑙 𝑓 𝐷𝑅 0.0167* 0.0192* 0.0346* 0.0281* 0.0429* 0.0315*
+
+In the experiments above, we have shown that our method consis-tently achieves superior performance over various baselines across multiple datasets, with SASRec serving as the base ranker. We fur-ther investigate whether this advantage remains robust when the candidate generator changes. To this end, we conduct additional experiments on Clothing using two different base ranker: (1) Light-GCN [16], a graph-based collaborative filtering model that captures high-order user–item relations; (2) ComiRec [5], a sequential recom-mendation model that captures multiple user interests from behav-ior sequences. We compare 𝑆𝑒𝑙 𝑓 𝐷𝑅 with BGE and COT4Rec, which are the strongest baselines overall among traditional and LLM-based methods, respectively. As shown in Table 8, all three methods im-prove over the original base ranker. Moreover, 𝑆𝑒𝑙 𝑓 𝐷𝑅 consistently achieves the best performance across all metrics, demonstrating its robustness and generalizability across different candidate genera-tors, as well as its stable effectiveness on the task. 
+
+## 5.3 Out-of-Domain Generalization 
+
+To verify that self-distillation learns transferable knowledge rather than dataset-specific shortcuts, we conduct an out-of-domain eval-uation. Specifically, we take models trained on one dataset, be-fore and after self-distillation, and directly evaluate them on other datasets. Improvements on unseen domains would indicate that the gains are not merely due to memorizing superficial patterns in the training data. Table 9 reports the results of models trained on Clothing and Home and evaluated on the other dataset. The distilled model consistently outperforms its non-distilled counter-part in both transfer directions, demonstrating that the benefits of self-distillation generalize beyond the training domain. These consistent gains suggest that self-distillation helps the model inter-nalize more transferable recommendation knowledge, rather than simply fitting dataset-specific signals. 
+
+Table 9: Out-of-Domain Performance before and after self-distillation. The upper block evaluates Clothing-trained mod-els on Home, while the lower block evaluates Home-trained models on Clothing.                                               
+
+> Dat: Home 𝐻 𝑔 @1 𝐻 𝑙 @1 𝐻 𝑙 @3 𝑁 𝑙 @3 𝐻 𝑙 @5 𝑁 𝑙 @5 Before SD 0.0076 0.0090 0.0197 0.0152 0.0275 0.0184
+> 𝑆𝑒𝑙 𝑓 𝐷𝑅 0.0095 0.0106 0.0208 0.0165 0.0279 0.0194
+> Dat: Clothing 𝐻 𝑔 @1 𝐻 𝑙 @1 𝐻 𝑙 @3 𝑁 𝑙 @3 𝐻 𝑙 @5 𝑁 𝑙 @5 Before SD 0.0100 0.0127 0.0237 0.0191 0.0312 0.0222
+> 𝑆𝑒𝑙 𝑓 𝐷𝑅 0.0115 0.0127 0.0243 0.0194 0.0322 0.0227
+
+## 6 Conclusion and Future Work 
+
+In this paper, we introduce 𝑆𝑒𝑙 𝑓 𝐷𝑅 , a novel self-distillation from reasoning framework for LLM-based recommendation. 𝑆𝑒𝑙 𝑓 𝐷𝑅 self-distills the LLM’s own reasoning-enhanced predictions to achieve self-learning and evolution, enhancing recommendation effective-ness while maintaining efficiency. Specifically, 𝑆𝑒𝑙 𝑓 𝐷𝑅 first builds a reasoning-guided teacher by training a reasoner to generate tar-geted rationales, and then lets a student model with the same ar-chitecture learn from the teacher’s deliberated outputs through dy-namic loss. Experiments on three public datasets show that 𝑆𝑒𝑙 𝑓 𝐷𝑅 
+
+achieves the best recommendation effectiveness while maintain-ing high inference efficiency. Ablation studies further verify that a compact LLM itself, once trained as the reasoner, can outperform external large LLMs, and that the dynamic self-distillation design is key to stable and effective learning. This work represents an early exploration of distilling from the reasoning of LLMs to real-ize self-evolution within a unified architecture. Our work centers on the widely-used LLaMA-8B model, aiming to enable relatively modest models to self-enhance their recommendation capabilities. Future work may extend this paradigm to LLMs of different types and scales to further validate its adaptability, moving toward au-tonomously evolving LLMs that continuously refine their reasoning and decision-making capabilities without external teachers. SelfDR : Self-Distillation from Reasoning for LLM-Based Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+## GenAI Usage Disclosure 
+
+The authors used generative AI tools only for language editing and polishing of author-written text, such as improving grammar, clarity, and fluency. These tools were not used to generate research ideas, methods, data, experimental results, citations, or scientific claims. All AI-assisted edits were carefully reviewed, verified, and revised by the authors. The authors take full responsibility for the accuracy, originality, and integrity of all content in this work. 
+
+## References 
+
+[1] Sherwin Bahmani, Tianchang Shen, Jiawei Ren, Jiahui Huang, Yifeng Jiang, Haithem Turki, Andrea Tagliasacchi, David B. Lindell, Zan Gojcic, Sanja Fidler, Huan Ling, Jun Gao, and Xuanchi Ren. 2025. Lyra: Generative 3D Scene Recon-struction via Video Diffusion Model Self-Distillation. arXiv:2509.19296 [cs.CV] https://arxiv.org/abs/2509.19296 [2] Keqin Bao, Jizhi Zhang, Wenjie Wang, Yang Zhang, Zhengyi Yang, Yancheng Luo, Chong Chen, Fuli Feng, and Qi Tian. 2023. A Bi-Step Grounding Paradigm for Large Language Models in Recommendation Systems. arXiv:2308.08434 [3] Keqin Bao, Jizhi Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan He. 2023. TALLRec: An Effective and Efficient Tuning Framework to Align Large Lan-guage Model with Recommendation. In Proceedings of the 17th ACM Conference on Recommender Systems (Singapore, Singapore) (RecSys ’23) . Association for Com-puting Machinery, New York, NY, USA, 1007–1014. doi:10.1145/3604915.3608857 [4] Millennium Bismay, Xiangjue Dong, and James Caverlee. 2025. ReasoningRec: Bridging Personalized Recommendations and Human-Interpretable Explana-tions through LLM Reasoning. In Findings of the Association for Computational Linguistics: NAACL 2025 , Luis Chiruzzo, Alan Ritter, and Lu Wang (Eds.). Asso-ciation for Computational Linguistics, Albuquerque, New Mexico, 8132–8148. doi:10.18653/v1/2025.findings-naacl.454 [5] Yukuo Cen, Jianwei Zhang, Xu Zou, Chang Zhou, Hongxia Yang, and Jie Tang. 2020. Controllable Multi-Interest Framework for Recommendation. In Proceedings of the 26th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining (Virtual Event, CA, USA) (KDD ’20) . Association for Computing Machinery, New York, NY, USA, 2942–2951. doi:10.1145/3394486.3403344 [6] Jianlv Chen, Shitao Xiao, Peitian Zhang, Kun Luo, Defu Lian, and Zheng Liu. 2025. M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation. arXiv:2402.03216 [cs.CL] https://arxiv.org/abs/2402.03216 [7] Zhiqi Chen, Rui Lu, Andrew Zhao, Zhaokai Wang, Yang Yue, Shiji Song, and Gao Huang. 2025. Does reinforcement learning really incentivize reasoning capacity in llms beyond the base model? Advances in Neural Information Processing Systems 
+
+38 (2025), 57654–57689. [8] Yu Cui, Feng Liu, Pengbo Wang, Bohao Wang, Heng Tang, Yi Wan, Jun Wang, and Jiawei Chen. 2024. Distillation Matters: Empowering Sequential Recommenders to Match the Performance of Large Language Models. In 18th ACM Conference on Recommender Systems (RecSys ’24) . ACM, 507–517. doi:10.1145/3640457.3688118 [9] Chengyu Dong, Liyuan Liu, and Jingbo Shang. 2024. Toward Student-oriented Teacher Network Training for Knowledge Distillation. In The Twelfth Interna-tional Conference on Learning Representations . https://openreview.net/forum?id= wsWGcw6qKD [10] Yingpeng Du, Zhu Sun, Ziyan Wang, Haoyan Chua, Jie Zhang, and Yew-Soon Ong. 2025. Active large language model-based knowledge distillation for session-based recommendation. In Proceedings of the Thirty-Ninth AAAI Conference on Artificial Intelligence and Thirty-Seventh Conference on Innovative Applications of Artificial Intelligence and Fifteenth Symposium on Educational Advances in Artifi-cial Intelligence (AAAI’25/IAAI’25/EAAI’25) . AAAI Press, Article 1290, 9 pages. doi:10.1609/aaai.v39i11.33263 [11] Yi Fang, Wenjie Wang, Yang Zhang, Fengbin Zhu, Qifan Wang, Fuli Feng, and Xiangnan He. 2025. Reason4Rec: Large Language Models for Recommendation with Deliberative User Preference Alignment. arXiv:2502.02061 [cs.IR] https: //arxiv.org/abs/2502.02061 [12] Yuxian Gu, Li Dong, Furu Wei, and Minlie Huang. 2024. MiniLLM: Knowledge Distillation of Large Language Models. In The Twelfth International Conference on Learning Representations . https://openreview.net/forum?id=5h0qf7IBZZ [13] Gousia Habib, Tausifa jan Saleem, Sheikh Musa Kaleem, Tufail Rouf, and Brejesh Lall. 2024. A Comprehensive Review of Knowledge Distillation in Computer Vision. arXiv:2404.00936 [cs.CV] https://arxiv.org/abs/2404.00936 [14] Sangchul Hahn and Heeyoul Choi. 2019. Self-Knowledge Distillation in Natural Language Processing. In Proceedings of the International Conference on Recent Advances in Natural Language Processing (RANLP 2019) , Ruslan Mitkov and Galia Angelova (Eds.). INCOMA Ltd., Varna, Bulgaria, 423–430. doi:10.26615/978-954-452-056-4_050 [15] Jesse Harte, Wouter Zorgdrager, Panos Louridas, Asterios Katsifodimos, Dietmar Jannach, and Marios Fragkoulis. 2023. Leveraging Large Language Models for Sequential Recommendation. In Proceedings of the 17th ACM Conference on Recom-mender Systems (Singapore, Singapore) (RecSys ’23) . Association for Computing Machinery, New York, NY, USA, 1096–1102. doi:10.1145/3604915.3610639 [16] Xiangnan He, Kuan Deng, Xiang Wang, Yan Li, YongDong Zhang, and Meng Wang. 2020. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation. In Proceedings of the 43rd International ACM SIGIR Confer-ence on Research and Development in Information Retrieval (Virtual Event, China) 
+
+(SIGIR ’20) . Association for Computing Machinery, New York, NY, USA, 639–648. doi:10.1145/3397271.3401063 [17] Geoffrey Hinton, Oriol Vinyals, and Jeff Dean. 2015. Distilling the Knowledge in a Neural Network. arXiv:1503.02531 [stat.ML] https://arxiv.org/abs/1503.02531 [18] Yupeng Hou, Junjie Zhang, Zihan Lin, Hongyu Lu, Ruobing Xie, Julian McAuley, and Wayne Xin Zhao. 2024. Large Language Models are Zero-Shot Rankers for Recommender Systems. In Advances in Information Retrieval: 46th European Conference on Information Retrieval, ECIR 2024, Glasgow, UK, March 24–28, 2024, Proceedings, Part II (Glasgow, United Kingdom). Springer-Verlag, Berlin, Heidel-berg, 364–381. doi:10.1007/978-3-031-56060-6_24 [19] Tao Huang, Shan You, Fei Wang, Chen Qian, and Chang Xu. 2022. Knowledge distillation from a stronger teacher. In Proceedings of the 36th International Con-ference on Neural Information Processing Systems (New Orleans, LA, USA) (NIPS ’22) . Curran Associates Inc., Red Hook, NY, USA, Article 2443, 12 pages. [20] Shima Imani, Liang Du, and Harsh Shrivastava. 2023. MathPrompter: Math-ematical Reasoning using Large Language Models. In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 5: Industry Track) , Sunayana Sitaram, Beata Beigman Klebanov, and Jason D Williams (Eds.). Association for Computational Linguistics, Toronto, Canada, 37–42. doi:10.18653/v1/2023.acl-industry.4 [21] Chumeng Jiang, Jiayin Wang, Weizhi Ma, Charles L. A. Clarke, Shuai Wang, Chuhan Wu, and Min Zhang. 2025. Beyond Utility: Evaluating LLM as Rec-ommender. In Proceedings of the ACM on Web Conference 2025 (Sydney NSW, Australia) (WWW ’25) . Association for Computing Machinery, New York, NY, USA, 3850–3862. doi:10.1145/3696410.3714759 [22] Jina AI. 2024. jina-reranker-v2-base-multilingual. https://huggingface.co/jinaai/ jina-reranker-v2-base-multilingual. [23] SeongKu Kang, Wonbin Kweon, Dongha Lee, Jianxun Lian, Xing Xie, and Hwanjo Yu. 2023. Distillation from Heterogeneous Models for Top-K Recommendation. In Proceedings of the ACM Web Conference 2023 (Austin, TX, USA) (WWW ’23) .Association for Computing Machinery, New York, NY, USA, 801–811. doi:10. 1145/3543507.3583209 [24] Jieyong Kim, Hyunseo Kim, Hyunjin Cho, SeongKu Kang, Buru Chang, Jinyoung Yeo, and Dongha Lee. 2025. Review-driven Personalized Preference Reasoning with Large Language Models for Recommendation. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (Padua, Italy) (SIGIR ’25) . Association for Computing Machinery, New York, NY, USA, 1697–1706. doi:10.1145/3726302.3730055 [25] Sein Kim, Hongseok Kang, Seungyoon Choi, Donghyun Kim, Minchul Yang, and Chanyoung Park. 2024. Large Language Models meet Collaborative Filtering: An Efficient All-round LLM-based Recommender System. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (Barcelona, Spain) (KDD ’24) . Association for Computing Machinery, New York, NY, USA, 1395–1406. doi:10.1145/3637528.3671931 [26] Chengpeng Li, Guanting Dong, Mingfeng Xue, Ru Peng, Xiang Wang, and Dayiheng Liu. 2024. DotaMath: Decomposition of Thought with Code Assis-tance and Self-correction for Mathematical Reasoning. arXiv:2407.04078 [cs.CL] https://arxiv.org/abs/2407.04078 [27] Jianghao Lin, Xinyi Dai, Yunjia Xi, Weiwen Liu, Bo Chen, Hao Zhang, Yong Liu, Chuhan Wu, Xiangyang Li, Chenxu Zhu, Huifeng Guo, Yong Yu, Ruiming Tang, and Weinan Zhang. 2025. How Can Recommender Systems Benefit from Large Language Models: A Survey. ACM Trans. Inf. Syst. 43, 2, Article 28 (Jan. 2025), 47 pages. doi:10.1145/3678004 [28] Jiacheng Lin, Tian Wang, and Kun Qian. 2025. Rec-R1: Bridging Generative Large Language Models and User-Centric Recommendation Systems via Reinforcement Learning. arXiv:2503.24289 [cs.IR] https://arxiv.org/abs/2503.24289 [29] Xinyu Lin, Wenjie Wang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Bridging Items and Language: A Transition Paradigm for Large Language Model-Based Recommendation. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (Barcelona, Spain) (KDD ’24) . Association for Computing Machinery, New York, NY, USA, 1816–1826. doi:10.1145/3637528.3671884 [30] Junling Liu, Chao Liu, Peilin Zhou, Renjie Lv, Kang Zhou, and Yan Zhang. 2023. Is ChatGPT a Good Recommender? A Preliminary Study. arXiv:2304.10149 [31] Junling Liu, Chao Liu, Peilin Zhou, Qichen Ye, Dading Chong, Kang Zhou, Yueqi Xie, Yuwei Cao, Shoujin Wang, Chenyu You, and Philip S. Yu. 2023. LLMRec: Benchmarking Large Language Models on Recommendation Task. arXiv:2308.12241 CIKM ’26, November 07–11, 2026, Rome, Italy Chumeng Jiang, Jiayin Wang, Xinjie Lin, Zhiqiang Guo, Hengliang Luo, and Min Zhang 
+
+[32] Jiahao Liu, Xueshuo Yan, Dongsheng Li, Guangping Zhang, Hansu Gu, Peng Zhang, Tun Lu, Li Shang, and Ning Gu. 2025. Improving LLM-powered Recom-mendations with Personalized Information. In Proceedings of the 48th Interna-tional ACM SIGIR Conference on Research and Development in Information Retrieval 
+
+(Padua, Italy) (SIGIR ’25) . Association for Computing Machinery, New York, NY, USA, 2560–2565. doi:10.1145/3726302.3730211 [33] Qidong Liu, Xian Wu, Yejing Wang, Zijian Zhang, Feng Tian, Yefeng Zheng, and Xiangyu Zhao. 2024. LLM-ESR: large language models enhancement for long-tailed sequential recommendation. In Proceedings of the 38th International Conference on Neural Information Processing Systems (Vancouver, BC, Canada) 
+
+(NIPS ’24) . Curran Associates Inc., Red Hook, NY, USA, Article 839, 27 pages. [34] Liang Pang, Jun Xu, Qingyao Ai, Yanyan Lan, Xueqi Cheng, and Jirong Wen. 2020. SetRank: Learning a Permutation-Invariant Ranking Model for Informa-tion Retrieval. In Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval (Virtual Event, China) (SI-GIR ’20) . Association for Computing Machinery, New York, NY, USA, 499–508. doi:10.1145/3397271.3401104 [35] Wonpyo Park, Dongju Kim, Yan Lu, and Minsu Cho. 2019. Relational Knowl-edge Distillation. In 2019 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) . 3962–3971. doi:10.1109/CVPR.2019.00409 [36] Nikolaos Passalis and Anastasios Tefas. 2018. Learning Deep Representations with Probabilistic Knowledge Transfer. In Computer Vision – ECCV 2018: 15th European Conference, Munich, Germany, September 8-14, 2018, Proceedings, Part XI (Munich, Germany). Springer-Verlag, Berlin, Heidelberg, 283–299. doi:10.1007/978-3-030-01252-6_17 [37] Changhua Pei, Yi Zhang, Yongfeng Zhang, Fei Sun, Xiao Lin, Hanxiao Sun, Jian Wu, Peng Jiang, Junfeng Ge, Wenwu Ou, and Dan Pei. 2019. Personalized re-ranking for recommendation. In Proceedings of the 13th ACM Conference on Recommender Systems (Copenhagen, Denmark) (RecSys ’19) . Association for Computing Machinery, New York, NY, USA, 3–11. doi:10.1145/3298689.3347000 [38] Adriana Romero, Nicolas Ballas, Samira Ebrahimi Kahou, Antoine Chassang, Carlo Gatta, and Yoshua Bengio. 2015. FitNets: Hints for Thin Deep Nets. arXiv:1412.6550 [cs.LG] https://arxiv.org/abs/1412.6550 [39] Lei Sang, Qiuze Ru, Honghao Li, Yiwen Zhang, Qian Cao, and Xindong Wu. 2024. Feature Interaction Fusion Self-Distillation Network For CTR Prediction. arXiv:2411.07508 [cs.IR] https://arxiv.org/abs/2411.07508 [40] Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, Y. K. Li, Y. Wu, and Daya Guo. 2024. DeepSeek-Math: Pushing the Limits of Mathematical Reasoning in Open Language Models. arXiv:2402.03300 [cs.CL] https://arxiv.org/abs/2402.03300 [41] Heng Tang, Feng Liu, Xinbo Chen, Jiawei Chen, Bohao Wang, Changwang Zhang, Jun Wang, Yuegang Sun, Bingde Hu, and Can Wang. 2025. Bridging the Gap: Self-Optimized Fine-Tuning for LLM-based Recommender Systems. arXiv:2505.20771 [cs.IR] https://arxiv.org/abs/2505.20771 [42] Alicia Tsai, Adam Kraft, Long Jin, Chenwei Cai, Anahita Hosseini, Taibai Xu, Zemin Zhang, Lichan Hong, Ed H. Chi, and Xinyang Yi. 2024. Leveraging LLM Reasoning Enhances Personalized Recommender Systems. In Findings of the Association for Computational Linguistics: ACL 2024 , Lun-Wei Ku, Andre Martins, and Vivek Srikumar (Eds.). Association for Computational Linguistics, Bangkok, Thailand, 13176–13188. doi:10.18653/v1/2024.findings-acl.780 [43] Chenyang Wang, Min Zhang, Weizhi Ma, Yiqun Liu, and Shaoping Ma. 2020. Make it a chorus: knowledge-and time-aware item modeling for sequential rec-ommendation. In Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval . 109–118. [44] Lei Wang and Ee-Peng Lim. 2023. Zero-Shot Next-Item Recommendation using Large Pretrained Language Models. arXiv:2304.03153 [45] Jiongran Wu, Jiahao Liu, Dongsheng Li, Guangping Zhang, Mingzhe Han, Hansu Gu, Peng Zhang, Li Shang, Tun Lu, and Ning Gu. 2025. Bidirectional Knowledge Distillation for Enhancing Sequential Recommendation with Large Language Models. arXiv:2505.18120 [cs.IR] https://arxiv.org/abs/2505.18120 [46] Likang Wu, Zhi Zheng, Zhaopeng Qiu, Hao Wang, Hongchao Gu, Tingjia Shen, Chuan Qin, Chen Zhu, Hengshu Zhu, Qi Liu, Hui Xiong, and Enhong Chen. 2024. A survey on large language models for recommendation. World Wide Web 27, 5 (Aug. 2024), 31 pages. doi:10.1007/s11280-024-01291-2 [47] Yunjia Xi, Weiwen Liu, Jieming Zhu, Xilong Zhao, Xinyi Dai, Ruiming Tang, Weinan Zhang, Rui Zhang, and Yong Yu. 2022. Multi-Level Interaction Reranking with User Behavior History. In Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (Madrid, Spain) 
+
+(SIGIR ’22) . Association for Computing Machinery, New York, NY, USA, 1336–1346. doi:10.1145/3477495.3532026 [48] Jundong Xu, Hao Fei, Liangming Pan, Qian Liu, Mong-Li Lee, and Wynne Hsu. 2024. Faithful Logical Reasoning via Symbolic Chain-of-Thought. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , Lun-Wei Ku, Andre Martins, and Vivek Srikumar (Eds.). Association for Computational Linguistics, Bangkok, Thailand, 13326–13365. doi:10.18653/ v1/2024.acl-long.720 [49] Shuyuan Xu, Wenyue Hua, and Yongfeng Zhang. 2024. OpenP5: An Open-Source Platform for Developing, Training, and Evaluating LLM-based Recommender Systems. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR ’24) . ACM, 386–394. doi:10.1145/ 3626772.3657883 [50] Wujiang Xu, Qitian Wu, Zujie Liang, Jiaojiao Han, Xuying Ning, Yunxiao Shi, Wenfang Lin, and Yongfeng Zhang. 2025. SLMRec: Distilling Large Language Models into Small for Sequential Recommendation. In International Conference on Learning Representations (ICLR 2025) .[51] Xiaohan Xu, Ming Li, Chongyang Tao, Tao Shen, Reynold Cheng, Jinyang Li, Can Xu, Dacheng Tao, and Tianyi Zhou. 2024. A Survey on Knowledge Distillation of Large Language Models. arXiv:2402.13116 [cs.CL] https://arxiv.org/abs/2402. 13116 [52] Chenglin Yang, Lingxi Xie, Chi Su, and Alan L Yuille. 2019. Snapshot distillation: Teacher-student optimization in one generation. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition . 2859–2868. [53] Zhendong Yang, Ailing Zeng, Zhe Li, Tianke Zhang, Chun Yuan, and Yu Li. 2023. From knowledge distillation to self-knowledge distillation: A unified approach with normalized loss and customized soft labels. In Proceedings of the IEEE/CVF International Conference on Computer Vision . 17185–17194. [54] Weiqi Yue, Yuyu Yin, Xin Zhang, Binbin Shi, Tingting Liang, and Jian Wan. 2025. CoT4Rec: revealing user preferences through chain of thought for rec-ommender systems. In Proceedings of the Thirty-Ninth AAAI Conference on Ar-tificial Intelligence and Thirty-Seventh Conference on Innovative Applications of Artificial Intelligence and Fifteenth Symposium on Educational Advances in Artifi-cial Intelligence (AAAI’25/IAAI’25/EAAI’25) . AAAI Press, Article 1461, 10 pages. doi:10.1609/aaai.v39i12.33434 [55] Zhenrui Yue, Sara Rabhi, Gabriel de Souza Pereira Moreira, Dong Wang, and Even Oldridge. 2023. LlamaRec: Two-Stage Recommendation using Large Language Models for Ranking. arXiv:2311.02089 [cs.IR] https://arxiv.org/abs/2311.02089 [56] Junjie Zhang, Beichen Zhang, Wenqi Sun, Hongyu Lu, Wayne Xin Zhao, Yu Chen, and Ji-Rong Wen. 2025. Slow Thinking for Sequential Recommendation. arXiv:2504.09627 [cs.IR] https://arxiv.org/abs/2504.09627 [57] Linfeng Zhang, Jiebo Song, Anni Gao, Jingwei Chen, Chenglong Bao, and Kaisheng Ma. 2019. Be Your Own Teacher: Improve the Performance of Con-volutional Neural Networks via Self Distillation. arXiv:1905.08094 [cs.LG] https://arxiv.org/abs/1905.08094 [58] Yang Zhang, Fuli Feng, Jizhi Zhang, Keqin Bao, Qifan Wang, and Xiangnan He. 2025. CoLLM: Integrating Collaborative Embeddings Into Large Language Models for Recommendation. IEEE Trans. on Knowl. and Data Eng. 37, 5 (Feb. 2025), 2329–2340. doi:10.1109/TKDE.2025.3540912 [59] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. 2024. Adapting Large Language Models by Integrating Collaborative Semantics for Recommendation. arXiv:2311.09049 [cs.IR] https: //arxiv.org/abs/2311.09049 [60] Zhangchi Zhu and Wei Zhang. 2025. Exploring Feature-based Knowledge Dis-tillation for Recommender System: A Frequency Perspective. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.1 
+
+(Toronto ON, Canada) (KDD ’25) . Association for Computing Machinery, New York, NY, USA, 2182–2193. doi:10.1145/3690624.3709248

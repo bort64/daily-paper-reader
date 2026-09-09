@@ -1,8 +1,345 @@
 {
   "date": "20260831-20260909",
   "date_label": "2026-08-31 ~ 2026-09-09",
-  "generated_at": "2026-09-09 09:31:37 UTC",
+  "generated_at": "2026-09-09 10:01:23 UTC",
   "recommend_exists": true,
-  "run_count": 1,
-  "papers": []
+  "run_count": 2,
+  "papers": [
+    {
+      "paper_id": "2608.30553v1",
+      "route": "20260831-20260909/2608.30553v1-preference-shapes-relevance-cross-component-hierarchical-semantic-alignment-for-personalized-generative-retrieval",
+      "title": "Preference Shapes Relevance: Cross-component Hierarchical Semantic Alignment for Personalized Generative Retrieval",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "提出CHAP方法，通过跨组件层次语义对齐让生成式检索直接映射查询到语义ID并建模用户行为序列",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2608.30606v1",
+      "route": "20260831-20260909/2608.30606v1-generative-retrieval-for-e-commerce-jointly-learning-embedding-and-codebook-with-same-product-cluster",
+      "title": "Generative Retrieval for E-commerce: Jointly Learning Embedding and Codebook with Same Product Cluster",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "电商场景生成式检索，联合学习嵌入与码本并生成商品标识符",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.00638v1",
+      "route": "20260831-20260909/2609.00638v1-it-takes-two-to-match-co-evolving-generative-retriever-with-reinforcement-learning",
+      "title": "It Takes Two to Match: Co-Evolving Generative Retriever with Reinforcement Learning",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向搜索与广告的生成式协同检索，由LLM直接生成查询端与物品端关键词",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.00986v1",
+      "route": "20260831-20260909/2609.00986v1-tgr-advancing-industrial-recommendation-from-generative-paradigm-ranking-toward-unified-generation-and-reasoning",
+      "title": "TGR: Advancing Industrial Recommendation from Generative-Paradigm Ranking toward Unified Generation and Reasoning",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "腾讯工业生成式推荐框架，包含生成式排序与端到端生成，使用可扩展Transformer建模用户序列",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.01240v1",
+      "route": "20260831-20260909/2609.01240v1-from-language-to-behavior-scaling-sequence-transformers-for-industrial-recommendation-ranking-with-rec-native-designs",
+      "title": "From Language to Behavior: Scaling Sequence Transformers for Industrial Recommendation Ranking with Rec-Native Designs",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向工业推荐排序的序列Transformer扩展，包括大规模高质量信号与训练效率设计",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.03313v1",
+      "route": "20260831-20260909/2609.03313v1-selfdr-self-distillation-from-reasoning-for-llm-based-recommendation",
+      "title": "SelfDR: Self-Distillation from Reasoning for LLM-Based Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "将推理增强预测蒸馏为直接推荐输出，兼顾LLM推荐效果与推理效率",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.03369v1",
+      "route": "20260831-20260909/2609.03369v1-hyprq-vae-hyperbolic-item-indexing-for-long-tail-aware-generative-recommender-systems",
+      "title": "HypRQ-VAE: Hyperbolic Item Indexing for Long-Tail-Aware Generative Recommender Systems",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向生成式推荐系统的双曲物品索引方法，用于大模型范式下的下一物品预测。",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.03522v1",
+      "route": "20260831-20260909/2609.03522v1-epic-explicit-posterior-item-conditioning-for-semantic-id-diffusion-recommendation",
+      "title": "EPIC: Explicit Posterior Item Conditioning for Semantic ID Diffusion Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "语义ID生成式推荐在扩散解码中引入物品级后验条件，与生成式下一物品推荐直接对应",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.08443v1",
+      "route": "20260831-20260909/2609.08443v1-sequenceo1-end-to-end-ultra-long-100k-sequence-modeling-in-recommendation-with-low-rank-caching",
+      "title": "SequenceO1: End-to-End Ultra-Long (100K) Sequence Modeling in Recommendation with Low-Rank Caching",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向十亿级推荐系统的端到端超长序列建模与低秩缓存，直接对应规模化推荐和训练效率需求",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.08762v1",
+      "route": "20260831-20260909/2609.08762v1-pdmr-passage-driven-multi-id-document-retrieval",
+      "title": "PDMR: Passage-Driven Multi-ID Document Retrieval",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "用多段落级标识符直接生成文档ID的生成式检索方法",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2608.30251v1",
+      "route": "20260831-20260909/2608.30251v1-setmir-multi-interest-retrieval-as-set-prediction",
+      "title": "SetMIR: Multi-Interest Retrieval as Set Prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向工业推荐检索的Transformer多兴趣集合预测，属于现代生成式检索架构方向",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.00086v1",
+      "route": "20260831-20260909/2609.00086v1-retrieval-scoring-and-decoding-shape-performance-and-stability-in-llm-based-conversational-recommendation",
+      "title": "Retrieval, Scoring, and Decoding Shape Performance and Stability in LLM-based Conversational Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "研究对话式推荐中LLM重排序在不同检索打分与解码协议下的表现差异",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.01655v1",
+      "route": "20260831-20260909/2609.01655v1-from-feature-interaction-to-feature-transport---a-unified-block-for-scalable-recommendation-models",
+      "title": "From Feature Interaction to Feature Transport - A Unified Block for Scalable Recommendation Models",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "通过特征传输构建可扩展统一推荐模型，直接面向深度排序模型的规模化问题",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.01807v2",
+      "route": "20260831-20260909/2609.01807v2-spd-single-pass-decoding-for-generative-reranking",
+      "title": "SPD: Single Pass Decoding for Generative Reranking",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "提出SPD解码策略，用单次前向和最优二分匹配从LLM预填充隐状态解码全部排序序号，避免自回归耗时",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.03554v1",
+      "route": "20260831-20260909/2609.03554v1-wide-wildcard-inference-with-dynamic-expansion-for-cross-modal-generative-retrieval",
+      "title": "WIDE: Wildcard Inference with Dynamic Expansion for Cross-Modal Generative Retrieval",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向生成式检索标识符解码的跨模态扩展方法，核心与文档标识符生成检索一致。",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2608.30255v1",
+      "route": "20260831-20260909/2608.30255v1-camie-co-engagement-aware-multimodal-item-embeddings-for-snap-dynamic-product-ads-retrieval",
+      "title": "CAMIE: Co-Engagement-Aware Multimodal Item Embeddings for Snap Dynamic Product Ads Retrieval",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "利用LLM/MLLM构造动态商品广告多模态物品嵌入，是广告召回核心任务但并非生成式解码",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2608.30398v1",
+      "route": "20260831-20260909/2608.30398v1-beyond-polarization-the-generative-constraint-of-chain-of-thought-in-pointwise-reranking",
+      "title": "Beyond Polarization: The Generative Constraint of Chain-of-Thought in Pointwise Reranking",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向网页搜索的LLM点式重排序与规模效应分析",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.03311v1",
+      "route": "20260831-20260909/2609.03311v1-dopr-reusable-compressed-document-prefixes-for-efficient-llm-reranking",
+      "title": "DoPR: Reusable Compressed Document Prefixes for Efficient LLM Reranking",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "可复用压缩文档前缀降低LLM重排序在线成本，属搜索排名高效化方法",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.04882v1",
+      "route": "20260831-20260909/2609.04882v1-atomrec-evolving-atomic-memory-for-agentic-recommendation",
+      "title": "AtomRec: Evolving Atomic Memory for Agentic Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向大模型智能体推荐的结构化原子记忆与多跳证据检索方法，属于基于大模型的推荐系统。",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.00165v1",
+      "route": "20260831-20260909/2609.00165v1-two-sided-state-space-models-for-sequential-recommendation-with-non-random-multimodal-review-feedback",
+      "title": "Two-Sided State-Space Models for Sequential Recommendation with Non-Random Multimodal Review Feedback",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向事件驱动序列推荐的双边状态空间模型，涉及下一项推荐预测",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    },
+    {
+      "paper_id": "2609.02170v1",
+      "route": "20260831-20260909/2609.02170v1-dmrl-document-mediated-reinforcement-learning-for-skill-optimization-in-advertising-recommendation",
+      "title": "DMRL: Document-Mediated Reinforcement Learning for Skill Optimization in Advertising Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "通过文档介导强化学习优化广告推荐中的LLM技能，属LLM广告系统调优而非生成式广告排序",
+      "first_seen_at": "2026-09-09 10:01:23 UTC",
+      "updated_at": "2026-09-09 10:01:23 UTC"
+    }
+  ]
 }

@@ -1,6 +1,175 @@
 {
-  "generated_at": "2026-09-09T09:31:36.882838+00:00",
+  "generated_at": "2026-09-09T09:45:58.914086+00:00",
   "updated_date": "20260831-20260909",
   "carryover_days": 9,
-  "tag_states": {}
+  "tag_states": {
+    "search-rec": {
+      "updated_date": "20260831-20260909",
+      "carryover_days": 9,
+      "items": [
+        {
+          "id": "2609.03674v1",
+          "source": "arxiv",
+          "title": "LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining",
+          "abstract": "Guidance queries stimulate user consumption by extracting preferences to provide search queries with guidance value, playing a crucial role in the e-commerce field. Traditional AI-generated queries (AIGQ) generation primarily relies on a two-stage \"Query-to-AI-Generated-Query\" (Q2AIGQ) association paradigm, first recalling user primary search queries from user profiles, historical behavior sequences, item-side information, and the current query through multi-path retrieval, then generalizing AIGQ via rule-based methods. This approach suffers from semantic drift due to information cascade loss; additionally, primary search query derivation heavily depends on \"user-item\" co-occurrence relationships, lacking exploration of user multi-interests, resulting in guidance queries with low value and mismatched purchase intent. To address the expressive limitations of traditional co-occurrence-based retrieval, we propose LLM4AIGQ, an LLM-based solution for generating AI guidance queries tailored to users' multi-interests. This approach segments user interests by integrating user profiles and historical interaction sequences, infers specific consumption intents for each sub-interest, and subsequently generates corresponding AIGQ. In terms of model training, we employ a post-training pipeline comprising Supervised Fine-Tuning (SFT), Reinforcement Learning (RL), and Direct Preference Optimization (DPO) to enhance the model's capability in generating AIGQ. We also introduce a multi-level reward design to satisfy the requirements of multi-objective optimization and long-chain reasoning in practical applications. Regarding deployment, we adopt a nearline-generation and online-read architecture to meet latency constraints. Extensive experimental analyses demonstrate that our model achieves robust performance in both offline evaluations and online A/B tests.",
+          "authors": [
+            "Xiangchen Pan",
+            "Jiayi Xu",
+            "Jing Wang",
+            "Xing Fang",
+            "Lingyun Zhu"
+          ],
+          "primary_category": "cs.IR",
+          "categories": [
+            "cs.IR"
+          ],
+          "published": "2026-09-03T11:13:01+00:00",
+          "link": "https://arxiv.org/pdf/2609.03674v1",
+          "tags": [
+            "keyword:search-rec",
+            "query:search-rec"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "LLM-based AI guidance query generation framed as multi-interest mining for e-commerce",
+          "llm_evidence_cn": "面向电商AI引导查询生成的LLM框架，从用户多兴趣探索中生成引导搜索语义的查询",
+          "llm_evidence": "面向电商AI引导查询生成的LLM框架，从用户多兴趣探索中生成引导搜索语义的查询",
+          "canonical_evidence": "面向电商AI引导查询生成的LLM框架，从用户多兴趣探索中生成引导搜索语义的查询",
+          "llm_tldr_en": "LLM4AIGQ uses large language models to frame e-commerce AI guidance query generation as multi-interest mining, replacing cascaded retrieval and rules to reduce semantic drift and discover extra interest signals.",
+          "llm_tldr_cn": "电商引导查询需要通过用户偏好生成有引导价值、能促进消费的搜索词，传统Q2AIGQ方法先做多路召回再按规则生成，易产生级联信息丢失和语义漂移。本文提出LLM4AIGQ框架，用大语言模型同时建模用户画像、历史行为和商品信息，对用户多兴趣进行显式挖掘并端到端生成AI引导查询。实验表明该框架比规则生成和两阶段召回生成更全面地覆盖用户兴趣，减少语义漂移，并提升了引导查询质量。该工作验证了LLM在电商搜索引导和兴趣挖掘场景中的生成潜力。",
+          "llm_tldr": "电商引导查询需要通过用户偏好生成有引导价值、能促进消费的搜索词，传统Q2AIGQ方法先做多路召回再按规则生成，易产生级联信息丢失和语义漂移。本文提出LLM4AIGQ框架，用大语言模型同时建模用户画像、历史行为和商品信息，对用户多兴趣进行显式挖掘并端到端生成AI引导查询。实验表明该框架比规则生成和两阶段召回生成更全面地覆盖用户兴趣，减少语义漂移，并提升了引导查询质量。该工作验证了LLM在电商搜索引导和兴趣挖掘场景中的生成潜力。",
+          "llm_tags": [
+            "query:search-rec"
+          ],
+          "matched_query_tag": "query:search-rec",
+          "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+          "matched_requirement_id": "req-8",
+          "selection_source": "carryover_cache",
+          "paper_id": "2609.03674v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2609.07273v1",
+          "source": "arxiv",
+          "title": "Task-Blind No MORE: Multi-Task Information Flow in Unified Ranking Backbones",
+          "abstract": "Industrial ranking models for recommendation have scaled feature interaction and sequence modeling separately; recent architectures such as HyFormer and MixFormer unify both in a stackable backbone. Real-world recommender systems, however, nearly always require multi-task learning, yet existing unified architectures confine multi-task modeling to shallow post-backbone towers, leaving the backbone without task-aware information flow. We propose MORE (Multi-task cO-evolving Ranking modEl), which embeds multi-task information flow inside the backbone, enabling task-specific signals to co-evolve with sequence and feature representations at every layer rather than in a post-hoc fusion. It introduces Anchor Tokens that persist across backbone layers: Shared Anchors encode cross-task commonalities, while Private Anchors capture task-specific priors. In each block, Anchor Tokens (1) read task-conditioned signals from behavior sequences, (2) mix with non-sequential features under a task-boundary mask, and (3) refine per-task representations through independent branches; as blocks stack, each task obtains a differentiated representation refined through all backbone layers.   Experiments on large-scale industrial datasets show that MORE consistently outperforms baselines across all tasks under comparable parameter and FLOPs budgets, and scales well with model size. Online A/B tests on Momo, a leading Chinese social discovery platform with tens of millions of monthly active users, yield 3% improvement in usage duration, 3.6% in interaction rate, and 2% in deep-chat rate. MORE is deployed in production with request-level shared computation reducing scoring latency by about 30%.",
+          "authors": [
+            "Yuchen Wang",
+            "Feng Niu",
+            "Qing Tan",
+            "Junting Lu",
+            "Baoxin Wu",
+            "Jun Gao"
+          ],
+          "primary_category": "cs.IR",
+          "categories": [
+            "cs.IR"
+          ],
+          "published": "2026-09-07T09:36:57+00:00",
+          "link": "https://arxiv.org/pdf/2609.07273v1",
+          "tags": [
+            "keyword:search-rec",
+            "query:search-rec"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "Introduces MORE, a multi-task co-evolving ranking backbone with anchor tokens for unified sequence-feature modeling",
+          "llm_evidence_cn": "在统一排序骨干网络中嵌入多任务信息流并引入锚点令牌，实现序列与特征的多层协同演化",
+          "llm_evidence": "在统一排序骨干网络中嵌入多任务信息流并引入锚点令牌，实现序列与特征的多层协同演化",
+          "canonical_evidence": "在统一排序骨干网络中嵌入多任务信息流并引入锚点令牌，实现序列与特征的多层协同演化",
+          "llm_tldr_en": "Proposes MORE, which embeds multi-task information flow into unified recommendation ranking backbones via persistent anchor tokens, letting task signals co-evolve with features and sequences at every backbone layer.",
+          "llm_tldr_cn": "真实推荐系统几乎都需要多任务学习，而现有一体化排序骨干如HyFormer和MixFormer仅在骨干后端接多层子网络，未让任务间信号在深层网络流动。为此提出MORE，在骨干中引入跨层持续存在的锚点令牌，使任务特定信息与序列、特征表示在各层协同演化。实验表明这种内嵌多任务信息流的方式优于浅层后置多任务融合，并提升了统一骨干在多种目标上的表现。该方案为规模化的推荐排序骨干提供了融合特征交互与序列建模的结构化选择，推动非任务盲模型的发展。",
+          "llm_tldr": "真实推荐系统几乎都需要多任务学习，而现有一体化排序骨干如HyFormer和MixFormer仅在骨干后端接多层子网络，未让任务间信号在深层网络流动。为此提出MORE，在骨干中引入跨层持续存在的锚点令牌，使任务特定信息与序列、特征表示在各层协同演化。实验表明这种内嵌多任务信息流的方式优于浅层后置多任务融合，并提升了统一骨干在多种目标上的表现。该方案为规模化的推荐排序骨干提供了融合特征交互与序列建模的结构化选择，推动非任务盲模型的发展。",
+          "llm_tags": [
+            "query:search-rec"
+          ],
+          "matched_query_tag": "query:search-rec",
+          "matched_query_text": "modern transformer and generative architectures for web search and recommender systems beyond traditional statistical models",
+          "matched_requirement_id": "req-9",
+          "selection_source": "carryover_cache",
+          "paper_id": "2609.07273v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2609.07143v1",
+          "source": "arxiv",
+          "title": "EAGER: Enrich-and-Align Generative Query Recommendation from Clicked Items in E-commerce Search",
+          "abstract": "E-commerce platforms increasingly display clickable query suggestions alongside items in the user feed, enabling users to refine or expand their intent without manually reformulating queries. Existing approaches either mine suggestions from historical logs -- limited to past behavior and blind to long-tail, personalized intents -- or rely on off-the-shelf LLMs whose lack of platform-specific knowledge yields fluent but generic queries disconnected from real click behavior. We propose EAGER (Enrich-and-AliGn gEnerative Query Recommendation), a two-stage framework for generating query suggestions from clicked items. In the enrichment stage, supervised fine-tuning (SFT) follows a four-stage curriculum that scales information richness (from item-only to user-conditioned) and reasoning depth (from direct to chain-of-thought). Each stage incorporates rationale augmentation, diversity regularization, and self-distillation. In the alignment stage, we post-train via GRPO with a hybrid reward of multiple rule-based business signals and a preference-aware click reward. Extensive offline experiments and online A/B test demonstrate the effectiveness of EAGER, which has been deployed in production at a major e-commerce platform.",
+          "authors": [
+            "Shuwei Yuan",
+            "Mingqian Ding",
+            "Luxin Liu",
+            "Rong Xiao",
+            "Xiaoyi Zeng"
+          ],
+          "primary_category": "cs.IR",
+          "categories": [
+            "cs.IR"
+          ],
+          "published": "2026-09-07T07:44:02+00:00",
+          "link": "https://arxiv.org/pdf/2609.07143v1",
+          "tags": [
+            "keyword:search-rec",
+            "query:search-rec"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "generative query suggestion from clicked items in e-commerce search through LLM supervised fine-tuning and alignment",
+          "llm_evidence_cn": "基于点击商品和SFT课程生成电商搜索查询建议，是面向搜索的生成式LLM方法",
+          "llm_evidence": "基于点击商品和SFT课程生成电商搜索查询建议，是面向搜索的生成式LLM方法",
+          "canonical_evidence": "基于点击商品和SFT课程生成电商搜索查询建议，是面向搜索的生成式LLM方法",
+          "llm_tldr_en": "EAGER enriches clicked-item contexts with a four-stage SFT curriculum and aligns generative query suggestions to clicked behavior, addressing long-tail personalized intents in e-commerce search.",
+          "llm_tldr_cn": "电商搜索需要平台主动给出可点击的查询建议，便于用户细化和扩展意图；已有方法受限于历史日志或缺乏平台知识。EAGER提出富化-对齐的生成式查询推荐框架：先用四阶段课程式受监督微调逐步扩大信息丰富度，再进行对齐，使LLM基于点击商品生成个性化且符合真实点击语义的查询建议。实验表明该方法优于日志挖掘与通用LLM方案，是生成式方法在搜索推荐中的代表性落地探索。",
+          "llm_tldr": "电商搜索需要平台主动给出可点击的查询建议，便于用户细化和扩展意图；已有方法受限于历史日志或缺乏平台知识。EAGER提出富化-对齐的生成式查询推荐框架：先用四阶段课程式受监督微调逐步扩大信息丰富度，再进行对齐，使LLM基于点击商品生成个性化且符合真实点击语义的查询建议。实验表明该方法优于日志挖掘与通用LLM方案，是生成式方法在搜索推荐中的代表性落地探索。",
+          "llm_tags": [
+            "query:search-rec"
+          ],
+          "matched_query_tag": "query:search-rec",
+          "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+          "matched_requirement_id": "req-8",
+          "selection_source": "carryover_cache",
+          "paper_id": "2609.07143v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2609.08310v1",
+          "source": "arxiv",
+          "title": "Exploring Bottom-Up Clustering for Creating Semantic IDs",
+          "abstract": "The success of generative retrieval has largely been attributed to the use of Semantic IDs, which improve over arbitrary item-level identifiers such as hashes by capturing the semantics of items. The main challenges faced when constructing Semantic IDs, however, is in mapping each identifier to a unique product and capturing information valuable to downstream tasks. Past works have appended additional codewords to de-duplicate item identifiers and utilized residual quantization to create hierarchical clusters. In this work, we present an algorithm for generating Semantic IDs that ensure the identifiers are both unique and preserve the structure of the original embedding. Key to our work is the use of bottom-up clustering to preserve local structure in the embedding space, improving the clustering quality of the resulting Semantic IDs and their utility for downstream generative retrieval.",
+          "authors": [
+            "Leah Woldemariam",
+            "Sudhanshu Garg",
+            "Taha Belkhouja",
+            "Charles Kim-Yip",
+            "Ali Sahami"
+          ],
+          "primary_category": "cs.IR",
+          "categories": [
+            "cs.IR",
+            "cs.AI"
+          ],
+          "published": "2026-09-08T06:32:57+00:00",
+          "link": "https://arxiv.org/pdf/2609.08310v1",
+          "tags": [
+            "keyword:search-rec",
+            "query:search-rec"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "Constructs unique semantic IDs via bottom-up clustering while preserving embedding structure, directly supporting generative retrieval over document/product identifiers.",
+          "llm_evidence_cn": "为生成式检索构建唯一且保留语义结构的Semantic ID，是文档或物品标识符生成的基础方法。",
+          "llm_evidence": "为生成式检索构建唯一且保留语义结构的Semantic ID，是文档或物品标识符生成的基础方法。",
+          "canonical_evidence": "为生成式检索构建唯一且保留语义结构的Semantic ID，是文档或物品标识符生成的基础方法。",
+          "llm_tldr_en": "Generative retrieval relies on semantic IDs that capture item semantics, but unique identifiers can destroy local embedding structure. This paper proposes bottom-up clustering to create hierarchical Semantic IDs that are unique and preserve local neighborhoods, improving identifier quality for generative retrieval over catalogs or documents.",
+          "llm_tldr_cn": "生成式检索依靠Semantic ID捕捉语义，但构造语义ID时既要映射唯一物品又要保留对下游有价值的信息，现有加码字去重或残差量化方案难以兼顾。本文提出基于自底向上聚类的语义ID生成算法，从嵌入的近邻结构出发逐层合并簇，保证每个标识唯一且保持原始嵌入的局部结构。实验表明该算法生成的ID能更完整保留嵌入结构，有利于后续生成式检索的标识符学习与召回。该方法为语义ID构造提供了新的聚类路线。",
+          "llm_tldr": "生成式检索依靠Semantic ID捕捉语义，但构造语义ID时既要映射唯一物品又要保留对下游有价值的信息，现有加码字去重或残差量化方案难以兼顾。本文提出基于自底向上聚类的语义ID生成算法，从嵌入的近邻结构出发逐层合并簇，保证每个标识唯一且保持原始嵌入的局部结构。实验表明该算法生成的ID能更完整保留嵌入结构，有利于后续生成式检索的标识符学习与召回。该方法为语义ID构造提供了新的聚类路线。",
+          "llm_tags": [
+            "query:search-rec"
+          ],
+          "matched_query_tag": "query:search-rec",
+          "matched_query_text": "generative retrieval models that directly generate document identifiers for web search",
+          "matched_requirement_id": "req-1",
+          "selection_source": "carryover_cache",
+          "paper_id": "2609.08310v1",
+          "carry_days": 1
+        }
+      ]
+    }
+  }
 }

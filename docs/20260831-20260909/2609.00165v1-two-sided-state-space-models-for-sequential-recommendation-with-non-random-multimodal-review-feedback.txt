@@ -1,0 +1,2170 @@
+Title: Two-Sided State-Space Models for Sequential Recommendation with Non-Random Multimodal Review Feedback
+
+URL Source: https://arxiv.org/pdf/2609.00165v1
+
+Published Time: Wed, 02 Sep 2026 00:07:27 GMT
+
+Number of Pages: 34
+
+Markdown Content:
+# Two-Sided State-Space Models for Sequential Recommendation with Non-Random Multimodal Review Feedback 
+
+Ziwen Pan * Zihan Liang * Ruoxuan Xiong 
+
+Emory University, Atlanta, USA 
+
+{ziwen.pan, zihan.liang, ruoxuan.xiong}@emory.edu 
+
+Abstract 
+
+Two-sided digital platforms are inherently dy-namic: user preferences shift, item popular-ity evolves, and reviews both reflect and drive these changes. Yet most sequential recommen-dation systems treat reviews as passive sig-nals for updating user states, leaving two as-pects underexplored. First, review generation is nonrandom, depending on evolving latent states of both users and items. Second, re-views can reshape item states, induce spillover across related items, and influence future user decisions. To address these gaps, we propose a two-sided state-space model (TS-SSM) for event-conditioned sequential recommendation. TS-SSM consists of three components: (1) a modality-missing-not-at-random fusion mod-ule that encodes review content and informa-tive observation patterns; (2) user-state evolu-tion with temporal variation and local graph message passing that uses related item states to refine user preferences; and (3) item-state evolution with asymmetric carryover of posi-tive and negative review feedback. In experi-ments across six Amazon categories, TS-SSM increases Recall@20 over BSARec by 14.8%– 18.8% and exceeds HM4SR by 11.7% on av-erage. On Goodreads Fantasy, Recall@20 im-proves HM4SR from .5191 to .5847. Ablations highlight distinct contributions of observation patterns, local propagation, and item dynamics. 
+
+1 Introduction 
+
+Two-sided digital platforms are ubiquitous, span-ning settings such as e-commerce marketplaces and service platforms. Both users and items evolve over time: user preferences shift with accumulated ex-perience (Koren, 2010), while item perception can change as public feedback accumulates. User reviews play a central role in these dynam-ics. They capture user experience through ratings, 
+
+> *Equal contribution. Code and reproducibility materials are available at here under the MIT License.
+
+text, and images, providing rich signals for mod-eling user preferences. Review-aware methods use review text to learn user and item representa-tions (McAuley and Leskovec, 2013; Zheng et al., 2017; Wu et al., 2019), while recent text-aware se-quential recommendation systems use item textual attributes or semantic item embeddings (Li et al., 2023c; Hu et al., 2024). However, these approaches largely treat the item side as static. This leaves two important aspects underexplored. First, how are reviews generated? Review genera-tion is neither random nor passive: whether a user leaves a review, and how it is expressed through optional modalities, depend on evolving latent user and item states. As shown in Figure 1 using Ama-zon review data (Hou et al., 2026), unusual image uploads or abrupt changes in text length are system-atically associated with shifts in ratings, indicating that the observation pattern itself is informative. Second, how do reviews propagate through item-side dynamics? Items evolve as feedback accumu-lates, so later users encounter items whose reputa-tions are shaped by prior reviews. As summarized in Figure 1, item attributes drift over time, and evidence from related items can inform recommen-dations through a local graph. We therefore propose a two-sided state-space model (TS-SSM) for sequential recommendation. TS-SSM maintains dynamic user and item states and models how reviews reflect and reshape them, with review text integrated throughout the model. TS-SSM makes three methodological contribu-tions. First, we develop a modality-missing-not-at-random review-fusion module, which uses (i) the presence or absence of each modality, such as text or images, and (ii) deviations from a user’s historical expression patterns as signals of evolving user and item states. This builds on prior work on non-random modality missingness in multimodal records (Liang et al., 2025, 2026), but extends it to jointly updating user and item states. arXiv:2609.00165v1 [cs.IR] 31 Aug 2026 Typical Deviation                             
+
+> 020 40 60 80
+> Rate (%)
+> (a) Image deviation
+> 74.4% 64.5% 1.9% 5.2%
+> −9.97 pp 5-star 1-star
+> Much shorter Similar length Much longer
+> 020 40 60 80
+> (b) Text-length deviation
+> 80.4% 74.8% 64.8% 1.8% 1.5% 3.3%
+> −9.98 pp
+> Panel 1 Behavioral deviation attenuates positive ratings
+> 2014 2016 2018 2020 2023
+> 4.4 4.5 4.6 4.7
+> Mean rating
+> 4.50
+> Mean rating (3m) Image rate
+> 4.64
+> 010 20 30 40
+> Image rate (%)
+> <1% 23%
+> Panel 2 Item attributes drift with accumulating reviews
+> 050
+> Edge fraction (%)
+> Negative (↓rating) Positive (↑rating)
+> 72.7% (w=+0.279)
+> 27.3% (w=−0.259)
+> (a) Positive/negative edges
+> 0510 15 20
+> Neighbor degree
+> 10 1
+> 10 2
+> 10 3
+> 10 4
+> Item count
+> 25,111 at cap
+> (b) Degree distribution
+> k = 0–19 k = 20 cap
+> Panel 3 Edges propagate positive/negative rating effects
+> 0m 3m 6m 9m 12m 15m 18m 21m 24m
+> Time since shock event (monthly bins)
+> 0.00 0.25 0.50 0.75 1.00
+> Carryover
+> 50%
+> Negative shock (t½ = 4.62 bins) Positive shock (t½ = 2.77 bins)
+> 0.47 0.64 t=3
+> Panel 4 Negative shocks linger longer than positive shocks
+
+Figure 1: TS-SSM motivations: ( 1) predictive observa-tion patterns, as behavioral deviations accompany fewer 5-star and more 1-star reviews; ( 2) item-attribute drift across 112 train-aligned bins (monthly through March 2023; April–August merged); ( 3) sign-aware review propagation over a dense unsigned co-occurrence graph; and ( 4) distinct half-lives from default negative/positive decay initializations ( t1/2 = 4 .62 /2.77 bins). 
+
+Second, we develop user-state evolution that cap-tures temporal variation and uses local graph mes-sage passing to refine user preferences. The key idea is to propagate review-induced preference in-formation through item relationships, allowing re-lated items to inform the user-state update. Third, we develop item-state evolution that cap-tures how reviews reshape item states over time. In particular, prior reviews enter through a carryover mechanism with separate decay rates for positive and negative feedback, allowing their influence on the item state to persist asymmetrically over time. We conduct extensive experiments across mul-tiple domains and find that TS-SSM consistently outperforms existing methods. Across six Ama-zon categories (Hou et al., 2026), it improves Re-call@20 over BSARec by 14 .8% –18 .8% and beats the strongest recent baseline, HM4SR, by 11 .7% 
+
+on average. On the Goodreads Book Graph’s Fan-tasy subset (Wan and McAuley, 2018; Wan et al., 2019), it improves over HM4SR by 12 .6% . Re-placing dynamic event-level review text with static item-level text lowers Recall@20 by 2.67% versus the full model; removing text lowers it by 6.30% .Appendices E, J, and M report cross-platform re-sults and sensitivity analyses. 
+
+2 Problem Formulation 
+
+We study sequential recommendation on a bipar-tite user–item system. Let U and I denote user and item sets, respectively. For an event time t,let b(t) ∈ { 1, . . . , T } denote its coarse time bin; Appendix B.6 specifies the train-aligned bin con-struction. 
+
+Bipartite states. At time t, the system state com-prises the latent states of all users and items: 
+
+St = ( Zt, Vt), Zt = [ Zu,t ]u∈U , Vt = [ Vi,t ]i∈I .
+
+Here, Zu,t and Vi,t denote the latent states of user u and item i, respectively, and we later use 
+
+zu,t and vi,t to denote their realizations. 
+
+Events. An event occurs when user u leaves a review for item i. We represent the event as 
+
+eu,i = ( τu,i , Ou,i ) ,
+
+where τu,i denotes the event time and 
+
+Ou,i = ( Mu,i , A u,i , r u,i , κ u,i ) ,
+
+denotes the observed review. Here, Mu,i contains the multimodal review content, e.g., title, text, and images; Au,i is a binary vector indicating which modalities are observed; ru,i is the review rating; and κu,i contains additional numeric review cues. Consider an event eu,i occurring at time t =
+
+τu,i . Review observation can be state-dependent. Both the modality-availability pattern Au,i and the observed review content may depend on the pre-event user and item states Zu,t − and Vi,t − , where 
+
+t− denotes the time immediately before t.We define the corresponding pre-event global, user, and item histories as 
+
+Ht− = {eu′,i ′ : τu′,i ′ < t, ∀u′, i ′}Hu,t − = {eu,i ′ : τu,i ′ < t, ∀i′}Hi,t − = {eu′,i : τu′,i < t, ∀u′}.The post-event history is Ht = Ht− ∪ { eu,i }.
+
+Event representation and state transitions. At time t = τu,i , we represent the event eu,i as 
+
+Φu,i,t = fobs (τu,i , Ou,i , ϕ i, t ) , (1) where ϕi is a learned representation of static item features, such as its description. The collection of available event representations at time t is 
+
+Φt =
+
+n
+
+Φu′,i ′,τ u′,i ′ : τu′,i ′ ≤ t, ∀u′, i ′o
+
+, (2) which includes Φu,i,t of the current event eu,i .Upon the arrival of eu,i , the user and item states evolve according to 
+
+Zu,t = f U  Zu,t − , Φt, X u,t 
+
+ + εUu,t (3) 
+
+Vi,t = f I  Vi,t − , Φt, Y i,t 
+
+ + εIi,t , (4) where f U and f I are transition functions, and 
+
+Xu,t and Yi,t denote global temporal contexts for users (e.g., seasonal preferences) and items (e.g., platform-wide or macroeconomic shifts). 
+
+Ranking-based evaluation. At event time t =
+
+τu,i , we use the pre-event history Ht− together with the current review Ou,i to construct the post-event user state zu,t and the candidate item states vj,t , for 
+
+j ∈ I . Then we compute a score 
+
+yu,j,t = z⊤
+
+> u,t
+
+vj,t + μj,t , (5) where μj,t is a learned dynamic item-specific bias, specified in Section 3.4. We rank the observed item i against all items 
+
+j ∈ I using yu,j,t and evaluate the rank of i using Recall@ K and NDCG@ K. Higher values indicate better ranking performance. 1
+
+3 Method 
+
+We propose TS-SSM, a two-sided state-space model for event-conditioned sequential recommen-dation. For each review event eu,i , it encodes the review relative to user and item histories (Sec-tion 3.1), updates both states (Sections 3.2 and 3.3), and aligns candidate-item states to query time t for ranking (Section 3.4). Figures 2 and 3 summarize its architecture and state evolution. 
+
+> 1For this evaluation metric, we omit a user-specific bias from Equation (5), as it is constant across candidate items for a given user and does not affect the ranking.
+
+3.1 Multimodal Review Encoding 
+
+Our encoding procedure extracts two complemen-tary sources of information from each review event: (i) the observed review record, including the pres-ence or absence of each modality and its observed content, and (ii) deviations of the current review from historical user and item expression patterns. We describe these two components below. 
+
+Review-record encoding. We first specify the event observation encoder fobs in Equation (1) to obtain the representation Φu,i,t . The encoder incorporates three types of information. First, we encode the review content and explicitly account for modality availability through fmod (Enc( Mu,i ), A u,i ).Second, we encode the review rating and addi-tional numeric cues through fnum (ru,i , κ u,i ).Third, we incorporate learned representations 
+
+ϕi, ϕt, and ϕAu,i for static item features (e.g., item description), query-time features, and the modality-availability pattern, respectively. Notably, ϕAu,i 
+
+allows the observation pattern itself to provide in-formation beyond its role in multimodal fusion. Combining these components, we instantiate 
+
+fobs as 
+
+Φu,i,t = LN 
+
+
+
+fmod (Enc( Mu,i ), A u,i )+ fnum (ru,i , κ u,i ) + ϕi + ϕt + ϕAu,i 
+
+
+
+,
+
+(6) where LN denotes layer normalization. Thus, 
+
+Φu,i,t captures both the observed review content and the modality availability pattern. Appendix B.3 specifies fmod and fnum , and Appendix N isolates the contribution of learned modality gating from direct observation-pattern encoding. The encoded representation Φu,i,t can vary with time t, allowing the relevance of review informa-tion to evolve. Appendix O compares this dynamic encoding with a static alternative. 
+
+Historical-deviation encoding. The observation pattern and content of a review can also be infor-mative relative to how a user or item has behaved historically. For a current event eu,i at time t, we therefore compare the observed review Ou,i with the pre-event user and item histories, Hu,t − and 
+
+Hi,t − to obtain the following outputs: 
+
+(δUu,t , δ Ii,t , m u,t , r u,t ) = fevt 
+
+ Hu,t − , Hi,t − , Ou,i 
+
+.
+
+Here, δUu,t captures deviations from the user’s his-torical expression pattern, while δIi,t captures de-viations from the item’s historical review pattern. 1. Encode Review Evidence           
+
+> Current Review Modality Availability
+> •Title: ✓
+> •Text: ✓
+> •Image: ×
+> Rating
+> Image
+> Time Title & Text
+> Target item ID masked only in the user-query branch
+> User History Item History
+> Review Evidence Content Availability Deviation
+> MNAR: modality availability can be informative.
+> 2. Update Both Sides
+> The same review updates both states.
+> User Side History Time Trend Current Review Updated user state Item Side History Time Trend Current Review Updated Item state
+> ±Memory
+> Positive and negative effects decay separately.
+
+−+    
+
+> Catalog item states Stored for later events
+> review evidence
+> 3. Add Local Spillover
+> Updated User Maintained Item States Most recent item (anchor) Related Items
+> Unsigned links; signed review evidence retained.
+> Final User State
+> 4. Rank Dynamic Items
+> Align to time t
+> Time-Aligned Item States Score Candidates
+> K𝑦 !,6,+ = 𝑧 !,+ 7v6,+ + bias 6,+
+> 𝑧 : final user state
+> 𝑣 : time-aligned item state
+> Ranked Catalog
+> ______________________ 1 ______________________ 2
+> ⋮
+> ______________________ k
+
+Figure 2: Overview of TS-SSM. Stage 1 encodes multimodal content, availability patterns, and historical deviations; Stage 2 updates user/item states with asymmetric item-side carryover; Stage 3 refines user state by propagating review information over an item graph; and Stage 4 aligns item states to query time and ranks candidates. 
+
+The current-event message mu,t summarizes in-formation from Φu,i,t used for state updates, and 
+
+ru,t is a learned reliability-related score based on the current event and its user and item histories. Appendix B.4 specifies fevt .
+
+3.2 User-Side Latent-State Evolution 
+
+We next specify how TS-SSM learns the user-state evolution in Equation (3). For a query event eu,i at time t, we construct the post-event user state as 
+
+zu,t = zu,t − + ∆ zng 
+
+u,t + ∆ zmp 
+
+u,t . (7) Here, zu,t − summarizes the user’s state before the current event; ∆zng 
+
+u,t captures the non-graph update based on the temporal context Xu,t , the user’s re-view history Hu,t − , and the current event eu,i ; and 
+
+∆zmp 
+
+u,t captures the cross-item update propagated through the local user–item graph. We describe each in turn. The transition uses Φt through the current event, the user’s event history, time-aligned item states, and the local graph context. 
+
+3.2.1 Pre-Event User State 
+
+We encode the user’s pre-event review history as 
+
+zu,t − = f U
+
+enc (Hu,t − ).
+
+Here, f U
+
+enc is the user-history encoder, which uses representations Φu,i ′,τ u,i ′ for events in Hu,t − .When Hu,t − = ∅, the encoder uses a learned empty-history state. The resulting zu,t − summa-rizes user u’s review events prior to eu,i and serves as the base state to which information from the current event and other signals at time t is added. Appendix B.4 specifies f U
+
+enc .
+
+3.2.2 Within-User State Update 
+
+We next update zu,t − using information available from the user’s history and the current event. The non-graph update ∆zng 
+
+u,t combines three sources of information: (i) the current review and the user’s prior reviews; (ii) systematic temporal variation; and (iii) the deviation of the current review from the user’s historical expression pattern. 
+
+Current and historical review information. For the current review, we use the event-level message 
+
+mu,t constructed in Section 3.1. For the user’s prior reviews, we construct an observation-weighted history-to-user message us-ing a three-step procedure. First, we construct a weight for each prior event eu,i ′ ∈ H u,t − ,
+
+ωUu,i ′,t = wU
+
+obs ,u,i ′,t × wU
+
+rel ,u,i ′,t 
+
+× wU
+
+evid ,u,i ′,t × wU
+
+time ,u,i ′,t , (8) where the four factors account for the modality-observation pattern, reliability-related cues, feed-back magnitude, and recency, respectively. This weighting allows prior reviews to contribute differ-ently depending on both how they were observed and their relevance to the current user state. Ap-pendix B.2 provides the corresponding factor spec-ification. Second, we construct a message for each prior event using the time-aligned item state: 
+
+ξUu,i ′,t = W U  Φu,i ′,τ u,i ′ + vi′,t 
+
+,
+
+where W U is a learned linear projection, and item state vi′,t will be specified in Section 3.3. Third, we weight the messages of prior events as 
+
+mUu,t =
+
+P  
+
+> eu,i ′∈H u,t −
+
+ωUu,i ′,t ξUu,i ′,t 
+
+P  
+
+> eu,i ′∈H u,t −
+
+ωUu,i ′,t 
+
+. (9) where the denominator is to normalize the weights 
+
+ωUu,i ′,t . When Hu,t − = ∅, we set mUu,t = 0.
+
+Systematic temporal variation. We encode system-atic temporal variation as 
+
+xu,t = f U
+
+> sys
+
+ T Uu,t 
+
+ , (10) where T Uu,t contains observed population- and user-group-level review statistics and their first differ-ences from the time bin immediately preceding b(t).These statistics capture temporal patterns shared across users, and xu,t provides a realization of the systematic temporal context Xu,t in Equation (3). Appendix B.4 specifies f U
+
+> sys
+
+, and Appendix B.6 de-tails the group assignments and lagged temporal contexts. 
+
+Deviation from historical expression. Deviations from a user’s historical expression pattern may pro-vide information about changes in the user’s state. Using the deviation encoding δUu,t from Section 3.1, we construct a state innovation 
+
+hUu,t = f U
+
+> ind
+
+ [zu,t − ; δUu,t ] .
+
+where [· ; ·] denotes vector concatenation. We con-struct a gate γUu,t = σ(f U
+
+> gate
+
+([ zu,t − ; δUu,t ])) , where 
+
+σ is the sigmoid function, so that γUu,t ∈ [0 , 1] . The gate controls how strongly the history-relative in-novation hUu,t contributes to the state update. Thus, the effect of the current review on the user state depends on how it differs from the prior expression pattern. Appendix B.4 specifies f U 
+
+> ind
+
+and f U
+
+> gate
+
+.
+
+Combined within-user update. We first combine the systematic temporal context and the history-relative innovation as 
+
+∆zu,t = η2xu,t + η3γUu,t hUu,t ,
+
+where η2 and η3 are learned nonnegative scalars. These two components capture the second and third sources of information described above. We then combine this innovation with the cur-rent and historical review information to obtain the complete non-graph update: 
+
+∆zng  
+
+> u,t
+
+= σ(ru,t )Wu,t mu,t + mUu,t 
+
++ Bound α
+
+ ∆zu,t ; zu,t −
+
+ , (11) where ru,t is the reliability-related score from Sec-tion 3.1 and Wu,t is a learned projection. The first two terms incorporate the current review and the user’s prior reviews, respectively. The term ∆zu,t enters Equation (11) through the bounding operator 
+
+Bound α(∆ s; s) = min 
+
+
+
+1, α∥s∥2
+
+max( ∥∆s∥2, ϵ )
+
+
+
+∆s. 
+
+(12) This operator prevents excessively large changes relative to the accumulated user state while preserv-ing the direction of the proposed update. 
+
+3.2.3 Local Graph Message Passing 
+
+A new review may change the user’s preferences toward related items. For example, a negative expe-rience with the current item may make a previously reviewed alternative more attractive. We capture relational update through a local user–item graph. Starting from the pre-propagation state zmid  
+
+> u,t
+
+=
+
+zu,t − + ∆ zng 
+
+> u,t
+
+, we construct a local graph represen-tation a′′  
+
+> u,t
+
+and propagate it back to the user state: 
+
+∆zmp  
+
+> u,t
+
+= gfb (zmid  
+
+> u,t
+
+, a ′′ 
+
+> u,t
+
+)Wfb a′′ 
+
+> u,t
+
+, (13) where gfb controls the strength of this update and 
+
+Wfb is a learned projection. To construct a′′ 
+
+> u,t
+
+, we use the user’s most recently reviewed item as an anchor, contextualize it using the current user state, and propagate from the anchor to related items. 
+
+Anchor-item contextualization. When Hu,t − is nonempty, let ianc  
+
+> u,t
+
+denote the item in the user’s most recent event before time t. We use it as a reference for the user’s recent preferences, with anchor representation au,t = vianc  
+
+> u,t ,t
+
+, where vj,t is the maintained review-conditioned state of item j
+
+at time t. Section 3.3 specifies its evolution. We contextualize the anchor using the within-user state after the current event: 
+
+a′ 
+
+> u,t
+
+= au,t + gU I (zmid  
+
+> u,t
+
+, a u,t )W U I zmid  
+
+> u,t
+
+. (14) This user-to-item message updates the anchor in light of the user’s current preferences: the current review may change how a previously reviewed item serves as a reference point. The gate gU I controls the strength of this update. 
+
+Propagation to related items. The current event may also inform the user’s preferences toward items related to the anchor. We therefore augment the contextualized anchor with neighboring item states. Let N (ianc  
+
+> u,t
+
+) denote the neighbors of the anchor. We compute 
+
+a′′  
+
+> u,t
+
+= a′ 
+
+> u,t
+
++ X  
+
+> n∈N (ianc
+> u,t )
+
+αnW II vn,t , (15) where WII is a learned projection and 
+
+αn = softmax n∈N (ianc  
+
+> u,t )
+
+(a′
+
+> u,t
+
+)⊤vn,t 
+
+√H
+
+!
+
+.
+
+Thus, neighbors more aligned with the contextual-ized anchor receive greater weight. Through Equa-tion (13), this local context propagates back to the user state. We maintain at most K = 20 highest-count neighbors in N (ianc  
+
+> u,t
+
+) to avoid global graph traversal. More details are provided in Appendix B. 
+
+3.3 Item-Side Latent-State Evolution 
+
+We next specify how TS-SSM learns the item-state evolution in Equation (4). For a review event eu,i 
+
+at time t, we construct the post-event item state as 
+
+vi,t = vi,t − + Bound α
+
+ ∆vIi,t ; vi,t −
+
+ , (16) where vi,t − summarizes the item’s state prior to the current review and ∆vIi,t captures the item-state update induced by information available at time t.The bounding operator is defined in Equation (12). 
+
+3.3.1 Pre-Event Item State 
+
+We encode the pre-event review history as 
+
+vi,t − = f I
+
+> enc
+
+ Hi,t −
+
+ .
+
+where f I 
+
+> enc
+
+is the item-history encoder and uses a learned empty-history state when Hi,t − = ∅.Appendix B.4 specifies f I
+
+> enc
+
+.
+
+3.3.2 Item-State Update 
+
+The update ∆vIi,t uses three sources of information: (i) systematic temporal variation; (ii) the deviation of the current review from the item’s historical re-view pattern; and (iii) carryover from prior reviews. 
+
+Systematic temporal variation. Similar to the user side, we encode item-side temporal variation as 
+
+yi,t = f I
+
+> sys
+
+ T Ii,t 
+
+ ,
+
+where T Ii,t replaces user-group statistics with item-group statistics, and yi,t realizes the systematic tem-poral context Yi,t in Equation (4). Appendix B.4 specifies f I
+
+> sys
+
+, and Appendix B.6 details the group assignments and lagged temporal contexts. 
+
+Deviation from historical expression. A current review that deviates from the item’s historical re-view pattern may signal a state change. Using the item-side deviation encoding δIi,t from Section 3.1, we construct a state innovation 
+
+hIi,t = f I
+
+> ind
+
+ [vi,t − ; δIi,t ] .
+
+We construct a gate γIi,t = σ(f I
+
+> gate
+
+([ vi,t − ; δIi,t ])) ,
+
+where γIi,t ∈ [0 , 1] controls how strongly the history-relative innovation contributes to the item-state update. Thus, the effect of the current review on the item state can depend on how it differs from the item’s historical review pattern. Appendix B.4 specifies f I 
+
+> ind
+
+and f I
+
+> gate
+
+.
+
+Carryover memory. Reviews may continue to affect an item’s state after the events at which they occur, and positive and negative feedback may persist at different rates. We summarize prior reviews of item 
+
+i through a carryover memory. Let tn < t denote the timestamp of prior review n. We compute its item-state innovation when the review occurs as 
+
+hIn = f I
+
+> ind
+
+
+
+[vi,t − 
+
+> n
+
+; δIi,t n ]
+
+
+
+.
+
+The innovation hIn remains fixed after tn, while its contribution at time t is modulated by the time-dependent weight ωIn,t . We assign this review the factorized weight 
+
+ωIn,t = wI 
+
+> obs ,n
+
+×wI 
+
+> rel ,n,t
+
+×wI 
+
+> sign ,n
+
+×wI
+
+> time ,n,t
+
+, (17) where the four factors account for the observation pattern, reliability-related cues, feedback magni-tude, and recency, respectively. The resulting mem-ory is 
+
+mIi,t =
+
+P 
+
+> n:tn<t
+
+ωIn,t tanh( qn)W I hIn
+
+P 
+
+> n:tn<t
+
+ωIn,t 
+
+, (18) where qn is a learned signed review score and W I
+
+is a learned projection. The recency factor uses separate learned decay rates for positive and nega-tive feedback. Appendices B.2 and B.2 define qn
+
+and detail the weighting factors and decay parame-terization, respectively. When Hi,t − = ∅, we set 
+
+mIi,t = 0.
+
+Combined item update. We combine the three com-ponents as 
+
+∆vIi,t = β2yi,t + β3γIi,t hIi,t + β4mIi,t , (19) where β2, β3, and β4 are learned nonnegative scalars. The three terms capture systematic tempo-ral variation, the history-relative innovation from Zu,t −
+
+Xu,t 
+
+Vi,t −
+
+Yi,t 
+
+Ou,i 
+
+Zu,t 
+
+Vi,t 
+
+Hi,t − mI 
+
+> event feedback event feedback accumulate
+> USER
+> side
+> ITEM
+> side pre-event post-event
+> item-side carryover (asymmetric decay)
+> state-dep. generation (MNAR) interaction feedback
+
+Figure 3: Filtering graph for TS-SSM. Dashed arrows 
+
+encode the predictive dependence of whether a review occurs and, conditional on occurrence, the realized record Ou,i on pre-event states Zu,t − , Vi,t − and con-texts Xu,t , Yi,t . Solid arrows represent state persistence and feedback from the realized event, encoded by Φu,i,t ,to the post-event states Zu,t and Vi,t . Carryover path :prior item reviews Hi,t − accumulate into memory m
+
+and shape Vi,t through asymmetric decay. 
+
+the current review, and persistent effects of prior reviews, respectively. Through Equation (16), this combined update produces the post-event state vi,t .
+
+3.4 Item Alignment, Scoring, and Training 
+
+Given the final user state zu,t , we align non-target candidate items to query time t before scoring. Let 
+
+¯vj,t − denote item j’s latest maintained state before 
+
+t. We construct its query-time state as 
+
+vj,t = ¯ vj,t − + λj,t ∆vj,t , (20) where ∆vj,t is a temporal adjustment and λj,t ∈
+
+[0 , 1] controls its strength: 
+
+∆vj,t = MLP cand 
+
+ [¯ vj,t − ; ϕj ; ϕt] ,λj,t = σ  MLP gate 
+
+ [¯ vj,t − ; ∆ vj,t ] ,
+
+where ϕj and ϕt encode item and time features. For scoring, we use the post-event state vi,t from Section 3.3 for the target item i and the aligned state vj,t from Equation (20) for each j̸ = i in Equation (5). We decompose its bias term as 
+
+μj,t = μj +μgj,t , where μj is a learned item-specific static bias and μgj,t is a learned dynamic bias shared within item j’s group. We train TS-SSM using the loss function 
+
+L = Lrank + λdrift Ldrift + λcarry Lcarry + λrel Lrel .
+
+The ranking term is temperature-scaled pairwise BPR over valid sampled pairs P:     
+
+> Lrank =1
+> |P|
+> X
+> (u,i +,i −)∈P
+> softplus
+> s(u, i −)−s(u, i +)
+> τ
+> 
+> .
+
+Ldrift and Lcarry predict masked, train-only next-bin item proxies; Lrel predicts observation, history-support, and user–item conflict proxies. They reg-ularize temporal decomposition alongside the pri-mary ranking loss. Appendices B and L specify targets, masks, schedules, and negative sampling, and evaluate coefficient sensitivity, respectively. 
+
+4 Experiments 
+
+Datasets. We use six Amazon Reviews 2023 cat-egories (Hou et al., 2026): Toys & Games, Pet Supplies, Sports & Outdoors, Electronics, Cloth-ing, and Home & Kitchen. After validating identi-fiers, ratings, and timestamps, we remove pre-2014 events and iteratively apply bipartite 10-core fil-tering, removing users and items with fewer than ten remaining events until convergence. Per-user leave-last-two-out assigns the penultimate and final events to validation and testing, respectively. We use 112 train-aligned time bins: monthly from Jan-uary 2014 through March 2023, plus one for April– August 2023. We also evaluate on Goodreads Book Graph’s Fantasy & Paranormal subset (Wan and McAuley, 2018; Wan et al., 2019), a non-Amazon platform with different interaction and review dis-tributions. Appendices A and E report the Amazon pipeline and statistics, and the Goodreads results and component ablations, respectively. 
+
+Baselines. On the three primary Amazon datasets, we compare four families: Sequential :Caser (Tang and Wang, 2018), GRU4Rec (Hi-dasi et al., 2016), SASRec (Kang and McAuley, 2018), BERT4Rec (Sun et al., 2019), FML-PRec (Zhou et al., 2022), CL4SRec (Xie et al., 2022), DuoRec (Qiu et al., 2022), FEARec (Du et al., 2023), and BSARec (Shin et al., 2024); 
+
+Multimodal : VBPR (He and McAuley, 2016), MMGCN (Wei et al., 2019), LATTICE (Zhang et al., 2021), BM3 (Zhou et al., 2023), and LLM-Rec (Wei et al., 2024); Adjustment and auxiliary signal : POD (Li et al., 2023d) and SAID (Hu et al., 2024); and Recent sequential and multimodal :RecGPT (Jiang et al., 2025), HORAE (Hu et al., 2025), and HM4SR (Zhang et al., 2025). BSARec is the primary established sequential reference, while HM4SR has the highest average Recall@20 Table 1: Overall performance on the three primary Amazon datasets. Best results are in bold and second-best results are underlined. All methods use the same preprocessing and evaluation protocol.                                                                                                                                                                                                                                                               
+
+> Toys & Games Pet Supplies Sports & Outdoors
+> Method R@10 R@20 N@10 N@20 R@10 R@20 N@10 N@20 R@10 R@20 N@10 N@20 Caser .0160 .0267 .0079 .0105 .0165 .0274 .0081 .0108 .0193 .0310 .0097 .0126 GRU4Rec .0210 .0346 .0105 .0139 .0217 .0357 .0108 .0144 .0311 .0484 .0158 .0201 SASRec .0649 .0924 .0364 .0433 .0670 .0954 .0376 .0447 .0426 .0646 .0228 .0283 BERT4Rec .0632 .0934 .0351 .0428 .0653 .0965 .0363 .0442 .0203 .0318 .0109 .0139 FMLPRec .0667 .0969 .0363 .0439 .0689 .1001 .0375 .0453 .0190 .0297 .0099 .0125 VBPR .0456 .0717 .0240 .0304 .0478 .0752 .0252 .0318 .0287 .0449 .0155 .0196 MMGCN .0570 .0838 .0311 .0376 .0598 .0879 .0325 .0394 .0348 .0535 .0191 .0240 LATTICE .0732 .1019 .0416 .0487 .0768 .1069 .0436 .0511 .0362 .0553 .0203 .0254 BM3 .0764 .1062 .0434 .0508 .0801 .1114 .0454 .0532 .0359 .0545 .0197 .0246 CL4SRec .0889 .1197 .0518 .0598 .0926 .1246 .0540 .0623 .0473 .0688 .0281 .0339 DuoRec .1027 .1362 .0650 .0733 .1071 .1419 .0676 .0764 .0571 .0808 .0370 .0436 FEARec .1047 .1390 .0658 .0743 .1096 .1452 .0687 .0777 .0573 .0820 .0363 .0430 LLMRec .1023 .1351 .0642 .0725 .1073 .1419 .0673 .0761 .0539 .0764 .0329 .0392 POD .1056 .1401 .0665 .0750 .1109 .1470 .0697 .0787 .0593 .0831 .0378 .0443 SAID .1065 .1414 .0670 .0757 .1119 .1484 .0703 .0795 .0573 .0817 .0417 .0475 BSARec .1063 .1427 .0746 .0838 .1118 .1500 .0784 .0880 .0624 .0838 .0438 .0493 RecGPT .1080 .1463 .0752 .0848 .1127 .1527 .0785 .0885 .0634 .0859 .0442 .0500 HORAE .1086 .1471 .0757 .0854 .1139 .1544 .0794 .0896 .0638 .0864 .0445 .0504 HM4SR .1099 .1489 .0766 .0865 .1153 .1563 .0804 .0908 .0644 .0872 .0448 .0507
+> TS-SSM .1162 .1683 .0781 .0912 .1212 .1756 .0815 .0953 .0664 .0962 .0453 .0530
+
+among recent baselines. We also augment BSARec with a conditioning token comprising TS-SSM’s modality-availability pattern, rating, and time bin. This BSARec + current-event features control tests how much these three metadata fields explain the gains (Appendix H). On the other three Amazon datasets, we evaluate BSARec, MACR (Wei et al., 2021), AutoDebias (Chen et al., 2021), RecGPT, HORAE, and HM4SR. 
+
+Evaluation protocol. Following standard prac-tice (Kang and McAuley, 2018; Sun et al., 2019), we use full-item ranking and validation Recall@20 checkpoint selection. We report Recall@10/20 and NDCG@10/20, with Recall/NDCG@50 and MRR in extended results. Because published Amazon-review evaluations differ in core filtering, rating thresholds, date ranges, temporal discretization, and negative sampling, and no standardized leader-board covers them, we reproduce every baseline using TS-SSM’s iterative bipartite 10-core filter-ing, per-user leave-last-two-out split, January-2014 cutoff, and 112-bin construction. Unless noted, full-sort filters items the user observed before the target timestamp while retaining and separately scoring the ground-truth item. Appendices B and G pro-vide exact rank computation and multi-run paired 
+
+t-tests with Bonferroni-adjusted decisions, confi-dence intervals, and effect sizes, respectively. 
+
+4.1 Main Results 
+
+Table 1 compares TS-SSM with all baselines on three primary Amazon datasets. TS-SSM is best on all twelve metrics, achieving Recall@20 of .1683, .1756, and .0962 on Toys, Pets, and Sports, respec-tively—relative gains of 17 .9% , 17 .1% , and 14 .8% 
+
+over BSARec. It also outperforms the strongest recent baseline, HM4SR, whose scores are .1489, .1563, and .0872, by 13 .0% , 12 .3% , and 10 .3% .Appendix H shows that adding modality availabil-ity, rating, and time-bin information to BSARec improves it by at most 4.7% , still leaving a 9.0% –
+
+11 .3% gap to TS-SSM. Static multimodal baselines VBPR, MMGCN, and BM3 trail the strongest sequential methods. Although RecGPT, HORAE, and HM4SR pro-gressively improve over BSARec, their gains un-der the same protocol remain smaller than those of TS-SSM. BM3 has a comparable parameter count, while several recent multimodal systems have higher measured runtime than TS-SSM (Ap-pendix I). Together with the BSARec current-event control, these comparisons place the effects of model scale, review-side inputs, and temporal ar-chitecture in a common empirical context. 
+
+Extended evaluations. Table 2 summarizes Re-call@20 across six Amazon categories, each with a distinct user–item graph, product vocabulary, and Table 2: Amazon R@20 (6-category common setup).                                    
+
+> Dataset BSARec RecGPT HORAE HM4SR TS-SSM Toys & Games .1427 .1463 .1471 .1489 .1683
+> Pet Supplies .1500 .1527 .1544 .1563 .1756
+> Sports & Outdoors .0838 .0859 .0864 .0872 .0962
+> Electronics .1317 .1342 .1358 .1375 .1530
+> Clothing .1391 .1413 .1443 .1461 .1653
+> Home & Kitchen .1365 .1390 .1408 .1425 .1570
+
+Table 3: Toys & Games ( ∆R@20 vs. full).                                         
+
+> Variant R@10 R@20 N@10 N@20 ∆R@20
+> TS-SSM (Full) .1162 .1683 .0781 .0912 —
+> User-side components
+> w/o User State Update .1133 .1641 .0759 .0887 −2.50%
+> w/o Deviation Features .1140 .1651 .0765 .0894 −1.90%
+> Item-side components
+> w/o Item State Update .1119 .1624 .0751 .0878 −3.50%
+> w/o Message Passing .1130 .1636 .0758 .0885 −2.79%
+> w/o Carryover Memory .1137 .1646 .0764 .0892 −2.20%
+> Auxiliary supervision
+> w/o Auxiliary Losses .1147 .1661 .0771 .0900 −1.31%
+
+multimodal expression distribution; image-upload rates range from 5.3% to 18 .7% . TS-SSM outper-forms BSARec on every dataset by 14 .8% –18 .8% 
+
+and HM4SR by 11 .7% on average. Clothing has both the highest image rate ( 18 .7% ) and largest BSARec gain ( 18 .8% ). Image rate and relative gain correlate at r = 0 .67 across categories (Ap-pendix F), but with only six category-level obser-vations, this is descriptive rather than evidence of a general relationship. Appendices D and G pro-vide the additional-category metric breakdown and multi-run robustness, respectively. Goodreads Fantasy mirrors Amazon: TS-SSM reaches .5847 Recall@20 versus HM4SR’s .5191, a 12 .6% relative gain. Removing item-state updat-ing causes the largest drop ( 6.81% ), followed by message passing ( 4.70% ), preserving the Amazon component ordering. Appendix E reports all four metrics and the full ablation. 
+
+4.2 Ablation Study 
+
+Table 3 decomposes TS-SSM on Toys & Games by removing one modeling component at a time. We report the ∆R@20 drop relative to the full model. Amazon Recall@20 drops most without Item State Update (−3.50% ), followed by Mes-sage Passing (−2.79% ) and User State Update 
+
+(−2.50% ). These components respectively track review histories, inject prefix and related-item sig-nals, and distinguish the current event from the user’s expression pattern. Removing Carryover Memory , Deviation Features , or Auxiliary Losses 
+
+reduces performance by 2.20% , 1.90% , and 1.31% ,supporting complementary roles for persistent feed-back, MNAR-related deviation cues, and tempo-ral regularization. Appendix J examines group-ing, gate, behavioral-deviation, and symmetric-carryover ablations. Over tenfold changes to each auxiliary coefficient reduce Recall@20 by at most 
+
+1.43% (Appendix L). Replacing MNAR gating with indicators lowers Recall@20 by 2.97% (p < 
+
+10 −7); no-pattern remains 13 .0% above BSARec (Appendix N). Static item-level and no-text vari-ants lower Recall@20 by 2.67% and 6.30% (Ap-pendix O); larger text/image encoders gain only 
+
+2.14% and 0.71% –1.27% (Appendix M). 
+
+5 Related Work 
+
+Sequential recommendation spans recurrent and convolutional models (Hidasi et al., 2016; Tang and Wang, 2018), Transformers (Kang and McAuley, 2018; Sun et al., 2019), and foundation-model extensions (Jiang et al., 2025; Na et al., 2024; Lyu et al., 2024). Multimodal methods exploit modality content (He and McAuley, 2016; Wei et al., 2019); missing-modality methods impute or marginalize absent inputs (Guo et al., 2024). Clini-cal multimodal models use non-random modality availability for representation (Liang et al., 2025, 2026). TS-SSM transfers this view to behavior-dependent modality use and expression in a two-sided platform-review state space. Recent baselines are RecGPT, HORAE, and HM4SR (Jiang et al., 2025; Hu et al., 2025; Zhang et al., 2025). Unlike TPNE’s time-dependent exci-tation (Huang et al., 2023), TS-SSM retains signed review shocks in item-side memory with inde-pendently learned decay. Causal recommenders address logged-feedback biases (Schnabel et al., 2016; Wang et al., 2019; Bonner and Vasile, 2018; Wei et al., 2021; Wang et al., 2021); our predictive correction instead resembles hierarchical decom-position (Gelman and Hill, 2007). Appendix T provides the extended comparison. 
+
+6 Conclusion 
+
+TS-SSM combines dynamic event-level review en-coding, observation-pattern-aware local propaga-tion, joint user–item updates, and asymmetric car-ryover memory in a two-sided state-space frame-work. Recall@20 improves by 14 .8% –18 .8% 
+
+over BSARec across six Amazon categories and by 11 .7% on average over HM4SR ( 12 .6% on Goodreads Fantasy). Sensitivity and ablations sup-port distinct component roles. 7 Limitations 
+
+We evaluate TS-SSM across six Amazon categories and one non-Amazon Goodreads domain. Broader validation is needed on platforms with sparser or qualitatively different review behavior. Its advan-tage may diminish when text is uninformative, mul-timodal expression is rare, or histories are too short to estimate user-relative deviations reliably. The MNAR formulation is predictive rather than causally identified. Bin-level population con-texts represent shared temporal shifts, while user-specific time constraints, interface exposure dif-ferences, and other unobserved factors may also shape review absence. The learned observation weights are therefore predictive quantities rather than causal propensities. TS-SSM requires more computation than lightweight user-only sequential models such as SASRec and BSARec. Maintaining catalog-wide dynamic item states and carryover summaries adds storage and update costs, while bounded local prop-agation and ANN retrieval can limit online ranking work. These costs depend on the serving environ-ment. The item–item graph uses fixed-window co-occurrence, and the auxiliary targets for drift, car-ryover, and reliability are predictive proxies rather than externally validated latent variables. 
+
+Acknowledgment 
+
+This research was supported by the URC Award at Emory University. 
+
+References 
+
+Mohsen Bayati, Yuwei Luo, William Overman, Sadegh Shirani, and Ruoxuan Xiong. 2024. Higher-order causal message passing for experimentation with complex interference. Advances in Neural Informa-tion Processing Systems , 37:81836–81856. Yoshua Bengio, Aaron Courville, and Pascal Vincent. 2013. Representation learning: A review and new perspectives. IEEE Trans. Pattern Anal. Mach. Intell. ,35(8):1798–1828. Lanxin Bi, Yunqi Zhang, Luyi Wang, Yake Niu, and Hui Zhao. 2025. Two challenges, one solution: Ro-bust multimodal learning through dynamic modality recognition and enhancement. In Findings of the Association for Computational Linguistics: EMNLP 2025 , pages 12855–12867, Suzhou, China. Associa-tion for Computational Linguistics. Stephen Bonner and Flavian Vasile. 2018. Causal em-beddings for recommendation. In Proceedings of the 12th ACM Conference on Recommender Systems ,RecSys ’18, page 104–112, New York, NY, USA. Association for Computing Machinery. Hongyu Chen, David Simchi-Levi, and Ruoxuan Xiong. 2026. Partial identification under missing data us-ing weak shadow variables from pretrained models. 
+
+arXiv preprint arXiv:2602.16061 .Jiawei Chen, Hande Dong, Yang Qiu, Xiangnan He, Xin Xin, Liang Chen, Guli Lin, and Keping Yang. 2021. AutoDebias: Learning to debias for recommenda-tion. In Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval , SIGIR ’21, pages 21–30, New York, NY, USA. ACM. Jingyuan Chen, Hanwang Zhang, Xiangnan He, Liqiang Nie, Wei Liu, and Tat-Seng Chua. 2017. Attentive collaborative filtering: Multimedia recommendation with item- and component-level attention. In Pro-ceedings of the 40th International ACM SIGIR Con-ference on Research and Development in Information Retrieval , SIGIR ’17, page 335–344, New York, NY, USA. Association for Computing Machinery. Xu Chen, Hongteng Xu, Yongfeng Zhang, Jiaxi Tang, Yixin Cao, Zheng Qin, and Hongyuan Zha. 2018. Sequential recommendation with user memory net-works. In Proceedings of the Eleventh ACM Interna-tional Conference on Web Search and Data Mining ,WSDM ’18, page 108–116, New York, NY, USA. Association for Computing Machinery. Ta-Chung Chi, Ting-Han Fan, and Alexander Rudnicky. 2024. Attention alignment and flexible positional em-beddings improve transformer length extrapolation. In Findings of the Association for Computational Lin-guistics: NAACL 2024 , pages 132–148, Mexico City, Mexico. Association for Computational Linguistics. Xinyu Du, Huanhuan Yuan, Pengpeng Zhao, Jianfeng Qu, Fuzhen Zhuang, Guanfeng Liu, Yanchi Liu, and Victor S. Sheng. 2023. Frequency enhanced hybrid attention network for sequential recommendation. In 
+
+Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Infor-mation Retrieval , SIGIR ’23, page 78–88, New York, NY, USA. Association for Computing Machinery. Junting Duan, Markus Pelger, and Ruoxuan Xiong. 2024a. Factor analysis for causal inference on large non-stationary panels with endogenous treatment. 
+
+Available at SSRN 4823360 .Junting Duan, Markus Pelger, and Ruoxuan Xiong. 2024b. Target pca: Transfer learning large di-mensional panel data. Journal of Econometrics ,244(2):105521. Xinyu Feng, Yuming Lin, Lihua He, You Li, Liang Chang, and Ya Zhou. 2024. Knowledge-guided dy-namic modality attention fusion framework for multi-modal sentiment analysis. In Findings of the Associ-ation for Computational Linguistics: EMNLP 2024 ,pages 14755–14766, Miami, Florida, USA. Associa-tion for Computational Linguistics. Andrew Gelman and Jennifer Hill. 2007. Data analysis using regression and multilevel/hierarchical models ,volume Analytical methods for social research. Cam-bridge University Press, New York. Shijie Geng, Juntao Tan, Shuchang Liu, Zuohui Fu, and Yongfeng Zhang. 2023. Vip5: Towards multimodal foundation models for recommendation. In Find-ings of the Association for Computational Linguis-tics: EMNLP 2023 , pages 9606–9620. Association for Computational Linguistics. Anindya Ghose and Panagiotis G. Ipeirotis. 2011. Esti-mating the helpfulness and economic impact of prod-uct reviews: Mining text and reviewer characteristics. 
+
+IEEE Transactions on Knowledge and Data Engi-neering , 23(10):1498–1512. Zirun Guo, Tao Jin, and Zhou Zhao. 2024. Multimodal prompt learning with missing modalities for senti-ment analysis and emotion recognition. In Proceed-ings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Pa-pers) , pages 1726–1736, Bangkok, Thailand. Associ-ation for Computational Linguistics. Ruining He and Julian McAuley. 2016. Vbpr: visual bayesian personalized ranking from implicit feed-back. In Proceedings of the Thirtieth AAAI Con-ference on Artificial Intelligence , AAAI’16, page 144–150. AAAI Press. Xiangnan He, Kuan Deng, Xiang Wang, Yan Li, Yong-Dong Zhang, and Meng Wang. 2020. Lightgcn: Sim-plifying and powering graph convolution network for recommendation. In Proceedings of the 43rd Inter-national ACM SIGIR Conference on Research and Development in Information Retrieval , SIGIR ’20, page 639–648, New York, NY, USA. Association for Computing Machinery. Balazs Hidasi, Alexandros Karatzoglou, Linas Bal-trunas, and Domonkos Tikk. 2016. Session-based recommendations with recurrent neural networks. In 
+
+4th International Conference on Learning Represen-tations, ICLR 2016, Poster . ArXiv:1511.06939. Yupeng Hou, Jiacheng Li, Xiangjun Fu, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. 2026. Bridging language and items for retrieval and rec-ommendation: Benchmarking LLMs as semantic en-coders. In Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (Vol-ume 1: Long Papers) , pages 3251–3265, San Diego, California, United States. Association for Computa-tional Linguistics. Jun Hu, Wenwen Xia, Xiaolu Zhang, Chilin Fu, We-ichang Wu, Zhaoxin Huan, Ang Li, Zuoli Tang, and Jun Zhou. 2024. Enhancing sequential recommen-dation via LLM-based semantic embedding learning. In Companion Proceedings of the ACM Web Con-ference 2024 , pages 103–111, New York, NY, USA. Association for Computing Machinery. Nan Hu, Jie Zhang, and Paul A. Pavlou. 2009. Over-coming the j-shaped distribution of product reviews. 
+
+Commun. ACM , 52(10):144–147. Shirui Hu, Weichang Wu, Zuoli Tang, Zhaoxin Huan, Lin Wang, Xiaolu Zhang, Jun Zhou, Lixin Zou, and Chenliang Li. 2025. HORAE: Temporal multi-interest pre-training for sequential recommenda-tion. ACM Transactions on Information Systems ,43(4):88:1–88:29. Chengkai Huang, Shoujin Wang, Xianzhi Wang, and Lina Yao. 2023. Modeling temporal positive and negative excitation for sequential recommendation. In Proceedings of the ACM Web Conference 2023 ,pages 1252–1263, New York, NY, USA. Association for Computing Machinery. Yangqin Jiang, Xubin Ren, Lianghao Xia, Da Luo, Kangyi Lin, and Chao Huang. 2025. RecGPT: A foundation model for sequential recommendation. In Proceedings of the 2025 Conference on Empiri-cal Methods in Natural Language Processing , pages 10129–10143, Suzhou, China. Association for Com-putational Linguistics. Wang-Cheng Kang and Julian McAuley. 2018. Self-Attentive Sequential Recommendation . In 2018 IEEE International Conference on Data Mining (ICDM) , pages 197–206, Los Alamitos, CA, USA. IEEE Computer Society. Yehuda Koren. 2010. Collaborative filtering with tem-poral dynamics. Commun. ACM , 53(4):89–97. Srijan Kumar, Xikun Zhang, and Jure Leskovec. 2019. Predicting dynamic embedding trajectory in tempo-ral interaction networks. In Proceedings of the 25th ACM SIGKDD International Conference on Knowl-edge Discovery & Data Mining , KDD ’19, page 1269–1278, New York, NY, USA. Association for Computing Machinery. Baohong Li, Haoxuan Li, Ruoxuan Xiong, Anpeng Wu, Fei Wu, and Kun Kuang. 2024a. Learning shadow variable representation for treatment effect estima-tion under collider bias. In Forty-first International Conference on Machine Learning .Baohong Li, Yingrong Wang, Anpeng Wu, Ming Ma, Ruoxuan Xiong, and Kun Kuang. 2025a. Generaliz-ing causal effects from randomized controlled trials to target populations across diverse environments. In 
+
+Forty-second International Conference on Machine Learning .Baohong Li, Anpeng Wu, Ruoxuan Xiong, and Kun Kuang. 2024b. Two-stage shadow inclusion estima-tion: An iv approach for causal inference under latent confounding and collider bias. In Forty-first Interna-tional Conference on Machine Learning .Dongyue Li, Haotian Ju, Aneesh Sharma, and Hongyang R Zhang. 2023a. Boosting multitask learn-ing on graphs through higher-order task affinities. In 
+
+Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining .Dongyue Li, Huy L Nguyen, and Hongyang R Zhang. 2023b. Identification of negative transfers in multi-task learning using surrogate models. Transactions on Machine Learning Research .Dongyue Li, Aneesh Sharma, and Hongyang R Zhang. 2024c. Scalable multitask learning using gradient-based estimation of task affinity. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining .Dongyue Li, Ziniu Zhang, Lu Wang, and Hongyang R Zhang. 2024d. Scalable fine-tuning from multiple data sources: A first-order approximation approach. 
+
+Findings of the Association for Computational Lin-guistics .Dongyue Li, Ziniu Zhang, Lu Wang, and Hongyang R Zhang. 2025b. Efficient ensemble for fine-tuning language models on multiple datasets. The 63rd An-nual Meeting of the Association for Computational Linguistics .Jiacheng Li, Ming Wang, Jin Li, Jinmiao Fu, Xin Shen, Jingbo Shang, and Julian McAuley. 2023c. Text is all you need: Learning language representations for sequential recommendation. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Dis-covery and Data Mining , KDD ’23, page 1258–1267, New York, NY, USA. Association for Computing Machinery. Jiacheng Li, Yujie Wang, and Julian McAuley. 2020. Time interval aware self-attention for sequential rec-ommendation. In Proceedings of the 13th Interna-tional Conference on Web Search and Data Mining ,WSDM ’20, page 322–330, New York, NY, USA. Association for Computing Machinery. Lei Li, Yongfeng Zhang, and Li Chen. 2023d. Prompt distillation for efficient llm-based recommendation. In Proceedings of the 32nd ACM International Con-ference on Information and Knowledge Management ,CIKM ’23, page 1348–1357, New York, NY, USA. Association for Computing Machinery. Zihan Liang, Ziwen Pan, and Ruoxuan Xiong. 2025. Causal representation learning from multimodal clin-ical records under non-random modality missingness. In Proceedings of the 2025 Conference on Empiri-cal Methods in Natural Language Processing , pages 28791–28808, Suzhou, China. Association for Com-putational Linguistics. Zihan Liang, Ziwen Pan, and Ruoxuan Xiong. 2026. Learning dynamic representations and policies from multimodal clinical time-series with informative missingness. In Findings of the Association for Computational Linguistics: ACL 2026 , pages 26363– 26392, San Diego, California, United States. Associ-ation for Computational Linguistics. Roderick JA Little and Donald B Rubin. 2019. Statisti-cal Analysis with Missing Data , 3 edition. Wiley. Yanchen Liu, Mingyu Derek Ma, Wenna Qin, Azure Zhou, Jiaao Chen, Weiyan Shi, Wei Wang, and Diyi Yang. 2024. Decoding susceptibility: Modeling mis-belief to misinformation through a computational approach. In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing ,pages 15178–15194, Miami, Florida, USA. Associa-tion for Computational Linguistics. Hanjia Lyu, Song Jiang, Hanqing Zeng, Yinglong Xia, Qifan Wang, Si Zhang, Ren Chen, Chris Leung, Jiajie Tang, and Jiebo Luo. 2024. LLM-rec: Personalized recommendation via prompting large language mod-els. In Findings of the Association for Computational Linguistics: NAACL 2024 , pages 583–612, Mexico City, Mexico. Association for Computational Lin-guistics. Benjamin M. Marlin, Richard S. Zemel, Sam Roweis, and Malcolm Slaney. 2007. Collaborative filtering and the missing at random assumption. In Proceed-ings of the Twenty-Third Conference on Uncertainty in Artificial Intelligence , UAI’07, page 267–275, Ar-lington, Virginia, USA. AUAI Press. Julian McAuley and Jure Leskovec. 2013. Hidden fac-tors and hidden topics: understanding rating dimen-sions with review text. In Proceedings of the 7th ACM Conference on Recommender Systems , RecSys ’13, page 165–172, New York, NY, USA. Association for Computing Machinery. Susan Mudambi and David Schuff. 2010. What makes a helpful online review? a study of customer reviews on amazon.com. MIS Quarterly , 34:185–200. Hyunsoo Na, Minseok Gang, Youngrok Ko, Jinseok Seol, and Sang-goo Lee. 2024. Enhancing large lan-guage model based sequential recommender systems with pseudo labels reconstruction. In Findings of the Association for Computational Linguistics: EMNLP 2024 , pages 7213–7222, Miami, Florida, USA. Asso-ciation for Computational Linguistics. Cong-Duy Nguyen, Thong Nguyen, Duc Vu, and Anh Luu. 2023. Improving multimodal sentiment anal-ysis: Supervised angular margin-based contrastive learning for enhanced fusion representation. In Find-ings of the Association for Computational Linguis-tics: EMNLP 2023 , pages 14714–14724, Singapore. Association for Computational Linguistics. Ziwen Pan, Zihan Liang, Jad Kabbara, and Ali Emami. 2026. DART: Mitigating harm drift in difference-aware LLMs via distill-audit-repair training. In Find-ings of the Association for Computational Linguistics: ACL 2026 , pages 4940–4980, San Diego, California, United States. Association for Computational Lin-guistics. Seung-Taek Park and Wei Chu. 2009. Pairwise prefer-ence regression for cold-start recommendation. In 
+
+Proceedings of the Third ACM Conference on Recom-mender Systems , RecSys ’09, page 21–28, New York, NY, USA. Association for Computing Machinery. Ruihong Qiu, Zi Huang, Hongzhi Yin, and Zijian Wang. 2022. Contrastive learning for representation degen-eration problem in sequential recommendation. In 
+
+Proceedings of the Fifteenth ACM International Con-ference on Web Search and Data Mining , WSDM ’22, page 813–823, New York, NY, USA. Association for Computing Machinery. Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sas-try, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, and Ilya Sutskever. 2021. Learn-ing transferable visual models from natural language supervision. In Proceedings of the 38th International Conference on Machine Learning, ICML 2021, 18-24 July 2021, Virtual Event , volume 139 of Proceedings of Machine Learning Research , pages 8748–8763. PMLR. Nils Reimers and Iryna Gurevych. 2019. Sentence-BERT: Sentence embeddings using siamese BERT-networks. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing (EMNLP) , pages 3982–3992. Donald B Rubin. 1976. Inference and missing data. 
+
+Biometrika , 63(3):581–592. Alireza Salemi, Sheshera Mysore, Michael Bendersky, and Hamed Zamani. 2024. Lamp: When large lan-guage models meet personalization. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) ,pages 7370–7398, Bangkok, Thailand. Association for Computational Linguistics. Tobias Schnabel, Adith Swaminathan, Ashudeep Singh, Navin Chandak, and Thorsten Joachims. 2016. Rec-ommendations as treatments: debiasing learning and evaluation. In Proceedings of the 33rd International Conference on International Conference on Machine Learning - Volume 48 , ICML’16, page 1670–1679. JMLR.org. Yehjin Shin, Jeongwhan Choi, Hyowon Wi, and Noseong Park. 2024. An attentive inductive bias for sequential recommendation beyond the self-attention. In Proceedings of the Thirty-Eighth AAAI Conference on Artificial Intelligence and Thirty-Sixth Conference on Innovative Applications of Artificial Intelligence and Fourteenth Symposium on Educational Advances in Artificial Intelligence ,AAAI’24/IAAI’24/EAAI’24. AAAI Press. Sadegh Shirani, Yuwei Luo, William Overman, Ruox-uan Xiong, and Mohsen Bayati. 2025. Can we validate counterfactual estimations in the presence of general network interference? arXiv preprint arXiv:2502.01106 .Harald Steck. 2010. Training and testing of recom-mender systems on data missing not at random. In 
+
+Proceedings of the 16th ACM SIGKDD International Conference on Knowledge Discovery and Data Min-ing , KDD ’10, page 713–722, New York, NY, USA. Association for Computing Machinery. Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. Bert4rec: Se-quential recommendation with bidirectional encoder representations from transformer. In Proceedings of the 28th ACM International Conference on Informa-tion and Knowledge Management , CIKM ’19, page 1441–1450, New York, NY, USA. Association for Computing Machinery. Jiaxi Tang and Ke Wang. 2018. Personalized top-n se-quential recommendation via convolutional sequence embedding. In Proceedings of the Eleventh ACM International Conference on Web Search and Data Mining , WSDM ’18, page 565–573, New York, NY, USA. Association for Computing Machinery. Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Ł ukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in Neural Information Pro-cessing Systems , volume 30. Curran Associates, Inc. Mengting Wan and Julian McAuley. 2018. Item rec-ommendation on monotonic behavior chains. In 
+
+Proceedings of the 12th ACM Conference on Rec-ommender Systems , pages 86–94, New York, NY, USA. Association for Computing Machinery. Mengting Wan, Rishabh Misra, Ndapa Nakashole, and Julian McAuley. 2019. Fine-grained spoiler detection from large-scale review corpora. In Proceedings of the 57th Annual Meeting of the Association for Com-putational Linguistics , pages 2605–2610, Florence, Italy. Association for Computational Linguistics. Wenjie Wang, Fuli Feng, Xiangnan He, Xiang Wang, and Tat-Seng Chua. 2021. Deconfounded recom-mendation for alleviating bias amplification. In Pro-ceedings of the 27th ACM SIGKDD Conference on Knowledge Discovery & Data Mining , KDD ’21, page 1717–1725, New York, NY, USA. Association for Computing Machinery. Xiaojie Wang, Rui Zhang, Yu Sun, and Jianzhong Qi. 2019. Doubly robust joint learning for recommenda-tion on data missing not at random. In Proceedings of the 36th International Conference on Machine Learn-ing , volume 97 of Proceedings of Machine Learning Research , pages 6638–6647. PMLR. Yuqing Wang and Yun Zhao. 2024. Metacognitive prompting improves understanding in large language models. In Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Tech-nologies (Volume 1: Long Papers) , pages 1914–1926, Mexico City, Mexico. Association for Computational Linguistics. Tianxin Wei, Fuli Feng, Jiawei Chen, Ziwei Wu, Jin-feng Yi, and Xiangnan He. 2021. Model-agnostic counterfactual reasoning for eliminating popularity bias in recommender system. In Proceedings of the 27th ACM SIGKDD Conference on Knowledge Dis-covery & Data Mining , KDD ’21, page 1791–1800, New York, NY, USA. Association for Computing Machinery. Wei Wei, Xubin Ren, Jiabin Tang, Qinyong Wang, Lixin Su, Suqi Cheng, Junfeng Wang, Dawei Yin, and Chao Huang. 2024. Llmrec: Large language models with graph augmentation for recommendation. In Pro-ceedings of the 17th ACM International Conference on Web Search and Data Mining , WSDM ’24, page 806–815, New York, NY, USA. Association for Com-puting Machinery. Yinwei Wei, Xiang Wang, Liqiang Nie, Xiangnan He, Richang Hong, and Tat-Seng Chua. 2019. Mmgcn: Multi-modal graph convolution network for person-alized recommendation of micro-video. In Proceed-ings of the 27th ACM International Conference on Multimedia , MM ’19, page 1437–1445, New York, NY, USA. Association for Computing Machinery. Chuhan Wu, Fangzhao Wu, Tao Qi, Suyu Ge, Yongfeng Huang, and Xing Xie. 2019. Reviews meet graphs: Enhancing user and item representations for recom-mendation with hierarchical attentive graph neural network. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natu-ral Language Processing (EMNLP-IJCNLP) , pages 4884–4893, Hong Kong, China. Association for Com-putational Linguistics. Sen Wu, Hongyang R Zhang, and Christopher Ré. 2020. Understanding and improving information transfer in multi-task learning. International Conference on Learning Representations .Xu Xie, Fei Sun, Zhaoyang Liu, Shiwen Wu, Jinyang Gao, Jiandong Zhang, Bolin Ding, and Bin Cui. 2022. Contrastive learning for sequential recommendation. In 2022 IEEE 38th International Conference on Data Engineering (ICDE) , pages 1259–1273. Ruoxuan Xiong and Markus Pelger. 2023. Large dimen-sional latent factor modeling with missing observa-tions and applications to causal inference. Journal of Econometrics , 233(1):271–301. Fan Yang, Hongyang R Zhang, Sen Wu, Christopher Re, and Weijie J Su. 2025. Precise high-dimensional asymptotics for quantifying heterogeneous transfers. 
+
+Journal of Machine Learning Research , 26(113):1– 88. Jinghao Zhang, Yanqiao Zhu, Qiang Liu, Shu Wu, Shuhui Wang, and Liang Wang. 2021. Mining la-tent structures for multimedia recommendation. In 
+
+Proceedings of the 29th ACM International Confer-ence on Multimedia , MM ’21, page 3872–3880, New York, NY, USA. Association for Computing Machin-ery. Shengzhe Zhang, Liyi Chen, Dazhong Shen, Chao Wang, and Hui Xiong. 2025. Hierarchical time-aware mixture of experts for multi-modal sequential recom-mendation. In Proceedings of the ACM Web Confer-ence 2025 , pages 3672–3682, New York, NY, USA. Association for Computing Machinery. Zhenshuo Zhang, Minxuan Duan, Youran Ye, and Hongyang R Zhang. 2026a. Scalable multi-objective and meta reinforcement learning via gradient esti-mation. In Proceedings of the AAAI Conference on Artificial Intelligence .Zhenshuo Zhang, Minxuan Duan, and Hongyang R Zhang. 2026b. Efficient estimation of kernel sur-rogate models for task attribution. arXiv preprint arXiv:2602.03783 .Lei Zheng, Vahid Noroozi, and Philip S. Yu. 2017. Joint deep modeling of users and items using reviews for recommendation. In Proceedings of the Tenth ACM International Conference on Web Search and Data Mining , WSDM ’17, page 425–434, New York, NY, USA. Association for Computing Machinery. Kun Zhou, Hui Wang, Wayne Xin Zhao, Yutao Zhu, Sirui Wang, Fuzheng Zhang, Zhongyuan Wang, and Ji-Rong Wen. 2020. S3-rec: Self-supervised learning for sequential recommendation with mutual informa-tion maximization. In Proceedings of the 29th ACM International Conference on Information & Knowl-edge Management , CIKM ’20, page 1893–1902, New York, NY, USA. Association for Computing Machin-ery. Kun Zhou, Hui Yu, Wayne Xin Zhao, and Ji-Rong Wen. 2022. Filter-enhanced mlp is all you need for sequen-tial recommendation. In Proceedings of the ACM Web Conference 2022 , WWW ’22, page 2388–2399, New York, NY, USA. Association for Computing Machinery. Wendi Zhou, Tianyi Li, Pavlos Vougiouklis, Mark Steed-man, and Jeff Z. Pan. 2024. A usage-centric take on intent understanding in e-commerce. In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing , pages 228–236, Mi-ami, Florida, USA. Association for Computational Linguistics. Xin Zhou and Zhiqi Shen. 2023. A tale of two graphs: Freezing and denoising graph structures for multi-modal recommendation. In Proceedings of the 31st ACM International Conference on Multimedia , MM ’23, page 935–943, New York, NY, USA. Association for Computing Machinery. Xin Zhou, Hongyu Zhou, Yong Liu, Zhiwei Zeng, Chun-yan Miao, Pengwei Wang, Yuan You, and Feijun Jiang. 2023. Bootstrap latent representations for multi-modal recommendation. In Proceedings of the ACM Web Conference 2023 , WWW ’23, page 845–854, New York, NY, USA. Association for Com-puting Machinery. Use of Artificial Intelligence 
+
+The authors used large language model (LLM)-based writing assistants to help polish the prose of this paper. All technical content, experimental design, results, and conclusions are entirely the work of the authors. The LLM tools were used solely for language editing and were not involved in any aspect of the research, methodology, or data analysis. 
+
+Appendix Overview 
+
+A Dataset Details – Summary statistics for all six Amazon categories and the common evaluation protocol. B Implementation Details and Hyperparameters 
+
+– TS-SSM settings, multimodal feature extraction, and baseline configurations. C Behavioral Deviation Analysis – Empirical motivation for deviation-aware modeling from review-expression patterns. D Additional Amazon Categories – Compact comparisons on three additional categories. E Cross-Platform Evaluation – Results and com-ponent ablations on Goodreads Fantasy. F Review Richness and Cross-Category Gain –Descriptive analysis across the six Amazon cate-gories. G Statistical Robustness – Multi-run significance tests on Toys & Games and Pet Supplies. H Information Boundary Controls – Controls for current-event conditioning and item-identity leak-age. I Model Scale, Efficiency, and Deployment – Pa-rameter counts, training cost, inference latency, and practical serving considerations. J Extended Ablation Study – Grouping alterna-tives, gate variants, deviation signals, and sym-metric carryover. K Sensitivity Analysis – Hyperparameter sensitiv-ity for the main design choices. L Auxiliary-Loss Weight Sensitivity – One-at-a-time sweeps for drift, carryover, and reliability coefficients. M Encoder Backbone Sensitivity – Text- and image-encoder capacity comparisons. N MNAR-Gating versus Simple Observation-Pattern Features – Comparison against simpler missingness-feature baselines. O Review Text as a Dynamic versus Static Signal 
+
+– Event-level text against static item-level text representations. P Subgroup Analysis – Reliability-gate patterns and performance by observable history length. Q Long-Tail Item Analysis – Popularity-stratified performance on Toys & Games. R Qualitative Analysis: Gate Activation and Carryover Persistence – Representative user-side and item-side case studies. S Error Analysis – Taxonomy of the model’s dom-inant prediction failures. T Extended Related Work – Additional discus-sion of sequential, multimodal, MNAR, temporal, causal, and LLM-based recommendation. A Dataset Details 
+
+All six Amazon categories use the same prepro-cessing order: category-specific review loading; required-field and timestamp validation; removal of events before 2014; iterative bipartite 10-core filter-ing; contiguous user/item indexing; chronological history construction; per-user leave-last-two-out; and construction of train-only statistics, groups, temporal summaries, item histories, item neigh-bors, and auxiliary targets. The 10-core operation repeatedly removes users and items with fewer than ten events in the current bipartite graph until both sides stabilize. Modality extraction and availability encoding do not change split membership. For Toys & Games, we use the 
+
+raw_review_Toys_and_Games category from 
+
+McAuley-Lab/Amazon-Reviews-2023 . A record is retained only if it has valid user and item identifiers, rating, and timestamp. Timestamps are detected as seconds or milliseconds and converted to datetimes; unparsable values, dates before 1995, dates after preprocessing time, and events before 2014 are removed. User and initial item histories are sorted by Unix time with the stable source 
+
+global_idx breaking exact ties. Query-time item histories use only events with timestamps strictly earlier than the target, excluding simultaneous item reviews. Review title, body, and image are optional and do not determine event retention. Empty title/body fields set has_title=0 or has_text=0 and use zero embeddings; missing images similarly set 
+
+has_image=0 . The three availability bits form an explicit modality-pattern embedding. After filter-ing, each user sequence is ordered chronologically: the last event is the test target, the penultimate event is the validation target, and all earlier events form the training split. The test user prefix includes the earlier validation event because it is observable at test query time. 
+
+Table 4: Summary statistics for all six Amazon cate-gories used in the experiments.                                    
+
+> Dataset #Users #Items #Inter. Img Rate Sparsity Toys & Games 35,690 28,530 611,908 8.1% 99.94% Pet Supplies 38,427 31,364 674,821 10.2% 99.94% Sports & Outdoors 27,832 35,284 473,144 5.3% 99.95% Electronics 42,831 35,672 724,519 12.4% 99.95% Clothing 38,294 31,458 583,621 18.7% 99.95% Home & Kitchen 45,162 38,941 812,374 9.8% 99.95%
+
+B Implementation Details and Hyperparameters 
+
+B.1 TS-SSM Configuration 
+
+Table 6 lists the TS-SSM settings used in all re-ported experiments. Training uses AdamW, co-sine scheduling, mixed negative sampling, and full-sort checkpoint selection by validation Re-call@20. Temporal statistics, group assignments, item graphs, and auxiliary targets are computed from the training split. Query histories obey chronological availability: a validation query can-not use itself or later events, while the earlier vali-dation event is observable in the prefix of the sub-sequent test query. 
+
+B.2 Abstract-to-Implementation Correspondence 
+
+The collection Φt in Equations (3)–(4) contains the event representations available by time t. Reviews are processed in chronological order. Each event 
+
+eu,i at time t = τu,i uses lagged statistics from bin b(t) − 1 for the systematic contexts, constructs the current user-side correction, and updates the maintained state of item i. The first bin uses de-fault training statistics. The post-event item state is stored and carried into later events, so the col-lection of item states records the review history accumulated for every item. 
+
+Event-level signed review score. For an event 
+
+e = ( ue, i e) occurring at time te, let eΦe denote its event representation with the item-identity channel removed. We compute a signed review score once, when the event occurs: 
+
+qe = ρr ¯re + a⊤ 
+
+> q
+
+GELU 
+
+
+
+Wq[eΦe; δUue,t e ;
+
+δIie,t e ] + bq
+
+
+
++ cq,ρr = softplus( ρraw  
+
+> r
+
+), ¯re = ( re − 3) /2.
+
+Here Wq, aq, bq, and cq are learned parameters. The positive rating coefficient anchors the score to rating polarity, while the learned residual incor-porates multimodal content and the event’s devia-tions from the user and item histories. The score is stored with the event and remains fixed; only its time-dependent weight changes for later queries. 
+
+User-history weighting. For a query event eu,i 
+
+at time t, define the query context 
+
+Cu,i,t = [ δUu,t ; δIi,t ; χUt− ; χIt− ].Table 5: Detailed statistics for the three primary Amazon datasets. 
+
+Statistic Toys Pets Sports Users |U| 35,690 38,427 27,832 Items |I| 28,530 31,364 35,284 Interactions 611,908 674,821 473,144 Sparsity 99.94% 99.94% 99.95% Time span Jan 2014–Aug 2023 Jan 2014–Aug 2023 Jan 2014–Aug 2023 Time bins T 112 112 112 Avg. interactions per user 17.1 17.6 17.0 Avg. interactions per item 21.4 21.5 13.4 Has title rate 100.00% 100.00% 100.00% Has text rate 99.97% 99.96% 99.97% Has image rate 8.1% 10.2% 5.3% Train / Val / Test 540,528 / 35,690 / 35,690 597,967 / 38,427 / 38,427 417,480 / 27,832 / 27,832 
+
+Table 6: TS-SSM hyperparameter settings.                                                   
+
+> Hyperparameter Value Hidden dimension H320 User Transformer layers 3Item Transformer layers 2Attention heads 4Dropout rate 0.1 Maximum user sequence length 64 Maximum item sequence length 40 Batch size 128 Learning rate 5×10 −4
+> Weight decay 1×10 −4
+> Optimizer AdamW LR scheduler Cosine annealing Training epochs 50 Gradient clipping 1.0 Training negatives 48 (mixed sampling) Uniform negative ratio 0.6 Ranking loss weight λrank 1.0 Drift loss weight λdrift 0.08 Carry loss weight λcarry 0.05 Reliability loss weight λrel 0.03 User groups G3Item groups GI8Shrinkage λs50 Initial / final norm bound α0.10 / 0.15 Warmup epochs 8BPR temperature schedule 1.0→0.5
+> Carryover λ+init. 0.25 Carryover λ−init. 0.15 User-history λUinit. 0.20 Item neighbors K20 (co-occurrence window 3) EMA decay 0.999
+
+For each prior event e = eu,i ′ ∈ H u,t − , let cUe,t =[xnum  
+
+> e
+
+; Cu,i,t ] and ∆be,t = b(t) − b(te). Using e as a compact index, its four weighting factors are 
+
+wU 
+
+> obs ,e
+
+= ϵw + softplus 
+
+
+
+(aU
+
+> obs
+
+)⊤ϕAe + bU
+
+> obs
+
+
+
+,wU 
+
+> rel ,e,t
+
+= ϵw + (1 − ϵw)σ  f U
+
+> rel
+
+(cUe,t ) ,wU 
+
+> evid ,e
+
+= 1 + |qe|,wU 
+
+> time ,e,t
+
+= exp ( −λU ∆be,t ) ,λU = softplus( λraw  
+
+> U
+
+),
+
+where 0 < ϵ w < 1 is a fixed positive floor, qe is the stored event-level score in Appendix B.2, and 
+
+f U 
+
+> rel
+
+is a scalar MLP. The decay rate λU is initial-ized to 0.20 (Table 6) and learned thereafter. These are the factors indexed by (u, i ′, t ) in Equation (8); the observation and evidence factors depend only on the stored event and can be cached. The ob-servation factor assigns a separate learned weight to each of the eight modality-availability patterns. The reliability factor combines numeric features of the prior event with current query-level deviations and history support. It is distinct from ru,t , which scales the current-event message in Equation (11). The evidence factor changes only the magnitude of the user-history contribution; rating and review-content channels in the event message retain its directional information. The user-side decay is shared across feedback signs, leaving sign-specific persistence to the item-side carryover. Write ξUe = ξUu,i ′,t and ωUe = ωUu,i ′,t , where 
+
+ξUu,i ′,t = W U (Φ u,i ′,τ u,i ′ + vi′,t ).
+
+The normalized, observation-pattern-weighted user-history message is 
+
+mUu,t =
+
+P 
+
+> e∈H u,t −
+
+ωUe ξUe
+
+P 
+
+> e∈H u,t −
+
+ωUe
+
+,
+
+where ωUe = wU
+
+> obs ,e
+
+wU
+
+> rel ,e,t
+
+wU
+
+> evid ,e
+
+wU
+
+> time ,e,t
+
+, equiva-lently ωUu,i ′,t in Equation (8). All four factors are positive. The current-event correction and bounded local graph context provide the other user-side path-ways from Φt.On the item side, let tn < t denote the times-tamp of prior review n of item i, and define ξIn =tanh( qn)W I hIn. The signed carryover summary is 
+
+mIi,t =
+
+P 
+
+> n:tn<t
+
+ωIn,t ξIn
+
+P 
+
+> n:tn<t
+
+ωIn,t 
+
+,where ωIn,t = wI
+
+> obs ,n
+
+wI
+
+> rel ,n,t
+
+wI
+
+> sign ,n
+
+wI
+
+> time ,n,t
+
+. The factors and the sign-specific temporal parameter-ization are detailed below. When the correspond-ing history is empty, the normalized aggregation is omitted and the memory is set to zero. The abstract user filtering map f U is the compo-sition of the bounded state update, weighted his-tory aggregation, current-event correction, and lo-cal feedback: 
+
+∆zu,t = η2xu,t + η3γUu,t hUu,t ,
+
+∆zng  
+
+> u,t
+
+= σ(ru,t )Wu,t mu,t + mUu,t 
+
++ Bound α(∆ zu,t ; zu,t − ),zmid  
+
+> u,t
+
+= zu,t − + ∆ zng 
+
+> u,t
+
+,
+
+∆zmp  
+
+> u,t
+
+= gfb (zmid  
+
+> u,t
+
+, a ′′ 
+
+> u,t
+
+)Wfb a′′ 
+
+> u,t
+
+,f U 
+
+> impl
+
+= zu,t = zu,t − + ∆ zng  
+
+> u,t
+
++ ∆ zmp  
+
+> u,t
+
+.
+
+Here zu,t − represents the pre-event state Zu,t − , xu,t 
+
+realizes the user-specific temporal context Xu,t 
+
+from lagged bin statistics, and the remaining terms select and aggregate the relevant event information from Φt. The final zu,t represents the post-event filtered state Zu,t . Similarly, the abstract item fil-tering map is instantiated as 
+
+∆vIi,t = β2yi,t + β3γIi,t hIi,t + β4mIi,t ,f I 
+
+> impl
+
+= vi,t = vi,t − + Bound α(∆ vIi,t ; vi,t − ),
+
+where vi,t − represents the maintained pre-event state Vi,t − , yi,t realizes Yi,t from lagged bin statis-tics, and the gated innovation and carryover mem-ory aggregate the current and prior event informa-tion for item i from Φt. The result f I 
+
+> impl
+
+= vi,t is stored as Vi,t and used directly for target scoring. Repeated application of this update maintains the dynamic states of all items. The local propagation in Section 3.2.3 refines the user branch using prefix and neighboring item states without re-processing the current target state. The process-noise terms εU
+
+and εI express residual uncertainty at the abstract-model level. 
+
+Carryover-memory parameterization. For prior review n of item i occurring at time tn < t ,the associated historical innovation is computed when that review occurs by the same item-side innovation map used for the current review: 
+
+hIn = f I
+
+> ind
+
+
+
+[vi,t − 
+
+> n
+
+; δIi,t n ]
+
+
+
+.
+
+The innovation hIn remains fixed after tn; its contri-bution to the carryover memory at time t changes through ωIn,t . Its carryover weight is 
+
+ωIn,t = wI
+
+> obs ,n
+
+wI
+
+> rel ,n,t
+
+wI
+
+> sign ,n
+
+wI
+
+> time ,n,t
+
+,
+
+For the current query event eu,i , write xnum  
+
+> n
+
+and 
+
+An for review n’s numeric features and availability pattern, and let cIn,t = [ xnum  
+
+> n
+
+; Cu,i,t ]. The four factors are 
+
+wI 
+
+> obs ,n
+
+= ϵw + softplus 
+
+
+
+(aI
+
+> obs
+
+)⊤ϕAn + bI
+
+> obs
+
+
+
+,wI 
+
+> rel ,n,t
+
+= ϵw + (1 − ϵw)σ  f I
+
+> rel
+
+(cIn,t ) ,wI 
+
+> sign ,n
+
+= 1 + |qn|,wI 
+
+> time ,n,t
+
+= exp −λsign( qn)∆bn,t 
+
+ ,
+
+where qn = qen is the stored score of review event 
+
+n, f I 
+
+> rel
+
+is a scalar MLP parameterized separately from f U
+
+> rel
+
+, and ∆bn,t = b(t) − b(tn) is the elapsed number of time bins. We set λsign( qn) = λ+ for 
+
+qn ≥ 0 and λsign( qn) = λ− otherwise. The multi-plier tanh( qn) in Equation (18) preserves direction, while wI 
+
+> sign ,n
+
+scales magnitude. The observation factor is pattern-specific, and the reliability factor combines the prior review’s numeric features with the current query context. The two decay parameters are learned indepen-dently and constrained as λ± = softplus( λraw  
+
+> ±
+
+).They are initialized to 0.25 and 0.15 for posi-tive and negative feedback, respectively. Their half-lives are measured in time bins and satisfy 
+
+t1/2 = ln 2 /λ . When Hi,t − = ∅, the carryover memory is set to mIi,t = 0, so the item update pro-ceeds without a historical carryover term. Table 7 reports the values at the selected checkpoints. 
+
+Scoring function. For query event eu,i at time t
+
+and candidate item j, Section 2 defines the score as 
+
+yu,j,t = z⊤
+
+> u,t
+
+vj,t + μj,t , μj,t = μj + μgj,t .
+
+Here μj is a learned item-specific bias and μgj,t 
+
+is a dynamic bias produced by an MLP from the item-group and query-bin embeddings. For a non-target candidate, vj,t is obtained by aligning its latest maintained history-conditioned state ¯vj,t − to the query time through Equation (20). For the ob-served target i, vi,t is the newly updated post-event state and is used directly. The same zu,t is used for all candidates in the query, and the separately computed target score is retained for the full-sort rank calculation described below. Query construction and full-sort evaluation. 
+
+For event eu,i at time t, the user encoder reads at most 64 events from Hu,t − , and the item encoder reads at most 40 train-split reviews from Hi,t − . The current event is excluded from both prefixes and enters only through the current-event encoder. Its ground-truth label is the review record’s item_idx .When the current event conditions the user-side query, this item-identity channel is masked; the available conditioning inputs are the rating, re-view title and body, review image, modality pattern, time bin, title and body token counts, image count, and verified-purchase status. Item identity remains available to the target-item branch and to historical event representations. Validation and test score every non-padding cat-alog item. Before ranking, we exclude padding, any duplicate catalog entry for the ground-truth item, and items the user interacted with before the target event. The ground-truth item receives a separately computed target score. Its rank is one plus the number of retained candidates with scores strictly greater than that target score; Recall@ K,NDCG@ K, and MRR follow from this rank. Full sort is used only for validation and test. Validation Recall@20 selects the checkpoint, while training uses sampled BPR. The user and item history encoders consume se-quences of event-level representations Φu,i,t rather than pre-aggregated item text. The exponential at-tenuation in the carryover module reduces the influ-ence of remote reviews and supports the 40-review item-history truncation. Local propagation retains at most K = 20 item neighbors constructed from a co-occurrence window of three interactions. These bounds apply during both training and inference. 
+
+Table 7: Learned carryover decay parameters read from the selected TS-SSM checkpoints. Half-life is ln 2 /λ 
+
+in train-aligned monthly bins; initialization is λ+=0 .25 ,
+
+λ−=0 .15 (Table 6).                            
+
+> Dataset Sign Init. λLearned λ/bin Init. half-life Learned half-life Toys & Games λ+0.2500 0.2814 2.7726 2.4632 Toys & Games λ−0.1500 0.1129 4.6210 6.1395 Pet Supplies λ+0.2500 0.2790 2.7726 2.4844 Pet Supplies λ−0.1500 0.1156 4.6210 5.9961
+
+At both selected checkpoints, the learned nega-tive decay is smaller than the learned positive decay. On Toys & Games, the negative half-life increases from the 4.62-bin initialization reference to 6.14 bins, while the positive half-life decreases from 2.77 to 2.46 bins; the negative-to-positive half-life ratio therefore increases from 1.67 to 2.49. Pet Supplies shows the same direction, with learned half-lives of 6.00 and 2.48 bins. Thus, the fitted checkpoints retain negative review shocks longer than the initialization alone would imply. 
+
+B.3 Multimodal Feature Extraction Availability-conditioned modality fu-sion. Let M = {title , text , image } and write the modality-availability pattern as 
+
+Au,i = ( atitle  
+
+> u,i
+
+, a text  
+
+> u,i
+
+, a image  
+
+> u,i
+
+) ∈ { 0, 1}3. Review ti-tles and bodies are encoded separately with frozen 
+
+all-MiniLM-L6-v2 (Reimers and Gurevych, 2019), producing 384-dimensional features, while review images are encoded with frozen CLIP ViT-B/32 (Radford et al., 2021), producing 512-dimensional features. For each modality m,we first normalize the frozen feature and project it into the shared H = 320 dimensional space: 
+
+¯x(m) 
+
+> u,i
+
+= x(m)
+
+> u,i
+
+max( ∥x(m) 
+
+> u,i
+
+∥2, ϵ ) ,h(m) 
+
+> u,i
+
+= Dropout 0.1
+
+
+
+GELU 
+
+
+
+Pm ¯x(m) 
+
+> u,i
+
++ bm
+
+ 
+
+,
+
+eh(m) 
+
+> u,i
+
+= a(m) 
+
+> u,i
+
+h(m) 
+
+> u,i
+
+.
+
+Here, Ptitle , P text ∈ R320 ×384 and Pimage ∈
+
+R320 ×512 are separate learned projections. The fi-nal line applies a hard mask after projection, so an absent modality contributes no projected content. The fusion module uses three scalar sigmoid gates conditioned jointly on the available content and the full availability pattern: 
+
+hall  
+
+> u,i
+
+= [ eh(title)  
+
+> u,i
+
+; eh(text)  
+
+> u,i
+
+; eh(image)  
+
+> u,i
+
+; Au,i ],gu,i = σ
+
+
+
+Wghall  
+
+> u,i
+
++ bg
+
+
+
+,
+
+egu,i = Au,i ⊙ gu,i ,
+
+where Wg ∈ R3×(3 H+3) and egu,i ∈ [0 , 1] 3.The modality contribution in Equation (6) is the availability-normalized gated average 
+
+N obs  
+
+> u,i
+
+= max 1, X
+
+> m∈M
+
+a(m)
+
+> u,i
+
+!
+
+,fmod (Enc( Mu,i ), A u,i ) = 1
+
+N obs 
+
+> u,i
+
+X
+
+> m∈M
+
+eg(m) 
+
+> u,i
+
+h(m) 
+
+> u,i
+
+.
+
+It is set to 0 when no modality is observed. The gates are independent rather than normalized across modalities. The availability pattern also enters Equation (6) through ϕAu,i , implemented as an 
+
+8 × 320 embedding table for the eight binary pat-terns. Thus, fmod uses the pattern to combine ob-served content, while ϕAu,i represents the pattern directly. The default backbones are compared with higher-capacity alternatives in Appendix M, with all downstream TS-SSM components held fixed. 
+
+Numeric-event projection. For the Amazon datasets, the additional numeric cues are 
+
+κu,i = [ ℓtitle  
+
+> u,i
+
+; ℓtext  
+
+> u,i
+
+; nimage  
+
+> u,i
+
+; vverified  
+
+> u,i
+
+],
+
+where ℓtitle  
+
+> u,i
+
+and ℓtext  
+
+> u,i
+
+are title and review-body to-ken counts, nimage  
+
+> u,i
+
+is the number of uploaded re-view images, and vverified  
+
+> u,i
+
+∈ { 0, 1} is the verified-purchase indicator. We map the rating to ¯ru,i =(ru,i − 3) /2. For each count variable x, we esti-mate the 99th percentile qtrain 0.99 and the normaliza-tion statistics from the training split and apply 
+
+ex = log  1 + min( x, q train 0.99 ) − μtrain 
+
+σtrain + ϵ .
+
+The same training-split transformation is used for validation and test events, while vverified  
+
+> u,i
+
+remains binary. The resulting input is 
+
+xnum  
+
+> u,i
+
+= [¯ ru,i ; eℓtitle  
+
+> u,i
+
+; eℓtext  
+
+> u,i
+
+; enimage  
+
+> u,i
+
+; vverified  
+
+> u,i
+
+].
+
+We instantiate the numeric map as 
+
+snum  
+
+> u,i
+
+= GELU  W1xnum  
+
+> u,i
+
++ b1
+
+ ,hnum  
+
+> u,i
+
+= Dropout 0.1
+
+ snum 
+
+> u,i
+
+ ,fnum (ru,i , κ u,i ) = W2hnum  
+
+> u,i
+
++ b2,
+
+where W1 ∈ R160 ×5 and W2 ∈ R320 ×160 . The out-put layer has no activation, and the combined event representation is normalized by the layer normal-ization in Equation (6). These numeric inputs de-scribe the current event; history-relative quantities are computed separately by the deviation branch. The user-history, item-history, and current-event paths use separate trainable event-projection mod-ules and share the same trainable item-embedding table. Frozen MiniLM and CLIP operate only during preprocessing and receive no downstream gradients. The norm-bound parameter is 0.10 for the first 15 epochs and then increases lin-early to 0.15 at epoch 50. The update coefficients 
+
+η2, η 3, β 2, β 3, β 4 and carryover decays are trained jointly with the other model parameters through softplus-constrained raw scalars. 
+
+B.4 Event-Conditioned and State-Update Networks Event-conditioned cues. The event map fevt 
+
+combines structured history-relative features with learned projections of the current event. We form an identity-free expression vector 
+
+xexpr  
+
+> u,i,t
+
+= [¯ ru,i ; eℓtitle  
+
+> u,i
+
+; eℓtext  
+
+> u,i
+
+;
+
+enimage  
+
+> u,i
+
+; Au,i ; vverified  
+
+> u,i
+
+],
+
+using the train-normalized quantities defined above. The operators HistStat U (Hu,t − ) and 
+
+HistStat I (Hi,t − ) compute feature-wise means 
+
+μSt− , scales σSt− , and a bounded history-support feature χSt− from the strictly preceding user or item prefix, respectively. Empty prefixes use train-split reference moments and χSt− = 0 . The deviation cues are 
+
+δUu,t =
+
+" xexpr  
+
+> u,i,t
+
+− μUt−
+
+σUt− + ϵ ; χUt−
+
+#
+
+,δIi,t =
+
+" xexpr  
+
+> u,i,t
+
+− μIt−
+
+σIt− + ϵ ; χIt−
+
+#
+
+.
+
+Thus, δUu,t and δIi,t describe the same review relative to the user’s and item’s respective histories. On the user-side current-event path, the item-identity chan-nel of Φu,i,t is zeroed. The current-event message is a learned projection 
+
+mu,t = Wmsg Φu,i,t + bmsg .
+
+A scalar reliability logit is computed as 
+
+ru,t = frel ([Φ u,i,t ; δUu,t ; δIi,t ; χUt− ; χIt− ]) .
+
+The user update uses σ(ru,t ) to scale Wu,t mu,t .These operations jointly instantiate the four outputs of fevt in Section 3.1. 
+
+User and item history encoders. The maps f U
+
+> enc
+
+and f I 
+
+> enc
+
+are separately parameterized causal Trans-formers over event-level representations. Write Φn
+
+for the event representation at the nth position of a user or item prefix. For side S ∈ { U, I }, the Transformer input is 
+
+xSn = Φ n + pSn + ϕS 
+
+> ∆bn
+
+,
+
+where pSn is a learned positional embedding and 
+
+ϕS 
+
+> ∆bn
+
+encodes the elapsed time-bin distance to the query. Writing xS = ( xS 
+
+> 1
+
+, . . . , x SN ) and OS =(oS 
+
+> 1
+
+, . . . , o SN ), the sequence is processed as 
+
+OS = CausalTransformer S (xS ).A causal mask restricts each position to its chrono-logical prefix. The user encoder has three layers and retains the 64 most recent prior events; the item encoder has two layers and retains the 40 most re-cent prior events. Both use four attention heads, hidden dimension H = 320 , and dropout 0.1. The last valid output gives zu,t − = f U
+
+> enc
+
+(Hu,t − ) or 
+
+vi,t − = f I
+
+> enc
+
+(Hi,t − ). The two Transformers have separate parameters, and each uses a learned empty-history state when its prefix is empty. The current event is excluded from both history encoders. 
+
+Systematic-context maps. For compactness, let 
+
+T U = T Uu,t and T I = T Ii,t . For S ∈ { U, I }, the context T S concatenates train-only global and user-or item-group summaries of rating, modality avail-ability, text length, image count, verified-purchase rate, and review volume; the corresponding first dif-ferences; and the relevant group embedding. User groups are defined by training-split image-upload rate and item groups by training-split interaction frequency, as detailed in Appendix B.6. Each query uses the preceding time bin, with group summaries shrunk toward their same-bin global summaries. After train-split normalization, the systematic map is 
+
+eT S = Norm train (T S ),aS 
+
+> sys
+
+= W S 
+
+> 1,sys
+
+eT S + bS
+
+> 1,sys
+
+,hS 
+
+> sys
+
+= Dropout 0.1
+
+ GELU( aS
+
+> sys
+
+) ,f S
+
+> sys
+
+(T S ) = W S
+
+> 2,sys
+
+hS 
+
+> sys
+
++ bS
+
+> 2,sys
+
+.
+
+The output dimension is H, and the final layer has no activation. The user and item maps have separate parameters and produce xu,t and yi,t , re-spectively. 
+
+State-conditioned innovations and gates. The individual maps convert each history-relative devi-ation into an update direction conditioned on the corresponding pre-event state. For compactness, let 
+
+sUt− = zu,t − , sIt− = vi,t − , δUt = δUu,t , and δIt = δIi,t .Each side first projects its deviation cue as 
+
+dSt = Dropout 0.1
+
+ GELU( P Sδ δSt + bSδ ) ,
+
+and then applies 
+
+hSt = f S
+
+> ind
+
+([ sSt− ; δSt ]) = W S 
+
+> 2,ind
+
+Dropout 0.1
+
+
+
+GELU  W S
+
+> 1,ind
+
+[sSt− ; dSt ] + bS
+
+> 1,ind
+
+
+
++ bS
+
+> 2,ind
+
+.
+
+The output layer is linear, so hSt ∈ RH can adjust the state in either direction. A side-specific scalar gate is 
+
+gSt = σ  f S
+
+> gate
+
+([ sSt− ; δSt ])  ,
+
+with gUt = γUu,t and gIt = γIi,t . The user and item innovation networks and gates have separate pa-rameters. The gated innovations enter the residual updates as η3γUu,t hUu,t and β3γIi,t hIi,t ; Equation (12) subsequently bounds the combined residual relative to the pre-event state. 
+
+B.5 Training Objectives and Sampling 
+
+For each training query, mixed negative sampling draws at most 48 distinct items after excluding padding, the current positive, and duplicates within the query. Approximately 60% are uniform catalog samples; the remainder follow a train-only popular-ity distribution proportional to (ctrain  
+
+> j
+
++ 1) 0.75 . In-batch negatives and hard-negative reweighting are disabled, so all valid sampled pairs receive equal weight in the BPR reduction. Invalid unfilled posi-tions are masked. The BPR temperature remains 1.0 for the first eight epochs, then decreases linearly to 0.5 by epoch 50; this schedule is independent of learning-rate scheduling. The drift head predicts a four-dimensional train-only next-bin target for the current item: normal-ized mean rating, image-availability rate, normal-ized mean review-text length, and log-scaled re-view volume. A target is valid only when the cur-rent and next bins lie in the training window and the item has training reviews in the next bin. With this mask, the loss is the mean elementwise squared error, 
+
+Ldrift = MSE( ˆd, d ).
+
+The carry head receives the updated item state, car-ryover memory, and current shock message. It predicts two train-only future-change proxies: the next-bin normalized mean-rating change relative to the pre-event item mean and the next-bin log-volume change relative to the pre-event item review count. It uses the same future-availability mask and mean MSE over its two outputs. The reliability representation used to produce 
+
+ru,t also feeds an auxiliary three-output head. Its observation target is the mean of the current re-view’s title, text, and image availability indicators. The history-support target averages bounded user-and item-history-length proxies. The conflict tar-get indicates whether the most recent user-side and item-side rating deviations have opposite signs. Each output uses binary cross-entropy with logits, and Lreliability is the arithmetic mean of the three BCE terms. Training uses only Lrank for epochs 1–5. Dur-ing epochs 6–10, the auxiliary coefficients increase linearly from zero to 0.08 , 0.05 , and 0.03 for drift, carry, and reliability, respectively; the full coef-ficients are used thereafter. No stop-gradient op-eration separates the auxiliary branches from the shared states, so valid auxiliary losses can update the item encoder, item updater, carryover module, and related shared representations. 
+
+B.6 Train-Only Groups and Temporal Contexts 
+
+For any event time t, b(t) denotes its assigned train-aligned coarse time bin. In the Amazon experi-ments, bins 1–111 are monthly from January 2014 through March 2023, and bin 112 contains April– August 2023. User grouping uses only training-split image-upload rate: users with rate zero form the never 
+
+group, rates in (0 , 0.2] form the rare group, and rates above 0.2 form the frequent group. Items are sorted by training interaction count and divided approximately evenly by catalog size into eight popularity groups; the padding item is assigned to group 0. Validation and test interactions do not affect either assignment. User-side temporal contexts contain train-only global and user-group review summaries and their first differences. Group statistics shrink toward the same-bin global statistic with 
+
+αg,t = ng,t 
+
+ng,t + 50 .
+
+They use a one-bin lag, so a query in bin b receives summaries from bin b − 1; the first bin uses default training statistics. Item-side contexts are likewise built only from training events using the eight item groups, with global/group summaries and first dif-ferences. The item graph is also train-only. For each chronological training sequence, undirected co-occurrence counts are accumulated between dis-tinct items within the preceding three-interaction window, and each item retains its 20 highest-count neighbors. The graph is then fixed for training, validation, and test. 
+
+B.7 Baseline Configurations 
+
+The sequential, multimodal, and debiasing base-lines follow the formulations listed in Section 4. RecGPT (Jiang et al., 2025), HORAE (Hu et al., 2025), and HM4SR (Zhang et al., 2025) repre-sent recent foundation-model, temporal, and multi-modal sequential approaches. Every baseline uses the same Amazon preprocessing pipeline as TS-SSM: the January-2014 cutoff, iterative bipartite 10-core filtering, per-user leave-last-two-out splits, and 112 train-aligned time bins with April–August 2023 merged into the final bin. This provides a common evaluation setting across methods. 
+
+C Behavioral Deviation Analysis 
+
+To motivate the deviation-feature design, we an-alyze how behavioral deviations relate to rating patterns in the Amazon Toys & Games training set. We define δimg = 1 if a user uploads an image in a review where their personal image-upload rate is below 10%; δtext = 1 if the review text length exceeds the user’s mean by more than 2σ. Users with δimg = 1 show a mean rating of 4.01 versus 4.26 for non-deviating reviews ( p < 10 −6, two-sample t-test), and are significantly more likely to give a rating of 1 or 2 stars. Longer-than-usual re-views have fewer 5-star ratings than similar-length reviews (64.8% versus 74.8%) and more 1-star rat-ings (3.3% versus 1.5%), shifting the distribution toward lower ratings. This analysis supports the MNAR framing behind the deviation-aware user update. 
+
+D Additional Amazon Categories 
+
+Table 8 reports the compact comparison on the three additional Amazon categories. TS-SSM out-performs BSARec, MACR, and AutoDebias on all reported metrics. 
+
+E Cross-Platform Evaluation on Goodreads Fantasy 
+
+We use the Fantasy & Paranormal subset of the Goodreads Book Graph (Wan and McAuley, 2018; Wan et al., 2019), collected from public Goodreads shelves in late 2017 with anonymized user and review identifiers. The released subset contains 258,585 books, 55,397,550 user–book interactions, and 3,424,641 detailed reviews. We refer to this subset as Goodreads Fantasy below. It evaluates TS-SSM in a non-Amazon content domain and review environment. Table 10 compares TS-SSM Table 8: Generalization performance on three additional Amazon categories (R@10, R@20, N@20). 
+
+Electronics Clothing Home & Kitchen 
+
+Method R@10 R@20 N@20 R@10 R@20 N@20 R@10 R@20 N@20 BSARec .0982 .1317 .0708 .1037 .1391 .0749 .1018 .1365 .0734 MACR .0938 .1266 .0680 .0993 .1336 .0719 .0974 .1311 .0705 AutoDebias .0922 .1247 .0668 .0976 .1315 .0706 .0958 .1291 .0693 
+
+TS-SSM .1063 .1530 .0761 .1145 .1653 .0822 .1100 .1570 .0788 
+
+Improv. +8.2% +16.2% +7.5% +10.4% +18.8% +9.7% +8.1% +15.0% +7.4% 
+
+Table 9: Relative Recall@20 gains over BSARec across the six Amazon categories. 
+
+Method Toys Pets Sports Electronics Clothing Home Mean RecGPT +2 .5% +1 .8% +2 .5% +1 .9% +1 .6% +1 .8% +2 .0% 
+
+HORAE +3 .1% +2 .9% +3 .1% +3 .1% +3 .7% +3 .2% +3 .2% 
+
+HM4SR +4 .3% +4 .2% +4 .1% +4 .4% +5 .0% +4 .4% +4 .4% 
+
+TS-SSM +17 .9% +17 .1% +14 .8% +16 .2% +18 .8% +15 .0% +16 .6%
+
+with BSARec and the three recent baselines and reports the principal component ablations using the same ranking metrics as the Amazon experiments. 
+
+Table 10: Cross-platform results and component abla-tions on Goodreads Fantasy. ∆R@20 is the relative drop from the full TS-SSM model.                                                             
+
+> Method R@10 R@20 N@10 N@20 ∆R@20 BSARec .4165 .4976 .2961 .3155 —RecGPT .4269 .5100 .3040 .3239 —HORAE .4299 .5130 .3065 .3263 —HM4SR .4355 .5191 .3109 .3312 —w/o User State Update .4743 .5660 .3401 .3622 −3.20%
+> w/o Deviation Features .4847 .5777 .3480 .3703 −1.20%
+> w/o Item State Update .4561 .5449 .3266 .3482 −6.81%
+> w/o Message Passing .4669 .5572 .3348 .3566 −4.70%
+> w/o Carryover Memory .4759 .5679 .3417 .3635 −2.87%
+> Symmetric Carryover .4818 .5742 .3459 .3681 −1.80%
+> TS-SSM .4923 .5847 .3538 .3752 —
+
+TS-SSM achieves the highest value on all four metrics. Recall@20 increases from .5191 for HM4SR to .5847, a 12 .6% relative improvement. The ablation ordering matches the Amazon re-sults: removing item-state evolution produces the largest drop ( 6.81% ), followed by message pass-ing ( 4.70% ), user-state evolution ( 3.20% ), and car-ryover memory ( 2.87% ). Deviation features and asymmetric carryover also improve performance. These results provide evidence from a second re-view platform, while generalization to broader plat-form types remains untested. 
+
+F Review Richness and Cross-Category Gain 
+
+We examine the association between review-expression richness and TS-SSM’s advantage over BSARec across the six Amazon categories, us-ing image-upload rate as a proxy for review effort. This category-level analysis characterizes variation within Amazon rather than cross-platform general-ization. 
+
+Table 11: Image rate versus relative gain over BSARec (Recall@20) across six Amazon categories, sorted by image rate.                             
+
+> Category Image Rate BSARec R@20 TS-SSM R@20 Rel. Gain Sports & Outdoors 5.3% .0838 .0962 +14 .8%
+> Toys & Games 8.1% .1427 .1683 +17 .9%
+> Home & Kitchen 9.8% .1365 .1570 +15 .0%
+> Pet Supplies 10.2% .1500 .1756 +17 .1%
+> Electronics 12.4% .1317 .1530 +16 .2%
+> Clothing 18.7% .1391 .1653 +18 .8%
+
+The Pearson correlation between image-upload rate and relative gain is r = 0 .67 . Sports has both the lowest image-upload rate (5.3%) and the small-est relative gain ( 14 .8% ), whereas Clothing has the highest image-upload rate (18.7%) and the largest gain ( 18 .8% ). The relationship is not monotonic among the remaining categories, and image-upload rate captures only one dimension of review rich-ness. Separately, the popularity-stratified Toys & Games analysis (Appendix Q) shows a 10 .5% gain over BSARec for long-tail items. Together, these results describe where TS-SSM’s gains are largest without attributing the differences to review rich-ness alone. 
+
+G Statistical Robustness 
+
+We run 30 independent trials on Toys & Games and compare TS-SSM against sequential and de-biasing baselines, including IPS, DR, CausE, and Deconfounded Recommendation (Schnabel et al., 2016; Wang et al., 2019; Bonner and Vasile, 2018; Wang et al., 2021). Table 12 reports paired t-tests with Bonferroni correction, 95% confidence inter-vals for the difference TS-SSM − baseline, and Cohen’s dz .
+
+G.1 Cross-Dataset Robustness: Pet Supplies 
+
+To verify that the statistical findings generalize beyond Toys & Games, we report 10-run paired robustness on Pet Supplies, following the same protocol as above: paired t-tests with Bonferroni correction for 12 simultaneous comparisons, 95% confidence intervals for the mean paired difference (TS-SSM minus baseline), and Cohen’s dz = ¯d/s d.All 12 comparisons remain significant at the Bonferroni-adjusted threshold after 10 trials. Ef-fect sizes ( dz from 9.1 to 16.9) are similar in mag-nitude to the 30-run Toys & Games results (Ta-ble 12), where the BSARec comparison yielded 
+
+dz = 10 .1. The Pet Supplies confidence intervals are wider than their Toys & Games counterparts; for example, [.0236 , . 0276] versus [.0247 , . 0265] 
+
+for BSARec. This difference is consistent with fewer runs ( n = 10 versus 30) and greater within-dataset variability. Both intervals remain above zero. The resulting multi-run evidence covers these two Amazon categories. 
+
+H Information Boundary Controls 
+
+H.1 Motivation 
+
+The event-conditioned query is formed after observ-ing the target review event Ou,i at time t = τu,i ,with its item-identity channel masked on the user-side current-event path. Three controls quantify the contributions of item-identity grounding, semantic review content, and current-event metadata. 
+
+H.2 Control Variants 
+
+• w/o item identity in event : removes ei from all historical and item-side event representations 
+
+Φu,i,t (Eq. (6)) while retaining the text, image, and title encodings; numeric cues; modality-availability embedding; and time bin. The cur-rent target event is already identity-masked on the user-side query path. This variant therefore mea-sures the contribution of item-identity grounding outside that masked path. • w/o review content (expression-pattern only) :zeroes the pretrained encoder output Enc( Mu,i )
+
+for the current event, retaining only the modality availability pattern Au,i , rating r, numeric cues κ,and the time bin. This isolates the contribution of semantic review content from that of observation-pattern signals alone. • BSARec + current-event features : aug-ments BSARec’s query representation with the modality-availability pattern, rating, and time bin used by TS-SSM. These features are imple-mented as a conditioning token prepended to the BSARec attention sequence, isolating access to these three metadata fields from the remaining TS-SSM architecture. 
+
+H.3 Results 
+
+Table 14: Information boundary ablations on Toys & Games. ∆R@20 is relative to the full model.                               
+
+> Variant R@10 R@20 N@10 N@20 ∆R@20 TS-SSM (full) .1162 .1683 .0781 .0912 —w/o item identity in event .1144 .1657 .0769 .0898 −1.55%
+> w/o review content (pattern only) .1113 .1546 .0726 .0835 −8.14%
+> BSARec + current-event features .1117 .1493 .0706 .0798 −11 .29%
+> BSARec (reference) .1063 .1427 .0746 .0838 −15 .21%
+
+Table 15: BSARec + current-event features across all three primary datasets (Recall@20). The gap column reports the relative shortfall of BSARec+event versus TS-SSM.                 
+
+> Dataset BSARec BSARec+event TS-SSM Gap Toys & Games .1427 .1493 .1683 −11 .3%
+> Pet Supplies .1500 .1569 .1756 −10 .7%
+> Sports & Outdoors .0838 .0876 .0962 −9.0%
+
+H.4 Findings 
+
+Removing ei from the historical and item-side event representations (Table 14, row 2) reduces Re-call@20 by 1.55% , whereas removing all semantic review content reduces it by 8.14% (row 3). With the current target identifier masked on the user-side query path, the smaller identity ablation quantifies the background semantic grounding supplied by item embeddings. The pattern-only variant remains 
+
+8.3% above bare BSARec in relative terms, indicat-ing that expression-pattern signals retain predictive value without semantic review content. BSARec with the modality-availability pattern, rating, and time bin improves over bare BSARec by 
+
+4.5% –4.7% across the three datasets and remains 
+
+9.0% –11 .3% below TS-SSM (Table 15). This comparison situates the contribution of current-event metadata alongside filtered state updates, observation-pattern-aware aggregation, carryover memory, and local propagation. Table 12: Statistical robustness on Toys & Games over 30 runs. 
+
+Method R@20 (mean ±std) p-value 95% CI (diff) Cohen’s dz Significant IPS .1283 ± .0034 < 10 −13 [.0389, .0411] 14.2 Yes DR .1317 ± .0033 < 10 −13 [.0356, .0376] 13.6 Yes AutoDebias .1351 ± .0029 < 10 −13 [.0322, .0342] 13.0 Yes CausE .1334 ± .0036 < 10 −11 [.0339, .0359] 12.6 Yes Deconfounded .1344 ± .0032 < 10 −12 [.0329, .0349] 13.2 Yes MACR .1372 ± .0028 < 10 −13 [.0301, .0321] 11.7 Yes SASRec .0924 ± .0048 < 10 −15 [.0741, .0777] 15.9 Yes BERT4Rec .0934 ± .0052 < 10 −14 [.0729, .0769] 13.7 Yes CL4SRec .1197 ± .0041 < 10 −11 [.0471, .0501] 11.8 Yes DuoRec .1362 ± .0035 < 10 −9 [.0309, .0333] 9.9 Yes FEARec .1390 ± .0032 < 10 −8 [.0281, .0305] 9.3 Yes BSARec .1427 ± .0029 < 10 −9 [.0247, .0265] 10.1 Yes 
+
+TS-SSM .1683 ± .0020 — — — —
+
+Table 13: Statistical robustness on Pet Supplies over 10 independent runs. 
+
+Method R@20 (mean ±std) p-value 95% CI (diff) Cohen’s dz Significant IPS .1351 ± .0035 < 10 −8 [.0383, .0427] 13.1 Yes DR .1384 ± .0034 < 10 −8 [.0351, .0393] 12.4 Yes AutoDebias .1420 ± .0031 < 10 −7 [.0316, .0356] 12.0 Yes CausE .1402 ± .0035 < 10 −7 [.0332, .0376] 11.5 Yes Deconfounded .1413 ± .0032 < 10 −7 [.0322, .0364] 11.8 Yes MACR .1442 ± .0031 < 10 −7 [.0294, .0334] 11.2 Yes SASRec .0971 ± .0054 < 10 −9 [.0752, .0818] 16.9 Yes BERT4Rec .0981 ± .0059 < 10 −9 [.0738, .0812] 15.1 Yes CL4SRec .1258 ± .0046 < 10 −8 [.0470, .0526] 12.5 Yes DuoRec .1431 ± .0038 < 10 −7 [.0301, .0349] 9.8 Yes FEARec .1461 ± .0035 < 10 −7 [.0273, .0317] 9.4 Yes BSARec .1500 ± .0031 < 10 −7 [.0236, .0276] 9.1 Yes 
+
+TS-SSM .1756 ± .0024 — — — —
+
+I Model Scale, Efficiency, and Deployment 
+
+TS-SSM adds catalog-wide dynamic item-state maintenance and user-centered local propagation to the user-side sequence model, making it more computationally involved than lightweight sequen-tial baselines. Table 16 reports trainable parameter count, per-epoch training time, per-query inference latency, and peak training memory measured under the same Toys & Games evaluation setup. 
+
+Table 16: Parameter count and computational cost on Toys & Games under a common evaluation setup. #Params counts trainable parameters only; the frozen MiniLM (22.7M) and CLIP ViT-B/32 (151M) feature extractors run in offline preprocessing and are excluded for every model. Peak GPU memory is the training maximum at batch size 128.                                         
+
+> Model #Params Train (s/epoch) Inference (ms/query) Peak GPU Mem (GB) SASRec 4.7M 27.4 1.4 2.13 BSARec 4.7M 29.3 1.9 2.38 MMGCN 10.8M 241.7 11.3 7.82 BM3 13.2M 183.6 8.1 6.27 HORAE 14.6M 219.3 9.4 6.94 HM4SR 15.3M 228.7 9.8 7.18 LLMRec 16.3M 298.4 13.7 9.51
+> TS-SSM 17.8M 197.3 8.6 7.64
+> RecGPT 21.4M 347.2 16.3 11.23
+
+All figures are measured on a single NVIDIA A100-SXM4-40GB (driver 535.104, CUDA 12.1, cuDNN 8.9) with an AMD EPYC 7543 host CPU, PyTorch 2.1.0, and Python 3.10.13, using mixed precision (AMP, bf16). Parameter counts are re-ported by each model builder and exclude the frozen MiniLM and CLIP encoders, which run only during offline preprocessing and receive no down-stream gradients. Training time is wall-clock time for one complete epoch, including forward and backward passes, mixed negative sampling, and AMP, but excluding validation. Inference latency is full-sort test-scoring wall-clock time divided by the number of test queries: candidates are processed in chunks of 4,096, 20 warmup batches are discarded, and the median of three runs is reported. It includes event encoding from cached MiniLM/CLIP fea-tures, item-state updates, bounded K = 20 propa-gation, and full-sort scoring, but excludes the one-time offline feature-extraction pass. Peak GPU memory is the maximum reserved during training at batch size 128; TS-SSM’s corresponding infer-ence peak is 3.91 GB. TS-SSM is more expensive than SASRec and BSARec because it maintains dynamic item states and includes local message passing. Its 197.3 sec-onds per epoch and 8.6 ms per query are close to BM3 and lower than MMGCN, HORAE, HM4SR, LLMRec, and RecGPT in the measured setup. The similarly sized BM3 comparison and the BSARec current-event control provide reference points for model scale and input availability. The reported training and evaluation implemen-tation processes reviews chronologically, updates the corresponding item state when each review ar-rives, and retains the resulting catalog-wide state collection for subsequent queries. The maintained states and carryover summaries can be cached for serving. Local propagation remains bounded to 
+
+K = 20 neighbors, and an approximate-nearest-neighbor stage can retrieve a candidate set before TS-SSM reranking. These choices limit online work while introducing deployment-specific mem-ory and energy tradeoffs. 
+
+J Extended Ablation Study 
+
+Table 17 extends the main ablation with grouping alternatives, gate variants, and auxiliary-loss re-moval. Table 18 separately tests whether signed carryover requires different positive and negative decay rates. 
+
+Table 18: Carryover-decay ablation on Amazon Toys & Games. The symmetric variant sets λ+ = λ− = 0 .20 ,the average of the default initial values 0.25 and 0.15.                 
+
+> Variant R@10 R@20 N@10 N@20 ∆R@20 TS-SSM (asymmetric) .1162 .1683 .0781 .0912 —Symmetric ( λsym = 0 .20 ).1143 .1657 .0766 .0895 −1.55%
+
+Symmetric versus asymmetric carryover. Sym-metric carryover retains more performance than removing carryover entirely (.1657 in Table 18 ver-sus .1646 in Table 3), indicating that persistent memory remains useful without sign-specific decay. The full asymmetric model reaches .1683. Thus, of the descriptive .0037 Recall@20 gap between no carryover and the full model, the symmetric variant recovers .1657 − .1646 = .0011 (approximately 30%), while the remaining asymmetric-decay dif-ference is .1683 − .1657 = .0026 (approximately 70%). Because these ablations are non-additive, the percentages are not a causal allocation of model performance. 
+
+Component roles. The item-state update main-tains a post-event representation for every item from its accumulated review events, while the user-state update incorporates each event relative to the user’s prior expression pattern. Weighted local mes-sage passing brings text-conditioned evidence from prefix and neighboring items into the user query, and observation-pattern-aware weights modulate their aggregate influence. Deviation features dis-tinguish routine expression from atypical events, such as an image upload by a user whose history is otherwise text-only. Carryover memory retains review shocks and allows negative evidence to per-sist differently from positive evidence. The drift, carryover, and reliability objectives regularize tem-poral changes, persistent memory, and confidence weights alongside the ranking objective. The train-only three-group partition outperforms 
+
+G = 1 and each alternative grouping criterion. Learned gating also outperforms every fixed in-terpolation, supporting the use of the reliability-conditioned update gate γ.
+
+Behavioral deviation decomposition. Table 19 isolates the two deviation channels used in the user-side correction. The joint removal is smaller than the sum of the two marginal drops, indicating par-tial substitutability. 
+
+Table 19: Effect decomposition of behavioral deviation signals on Toys & Games.                     
+
+> Configuration R@10 R@20 N@20 ∆R@20 Full model .1162 .1683 .0912 —w/o image deviation only .1148 .1659 .0897 −1.43%
+> w/o text length only .1139 .1650 .0893 −1.96%
+> w/o both (image + text) .1135 .1644 .0891 −2.32%
+
+Table 17: Extended ablation study on Amazon Toys & Games. 
+
+Variant R@10 R@20 N@10 N@20 ∆R@20 
+
+TS-SSM (Full) .1162 .1683 .0781 .0912 —
+
+User-side components 
+
+w/o User State Update .1133 .1641 .0759 .0887 −2.50% 
+
+w/o Deviation Features .1140 .1651 .0765 .0894 −1.90% 
+
+Item-side components 
+
+w/o Item State Update .1119 .1624 .0751 .0878 −3.50% 
+
+w/o Message Passing .1130 .1636 .0758 .0885 −2.79% 
+
+w/o Carryover Memory .1137 .1646 .0764 .0892 −2.20% 
+
+Grouping alternatives 
+
+G = 1 (No Grouping) .1126 .1641 .0754 .0884 −2.50% 
+
+Random Groups .1135 .1644 .0763 .0891 −2.32% 
+
+Review-Length Groups .1144 .1656 .0769 .0898 −1.60% 
+
+Activity-Based Groups .1141 .1652 .0767 .0896 −1.84% 
+
+Gate variants 
+
+Fixed γ = 0 .0 (Group Only) .1145 .1658 .0769 .0898 −1.48% 
+
+Fixed γ = 0 .5 .1149 .1664 .0773 .0903 −1.13% 
+
+Fixed γ = 1 .0 (No Gating) .1153 .1669 .0775 .0905 −0.83% 
+
+Auxiliary supervision contribution 
+
+w/o Auxiliary Losses .1147 .1661 .0771 .0900 −1.31% 
+
+K Sensitivity Analysis 
+
+Table 20 reports sensitivity to the main design choices on Toys & Games. 
+
+L Auxiliary-Loss Weight Sensitivity 
+
+The default auxiliary coefficients are λdrift = 0 .08 ,
+
+λcarry = 0 .05 , and λrel = 0 .03 . We vary one coefficient at a time on Amazon Toys & Games while holding the other two fixed at their defaults. Each sweep spans more than an order of magnitude. The largest reduction across all fifteen non-default settings is 1.43% , and the central settings remain within 1% of the default. The auxiliary terms therefore behave as stable regularizers over the evaluated ranges rather than precision-sensitive tuning parameters. 
+
+M Encoder Backbone Sensitivity 
+
+We vary the frozen text and image feature extrac-tors while keeping the TS-SSM architecture and remaining hyperparameters fixed. The text com-parison uses Amazon Toys & Games. The image comparison uses both Toys & Games (8.1% image rate) and Clothing (18.7% image rate). 
+
+Table 22: Text-encoder sensitivity on Amazon Toys & Games. ∆ is relative to the default encoder.                   
+
+> Text encoder Dim. #Params R@20 ( ∆)all-MiniLM-L6-v2 (default) 384 22.7M .1683 (—) sentence-t5-base 768 110M .1698 ( +0 .89% )e5-base-v2 768 109M .1703 ( +1 .19% )sentence-t5-large 1024 335M .1714 ( +1 .84% )e5-large-v2 1024 335M .1719 ( +2 .14% )
+
+Table 23: Image-encoder sensitivity on categories with lower and higher image-upload rates.             
+
+> Image encoder #Params Toys R@20 Clothing R@20 CLIP ViT-B/32 (default) 151M .1683 .1653 CLIP ViT-L/14 428M .1695 .1674 Relative change —+0 .71% +1 .27%
+
+Increasing text-encoder capacity by approxi-mately 15 ×, from 22.7M to 335M parameters, improves Recall@20 by at most 2.14% . Increas-ing image-encoder capacity by approximately 3×,from CLIP ViT-B/32 (151M) to ViT-L/14 (428M), yields gains of 0.71% on Toys and 1.27% on Cloth-ing. The larger image gain in Clothing is con-sistent with its higher image-upload rate, but the two-category comparison is descriptive and does not establish a causal relationship between image prevalence and encoder scaling. Across the tested backbones, the largest encoders provide only mod-est gains over the default encoders. Table 20: Sensitivity analysis on Amazon Toys & Games. 
+
+Setting R@10 R@20 N@10 N@20 
+
+Shrinkage λs
+
+λs = 1 .1136 .1637 .0743 .0869 
+
+λs = 5 .1143 .1650 .0755 .0883 
+
+λs = 10 .1151 .1659 .0764 .0892 
+
+λs = 20 .1157 .1673 .0773 .0903 
+
+λs = 30 .1160 .1680 .0777 .0908 
+
+λs = 50 .1162 .1683 .0781 .0912 
+
+λs = 70 .1158 .1674 .0772 .0902 
+
+λs = 100 .1159 .1676 .0774 .0904 
+
+λs = 150 .1154 .1661 .0765 .0893 
+
+λs = 200 .1147 .1649 .0756 .0882 
+
+Norm bound αα = 0 .05 .1147 .1651 .0757 .0884 
+
+α = 0 .08 .1157 .1666 .0771 .0899 
+
+α = 0 .10 .1158 .1664 .0775 .0902 
+
+α = 0 .12 .1161 .1681 .0779 .0910 
+
+α = 0 .15 .1162 .1683 .0781 .0912 
+
+α = 0 .18 .1160 .1679 .0778 .0909 
+
+α = 0 .20 .1157 .1672 .0770 .0900 
+
+α = 0 .25 .1148 .1655 .0756 .0884 
+
+Number of user groups GG = 1 .1126 .1641 .0754 .0884 
+
+G = 2 .1155 .1668 .0773 .0902 
+
+G = 3 .1162 .1683 .0781 .0912 
+
+G = 5 .1159 .1675 .0777 .0907 
+
+G = 7 .1158 .1677 .0773 .0904 
+
+G = 10 .1150 .1659 .0760 .0888 
+
+Warmup epochs 
+
+0 .1143 .1654 .0761 .0890 5 .1153 .1670 .0771 .0901 8 .1162 .1683 .0781 .0912 
+
+10 .1161 .1681 .0780 .0911 15 .1160 .1679 .0778 .0909 20 .1154 .1669 .0771 .0901 25 .1151 .1671 .0767 .0898 
+
+N MNAR-Gating versus Simple Observation-Pattern Features 
+
+N.1 Motivation 
+
+We compare the learned MNAR-gated fusion mech-anism with a binary indicator-feature baseline to distinguish observation-pattern-aware weighting from simple modality-availability feature injection. 
+
+N.2 Variants 
+
+• Missingness indicator only : re-places the full MNAR-gated fusion module fmod (Enc( Mu,i ), A u,i ) with simple binary feature concatenation: 
+
+[⊮[has_image ]; ⊮[text_length > 2σu]] ap-pended to the event embedding without any learned weighting over modality content. • No observation pattern : removes all use of Au,i 
+
+and the deviation signals δUu,t , δ Ii,t , reducing event encoding to pretrained content embeddings, rat-ing, and time bin only. This mirrors how standard review-aware recommenders treat observation as uniformly informative. 
+
+N.3 Results 
+
+Table 24: MNAR-gating ablation on Amazon Toys & Games.                     
+
+> Variant R@10 R@20 N@10 N@20 ∆R@20 TS-SSM (full MNAR gating) .1162 .1683 .0781 .0912 —Missingness indicator only .1127 .1633 .0756 .0883 −2.97%
+> No observation pattern .1097 .1613 .0742 .0872 −4.16%
+
+N.4 Findings 
+
+Replacing learned gated weighting with binary in-dicators reduces Recall@20 from .1683 to .1633, a 2.97% drop relative to the full model; the 30-seed comparison gives p < 10 −7. Removing all observation-pattern signals further reduces Re-call@20 to .1613. The no-pattern variant remains Table 21: One-at-a-time sensitivity of Recall@20 to the three auxiliary-loss coefficients on Amazon Toys & Games. 
+
+∆ is relative to the default full model (.1683).                                              
+
+> λdrift 0.02 0.04 0.08 0.16 0.32 R@20 .1663 .1674 .1683 .1679 .1671
+> ∆−1.19% −0.53% —−0.24% −0.71%
+> λcarry 0.01 0.025 0.05 0.10 0.20 R@20 .1659 .1671 .1683 .1676 .1665
+> ∆−1.43% −0.71% —−0.42% −1.07%
+> λrel 0.005 0.015 0.03 0.06 0.12 R@20 .1664 .1674 .1683 .1676 .1661
+> ∆−1.13% −0.53% —−0.42% −1.31%
+
+approximately 13 .0% above BSARec (.1427), indi-cating that dynamic item-state updates, carryover, event-level content, and local propagation retain predictive value without observation-pattern fea-tures. These comparisons support the predictive value of learned observation-pattern-aware weight-ing; causal mechanisms for review missingness remain outside their scope. 
+
+O Review Text as a Dynamic versus Static Signal 
+
+O.1 Motivation 
+
+TS-SSM uses frozen pretrained encoders: all-MiniLM-L6-v2 for review text and title and CLIP ViT-B/32 for images. To distinguish dynamic use of review language from static feature injection, we compare event-level review encodings with item-level text aggregates and text-removed variants in both the current-event representation and the user-and item-history sequences. 
+
+O.2 Variants 
+
+• w/o review body (title only) : zeroes the re-view body text embedding Enc rev (Mu,i ), retain-ing title and image encodings. Like the review body, the title is encoded per event from the re-view record (Section 3.1), so this variant isolates the marginal contribution of the longer, event-specific review body beyond the shorter, event-specific title text. • Static text features : replaces per-event review-text encodings with item-level averages com-puted over all training reviews: ¯erev  
+
+> i
+
+= 
+
+> 1
+> |Htrain
+> i|
+
+P 
+
+> eu′,i ∈Htrain
+> i
+
+Enc rev (Mu′,i ). Each event receives the same representation for item i,matching the pre-aggregated item-side text used by static multimodal baselines such as BM3 and LATTICE. • No text features : zeroes all text from every event in both history and current encoding, leaving only item embeddings, image features, rating, numeric cues, modality availability, and time bin. 
+
+O.3 Results 
+
+Table 25 reports the review-text ablation results on Amazon Toys & Games. The full model with dynamic per-event text achieves .1683 Re-call@20. Replacing per-event review text with a static item-level mean-pooled representation re-duces Recall@20 to .1638, a relative decrease of 2.67%. Using review titles only yields .1641, while removing all text features further reduces Recall@20 to .1577, corresponding to a 6.30% de-crease. 
+
+O.4 Findings 
+
+Dynamic per-event text achieves .1683 Recall@20, compared with .1638 for static item-level mean-pooled text, a 2.67% reduction relative to the full model. The two variants use the same pretrained encoder and differ in whether review representa-tions vary by event, so the comparison supports the predictive value of temporal and event-specific review content. The title-only variant, which like-wise encodes title text per event rather than as a fixed item-level attribute, reaches .1641 ( −2.49% ), close to the static all-text variant. Removing all text reduces Recall@20 to .1577 (−6.30% ), a larger decrease than that caused by removing any single architectural component in Table 3. Review text is therefore a major predic-tive input under this evaluation. Together, these results distinguish TS-SSM’s event-level treatment of review language from static item-level text ag-gregation without attributing the difference to a causal mechanism. Table 25: Review text contribution ablation on Amazon Toys & Games. ∆R@20 is relative to the full model.                          
+
+> Variant R@10 R@20 N@10 N@20 ∆R@20 TS-SSM (dynamic per-event text) .1162 .1683 .0781 .0912 —w/o review body (title only) .1133 .1641 .0762 .0890 −2.49%
+> Static text (train mean-pool per item) .1130 .1638 .0759 .0887 −2.67%
+> No text features .1087 .1577 .0729 .0852 −6.30%
+
+P Subgroup Analysis 
+
+Reliability gate activation patterns. Table 26 reports one gate evaluation for every event in all splits, so its event counts sum to all 611,908 Toys & Games interactions. Here observable history is the number |H u,t − | of the user’s own events strictly before the query, clipped at the encoder limit of 64. The smallest bucket also includes the 35,690 empty-history first events, which use the learned empty-history state. Mean γ increases from 0.26 in this smallest bucket to 0.75 for histories of 21–50 events, consistent with the gate assigning greater weight to individual corrections when deviation estimates are supported by longer histories. 
+
+Performance by observable history length. For the test-only analysis in Table 27, observable his-tory instead denotes the number of the user’s own events in the trailing 12 monthly bins strictly be-fore the test query. This recency-restricted support can be below five even after 10-core filtering: the 10-core condition requires at least ten lifetime in-teractions in the stabilized graph, whereas earlier interactions can fall outside the 12-bin window. The relative gain over BSARec grows with this recent-history support. 
+
+Q Long-Tail Item Analysis 
+
+TS-SSM’s larger relative gain on long-tail items suggests that the item-side temporal state and reliability-weighted propagation recover signal when item evidence is sparse. 
+
+R Qualitative Analysis: Gate Activation and Carryover Persistence 
+
+R.1 User-Side Deviation Gate 
+
+We select a representative test-split user from Toys & Games (28 reviews in training history, per-sonal image-upload rate 2.9%, mean review length 138 words) whose final test event at time t ex-hibits strong behavioral deviation: 2 images up-loaded, 571-word review, 2-star rating for a multi-component board game accessory. The deviation gate activates at γUu,t = 0 .79 . Within the 21–50-event bucket (mean 0.75, standard deviation 0.06), the empirical P90 threshold is 0.786; the case lies at the 91.2nd percentile and therefore just inside the top decile (Table 26). Table 29 compares the top-5 candidate rankings produced by the full model against the variant with the deviation gate fixed at γU ≡ 0 (group-level trend only, no event-conditioned innovation). The substantive difference lies in the treatment of the same-subcategory accessory cluster: without the deviation gate, the model over-weights items in the reviewed category because the group-level trend suggests the user has repeatedly engaged with that subcategory. The high-deviation negative re-view ( γU = 0 .79 ) causes the full model to move Items D and E down by three rank positions in fa-vor of alternatives with higher standalone quality signals, consistent with the interpretation that the gate captures the degree to which the current event constitutes a departure from the user’s expressed preference state. 
+
+R.2 Item-Side Carryover Persistence 
+
+We select a test-split item from Pet Supplies with 89 prior reviews (median-frequency tier) that receives a concentrated shock at bin t0 (October 2021): 4 negative reviews (all 1–2 stars) in a single monthly bin citing product durability failure. Prior to the shock, the item’s trailing 3-month mean rating is 4.3; post-shock mean rating in bin t0 drops to 3.6. The default negative initialization λ− = 0 .15 
+
+corresponds to a reference half-life of ln 2 /0.15 = 4.62 bins (Figure 1, Panel 4). Under this ref-erence decay, a negative shock retains exp( −3 ·
+
+ln 2 /4.62) = 0 .638 of its initial weight at t0 + 3 .Table 30 traces the item’s full-catalog ranking posi-tion at five post-shock evaluation points for users who interacted with related items in the same cate-gory, comparing full TS-SSM against the w/o Car-ryover Memory variant. The rank trajectory uses the selected Pet Sup-plies checkpoint, whose learned negative decay is λ− = 0 .1156 (Table 7); the reference-weight Table 26: Reliability-gate activation patterns on Toys & Games. Observable history is the per-event count |H u,t − |;P90 is the empirical top-decile γ threshold within each bucket.                                              
+
+> Observable history #Events Mean γMedian γ%γ > 0.5%γ > 0.7P90 γ
+> 0–3 events 51,423 0.26 0.22 9.4% 2.2% 0.494 4–10 events 142,587 0.48 0.46 39.1% 13.4% 0.723 11–20 events 176,894 0.61 0.63 65.8% 30.2% 0.751 21–50 events 148,629 0.75 0.77 83.2% 57.6% 0.786
+> >50 events 92,375 0.83 0.85 91.9% 74.3% 0.901
+
+Table 27: Performance by observable history length (Recall@20, Toys & Games). Here observable history is the number of a user’s own events within the trailing 12 monthly bins strictly before the test query; 10-core constrains lifetime rather than this recency-restricted count.                        
+
+> User group #Test events BSARec TS-SSM Improvement Gate ¯γ
+> Short history ( <5)12,846 .1118 .1185 +6.0% 0.26 Medium history (5–20) 15,236 .1391 .1530 +10.0% 0.53 Long history ( >20 )7,608 .1674 .1908 +14.0% 0.73
+
+column in Table 30 deliberately retains the initial-ization value 0.15 for comparison. Table 31 gives both attenuation curves at the same horizons. The full model’s suppression of the item’s cata-log rank is strongest immediately after the shock (rank 51 vs. 28, a 23-position gap) and dimin-ishes over subsequent evaluation points. At t0 +18 , the two variants converge to rank 23. The learned checkpoint nevertheless retains approxi-mately 50%, 25%, and 12.5% of a negative shock after 6, 12, and 18 bins, respectively, compared with 41%, 17%, and 7% under the initialization reference. Its fitted negative half-life is 6.00 bins, whereas its fitted positive half-life is 2.48 bins. The learned decay therefore makes negative feedback more persistent than the initialization reference while preserving the model’s intended sign asym-metry. 
+
+S Error Analysis 
+
+Table 32 presents a taxonomy of the top-100 pre-diction errors made by TS-SSM on Toys & Games. The dominant failure mode is false deviation, where the model over-trusts a behavior that looks unusual but is not actually informative for the next ranking decision. Conflicts between user-side and item-side signals remain the most model-specific failure pattern and suggest a clear direction for future refinement. 
+
+T Extended Related Work 
+
+We provide extended discussion of related work across several research areas. 
+
+T.1 Sequential Recommendation 
+
+Sequential recommendation models user behav-ior as temporally ordered sequences to capture dynamic preferences. Early neural approaches employed recurrent architectures: GRU4Rec (Hi-dasi et al., 2016) applied Gated Recurrent Units to session-based recommendation, demonstrating that modeling entire sessions outperforms item-to-item methods. Subsequent work explored con-volutional (Tang and Wang, 2018) and memory-augmented (Chen et al., 2018) architectures. Self-attention provides an alternative to recur-rent and convolutional sequence encoders. SAS-Rec (Kang and McAuley, 2018) adapts the Trans-former architecture (Vaswani et al., 2017) to se-quential recommendation through causal attention, while BERT4Rec (Sun et al., 2019) uses bidi-rectional attention with masked-item prediction. Subsequent work incorporates contrastive learn-ing (Zhou et al., 2020; Xie et al., 2022), foundation models (Jiang et al., 2025), LLMs (Hou et al., 2026; Na et al., 2024), and flexible positional embeddings for length extrapolation (Chi et al., 2024). TS-SSM models both the item sequence and the observation-pattern sequence, including modality choices and content lengths. 
+
+T.2 Multimodal Recommendation 
+
+Multimodal recommendation incorporates diverse content signals to enrich item and user representa-tions. VBPR (He and McAuley, 2016) integrates visual features into Bayesian Personalized Ranking. MMGCN (Wei et al., 2019) constructs modality-specific user–item graphs, while LightGCN (He Table 28: Popularity-stratified performance on Toys & Games. Popularity is the item’s train-only review count 
+
+ctrain  
+
+> j
+
+, the quantity used for item grouping and popularity sampling. Because leave-last-two-out removes each user’s last two events from training, ctrain  
+
+> j
+
+< 10 is consistent with 10-core, which constrains lifetime rather than train-split counts.                         
+
+> Item popularity #Items #Test events BSARec TS-SSM Improvement Long-tail ( <10 reviews) 14,832 8,421 .1007 .1113 +10.5% Medium (10–100 reviews) 11,246 18,734 .1449 .1591 +9.8% Popular ( >100 reviews) 2,452 8,535 .1780 .1895 +6.5%
+
+Table 29: Top-5 non-target candidate rankings: full model vs. w/o deviation gate ( γU ≡ 0). The target test item is ranked first in both conditions and is excluded from display.             
+
+> Rank Full TS-SSM w/o Deviation Gate 1Item A — strategy board game, 4.7 ⋆, different subcategory Item D — accessory set (same subcat.), 4.0 ⋆
+> 2Item B — puzzle game, 4.8 ⋆, different subcategory Item E — accessory bundle (same subcat.), 4.3 ⋆
+> 3Item C — card game, 4.6 ⋆, different subcategory Item A — strategy board game, 4.7 ⋆
+> 4Item D — accessory set (same subcat.), 4.0 ⋆Item B — puzzle game, 4.8 ⋆
+> 5Item E — accessory bundle (same subcat.), 4.3 ⋆Item F — accessory expansion (same subcat.), 4.1 ⋆
+
+et al., 2020) studies simplified graph convolution for collaborative filtering. LATTICE (Zhang et al., 2021) and subsequent work (Zhou and Shen, 2023) model latent structure across modalities, and multi-modal foundation models have also been applied to recommendation (Geng et al., 2023). More broadly, message passing has been used to propagate infor-mation under complex network interactions (Bayati et al., 2024; Shirani et al., 2025). TS-SSM uses local graph message passing to propagate review-induced preference information through item rela-tionships and refine the user state. Related multimodal sentiment work uses con-trastive learning for fusion representations (Nguyen et al., 2023) and studies dynamic modality atten-tion (Feng et al., 2024) and modality imbalance (Bi et al., 2025). Missing-modality methods typically impute or marginalize absent information (Guo et al., 2024). TS-SSM instead represents the observation pattern itself: for example, an image upload can be in-formative when it deviates from the user’s usual modality use. This formulation draws on the Miss-ing Not At Random (MNAR) framework (Little and Rubin, 2019; Rubin, 1976) but uses missing-ness patterns for prediction rather than causal iden-tification or missing-data correction. 
+
+T.3 Handling Missing Data in Recommendations 
+
+Missing data is pervasive in recommender systems, manifesting as unobserved ratings, absent features, and incomplete user histories. Classical collabora-tive filtering commonly treats unobserved entries as uninformative, an assumption related to Missing At Random (MAR) (Marlin et al., 2007). In practice, users self-select which items to rate, and this se-lection may correlate with their preferences (Steck, 2010). Inverse propensity scoring (Schnabel et al., 2016) and doubly robust estimators (Wang et al., 2019) address selection bias by reweighting ob-served samples. More broadly, recent work studies missingness endogenously driven by latent factors (Xiong and Pelger, 2023; Duan et al., 2024a,b; Li et al., 2024a,b, 2025a; Chen et al., 2026). For multimodal settings, attention mecha-nisms (Chen et al., 2017) and gated fusion (Wei et al., 2019) handle missing modalities by dy-namically adjusting contribution weights. Re-cent work on prompt learning addresses missing modalities through generative and missing-signal prompts (Guo et al., 2024). Most closely related are Liang et al. (2025, 2026), which explicitly model informative modality missingness in multimodal EHRs. We extend this perspective to sequential rec-ommendation, where modality availability and ex-pression patterns evolve with user and item states. UGC studies report associations between review effort, sentiment extremity, and perceived helpful-ness (Hu et al., 2009; Mudambi and Schuff, 2010; Ghose and Ipeirotis, 2011). TS-SSM therefore treats modality use and expression patterns as pre-dictive features. This interpretation is associational: it does not assume that latent preference is the sole cause of review effort or modality availability. Table 30: Post-shock catalog rank trajectory for a Pet Supplies item with concentrated negative feedback. Lower rank = better.                                                 
+
+> Months after shock Full TS-SSM rank w/o Carryover rank Reference weight ( λ−=.15 )
+> t0+ 1 (Nov 2021) 51 28 0.861
+> t0+ 3 (Jan 2022) 46 33 0.638
+> t0+ 6 (Apr 2022) 37 29 0.407
+> t0+ 12 (Oct 2022) 27 25 0.165
+> t0+ 18 (Apr 2023) 23 23 0.067
+> Table 31: Retained weight of a negative shock at post-shock horizons under the 0.15 reference decay and the learned Pet Supplies value λ−=0 .1156 .
+> Bins after shock +1 +3 +6 +12 +18
+> Reference ( λ−=.15 )0.861 0.638 0.407 0.165 0.067 Learned ( λ−=.1156 )0.891 0.707 0.500 0.250 0.125
+
+T.4 Temporal Dynamics in Recommendations 
+
+User preferences and item characteristics evolve over time, motivating temporal modeling in rec-ommender systems. Koren’s seminal work (Ko-ren, 2010) introduced time-drifting parameters into matrix factorization. Subsequent approaches model temporal dynamics through recurrent archi-tectures (Hidasi et al., 2016), time-aware atten-tion (Li et al., 2020), and continuous-time point pro-cesses (Kumar et al., 2019). TS-SSM discretizes time into bins and uses population-level statistics to represent shared temporal variation. This decompo-sition combines group-level trends with individual deviations from those trends. 
+
+T.5 User-Generated Content and Intent Analysis 
+
+Research on user-generated content (UGC) shows that expression patterns can carry information be-yond review content. Hu et al. (Hu et al., 2009) documented the J-shaped distribution of online rat-ings, where extreme opinions are over-represented. Mudambi and Schuff (Mudambi and Schuff, 2010) found that review length and depth correlate with perceived helpfulness. Ghose and Ipeirotis (Ghose and Ipeirotis, 2011) showed that textual features predict review helpfulness and economic impact. Recent NLP work has advanced user intent un-derstanding, particularly in e-commerce settings where usage-centric approaches model how cus-tomers use products rather than just what they purchase (Zhou et al., 2024). Understanding user susceptibility to information and modeling behav-ioral patterns has also received attention (Liu et al., 2024). 
+
+T.6 LLM-based Personalization and Recommendation 
+
+Large language models are increasingly used for personalized recommendation. The LaMP bench-mark (Salemi et al., 2024) evaluates LLM personal-ization across multiple tasks, while LLM-Rec (Lyu et al., 2024) studies prompting strategies for person-alization. Other work applies foundation models to sequential recommendation (Jiang et al., 2025) and uses pseudo-label reconstruction (Na et al., 2024). Safety work on difference-aware LLMs further shows that improving context-sensitive distinc-tions can induce harmful drift in generated ra-tionales, motivating explicit audit-and-repair safe-guards (Pan et al., 2026). This issue is orthogonal to TS-SSM’s non-generative ranking setting but is relevant to future generative personalization or recommendation-explanation extensions. Research on metacognitive prompting examines whether introspection-inspired prompts improve LLM reasoning (Wang and Zhao, 2024). TS-SSM addresses a different setting: it represents image uploads and review length relative to each user’s historical baseline. These behavior-relative fea-tures provide predictive information that is absent from static item-level representations, without im-plying a specific cognitive mechanism. 
+
+T.7 Shared Representation and Multitask Learning 
+
+Our work is related to multitask learning, which exploits shared representations across related learn-ing objectives (Bengio et al., 2013). Such sharing reflects a classical bias–variance tradeoff: shared representations can improve generalization when data are sparse, while excessive sharing may ob-Table 32: Top-100 error taxonomy for TS-SSM on Amazon Toys & Games.                             
+
+> Failure pattern Count %BSARec also fails? Potential mitigation False deviation 28 28% 25/28 Temporal consistency checks Extreme sparsity 23 23% 20/23 More conservative group reliance Conflicting signals 15 15% 6/15 Signal reconciliation Cold-start items 12 12% 10/12 Item-side modeling Conformity / burst effects 10 10% 4/10 Social/context features Mixed / unknown 12 12% 5/12 —
+
+scure task-specific heterogeneity. Related hierar-chical approaches in recommendation balance this tradeoff by sharing information across users while retaining individual variation (Park and Chu, 2009). In TS-SSM, review information is shared across coupled user- and item-state evolution, while each side retains its own transition mechanism. TS-SSM also uses auxiliary learning: the pri-mary ranking objective is jointly trained with ob-jectives for temporal drift, review carryover, and reliability. Such shared learning can enable posi-tive transfer, but excessive sharing across heteroge-neous objectives may lead to negative transfer (Wu et al., 2020; Yang et al., 2025). Recent work on task modeling (Li et al., 2023a,b; Zhang et al., 2026b) and adaptive task-specific learning (Li et al., 2024c,d, 2025b; Zhang et al., 2026a) provides re-lated approaches for balancing shared and task-specific information.

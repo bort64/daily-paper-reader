@@ -1,0 +1,450 @@
+Title: SetMIR: Multi-Interest Retrieval as Set Prediction
+
+URL Source: https://arxiv.org/pdf/2608.30251v1
+
+Published Time: Tue, 01 Sep 2026 02:00:02 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# SetMIR: Multi-Interest Retrieval as Set Prediction 
+
+# Xiaodong Liu 
+
+Snap Inc. Bellevue, WA, USA xliu9@snapchat.com 
+
+# Congfei Zhang 
+
+Snap Inc. Bellevue, WA, USA czhang3@snapchat.com 
+
+# Hsiang-wei Chao 
+
+Snap Inc. Seattle, WA, USA hchao@snapchat.com 
+
+# Siman Wang 
+
+Snap Inc. Bellevue, WA, USA swang7@snapchat.com 
+
+# Xiao Bai 
+
+Snap Inc. Palo Alto, CA, USA xbai@snapchat.com 
+
+# Tong Zhao 
+
+Snap Inc. Bellevue, WA, USA tzhao@snapchat.com 
+
+# Jingxiao Ma 
+
+Snap Inc. Bellevue, WA, USA jma3@snapchat.com 
+
+# Wen Zhang 
+
+Snap Inc. Bellevue, WA, USA wzhang7@snapchat.com 
+
+# Zhe Liu 
+
+Snap Inc. Palo Alto, CA, USA zliu11@snapchat.com 
+
+# Shantanu Aggarwal 
+
+Snap Inc. Palo Alto, CA, USA saggarwal@snapchat.com 
+
+# Di Huang 
+
+Snap Inc. Santa Monica, CA, USA dhuang6@snapchat.com 
+
+# William Leach 
+
+Snap Inc. Seattle, WA, USA wleach@snapchat.com 
+
+# Yunzhi Zhou 
+
+Snap Inc. Palo Alto, CA, USA yzhou10@snapchat.com 
+
+# Yajun Wang 
+
+Snap Inc. Palo Alto, CA, USA ywang30@snapchat.com 
+
+# Jinchao Li 
+
+Snap Inc. Bellevue, WA, USA jli18@snapchat.com 
+
+# Yu Zhang 
+
+Snap Inc. Palo Alto, CA, USA yzhang3@snapchat.com 
+
+## Abstract 
+
+Embedding-based retrieval is at the core of industrial recommender systems, but a single user embedding is often too limited to capture a user’s diverse interests. Multi-interest retrieval addresses this by using multiple user embeddings, yet existing methods still suffer from two issues: interest collapse , where different embeddings learn the same interest, and static dispatch , where serving uses a fixed retrieval budget even when some embeddings are unnecessary. We propose SetMIR , which treats multi-interest retrieval as a set pre-diction problem. SetMIR encodes a user’s behavior history with a transformer and uses 𝐾 learnable queries to decode a set of user in-terests, each producing a retrieval embedding and a presence score. During training, Hungarian matching assigns targets to queries one-to-one, so matched queries learn distinct interests and the pres-ence head learns which queries are active. At serving time, SetMIR uses presence scores and query-level Non-Maximum Suppression (NMS) to issue only active, non-redundant ANN queries. On Snap’s Dynamic Product Ads (DPA) data, SetMIR outperforms four learned multi-interest retrievers on every metric while issuing 33% fewer ANN queries per request. Deployed as a new retrieval source in the DPA production stack, SetMIR lifts overall CVR by 3.1%, while lifting CTR by 44% and CVR by 51% over the item-to-item retrieval source with the same item embeddings, ANN index, and retrieval quota. 
+
+## CCS Concepts 
+
+• Information systems → Retrieval models and ranking ; Rec-ommender systems .
+
+## Keywords 
+
+Multi-interest retrieval, set prediction, recommender systems 
+
+> KDD ’27, ADS Track, Under Review, San Jose, CA, USA
+> 2027.
+
+ACM Reference Format: 
+
+Xiaodong Liu, Congfei Zhang, Hsiang-wei Chao, Siman Wang, Xiao Bai, Tong Zhao, Jingxiao Ma, Wen Zhang, Zhe Liu, Shantanu Aggarwal, Di Huang, William Leach, Yunzhi Zhou, Yajun Wang, Jinchao Li, and Yu Zhang. 2027. SetMIR: Multi-Interest Retrieval as Set Prediction. In Proceedings of The 33rd ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD ’27, ADS Track, Under Review). ACM, New York, NY, USA, 9 pages. 
+
+## 1 Introduction 
+
+The retrieval stage of a large-scale recommender selects a few thousand candidate items per request from a corpus of millions to billions; a downstream ranker then scores those candidates with a heavier model [3, 6]. The dominant retrieval architecture is a two-tower neural network: a user tower produces one embedding, an item tower indexes the catalog, and approximate-nearest-neighbor (ANN) search [5, 7, 10, 27] retrieves the top-𝑁 items by inner prod-uct or cosine similarity. A single user embedding is often too coarse for this task. A user may interact with streetwear, baby clothes, and skincare in the same week, yet an averaged representation favors dominant categories and misses narrower, short-lived ones. Multi-interest retrieval addresses this limitation by producing 𝐾 
+
+embeddings per user, each issuing an ANN query whose results are merged [2, 4, 14]. However, current methods usually have two draw-backs. First, interest collapse : the standard training signal [14] assigns each target to its closest interest by arg max 𝑘 ⟨𝑒 𝑘 , 𝑡 ⟩; mul-tiple targets can collide on the same query, unmatched queries receive no gradient, and the model can converge to only a few effective interests. Second, static dispatch : issuing ANN searches from all 𝐾 embeddings spreads a per-request retrieval budget 𝑁 
+
+across redundant or low-quality queries, and without a learned per-query quality signal, 𝐾 ANN calls may return fewer than 𝐾 
+
+meaningfully distinct candidate sets while still consuming the full budget. Recent methods add auxiliary regularizers [25, 28], but they arXiv:2608.30251v1 [cs.IR] 31 Aug 2026 KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Liu et al. 
+
+do not learn which of the 𝐾 embeddings should retrieve candidates for a particular user request. We propose SetMIR, a set-based multi-interest retrieval frame-work that predicts a variable-size set from a fixed-size bank of learnable queries: the target-set size is unknown, and the queries must coordinate so each captures a distinct element. A Hungar-ian matcher [12] assigns engaged targets to queries one-to-one, so each matched query receives a retrieval gradient while unmatched queries receive an explicit absence target. A per-query presence 
+
+score is supervised by the matcher (matched vs. unmatched) and gates which of the 𝐾 queries dispatch ANN searches at inference time. Our contributions are summarized as follows: 
+
+• We frame multi-interest retrieval as set prediction over 𝐾 
+
+learnable queries, which removes interest collapse at the training-objective level rather than through the auxiliary regularizers prior work relies on. 
+
+• We replace static dispatch with adaptive retrieval at serving time. Presence gating, followed by query-level NMS, acti-vates ˜ 𝐾 ≤ 𝐾 queries per request while keeping performance on par with all-𝐾 retrieval. 
+
+• Extensive offline experiments against learned multi-interest baselines, and an online A/B test in Snap DPA, demonstrate the effectiveness of SetMIR in a production recommender. 
+
+## 2 Related Work 
+
+Multi-interest retrieval. Multi-interest recommenders represent each user with multiple embeddings to capture the diverse interests reflected in their behavior history. Existing methods differ mainly in how these embeddings are constructed. MIND [14] uses capsule routing [20]; ComiRec uses multi-head self-attention [2]; SINE acti-vates a sparse subset of global prototypes [22]; MVKE introduces virtual-kernel experts [26]; DCM performs differentiable cluster-ing [4]; KuaiFormer appends learnable query tokens to a trans-former over the behavior sequence [17]; and PinnerSage derives interests from offline clustering of user behaviors [19]. Subsequent work further improves these models through hard-negative mining and contrastive learning objectives [25, 28]. We refer readers to Li et al. [16] for a broader survey of multi-interest recommendation. Despite these advances, two challenges remain in production retrieval. First, many methods use argmax-based target-to-query assignment [2, 14]. Multiple targets may then be assigned to the same query, while unmatched queries receive no training signal, leading to interest collapse . Second, most multi-interest retrievers use static dispatch , issuing a fixed number of ANN queries for every request regardless of how many user interests are active. Both persist in the deployed systems closest to SetMIR. KuaiFormer [17] at Kuaishou is the nearest in architecture, a transformer over the behavior sequence with learnable query tokens, and shows that this design is practical at production scale; SetMIR adopts the same family but replaces its argmax assignment and fixed ANN bud-get. DCM [4] reduces interest collapse through single-assignment clustering but still relies on static dispatch. SetMIR addresses both challenges by formulating multi-interest retrieval as set prediction. Hungarian matching provides one-to-one target assignment during training, while a per-query presence head provides explicit no-interest supervision and dynamically gates ANN queries at serving time. 
+
+Set prediction, multi-vector retrieval, and selection. Set pre-diction produces a variable-size output set from a fixed bank of learnable queries. DETR [1] popularized this formulation for object detection; Set Transformer [13], Perceiver IO [8], and Q-Former [15] extend the learnable-query paradigm to other domains. SetMIR adapts this paradigm to retrieval-stage recommendation. Specif-ically, SetMIR inherits DETR’s learnable query bank, Hungarian assignment, and explicit absence target for unmatched queries, but applies them to a different input and a different prediction target. DETR predicts boxes in a bounded continuous space, supervised by exhaustive annotation. Here the prediction is a vector in a frozen item-embedding space, supervised contrastively, and the ground truth is a user’s engagement in a future window, so an unmatched query indicates only that no further interest appears in that window. The presence score also acts at a different point: in detection every query is decoded and the absence class filters the output, whereas here it determines how many of the 𝐾 ANN searches are issued. Unlike ColBERT-style multi-vector retrieval [11, 21], where each 
+
+document is represented by many vectors with late interaction at scoring time, SetMIR keeps every item as a single vector and places multiplicity only on the user side, so existing single-vector ANN indices [5, 10] are reused without modification. Compared to differentiable top-𝑀 selection (e.g., Gumbel-Softmax [9]), the presence head supports a variable number of active queries per request and avoids the temperature schedule and straight-through estimator that top-𝑀 sampling requires. 
+
+## 3 Method 3.1 Problem statement 
+
+We frame multi-interest retrieval as set prediction over 𝐾 learnable queries. Given a user’s chronological engagement history H𝑢 =
+
+[𝑣 1, 𝑣 2, . . . , 𝑣 𝐿 ], where each 𝑣 𝑖 pairs an engaged product with an engagement type, the task is to recover the user’s multiple interests. The most recent high-intent products (e.g., purchase, add-to-cart, swipe-up) form the target set T𝑢 = {𝑡 1, . . . , 𝑡 𝑊 } ⊂ V , where V is the item universe. Earlier engaged products serve as model inputs. The number of targets 𝑊 varies across users and is unknown at inference time. The retrieval task is to return a top-𝑁 candidate list C𝑢 ⊆ V with high recall against T𝑢 under a serving budget: at most 𝐾 interest embeddings may query the item index per request. SetMIR therefore predicts a set of interest representations P𝑢 = {( 𝑒 𝑘 , 𝑝 𝑘 )} 𝐾 𝑘 =1, where 
+
+𝑒 𝑘 ∈ R𝑑 is an interest embedding and 𝑝 𝑘 ∈ [ 0, 1] is a presence score indicating whether query 𝑘 corresponds to a current user interest. 
+
+## 3.2 Architecture 
+
+Figure 1 illustrates the overall framework: an input embedder, a history encoder, and an interest decoder with two per-query output heads, detailed in the following paragraphs. 
+
+Input embedder. Each history product 𝑣 𝑖 is embedded by a frozen pretrained content-embedding model from its metadata (title, brand, category, image) into a content embedding ¯ 𝑥 𝑖 ∈ R𝑑 . We add a SetMIR KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Feed-Forward Self Attention Cross Attention to Query Self Attention Feed-Forward 
+
+> User History Embedding Encoder Output Interest Query Interest Embedding Presence Score
+
+History Encoder Interest Decoder  
+
+> Layers Layers
+> User History (Raw)
+> Pretrained Item Embedder (Frozen) Learned Positional Embedding
+> cart purchase
+> Event-type Embedding
+> view User History Embedding
+
+Input Embedder 
+
+,,,
+
+Figure 1: SetMIR pipeline. A transformer encoder reads the user history, a 𝐾 -query transformer decoder emits per-query retrieval embeddings and presence scores, and training uses Hungarian matching to align engaged targets with queries. At inference, presence gating and query-level NMS select the active ANN queries, whose results are merged by maximum score. 
+
+learned positional embedding 𝑝 pos  
+
+> 𝑖
+
+and an 𝛼 -gated event-type em-bedding 𝛼 𝑐 (type 𝑖 ) ∈ R𝑑 to form the per-item input. The event-type embeddings are learned from scratch, and the scalar 𝛼 is initial-ized at 0 and learned directly, so the model starts from the pure content-embedding space and gradually incorporates engagement signals: 
+
+𝑥 𝑖 = ¯𝑥 𝑖 + 𝑝 pos  
+
+> 𝑖
+
++ 𝛼 𝑐 (type 𝑖 ) ∈ R𝑑 . (1) 
+
+History encoder. A standard 𝐽 -layer transformer encoder E𝜃 [24] processes the history of per-item inputs [𝑥 1, . . . , 𝑥 𝐿 ] into contextu-alized representations: 
+
+𝐻 = E𝜃 
+
+ [𝑥 1, . . . , 𝑥 𝐿 ] ∈ R𝐿 ×𝑑 . (2) 
+
+Interest decoder with 𝐾 learnable queries. SetMIR maintains 𝐾 
+
+learnable interest queries, shared across users, 𝑄 (0) = [𝑞 1, . . . , 𝑞 𝐾 ] ∈ 
+
+R𝐾 ×𝑑 , randomly initialized and trained jointly with the rest of the model. An 𝑀 -layer transformer decoder D𝜙 alternates between self-attention among queries and cross-attention to the encoded history. Omitting residual connections and layer normalization for compactness, one decoder layer is ˜𝑄 (ℓ ) = SelfAttn  𝑄 (ℓ −1) , (3) ¯𝑄 (ℓ ) = CrossAttn   ˜𝑄 (ℓ ) , 𝐻, 𝐻 , (4) 
+
+𝑄 (ℓ ) = FFN   ¯𝑄 (ℓ ) , (5) for ℓ = 1, . . . , 𝑀 . Query self-attention lets interest queries exchange information before reading the history, which encourages different queries to specialize rather than independently chase the same dominant signal. The decoder output 𝑍 = 𝑄 (𝑀 ) ∈ R𝐾 ×𝑑 is passed to two per-query heads. 
+
+Two output heads per query. For each decoder-output row 𝑧 𝑘 
+
+of 𝑍 = 𝑄 (𝑀 ) , SetMIR predicts a normalized retrieval embedding 𝑒 𝑘 
+
+and a presence score 𝑝 𝑘 :
+
+𝑒 𝑘 = 𝑊 𝑒 LN (𝑧 𝑘 ) + 𝑏 𝑒 
+
+𝑊 𝑒 LN (𝑧 𝑘 ) + 𝑏 𝑒 2
+
+∈ R𝑑 , (6) 
+
+𝑝 𝑘 = 𝜎  𝑤 ⊤ 
+
+> 𝑝
+
+LN (𝑧 𝑘 ) + 𝑏 𝑝 
+
+ ∈ [ 0, 1], (7) where 𝜎 (·) is the logistic sigmoid. The 𝐿 2 normalization makes training and serving consistent. The scalar presence head estimates whether the query is active for this request. 
+
+## 3.3 Set-prediction training 
+
+For a training example, target product identifiers are deduplicated by product id (pid). If the same pid appears with multiple event types, we keep the strongest-intent event type (priority order: pur-chase > add-to-cart > swipe-up). The target products are then capped at 𝑊 max = 15 by strongest-intent priority. The model pro-duces 𝐾 interest embeddings {𝑒 𝑘 }𝐾 𝑘 =1, and the same frozen pre-trained model from §3.2 encodes each target product 𝑡 𝑤 into a target embedding ¯ 𝑡 𝑤 ∈ R𝑑 , giving the target set {¯𝑡 𝑤 }𝑊 𝑤 =1 where 
+
+𝑊 ≤ 𝑊 max and may exceed 𝐾 .
+
+Hungarian matching. We compute a one-to-one assignment be-tween predicted queries and target items. Let A𝐾,𝑊 be the set of matchings 𝐴 ⊆ [ 𝐾 ] × [ 𝑊 ] with |𝐴 | = min (𝐾,𝑊 ) and no repeated query or target. We solve ˆ𝐴 = arg min 
+
+> 𝐴 ∈ A 𝐾,𝑊
+
+∑︁ (𝑘,𝑤 ) ∈ 𝐴 
+
+Γ𝑘,𝑤 ,
+
+Γ𝑘,𝑤 = − 𝜆 emb 𝑒 ⊤ 
+
+> 𝑘
+
+¯𝑡 𝑤 − 𝜆 cls log 𝜎  ℓ𝑘 
+
+,
+
+(8) where ℓ𝑘 is the pre-sigmoid presence logit. The embedding term prefers geometrically close query-target pairs; the class term biases the matcher toward queries the model already predicts as present. We use 𝜆 emb = 1 and 𝜆 cls = 0.5, with the class term linearly warmed up over the first 10% of training steps so that early matching is driven primarily by embedding geometry. For 𝐾 = 10, each user’s assignment is a small 𝐾 ×𝑊 problem and the solve itself is negligible. Let M𝑢 = {𝑘 : (𝑘, 𝑤 ) ∈ ˆ𝐴 } denote the matched query indices, with 
+
+|M 𝑢 | = min (𝑊 , 𝐾 ), and let U𝑢 = [𝐾 ] \ M 𝑢 denote unmatched (“no-interest”) queries. 
+
+InfoNCE retrieval loss. For each matched pair (𝑘, 𝑤 ) ∈ ˆ𝐴 , we ap-ply an in-batch sampled-softmax (InfoNCE [23]) loss. The assigned target ¯ 𝑡 𝑤 is the positive, and all valid target embeddings gathered KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Liu et al. 
+
+across the data-parallel mini-batch form the contrastive pool N,which therefore contains ¯ 𝑡 𝑤 itself: 
+
+LInfoNCE (𝑢 ) = − 1
+
+| ˆ𝐴 |∑︁ (𝑘,𝑤 ) ∈ ˆ𝐴 
+
+log exp  𝑒 ⊤ 
+
+> 𝑘
+
+¯𝑡 𝑤 /𝜏 𝑟 
+
+Í¯𝑡 ′ ∈ N exp  𝑒 ⊤ 
+
+> 𝑘
+
+¯𝑡 ′/𝜏 𝑟 
+
+ , (9) where 𝜏 𝑟 is the InfoNCE temperature and padded target entries are masked out. Only matched queries participate in LInfoNCE ; un-matched queries are not pulled toward any target direction. 
+
+Presence loss. The matcher identifies which queries are used on the example, and the presence head learns to predict that assignment. Given presence score 𝑝 𝑘 and binary label 𝑦 𝑘 = 1[𝑘 ∈ M 𝑢 ],
+
+LPres (𝑢 ) = − 1
+
+𝐾 
+
+> 𝐾
+
+∑︁ 
+
+> 𝑘 =1
+
+𝑦 𝑘 log 𝑝 𝑘 + ( 1 − 𝑦 𝑘 ) log (1 − 𝑝 𝑘 ) . (10) The retrieval and presence losses provide complementary super-vision. Matched queries are pulled toward their assigned targets, whereas unmatched queries receive only a 𝑦 𝑘 =0 presence target. This absence signal is the mechanism missing from argmax-trained multi-interest models: when targets independently choose their closest query, unmatched queries receive no direct supervision and can collapse or drift. 
+
+Margin diversity loss. We add a light pairwise repulsion term to discourage active queries from becoming nearly identical. Let 
+
+𝑎 𝑘 = 1[𝑝 𝑘 > 0.5] be a detached hard activity mask; gradients do not flow through the threshold. We define 
+
+LDiv (𝑢 ) =
+
+Í𝑖 ≠𝑗 𝑎 𝑖 𝑎 𝑗 max  0, 𝑒 ⊤ 
+
+> 𝑖
+
+𝑒 𝑗 − 𝑚 
+
+max  1, Í𝑖 ≠𝑗 𝑎 𝑖 𝑎 𝑗 
+
+ , (11) with margin 𝑚 = 0.3. The loss is zero when fewer than two queries are active. Otherwise, it penalizes only active pairs whose cosine similarity exceeds 𝑚 , leaving already separated queries unchanged. Unlike ComiRec’s controllability term [2], which is applied during inference, this term shapes the learned retrieval geometry during training. 
+
+Total loss. For a mini-batch of users B, the total training loss is 
+
+L = 1
+
+|B| ∑︁ 𝑢 ∈ B 
+
+ 𝜆 𝑅 LInfoNCE (𝑢 ) + 𝜆 𝑃 LPres (𝑢 ) + 𝜆 𝐷 LDiv (𝑢 ) , (12) with loss weights 𝜆 𝑅 , 𝜆 𝑃 , 𝜆 𝐷 specified in §4.1. 
+
+## 3.4 Inference 
+
+At serving time, SetMIR performs a single forward pass that en-codes the user history and decodes the 𝐾 interest queries, yielding 
+
+{( 𝑒 𝑘 , 𝑝 𝑘 )} 𝐾 𝑘 =1. It then converts the fixed query bank into a dynamic set of ˜ 𝐾 ≤ 𝐾 ANN queries through three lightweight steps that together replace static dispatch with dynamic ˜ 𝐾 retrieval (see Fig-ure 2). 
+
+Step 1: Presence gating. We first retain queries whose presence exceeds a threshold 𝜏 :
+
+S1 = { 𝑘 ∈ [ 𝐾 ] : 𝑝 𝑘 > 𝜏 }. (13) If no query passes the threshold, we keep the query with the largest presence score as a fallback. 
+
+Step 2: Query-level non-maximum suppression. We sort S1 by descending 𝑝 𝑘 and apply NMS over query-query cosine similarity. A query is removed if its cosine similarity to any higher-presence Decoder Output (Ranked by )
+
+ANN Index 
+
+> items from items from items from items from
+
+Max Merge  
+
+> Step 1: Presence Gating Step 2: NMS Suppression Step 3: Per-Query ANN Search and Max-Merge Retain queries above threshold 𝜏
+> Remove similar queries (e.g. 4 and 6 are similar to 2)
+
+Figure 2: Inference-time gating and per-query ANN. Presence gating at threshold 𝜏 retains active queries, cosine-NMS at 
+
+𝛿 NMS removes redundant survivors, each survivor issues one ANN search, and returned items are merged by max-score. 
+
+retained query exceeds 𝛿 NMS ; we use 𝛿 NMS = 0.9. The surviving set is S2 ⊆ S 1, with |S 2 | = ˜𝐾 .
+
+Step 3: Per-query ANN search and max-merge. Each surviving query 𝑘 ∈ S 2 retrieves its top-𝑀 𝑞 items from the item index. We set 
+
+𝑀 𝑞 = ⌈𝑁 / ˜𝐾 ⌉ so that the total retrieval depth remains approximately constant as ˜𝐾 changes. Items returned by multiple queries are merged by maximum score: 
+
+𝑠 (𝑡 | 𝑢 ) = max  
+
+> 𝑘 ∈ S 2
+
+𝑒 ⊤ 
+
+> 𝑘
+
+¯𝑡, (14) and the top-𝑁 items by 𝑠 (𝑡 | 𝑢 ) form the candidate list. 
+
+## 4 Experiments 4.1 Experimental Setup 
+
+Dataset. We evaluate SetMIR on user-product engagement logs from Snap DPA. The advertiser catalog contains hundreds of mil-lions of products, and the event stream includes views, swipe-ups, add-to-carts, and purchases. For each user, we form the target set 
+
+T𝑢 from all high-intent events (such as purchase, add-to-cart, and swipe-up) that fall within the last 3-day window. Targets are dedu-plicated by product id and capped at 𝑊 max =15 items, which retains all high-intent targets for most users in the training data. The his-tory sequence is every event whose timestamp lies strictly before the start of the window, truncated to the most recent 𝐿 =40 events. Users are partitioned into disjoint train, validation, and test sets. Item embeddings are computed offline by a separately pretrained content-embedding model, then frozen and stored as 𝐿 2-normalized vectors throughout SetMIR training and evaluation. SetMIR KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA 
+
+Table 1: Comparison of SetMIR against four learned multi-interest retrieval methods. All rows share the same training data, the same frozen item embeddings, 𝐾 =10 , the same optimizer and batch size, and the same per-request retrieval budget; they differ only in the interest-extraction architecture and the target-to-query assignment. Baselines have no presence concept, so they dispatch all 𝐾 queries ( ˜𝐾 =𝐾 ), which is the static dispatch they practice in production. Every method is trained until it converges, each to its own point of convergence rather than to a shared step count, since the model classes differ substantially in how long they keep improving. The SetMIR (argmax) row replaces Hungarian matching with argmax assignment and is analyzed in §4.2.2. Each metric is normalized so that SetMIR equals 100% .                                                        
+
+> Method ˜𝐾 R@1 R@5 R@10 R@100 HR@100 NDCG@100 MRR MIND [14] 10 .00 45 .7% 50 .7% 52 .9% 61 .7% 58 .2% 54 .3% 44 .4% ComiRec-SA [2] 10 .00 67 .4% 83 .5% 89 .8% 99 .9% 99 .6% 89 .8% 80 .0% DCM [4] 10 .00 26 .0% 34 .5% 37 .4% 49 .3% 48 .8% 39 .3% 29 .1% KuaiFormer [17] 10 .00 43 .0% 47 .6% 52 .0% 62 .8% 64 .1% 52 .3% 42 .2% SetMIR (argmax) 2.16 62 .1% 63 .2% 63 .5% 69 .1% 73 .2% 63 .1% 56 .4% SetMIR 6.70 100% 100% 100% 100% 100% 100% 100%
+
+Evaluation pool. All offline results are reported on a held-out 
+
+test set of around 1M users, yielding a target pool of around 5 .3M products. The validation split also includes around 1M users and is used to choose the presence threshold 𝜏 , the NMS threshold 𝛿 NMS ,and each method’s converged checkpoint, so no reported number informs those choices. 
+
+Metrics. We report R@ 𝑁 (recall at top-𝑁 retrieved products) for 
+
+𝑁 ∈ { 1, 5, 10 , 100 }, HR@100 (hit rate), NDCG@100, and MRR (mean reciprocal rank). For serving analysis we additionally report ˜ 𝐾 , the average number of ANN queries per request after presence gating and NMS. Per Snap’s policy, we report only relative metric lifts. 
+
+Implementation. The history encoder is a 2-layer transformer with 8 attention heads, feed-forward width 𝑑 ff = 1024, and dropout 0.1; the interest decoder has 6 layers with the same width, heads, and dropout, with hidden size 𝑑 = 128 and approximately 3M learnable parameters. We train with AdamW [18] (peak learning rate 5 × 10 −4, 4000 warm-up steps, weight decay 0 .01, cosine decay) on 8 A100-40GB GPUs with batch size 1536 users per GPU and bfloat16 mixed preci-sion. The in-batch InfoNCE pool gathers target embeddings across GPUs and masks padded target entries. The InfoNCE temperature is 𝜏 𝑟 = 0.05, the diversity margin is 𝑚 = 0.3, and the loss weights are 𝜆 𝑅 = 1.0, 𝜆 𝑃 = 0.5, 𝜆 𝐷 = 0.1, with the Hungarian class term 
+
+𝜆 cls = 0.5 linearly warmed up over the first 10% of steps. Unless otherwise stated, inference uses presence threshold 𝜏 = 0.3, NMS threshold 𝛿 NMS = 0.9, and 𝐾 =10 queries. 
+
+## 4.2 Offline Experiments 
+
+4.2.1 Comparison with learned multi-interest baselines. We com-pare SetMIR against four learned multi-interest retrievers spanning the designs surveyed in §2: MIND [14], ComiRec-SA [2], DCM [4], and KuaiFormer [17] on the Snap DPA evaluation pool. Because SetMIR consumes a frozen pretrained item tower whereas all four learn item embeddings jointly with the user side, this is a con-trolled comparison of interest-extraction mechanisms rather than an end-to-end reproduction of published results. For the experiment comparison, ComiRec-SA and MIND are ported from the authors’ reference implementation 1; DCM and KuaiFormer have no public 
+
+> 1https://github.com/THUDM/ComiRec
+
+code and are implemented from their papers. All four use the same output head as SetMIR, and MIND’s ReLU output layer is dropped because a frozen item tower would otherwise confine queries to the non-negative orthant. Each method is trained until it converges on the validation set, so the training length is per method rather than shared: MIND, ComiRec-SA and DCM peak within 60K steps, KuaiFormer at roughly 100K and SetMIR at 160K. SetMIR is strongest on every metric, and the margins are widest at the top of the ranking, which is what the downstream ranker consumes: the best baseline, ComiRec-SA, reaches 67 .4% of SetMIR’s R@1 and 80 .0% of its MRR, yet becomes competitive at depth (99 .9% of R@100), so attention-based routing recovers a similar candidate 
+
+pool but orders it less well. SetMIR does this while issuing 6 .70 ANN queries per request against the baselines’ 10, a 33% smaller budget. MIND and DCM fall furthest behind, at 52 .9% and 37 .4% of Set-MIR’s R@10. Both construct interests geometrically, by capsule routing and by differentiable clustering respectively, and both were designed to learn the item tower jointly with the user side; DCM additionally had to be reimplemented from its paper. We therefore read these rows as evidence about how those mechanisms behave under a frozen item space, not as a verdict on the published systems. KuaiFormer is worth isolating: it is the closest architecture to SetMIR, a transformer over the history with learnable query tokens, yet reaches only 52 .0% of SetMIR’s R@10. Both are deep transform-ers of comparable capacity on identical data and item embeddings, so the gap points to how the queries are supervised, which the SetMIR (argmax) row isolates directly (§4.2.2). 
+
+4.2.2 Component ablation. Table 2 removes one mechanism at a time: the target-to-query assignment, the presence loss, and the di-versity loss. Replacing Hungarian matching with per-target argmax costs 36 .5% of R@10 and 43 .6% of MRR and drops the mean number of presence-active queries from 6 .70 to 2 .16 of 10: targets compete for whichever query is already closest, the rest never receive a retrieval gradient, and the model settles on roughly two effective interests, illustrating the impact of interest collapse. Both loss terms also cost recall when removed: R@10 falls to 91 .4% without the presence loss and 93 .2% without diversity. Each term does distinct work. The presence loss is what makes gating KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Liu et al. 
+
+Table 2: Component ablation. Each row removes exactly one mechanism; architecture, data and the remaining losses are held fixed, on the same converged schedule as Table 1. Rows are normalized to SetMIR and ˜𝐾 is absolute at 𝜏 =0.3. Each mechanism is discussed in §4.2.2.                                           
+
+> Variant ˜𝐾 R@1 R@5 R@10 R@100 HR@100 NDCG@100 MRR SetMIR (full) 6.70 100% 100% 100% 100% 100% 100% 100%
+> −presence loss 8.23 97 .1% 90 .4% 91 .4% 91 .3% 88 .4% 92 .9% 97 .4%
+> −diversity loss 7.55 88 .5% 90 .6% 93 .2% 91 .8% 91 .5% 93 .3% 95 .7% argmax assignment 2.16 62 .1% 63 .2% 63 .5% 69 .1% 73 .2% 63 .1% 56 .4%
+
+Table 3: K sweep experiment. All rows share architecture, optimization, and training duration; only 𝐾 varies. Each metric is normalized so that the single-query ( 𝐾 =1) configuration equals 100% . The second column reports ˜𝐾 , the average number of presence-active queries.                                                         
+
+> 𝐾 ˜𝐾 R@1 R@5 R@10 R@100 HR@100 NDCG@100 MRR 11.00 100% 100% 100% 100% 100% 100% 100% 33.00 108 .4% 133 .5% 137 .5% 137 .2% 110 .8% 130 .7% 112 .4% 54.72 113 .2% 145 .8% 151 .1% 148 .6% 113 .3% 141 .6% 117 .2% 75.75 112 .3% 147 .6% 154 .7% 151 .9% 114 .2% 144 .2% 117 .8% 10 6.70 113 .0% 148 .3% 155 .0% 152 .8% 114 .1% 145 .8% 118 .9% 15 7.59 112 .8% 148 .6% 155 .1% 152 .6% 114 .1% 145 .9% 118 .4%
+
+Table 4: Ablation of the 𝛼 -gated event-type embedding: percentage change from a no-event-type-embedding baseline at three training durations. All other architecture and training settings are held fixed.                             
+
+> Steps ΔR@1 ΔR@5 ΔR@10 ΔR@100 ΔHR@100 ΔNDCG@100 ΔMRR 30K +5.1% +2.6% +3.0% +1.7% +0.5% +2.9% +3.0% 60K +7.6% +5.6% +4.0% +1.8% +0.5% +4.3% +5.3% 120K +8.2% +6.9% +5.0% +3.2% +1.6% +5.2% +5.6%
+
+learnable: left unsupervised, 𝜎 (ℓ𝑘 ) carries no information about whether a query is warranted, so thresholding at 𝜏 =0.3 admits 8 .23 queries rather than 6 .70 and still loses recall, which is more calls for less return. The diversity term acts on query redundancy, and mean pairwise cosine among the 𝐾 query embeddings rises from 0.298 to 0 .321 when it is removed. Across the three, the assignment dominates: it costs 36 .5% of R@10 against 8 .6% and 6 .8% for the presence and diversity terms, so one-to-one matching carries the retrieval quality while the two losses contribute smaller, separate effects. 
+
+4.2.3 K sweep. Having established that SetMIR improves on prior learned multi-interest retrievers, we now vary the number of de-coder queries 𝐾 while holding the rest of the configuration fixed (Table 3). The 𝐾 =1 row serves as the single-query configuration. Three patterns stand out. First, increasing 𝐾 produces large recall gains. 𝐾 =10 reaches 155% of the 𝐾 =1 R@10 and 153% of the 𝐾 =1R@100. The largest jump is from 𝐾 =1 to 𝐾 =3, indicating that even a small number of additional interest queries captures most of the available gain. Second, gains are larger at deeper retrieval depths. 
+
+The lift from 𝐾 =1 to 𝐾 =10 is wider on R@10/R@100 ( +55%/ +53%) than on R@1/HR@100 ( +13%/ +14%), consistent with multi-interest retrieval broadening the candidate surface rather than only improv-ing the top hit. Third, gains gradually saturate as 𝐾 increases. 𝐾 =7already reaches 99 .8% of 𝐾 =10’s R@10, and 𝐾 =15 is within ±0.5% of 𝐾 =10 across all columns. The ˜ 𝐾 column makes this explicit: ˜ 𝐾 
+
+grows sublinearly with 𝐾 (4 .72 at 𝐾 =5, 6 .70 at 𝐾 =10, only 7 .59 at 
+
+𝐾 =15), so even when 15 queries are available the model commits to fewer than 8 on average; the effective number of interests is bounded by the data, not by 𝐾 .
+
+4.2.4 Event-type embedding. Table 4 isolates the 𝛼 -gated event-type embedding of §3.2. The event signal helps consistently, and its effect grows with training duration. Because 𝛼 is initialized at zero, the model first matches the no-event baseline and then gradually learns how much event-type information to add: the R@10 gain rises from +3.0% to +5.0% between the shortest and longest schedule. The gain is strongest near the top of the ranking (ΔR@1 = +8.2% vs. ΔR@100 = +3.2%), which complements the 𝐾 
+
+sweep, where the multi-interest gain is more visible at depth. 
+
+4.2.5 Data scaling. Table 5 sweeps the number of training users. Each metric is normalized so that the smallest scale (100K users) equals 100%. Performance scales smoothly with training data: 1M users lifts the R@100 to 1 .66 × and HR@100 to 1 .45 ×, while 10M users further improves the R@100 and HR@100 to 2 .18 × and 1 .69 ×,respectively. 
+
+4.2.6 Inference-time gating and dispatch reduction. Table 6 tests whether gating and NMS deliver the dynamic ˜ 𝐾 ≤ 𝐾 dispatch that replaces static all-𝐾 retrieval, serving one 𝐾 =10 checkpoint under SetMIR KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA History (chronological, oldest → newest) 
+
+> user interests: Shirts & Tops, Pants, Dresses, Shoes, Skirts, Handbags, Accessories
+
+Single embedding retrieval (K=1) 
+
+> category: Pants · r1 → r10
+
+Multiple embeddings retrieval (K=10, active heads sampled)                   
+
+> head 3 · σ(presence)=0.976 · kept by NMS · category: Shirts & Tops · r1 → r10
+> head 1 · σ(presence)=0.959 · dropped by NMS (because of head 3) · category: Shirts & Tops · r1 → r10
+> head 9 · σ(presence)=0.947 · kept by NMS · category: Dresses, Skirts · r1 → r10
+> head 5 · σ(presence)=0.708 · kept by NMS · category: Pants · r1 → r10
+> head 0 · σ(presence)=0.683 · kept by NMS · category: Apparel & Accessories, Hats, Earrings · r1 → r10
+> head 7 · σ(presence)=0.526 · kept by NMS · category: Shoes · r1 → r10
+
+Figure 3: Qualitative retrieval comparison for one user. The figure labels “Single embedding ( 𝐾 =1)” and “Multiple embeddings (𝐾 =10 )” correspond to the single-query baseline and SetMIR respectively; per-query rows are labeled “head 𝑘 ”, each corresponding to one of SetMIR’s 𝐾 interest queries with its 𝜎 (presence ) score from the gating step. The user’s history spans shirts & tops, pants, dresses, shoes, skirts, handbags, and accessories. The single-query baseline collapses onto pants; SetMIR’s five active queries each specialize in a distinct category, while a near-duplicate query (head 1) is removed by NMS for overlapping with head 3. KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Liu et al. 
+
+Table 5: Training-data scaling sweep. All rows share architecture and training recipe, and each is trained to convergence; only the number of training users varies. Each metric is normalized so that the smallest scale ( 100 K users) equals 100% .                            
+
+> Train users R@1 R@5 R@10 R@100 HR@100 NDCG@100 MRR 100K 100% 100% 100% 100% 100% 100% 100% 1M 179 .1% 181 .2% 179 .2% 166 .9% 145 .1% 175 .1% 171 .0% 10M 247 .5% 262 .5% 258 .4% 218 .5% 169 .7% 243 .3% 231 .2%
+
+Table 6: Serving ablation. One checkpoint served under three dispatch policies; no retraining. ANN calls is the mean num-ber of per-request ANN queries actually issued, and metrics are normalized so that static all-𝐾 dispatch equals 100% . Pres-ence gating removes 23% of the ANN calls at 99 .4% of R@10 while improving R@1, and NMS at 𝛿 NMS =0.90 removes a fur-ther 1.03 calls at 99 .2% of R@10, so the two together issue 6.70 
+
+of 10 .                 
+
+> Dispatch policy ANN calls R@1 R@10 MRR static all-𝐾 (𝜏 =0) 10 .00 100% 100% 100% + presence gating ( 𝜏 =0.3) 7.73 101 .9% 99 .4% 100 .7% + query-level NMS ( 𝛿 =0.9) 6.70 101 .8% 99 .2% 100 .7%
+
+three policies. Gating accounts for most of the reduction (10 → 7.73 calls of the 10 → 6.70 total), and it slightly improves R@1 and MRR, because suppressing low-confidence queries removes candidates that would otherwise dilute the merged list. The two knobs are complementary rather than interchangeable: gating asks whether the user has the interest at all, which the head is trained to answer, whereas NMS applies a purely geometric test to whichever queries survive, so each removes calls the other keeps. Loosening the gate below 𝜏 =0.30 buys little (99 .4% → 100% R@10 for 7 .73 → 10 calls), so we deploy 𝜏 =0.30 with 𝛿 NMS =0.90. 
+
+## 4.3 Online Experiment 
+
+We deployed SetMIR as a new retrieval source in the Snap DPA production stack and ran a live A/B test with the downstream ranker held fixed. SetMIR uses its default inference policy and its own ANN index built from the same pretrained content-embedding model. The experiment ran on a representative live-traffic slice for about one week; exact traffic fractions, sample sizes, and sig-nificance thresholds are omitted per Snap’s policy. We report two analyses from this single A/B: (a) the group-level lift of treatment over control, capturing SetMIR’s overall contribution to the pro-duction stack; and (b) a source-level comparison of SetMIR versus the embedding-based item-to-item (I2I) matching retrieval source running alongside it in the treatment arm. 
+
+(a) Overall contribution to the production stack. The control retains the current Snap DPA retrieval mix; the treatment adds SetMIR as a new retrieval source while keeping the global retrieval quota unchanged. Adding SetMIR lifts user impressions by +0.10%, CTR by +0.21%, and CVR by +3.11% (Table 7, column (a)). 
+
+(b) Per-source comparison vs item-to-item retrieval. Item-to-item (I2I) retrieval dispatches a user’s recent engaged high-intent products directly as ANN seeds, sharing SetMIR’s input signal, 
+
+Table 7: Online A/B results from a single live experiment. (a) Group-level engagement lifts of treatment (production stack + SetMIR) over control (production stack). (b) Source-level en-gagement attribution within the treatment arm, comparing SetMIR against the item-to-item (I2I) retrieval source run-ning alongside it under matched per-source retrieval quota. Downstream ranker held fixed across both analyses.           
+
+> Metric (a) Δvs control (b) ΔSetMIR vs I2I CTR +0.21% +44% CVR +3.11% +51%
+
+frozen item embeddings, ANN index, and per-source retrieval quota; the two differ only in how the query vectors are produced. Since I2I already dispatches several seeds per request, this is a comparison between two ways of choosing a small set of query vectors, and serving cost is comparable because both issue a few single-vector ANN lookups per request. Attributing engagement to each source within the treatment arm, SetMIR achieves +44% CTR and +51% CVR over I2I (Table 7, column (b)), isolating the value of the learned encoder–decoder, Hungarian matching, and presence head over the simpler heuristic of dispatching engaged history items directly. 
+
+## 4.4 Qualitative Analysis 
+
+Figure 3 visualizes the interest collapse failure mode on one user: although the user’s history spans shirts & tops, pants, dresses, shoes, skirts, handbags, and accessories, the single-query ( 𝐾 =1) baseline returns only pants. SetMIR’s five active queries each specialize in a distinct interest cluster, so the merged retrieval covers most of the user’s interest mix. 
+
+## 5 Conclusion 
+
+We presented SetMIR for multi-interest retrieval. The model uses 
+
+𝐾 learnable interest queries, Hungarian matching against engaged targets, and a presence head supervised by the matcher. Together, these components address interest collapse at training time and static dispatch at serving time: presence gating and query-level NMS turn the fixed query bank into a request-dependent set of active ANN queries, all served by a single-vector item index. On Snap DPA, SetMIR outperforms four learned multi-interest retrievers on every metric while issuing 33% fewer ANN queries per request. Deployed as a new retrieval source in the production stack, SetMIR lifts CVR by 3 .11% over the existing retrieval mix and delivers 44% higher CTR and 51% higher CVR than the item-to-item source running beside it. SetMIR KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA 
+
+## References 
+
+[1] Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexan-der Kirillov, and Sergey Zagoruyko. 2020. End-to-End Object Detection with Transformers. In Computer Vision – ECCV 2020 (Lecture Notes in Com-puter Science, Vol. 12346) . Springer International Publishing, Cham, 213–229. arXiv:2005.12872 [cs.CV] doi:10.1007/978-3-030-58452-8_13 [2] Yukuo Cen, Jianwei Zhang, Xu Zou, Chang Zhou, Hongxia Yang, and Jie Tang. 2020. Controllable Multi-Interest Framework for Recommendation. In Pro-ceedings of the 26th ACM SIGKDD International Conference on Knowledge Dis-covery and Data Mining (KDD ’20) . ACM, New York, NY, USA, 2942–2951. arXiv:2005.09347 [cs.IR] doi:10.1145/3394486.3403344 [3] Paul Covington, Jay Adams, and Emre Sargin. 2016. Deep Neural Networks for YouTube Recommendations. In Proceedings of the 10th ACM Conference on Recommender Systems (RecSys ’16) . ACM, New York, NY, USA, 191–198. doi:10. 1145/2959100.2959190 [4] Zhibo Fan, Hongtao Lin, Haoyu Chen, Bowen Deng, Hedi Xia, Yuke Yan, and James Li. 2025. Synergizing Implicit and Explicit User Interests: A Multi-Embedding Retrieval Framework at Pinterest. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2 (KDD ’25) . ACM, New York, NY, USA, 4396–4405. arXiv:2506.23060 [cs.IR] doi:10.1145/3711896. 3737265 [5] Ruiqi Guo, Philip Sun, Erik Lindgren, Quan Geng, David Simcha, Felix Chern, and Sanjiv Kumar. 2020. Accelerating Large-Scale Inference with Anisotropic Vector Quantization. In Proceedings of the 37th International Conference on Machine Learning (ICML) (Proceedings of Machine Learning Research, Vol. 119) . PMLR, Virtual Event, 3887–3896. arXiv:1908.10396 [cs.LG] [6] Jui-Ting Huang, Ashish Sharma, Shuying Sun, Li Xia, David Zhang, Philip Pronin, Janani Padmanabhan, Giuseppe Ottaviano, and Linjun Yang. 2020. Embedding-based Retrieval in Facebook Search. In Proceedings of the 26th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD ’20) . ACM, New York, NY, USA, 2553–2561. arXiv:2006.11632 [cs.IR] doi:10.1145/3394486.3403305 [7] Po-Sen Huang, Xiaodong He, Jianfeng Gao, Li Deng, Alex Acero, and Larry P. Heck. 2013. Learning Deep Structured Semantic Models for Web Search using Clickthrough Data. In Proceedings of the 22nd ACM International Conference on Information & Knowledge Management (CIKM ’13) . ACM, New York, NY, USA, 2333–2338. doi:10.1145/2505515.2505665 [8] Andrew Jaegle, Sebastian Borgeaud, Jean-Baptiste Alayrac, Carl Doersch, Catalin Ionescu, David Ding, Skanda Koppula, Daniel Zoran, Andrew Brock, Evan Shel-hamer, Olivier J. Hénaff, Matthew M. Botvinick, Andrew Zisserman, Oriol Vinyals, and João Carreira. 2022. Perceiver IO: A General Architecture for Structured In-puts and Outputs. In International Conference on Learning Representations (ICLR) .OpenReview.net, Virtual Event, 29 pages. arXiv:2107.14795 [cs.LG] [9] Eric Jang, Shixiang Gu, and Ben Poole. 2017. Categorical Reparameterization with Gumbel-Softmax. In International Conference on Learning Representations (ICLR) . OpenReview.net, Toulon, France, 12 pages. arXiv:1611.01144 [cs.LG] [10] Jeff Johnson, Matthijs Douze, and Hervé Jégou. 2021. Billion-Scale Similar-ity Search with GPUs. IEEE Transactions on Big Data 7, 3 (2021), 535–547. arXiv:1702.08734 [cs.CV] doi:10.1109/TBDATA.2019.2921572 [11] Omar Khattab and Matei Zaharia. 2020. ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT. In Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR ’20) . ACM, New York, NY, USA, 39–48. arXiv:2004.12832 [cs.IR] doi:10.1145/3397271.3401075 [12] Harold W. Kuhn. 1955. The Hungarian Method for the Assignment Prob-lem. Naval Research Logistics Quarterly 2, 1–2 (1955), 83–97. doi:10.1002/nav. 3800020109 [13] Juho Lee, Yoonho Lee, Jungtaek Kim, Adam R. Kosiorek, Seungjin Choi, and Yee Whye Teh. 2019. Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks. In Proceedings of the 36th International Conference on Machine Learning (ICML) (Proceedings of Machine Learning Research, Vol. 97) . PMLR, Long Beach, CA, USA, 3744–3753. arXiv:1810.00825 [cs.LG] [14] Chao Li, Zhiyuan Liu, Mengmeng Wu, Yuchi Xu, Pipei Huang, Huan Zhao, Guoliang Kang, Qiwei Chen, Wei Li, and Dik Lun Lee. 2019. Multi-Interest Network with Dynamic Routing for Recommendation at Tmall. In Proceedings of the 28th ACM International Conference on Information and Knowledge Management (CIKM ’19) . ACM, New York, NY, USA, 2615–2623. arXiv:1904.08030 [cs.IR] doi:10.1145/3357384.3357814 [15] Junnan Li, Dongxu Li, Silvio Savarese, and Steven Hoi. 2023. BLIP-2: Boot-strapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models. In Proceedings of the 40th International Conference on Machine Learning (ICML) (Proceedings of Machine Learning Research, Vol. 202) . PMLR, Honolulu, HI, USA, 19730–19742. arXiv:2301.12597 [cs.CV] [16] Zihao Li, Qiang Chen, Lixin Zou, Aixin Sun, and Chenliang Li. 2025. Multi-Interest Recommendation: A Survey. arXiv preprint arXiv:2506.15284 (2025). arXiv:2506.15284 [cs.IR] [17] Chi Liu, Jiangxia Cao, Rui Huang, Kai Zheng, Qiang Luo, Kun Gai, and Guorui Zhou. 2024. KuaiFormer: Transformer-Based Retrieval at Kuaishou. arXiv preprint arXiv:2411.10057 (2024). arXiv:2411.10057 [cs.IR] [18] Ilya Loshchilov and Frank Hutter. 2019. Decoupled Weight Decay Regularization. In International Conference on Learning Representations (ICLR) . OpenReview.net, New Orleans, LA, USA, 19 pages. arXiv:1711.05101 [cs.LG] [19] Aditya Pal, Chantat Eksombatchai, Yitong Zhou, Bo Zhao, Charles Rosenberg, and Jure Leskovec. 2020. PinnerSage: Multi-Modal User Embedding Framework for Recommendations at Pinterest. In Proceedings of the 26th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining (KDD ’20) . ACM, New York, NY, USA, 2311–2320. arXiv:2007.03634 [cs.LG] doi:10.1145/3394486. 3403280 [20] Sara Sabour, Nicholas Frosst, and Geoffrey E. Hinton. 2017. Dynamic Routing Be-tween Capsules. In Advances in Neural Information Processing Systems 30 (NeurIPS) .Curran Associates, Inc., Red Hook, NY, USA, 3856–3866. arXiv:1710.09829 [cs.CV] [21] Keshav Santhanam, Omar Khattab, Jon Saad-Falcon, Christopher Potts, and Matei Zaharia. 2022. ColBERTv2: Effective and Efficient Retrieval via Lightweight Late Interaction. In Proceedings of the 2022 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL-HLT) . Association for Computational Linguistics, Stroudsburg, PA, USA, 3715–3734. arXiv:2112.01488 [cs.IR] doi:10.18653/v1/2022.naacl-main.272 [22] Qiaoyu Tan, Jianwei Zhang, Jiangchao Yao, Ninghao Liu, Jingren Zhou, Hongxia Yang, and Xia Hu. 2021. Sparse-Interest Network for Sequential Recommendation. In Proceedings of the 14th ACM International Conference on Web Search and Data Mining (WSDM ’21) . ACM, New York, NY, USA, 598–606. arXiv:2102.09267 [cs.IR] doi:10.1145/3437963.3441811 [23] Aäron van den Oord, Yazhe Li, and Oriol Vinyals. 2018. Representation Learn-ing with Contrastive Predictive Coding. arXiv preprint arXiv:1807.03748 (2018). arXiv:1807.03748 [cs.LG] [24] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention Is All You Need. In Advances in Neural Information Processing Systems 30 (NeurIPS) .Curran Associates, Inc., Red Hook, NY, USA, 5998–6008. arXiv:1706.03762 [cs.CL] [25] Yueqi Xie, Jingqi Gao, Peilin Zhou, Qichen Ye, Yining Hua, Jae Boum Kim, Fangzhao Wu, and Sunghun Kim. 2023. Rethinking Multi-Interest Learning for Candidate Matching in Recommender Systems. In Proceedings of the 17th ACM Conference on Recommender Systems (RecSys ’23) . ACM, New York, NY, USA, 283–293. arXiv:2302.14532 [cs.IR] doi:10.1145/3604915.3608766 [26] Zhenhui Xu, Meng Zhao, Liqun Liu, Lei Xiao, Xiaopeng Zhang, and Bifeng Zhang. 2022. Mixture of Virtual-Kernel Experts for Multi-Objective User Profile Modeling. In Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD ’22) . ACM, New York, NY, USA, 4257–4267. arXiv:2106.07356 [cs.IR] doi:10.1145/3534678.3539062 [27] Xinyang Yi, Ji Yang, Lichan Hong, Derek Zhiyuan Cheng, Lukasz Heldt, Aditee Kumthekar, Zhe Zhao, Li Wei, and Ed Chi. 2019. Sampling-Bias-Corrected Neural Modeling for Large Corpus Item Recommendations. In Proceedings of the 13th ACM Conference on Recommender Systems (RecSys ’19) . ACM, New York, NY, USA, 269–277. doi:10.1145/3298689.3346996 [28] Shengyu Zhang, Lingxiao Yang, Dong Yao, Yujie Lu, Fuli Feng, Zhou Zhao, Tat-Seng Chua, and Fei Wu. 2022. Re4: Learning to Re-contrast, Re-attend, Re-construct for Multi-interest Recommendation. In Proceedings of the ACM Web Conference 2022 (WWW ’22) . ACM, New York, NY, USA, 2216–2226. arXiv:2208.08011 [cs.IR] doi:10.1145/3485447.3512094

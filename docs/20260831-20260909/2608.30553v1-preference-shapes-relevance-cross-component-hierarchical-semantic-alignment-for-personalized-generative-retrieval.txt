@@ -1,0 +1,1031 @@
+Title: Preference Shapes Relevance: Cross-component Hierarchical Semantic Alignment for Personalized Generative Retrieval
+
+URL Source: https://arxiv.org/pdf/2608.30553v1
+
+Published Time: Tue, 01 Sep 2026 02:23:50 GMT
+
+Number of Pages: 22
+
+Markdown Content:
+## Preference Shapes Relevance: Cross-component Hierarchical Semantic Alignment for Personalized Generative Retrieval 
+
+Gaoming Zhang 1 Angqing Jiang 1 Jianchun Song 2 Kena Qi 2
+
+Dayao Chen 2 Wei Lin 2 Defu Lian 1* 1University of Science and Technology of China 
+
+> 2
+
+Meituan 
+
+{zzzgm, philipgaq}@mail.ustc.edu.cn liandefu@ustc.edu.cn {songjianchun, qikena, chendayao, linwei31}@meituan.com 
+
+Abstract 
+
+Generative Retrieval (GR) has emerged as a promising paradigm by mapping queries di-rectly to Semantic IDs (SIDs) with powerful representation capabilities for candidate items. However, existing SIDs derived solely from item content create a semantic gap, failing to align dynamic query intents with static item representations. Furthermore, current genera-tive paradigms rarely model user behavior se-quences and are always bottlenecked by the high inference latency of beam-search autore-gressive decoding. To address these challenges, we propose Cross-component Hierarchical se-mantic Alignment for Personalized genera-tive retrieval ( CHAP ), a novel personalized GR framework from a hierarchical perspec-tive. First, we design a Hierarchical Semantic Alignment module to align query’s latent space with item’s quantization path and synchronize multi-granular semantics. Second, we con-struct a personalized GR framework that mod-els user behavior by synergizing discrete SIDs for structural guidance and continuous repre-sentations for fine-grained semantic refinement. Notably, we introduce a Residual Cascading Generation mechanism to restrict the costly multi-step Transformer Decoder to a single-pass inference, boosting inference throughput while mitigating information loss. Extensive experiments on three public datasets, one pro-prietary industrial dataset, and online A/B tests demonstrate CHAP’s superiority, validating the effectiveness and practical value of our approach. The code is publicly available at 
+
+https://github.com/zzzgm/CHAP .
+
+1 Introduction 
+
+Modern Information Retrieval (IR) systems tradi-tionally rely on the "Index-Retrieve-Rank" cascade pipeline (Wang et al., 2011; Zhou et al., 2021), employing sparse methods like BM25 (Robert-son et al., 2009) for keyword matching and dense 
+
+> *Corresponding author.
+
+methods like DPR (Karpukhin et al., 2020) for se-mantic vector mapping. However, static models often struggle to adapt to dynamic, personalized user intents (Liu et al., 2020). Recently, Gener-ative Retrieval (GR) has emerged as a disruptive paradigm alongside the advancement of Large Lan-guage Models (LLMs) (Tang et al., 2023b; Li et al., 2025). By adopting an end-to-end approach that transforms retrieval into a sequence generation task which directly generates relevant item identifiers (ItemIDs) from user queries, GR eliminates the need for complex external indices. This paradigm significantly enhances scalability and demonstrates superior performance in long-tail queries and cold-start problems (Kuo et al., 2024; Yuan et al., 2024). In the GR architecture, generating Semantic IDs (SIDs) with robust representational capabilities re-mains a core challenge (Zhang et al., 2025b; Liu et al., 2025). Existing models like TIGER (Ra-jput et al., 2023) and HierGR (Zhang et al., 2025a) train SIDs solely on item corpora, lacking explicit query perception and failing to bridge the inher-ent semantic gap between user intents and item descriptions, which leads to poor generalization on complex queries (Zhang et al., 2025c; Zheng et al., 2025). Furthermore, current methods exhibit critical limitations in structural utilization, person-alization, and inference efficiency. Treating quan-tized SIDs merely as flat symbol sequences ignores the natural "Coarse-to-Fine" hierarchy, wasting its benefits for feature generalization and semantic stability (Williams et al., 2020; Si et al., 2024). Re-lying solely on discrete sparse IDs also discards fine-grained continuous vector details, hindering the integration of user behavior sequences (Yang et al., 2025). Crucially, standard autoregressive GR paradigms suffer from severe computational bot-tlenecks during online serving; repeatedly execut-ing the heavy Transformer Decoder (especially the costly Cross-Attention) for each hierarchical step causes prohibitive latency, hindering large-scale arXiv:2608.30553v1 [cs.IR] 31 Aug 2026 deployment in latency-sensitive industrial systems. To address these limitations, we propose Cross-component Hierarchical semantic Alignment for 
+
+Personalized generative retrieval ( CHAP ), a novel framework which performs hierarchical alignment on pre-trained SIDs and efficiently fuses sparse and dense representations in a sequence model. Specifically, CHAP initializes SIDs using a Residual Quantized Variational Autoencoder (RQ-VAE) (Rajput et al., 2023). To bridge the query-item semantic gap while preventing codebook col-lapse, we design a multi-module Hierarchical Se-mantic Alignment paradigm which includes a cross-sample alignment module to proactively pull the query’s potential representation towards the target’s quantization space, a hierarchical-aware contrastive learning module to enforce coarse-to-fine alignment, and a soft probability distillation module to regularize the output distribution of the encoder via KL divergence. Integrating these mod-ules ensures the generated SIDs can robustly com-prehend complex query semantics. Furthermore, CHAP constructs a Personalized Cascading Generative Sequence Model that im-plements multi-granular modeling of user queries and personalized behavior sequences by cross-cascading aligned sparse SIDs with its raw dense vector. Unlike standard autoregressive approaches, CHAP implements a Residual Cascading Gen-eration strategy which decouples heavy historical intent routing from hierarchical code generation. By restricting the costly multi-step Transformer Decoder to a single-pass inference and offloading the layer-wise generation to lightweight residual blocks, this mechanism not only mitigates informa-tion loss but also acts as an efficient decoding accel-erator, significantly boosting inference throughput. Our main contributions are as follows: 
+
+• We propose a Hierarchical Semantic Align-ment paradigm, effectively bridging the inher-ent Semantic Gap between user intents and static item codes. 
+
+• We design a Personalized GR Architecture equipped with a Residual Cascading Gener-ation mechanism, which resolves the inher-ent latency bottleneck of autoregressive GR while effectively mitigating information loss through coarse-to-fine structural guidance. 
+
+• Extensive experiments on three public datasets and one proprietary industrial dataset, as well as online A/B tests demonstrate the superiority of our method. 
+
+2 Related Works 
+
+Sparse retrieval methods like BM25 (Robertson et al., 2009) and TF-IDF (Ramos et al., 2003) rely on exact term matching but suffer from vo-cabulary mismatch. Conversely, dense retrieval 
+
+approaches (e.g., DPR (Karpukhin et al., 2020), ANCE (Xiong et al., 2020)) map inputs into a shared vector space, enhancing semantic match-ing but necessitating costly external indices like HNSW (Malkov and Yashunin, 2018). Person-alized retrieval tailors results by incorporating user contexts. QEM (Ai et al., 2019a) investigates personalization mechanisms, while DREM (Ai et al., 2019b) models dynamic user-product rela-tionships via knowledge graphs. Embedding-based approaches like ZAM (Ai et al., 2019a), HEM (Ai et al., 2017), and TEM (Bi et al., 2020) integrate user profiles and history into unified embeddings. 
+
+Generative retrieval internalizes corpus knowl-edge to directly generate ItemIDs. DSI (Tay et al., 2022) pioneered this paradigm, followed by semantic enhancements in SE-DSI (Tang et al., 2023a). TIGER (Rajput et al., 2023) first utilized RQ-VAE for SIDs. Regarding architecture, CO-BRA (Yang et al., 2025) integrates sparse and dense vectors, while CAT-ID 2 (Liu et al., 2025), and MERGE (Zhang et al., 2025b) optimize ID generation by exploiting multi-level correlations. 
+
+3 Preliminaries 
+
+3.1 Problem Definition 
+
+Given a user’s interaction history S =
+
+{i1, . . . , i N } and a current query q, Person-alized GR aims to retrieve items by directly generating their identifiers such as a unique hierarchical SID c = ( c0, . . . , c L−1) derived from a codebook. The objective is to learn a proba-bilistic model θ that maximizes the probability of generating the target SID given the context: 
+
+P (i|q, S ; θ) = P (c|q, S ; θ)=
+
+> L−1
+
+Y
+
+> l=0
+
+P (cl|c<l , q, S ; θ). (1) where c<l denotes the generated prefix tokens at layer l. Inference is to generate the target SID with the highest joint probability. DNN Encoder Input Dense Embedding Reconstruction Embedding DNN Decoder (3 , 4 , 1) Semantic ID Figure 1: Schematic of SID generation via RQ-VAE. 
+
+3.2 Semantic ID Generation via RQ-VAE 
+
+To assign meaningful discrete identifiers to items ef-fectively, we employ RQ-VAE (Rajput et al., 2023) (Fig. 1). This approach generates hierarchical SIDs by recursively quantizing item embeddings in a coarse-to-fine manner, which serves as the founda-tional representation for our proposed framework. Given an item i, a pre-trained language encoder first encodes its textual content into a dense em-bedding di. A deep neural network encoder E(·)
+
+then maps this embedding to a latent representa-tion z = E(di). The quantization process utilizes 
+
+L residual layers, where each layer l is equipped with a codebook Cl = {elk}Kk=1 containing K code words. At each step l, quantization is performed by selecting the code word nearest to the current residual vector rl (where r0 = z). The Semantic Token cl for layer l is determined as: 
+
+cl = arg min 
+
+> k
+
+∥rl − elk∥22, rl+1 = rl − elcl . (2) After L iterations, we obtain a discrete coarse-to-fine SID (c0, . . . , c L−1). The quantized latent representation ˆz is then approximated by the sum of the selected codebook vectors: ˆz = PL−1 
+
+> l=0
+
+elcl .The training of RQ-VAE aims to reconstruct the original input while optimizing the codebooks. The decoder D(·) attempts to reconstruct the input di
+
+from ˆz, resulting in the reconstruction loss: 
+
+Lrecon = ∥di − D(ˆ z)∥22. (3) To ensure the stability of quantization, RQ-VAE employs a split quantization objective consisting of a codebook loss to update codebook vectors towards the residuals and a commitment loss to constrain the encoder output: 
+
+Lcodebook =
+
+> L−1
+
+X
+
+> l=0
+
+∥sg [rl] − elcl ∥22 (4) 
+
+Lcommit = β
+
+> L−1
+
+X
+
+> l=0
+
+∥rl − sg [elcl ]∥22, (5) where sg [·] denotes the stop-gradient operation which prevents gradient update during backprop-agation, and β is a hyperparameter balancing the commitment loss. The final training objective is: 
+
+LRQ-VAE = Lrecon + Lcodebook + Lcommit . (6) 
+
+4 Methodology 
+
+4.1 Hierarchical Semantic Alignment (HSA) 
+
+Directly applying an item-pretrained RQ-VAE to retrieval faces a semantic gap, as its encoder E(·)
+
+is optimized solely for item reconstruction. To bridge this, we propose a Hierarchical Semantic Alignment (HSA) paradigm (Fig. 2). To prevent se-mantic drift and catastrophic forgetting, we freeze the pre-trained codebook, forcing the query quanti-zation path directly into the stable item manifold. 
+
+Cross-Sample Alignment (CSA). To pull the query’s latent representation into the item’s quan-tization space, we repurpose RQ-VAE losses by swapping input-target variables. Given a query 
+
+q and target t, the Cross-Commitment loss forces the query’s residual rlq to align with the target’s selected code elcl :
+
+LCC = β
+
+> L−1
+
+X
+
+> l=0
+
+∥rlq − sg [elcl ]∥22. (7) The Cross-Reconstruction loss ensures the target’s raw content dt is reconstructable from the query’s quantized representation ˆzq:
+
+LCR = ∥dt − D(ˆ zq)∥22. (8) The total CSA loss is LCSA = LCC + LCR .
+
+Hierarchical-Aware Contrastive Learning (HCL). To explicitly exploit the “Coarse-to-Fine” SID structure, we align the query’s partial quan-tized representation ˆz(l) 
+
+> q
+
+= Pli=0 eiciq
+
+with the target’s partial quantized representation ˆz(l) 
+
+> t
+
+=Pli=0 eicit
+
+accumulated up to depth l:
+
+LHCL = −
+
+> L−1
+
+X
+
+> l=0
+
+log exp( s+ 
+
+> l
+
+/τ )
+
+P 
+
+> j∈B
+
+exp( slj /τ ) ,s+ 
+
+> l
+
+= sim 
+
+
+
+ˆz(l) 
+
+> q
+
+, sg [ˆ z(l) 
+
+> t
+
+]
+
+
+
+,slj = sim 
+
+
+
+ˆz(l) 
+
+> q
+
+, sg [ˆ z(l) 
+
+> j
+
+]
+
+
+
+.
+
+(9) where B is the batch containing the positive target and negatives, and τ is the temperature. Token Emb Type Emb Position Emb Transformer Encoder Transformer Decoder Linear LayerNorm Activation Dropout Softmax Linear LayerNorm Activation Dropout Softmax Linear LayerNorm Activation Dropout Softmax Linear Activation Dropout Linear LayerNorm Candidate Set   
+
+> Top-K Items
+> Personalized Sequence Modeling Residual Cascading Generation
+> Query Input Embedding Target Input Embedding Decoder Reconstruction Emb Encoder Encoder Query Input Embedding Frozen Encoder Trainable Encoder
+> KL Divergence
+> Cross-Sample Alignment Hierarchical-Aware Contrastive Learning Soft Probability Distillation
+> Pull Together Push Away Negative Doc
+
+Figure 2: Overall architecture of CHAP , featuring HSA to bridge the query-item gap (left), and dual-view Personalized Sequence Modeling with Residual Cascading Generation for efficient coarse-to-fine retrieval (right). 
+
+Soft Probability Distillation. To prevent drastic latent shifts caused by hard quantization assign-ments, we distill the soft code assignment distribu-tion from the frozen item-side quantization path of the target item to the trainable query encoder via KL divergence: 
+
+LDistill =
+
+L−1X
+
+l=0 
+
+KL  Pitem (·| t) ∥ Pquery (·| q) , (10) where the soft assignment probability is defined by the Euclidean distance to the residual: 
+
+P (cl = k|q) = exp  −∥ rlq − elk∥22
+
+PKj=1 exp 
+
+
+
+−∥ rlq − elj ∥22
+
+ .
+
+(11) The comprehensive HSA objective is optimized via a weighted sum: 
+
+LHSA = LCSA + γ · L HCL + δ · L Distill . (12) 
+
+4.2 Personalized Sequence Modeling Dual-View Sequence Modeling. To capture the multi-granularity preferences of users and generate high-fidelity retrieval representations, we construct an input sequence where each interaction syner-gizes an aligned discrete SID and a continuous dense vector. For a user history S = {i1, . . . , i N }
+
+and query q, the input is organized as: 
+
+Xin = [ v[CLS] , vsparse 
+
+q , vdense 
+
+q ,
+
+vsparse 
+
+i1 , vdense 
+
+i1 , . . . ]. (13) The sparse view vsparse maps the aggregated code-book vectors ( P elcl ) into a unified dense space, while vdense corresponds to the raw language model embedding. To maintain training-inference consistency and prevent exposure bias, the unified decoder is initialized exclusively with the query’s dual representation ( vsparse 
+
+q , vdense 
+
+q ). This explic-itly forces the decoder to “look back” via cross-attention to retrieve personalized results. 
+
+Hybrid Optimization. Our multi-task frame-work optimizes the Sparse Generation Loss for hierarchical SID classification across all L levels: 
+
+Lsparse = −
+
+L−1X
+
+l=0 
+
+log exp( slcl )
+
+PKk=1 exp( slk)
+
+!
+
+, (14) where sl ∈ RK is the logit vector at level l. Simul-taneously, to avoid Mean Squared Error instability, we employ an InfoNCE-based Dense Contrastive Loss (Ldense ) over the batch set B = {v+} ∪ B −:
+
+Ldense = − log exp( sim (ˆ v, v+)/τ )
+
+P
+
+v′∈B exp( sim (ˆ v, v′)/τ ) , (15) treating the predicted dense vector ˆv (introduced in Sec. 4.3) as the anchor. The joint objective 
+
+Ltotal = Lsparse + Ldense creates a robust curricu-lum learning effect, where sparse structural con-straints simplify the dense ranking optimization. 
+
+4.3 Residual Cascading Generation and Retrieval 
+
+To achieve a balance between structural correctness and fine-grained semantic precision, we adopt a “Coarse-to-Fine” strategy to coordinate the predic-tion of discrete SIDs and continuous dense vectors. Formally, we decompose the generation probabil-ity of a target item i, given the context X, into two stages: the joint probability of the L hierarchi-cal Semantic Tokens, followed by the conditional probability of the dense vector (operationalized by a cosine-softmax score over generated candidates): 
+
+P (i|X) = 
+
+> L−1
+
+Y
+
+> l=0
+
+P (cli|c<l i , X )
+
+| {z }
+
+> Sparse Generation
+
+· P (vi|c0: L−1 
+
+> i
+
+, X )
+
+| {z }
+
+> Dense Refinement
+
+.
+
+(16) An entropy-based justification for this cascaded sparse-dense factorization is provided in App. B. 
+
+Coarse-to-Fine Residual Generation. To avoid the prohibitive latency of standard autoregres-sive decoding, we propose a Single-pass Resid-ual Generation Mechanism. The Transformer De-coder executes only once over the query’s input tokens. Specifically, let hsparse dec and hdense dec de-note the output hidden states corresponding to the discrete query SID position and the continuous query embedding position, respectively. Utilizing 
+
+hsparse dec as a global structural context anchor, subse-quent states for predicting level l are updated via lightweight residual blocks: 
+
+h(l+1) = ResBlock 
+
+
+
+Concat [hsparse dec , elcl ]
+
+
+
++ h(l).
+
+(17) This decoupled design acts as a powerful decoding accelerator. To align the continuous vector with this discrete structure, we inject the reconstructed quantization ˆz = PL−1 
+
+> l=0
+
+elcl into the dense predic-tion head conditioned on hdense dec :
+
+ˆv = PredHead 
+
+
+
+Concat [hdense dec , ˆz]
+
+
+
+, (18) achieving an elegant balance between structural correctness and fine-grained semantic precision. 
+
+Candidate Scoring. During inference, we maxi-mize throughput via a parallel sampling strategy 
+
+to generate M candidate SIDs. We calculate the accumulated log-probability of the sampled hierar-chical path as the sparse signal Ssparse , and the co-sine similarity between the predicted dense vector 
+
+ˆv corresponding to the sampled SID and the candi-date item’s raw vector vi as the dense signal Sdense .Both signals are normalized using a temperature-scaled Softmax over the candidate pool Icand :
+
+N (S) = exp( S/τ )
+
+P 
+
+> j∈I cand
+
+exp( Sj /τ ) . (19) The final score fuses both dual-view intents: 
+
+Sfinal (i) = N (Ssparse (i)) · N (Sdense (i)) . (20) 
+
+Table 1: Statistics of the datasets in our experiments.                     
+
+> Dataset #Items #Queries #Q-I Pairs Avg. Hist.
+> ESCI-us 1,215,854 97,346 1,818,825 -KuaiSearch 6,634,118 295,561 682,228 10.37 Amazon 35,772 9,070 9,070 40.12 Local-Life 10,145,542 3,089,026 3,089,026 7.47
+
+5 Experiments 
+
+We analyze CHAP’s effectiveness and address these research questions in this section: RQ1: 
+
+How does CHAP perform against state-of-the-art baselines? RQ2: How does semantic alignment improve generated ItemID quality? RQ3: How do core components contribute across intent-wise query segments? RQ4: Does our residual architec-ture resolve GR latency bottlenecks? RQ5: How robust is CHAP to codebook and decoding hyper-parameters? RQ6: Can CHAP drive tangible busi-ness growth in live online production? 
+
+5.1 Experimental Settings 5.1.1 Datasets 
+
+To validate the effectiveness of CHAP, we con-duct extensive experiments on four real-world datasets. ESCI-us (Reddy et al., 2022) features authentic Amazon search queries with complex linguistic patterns and strict attribute constraints. 
+
+KuaiSearch (Li et al., 2026) provides a massive e-commerce search corpus from Kuaishou, preserv-ing real queries, long-term user behavior sequences, and long-tail product distributions. Amazon (Cai et al., 2025) integrates diverse user profiles and his-torical web behaviors to rigorously evaluate highly personalized search instructions. Lastly, Local-Life is a large-scale industrial dataset collected from 30 days of user interaction logs on a lead-ing platform, covering heterogeneous search in-tents with raw natural language texts. Detailed descriptions and comprehensive statistics for all four datasets are provided in Tab. 1 and App. C. 
+
+5.1.2 Baselines 
+
+To comprehensively evaluate the performance of CHAP, we compare it against a diverse set of 14 representative baselines across four categories. For sparse retrieval, we select BM25 (Robert-son et al., 2009), Doc2Query (Nogueira et al., 2019), and DeepCT (Dai and Callan, 2019). For dense retrieval, we employ DPR (Karpukhin et al., 2020), Sen-T5 (Ni et al., 2022), and MPNet (Song et al., 2020). For personalized retrieval scenarios, Table 2: Performance comparison on four datasets. Bold indicates the result significantly outperforms all baselines with paired t-tests at p < 0.05 level, and underlined values denote the second-best results.                                                                                                                                                                                                      
+
+> Type Model ESCI-us KuaiSearch Amazon Local-Life
+> R@10 R@50 NDCG@50 R@10 R@50 HR@50 R@10 R@50 NDCG@50 R@10 R@50 MRR@10 Sparse BM25 0.0480 0.0932 0.0811 0.0706 0.1564 0.2088 0.4807 0.6780 0.3887 0.2531 0.3415 0.0997 Doc2Query 0.0551 0.1410 0.1015 0.0784 0.1772 0.2382 0.5064 0.6904 0.4039 0.2971 0.3959 0.1374 DeepCT 0.0626 0.1486 0.0997 0.0760 0.1898 0.2531 0.5869 0.7622 0.4708 0.3718 0.4387 0.1913 Dense DPR 0.0552 0.1765 0.1104 0.0826 0.2079 0.2769 0.2010 0.3413 0.1666 0.3153 0.4820 0.1582 Sen-T5 0.0458 0.1363 0.0845 0.0673 0.1622 0.2227 0.5690 0.7967 0.4376 0.2360 0.3802 0.0956 MPNet 0.0294 0.0879 0.0531 0.0619 0.1279 0.1970 0.5961 0.7755 0.4719 0.1820 0.3210 0.0815 Personalized TEM 0.0213 0.0545 0.0402 0.0852 0.2131 0.2776 0.4814 0.7301 0.3535 0.3551 0.5401 0.1716 CoPPS 0.0246 0.0878 0.0458 0.0877 0.2153 0.2832 0.4854 0.8004 0.3699 0.4265 0.5971 0.2403 Generative DSI 0.0217 0.0552 0.0433 0.0623 0.1369 0.2018 0.4181 0.6202 0.3414 0.1868 0.3056 0.0836 NCI 0.0432 0.1006 0.0803 0.0591 0.1270 0.1781 0.3765 0.5836 0.3139 0.2540 0.3951 0.1014 LTRGR 0.0316 0.0944 0.0629 0.0688 0.1501 0.2184 0.5143 0.7025 0.4062 0.2608 0.4644 0.1120 TIGER 0.0487 0.1335 0.0814 0.0731 0.1796 0.2427 0.5387 0.7292 0.4237 0.2659 0.4068 0.1073 MERGE 0.0612 0.1903 0.1070 0.0858 0.2033 0.2625 0.5697 0.7819 0.4523 0.3850 0.5828 0.2389 COBRA 0.0585 0.1950 0.1126 0.0890 0.2074 0.2803 0.6205 0.8474 0.4906 0.5020 0.6057 0.2810
+> CHAP (Ours) 0.1127 0.2452 0.2454 0.0944 0.2289 0.2949 0.7358 0.9416 0.5191 0.5803 0.8085 0.3302
+
+Table 3: Ablation study of CHAP on Local-Life.                                               
+
+> Variant R@10 R@50 MRR@10 QPS
+> CHAP (Full Model) 0.5803 0.8089 0.3302 78.9
+> (A) Hierarchical Semantic Alignment (HSA)
+> w/o HSA 0.5115 0.7488 0.2845 78.9 w/o LCSA 0.5164 0.7602 0.2721 78.9 w/o LHCL 0.5218 0.7534 0.2858 78.9 w/o LDistill 0.5692 0.7895 0.3063 78.9
+> (B) Sequence Modeling
+> w/o Dense Refinement 0.4352 0.6455 0.2241 81.2
+> (C) Residual Cascading Generation
+> w/o Residual Gen. (Autoregressive) 0.5285 0.7610 0.2849 40.5 w/o Self-Attention (Cross-Attention) 0.5712 0.8062 0.3237 84.8 w/o Decoder (Pooling + MLP) 0.4651 0.6836 0.2584 112.4
+
+we compare against TEM (Bi et al., 2020) and 
+
+CoPPS (Dai et al., 2023). Finally, for Genera-tive Retrieval (GR), we evaluate against state-of-the-art models including DSI (Tay et al., 2022), 
+
+NCI (Wang et al., 2022), TIGER (Rajput et al., 2023), LTRGR (Li et al., 2024), MERGE (Zhang et al., 2025b), and COBRA (Yang et al., 2025). Detailed descriptions are provided in App. D. 
+
+5.1.3 Evaluation Metrics 
+
+We evaluate retrieval performance using four stan-dard metrics: Recall (R@K) for the overall macro-scopic coverage of relevant candidates; Hit Ratio 
+
+(HR@K) for the success rate of retrieving at least one target in sparse or single-interaction scenarios; 
+
+Mean Reciprocal Rank (MRR@K) for assess-ing strict positional ranking quality in single-target datasets; and Normalized Discounted Cumula-tive Gain (NDCG@K) for handling fine-grained permutations in multi-target datasets. Detailed mathematical formulations and selection justifica-tions are provided in App. E. 
+
+5.1.4 Implementation Details 
+
+We utilize BERT-base (Devlin et al., 2019) for raw text representation and T5-base (Raffel et al., 2020) for the generative retrieval backbone (Chinese-BERT-base and mT5-base for Chinese datasets). In the SID learning stage, the RQ-VAE is configured with a codebook depth of L = 3 and a codebook size of K = 512 . For the Hierarchical Seman-tic Alignment, the loss weights γ and δ are set to 
+
+0.01 and 0.001 , respectively. During inference, we employ a parallel sampling strategy to efficiently generate M = 50 diverse candidate SIDs, and set the temperature τ = 1 .1 for the joint probability normalization operator N (·). Comprehensive de-tails and explicit implementation settings for all baseline models are provided in App. F. 
+
+5.2 Overall Results (RQ1) 
+
+Tab. 2 presents the comparative results across the four evaluated datasets. CHAP consistently es-tablishes a new state-of-the-art, significantly out-performing strong baselines from all categories, including advanced GR models like COBRA and MERGE. Specifically, while standard GR meth-ods like TIGER struggle with the inherent seman-tic gap—often lagging behind traditional BM25, our Hierarchical Semantic Alignment effectively bridges this gap, synergizing the semantic com-prehension of dense retrievers with the structural precision of GR. Furthermore, traditional person-alized baselines frequently suffer from relevance drift, allowing historical behaviors to overshadow current search intents. In contrast, CHAP dynami-cally refines query relevance through its dual-view sequence modeling. This prevents relevance drift and ensures retrieved items are precisely aligned with both the explicit query constraints and the user’s fine-grained intents, yielding robust general-ization across diverse, real-world search scenarios. Notably, unlike COBRA (Yang et al., 2025), which mandates the generation of multiple dense representations—incurring excessive training costs and prohibitive real-time inference overhead, CHAP achieves superior efficiency by elegantly reusing the item’s raw representations for sequence modeling. Furthermore, MERGE (Zhang et al., 2025b) heavily relies on aligning multiple posi-tive samples and varying relevance levels under a single query, exhibiting limited generalization on datasets with single positive targets or uniform rel-evance levels. In contrast, our semantic alignment paradigm is specifically designed to bridge the gap between complex, multi-intent queries and targets. 
+
+5.3 Ablation Study 
+
+Tab. 3 details our ablation study on Local-Life, incorporating Queries Per Second (QPS) to concur-rently assess industrial efficiency. Detailed variant configurations are provided in App. G. 
+
+5.3.1 Analysis of Generated SIDs (RQ2) 
+
+Replacing our aligned encoder with a fixed pre-trained encoder (w/o HSA) causes significant degradation, confirming the critical necessity of proactive alignment in bridging the semantic gap. Furthermore, we observe a performance drop when removing the continuous vectors (w/o Dense Re-finement). This validates our dual-view design intu-ition: sparse SIDs act strictly as structural skeletons for coarse retrieval, while dense vectors are indis-pensable for carrying the fine-grained semantics required for precise personalized matching. Furthermore, visualization of the latent space encoded by DNN encoder of RQ-VAE after PCA dimensionality reduction (from ESCI-us, shown in Fig. 3) intuitively confirms this advantage: while vanilla RQ-VAE suffers from a visible semantic gap with loosely scattered relevant items, CHAP tightly clusters relevant items (orange) directly around their corresponding queries (red), as highlighted by the dashed boxes, while explicitly pushing irrele-vant items (blue) further away. This demonstrates the efficacy of our alignment paradigm in draw-ing dynamic user intents and static item semantics into a highly unified space. Additional qualitative diagnostics are provided in App. I. 1.0 0.5 0.0 0.5 1.0 0.75      
+
+> 0.50
+> 0.25
+> 0.00 0.25 0.50 0.75
+> CHAP
+> 123
+> 1.0 0.5 0.0 0.5 1.0 1.5 0.75
+> 0.50
+> 0.25
+> 0.00 0.25 0.50 0.75 1.00
+> vanilla RQ-VAE
+> Query #1 Q#1 Relevant Q#1 Irrelevant Query #2 Q#2 Relevant Q#2 Irrelevant Query #3 Q#3 Relevant Q#3 Irrelevant
+> 123
+
+Figure 3: Visualization of Items under three queries. General (vanilla RQ-VAE: 10.73) Ambiguous (vanilla RQ-VAE: 7.54) ColdStart (vanilla RQ-VAE: 5.21) LongTail (vanilla RQ-VAE: 6.36)    
+
+> 0510 15 20 25
+> Improvement over vanilla RQ-VAE (MRR@10 pts)
+> +11.23 +9.16 +16.86 +17.12 +16.52 +21.11 +8.94 +9.65 +5.52 +6.89 +5.76 +6.43 +22.29 +26.14 +22.68 +23.85
+> + HSA + Sequence Modeling + Res. Gen. CHAP (Full)
+
+Figure 4: Intent-wise query segment analysis. 
+
+5.3.2 Intent-wise Query Analysis (RQ3) 
+
+To further dissect the source of CHAP’s superiority, we extract four intent-wise query segments from the Local-Life dataset: General, Ambiguous, Cold-Start, and LongTail (detailed in App. H). We explic-itly evaluate the absolute MRR@10 improvements brought by individually integrating each core com-ponent over the vanilla RQ-VAE baseline (Fig. 4). The segment-wise results corroborate our de-sign intuitions, revealing the orthogonal strengths of each module. Introducing the dual-view Se-quence Modeling delivers the most dominant boost on the Ambiguous segment. This confirms that for highly generic queries, dense historical contex-tualization is indispensable for intent disambigua-tion. However, its isolated contribution drops on the ColdStart and LongTail segments, as cold en-tities inherently lack sufficient interaction histories for sequence models to exploit. Conversely, in-tegrating the HSA module addresses these sparse segments, suggesting that proactive semantic map-ping bridges the representation gap for rare queries and new items, independent of popularity biases. Meanwhile, the Residual Generation mechanism yields a stable, structural baseline uplift across all slices by mitigating layer-wise decoding decay. 
+
+5.3.3 Efficiency Analysis (RQ4) 
+
+We deeply deconstruct our decoding architecture to evaluate its necessity and efficiency. Degener-ating to a standard autoregressive paradigm (w/o Residual Gen.) harms accuracy and halves infer-Table 4: Efficiency comparison on Local-Life. ItemID and Seq. denote the training time for ItemID construc-tion and the GR model, respectively. Total is their sum. 
+
+Model ItemID (H) Seq. (H) Total (H) QPS 
+
+DSI 1.3 16.5 17.8 37.5 NCI 1.3 34.0 35.3 26.2 LTRGR 1.5 31.9 33.4 34.7 TIGER 0.4 18.2 18.6 39.2 MERGE 0.8 19.3 20.1 36.8 COBRA 0.4 26.4 26.8 32.4 
+
+CHAP (Ours) 0.5 23.8 24.3 78.9 10 4 10 3 10 2 10 1 10 0 
+
+> Loss Weight Value
+> 0.27 0.28 0.29 0.30 0.31 0.32 0.33 0.34
+> MRR@10
+> HCL Weight ( )
+> Distill Weight ( )
+
+(a) Alignment Weights 256 512 1024    
+
+> Codebook Size ( K)
+> 0.28 0.29 0.30 0.31 0.32 0.33
+> MRR@10
+> Depth ( L)Size ( K)
+> 234
+> Codebook Depth ( L)
+
+(b) Codebook Size 
+
+Figure 5: Effect of hyperparameters on retrieval tasks. 
+
+ence throughput (QPS), indicating our residual de-sign is a powerful decoding accelerator. Removing the decoder’s self-attention (w/o Self-Attention) improves QPS with minimal precision loss, show-ing explicit residual pathways effectively replace self-attention for hierarchical modeling. However, entirely removing the decoder (w/o Decoder) maxi-mizes QPS but collapses MRR. This highlights the indispensable role of cross-attention for dynamic history routing across lengthy user sequences. To further contextualize the efficiency (Tab. 4), we evaluated the computational overhead using an 8×A100 (80G) GPU cluster for training and a sin-gle A100 (80G) GPU for inference QPS. During training, advanced baselines like NCI and LTRGR incur excessive computational overhead due to mas-sive query augmentation or complex list-wise op-timization. In contrast, CHAP maintains a highly competitive duration, presenting a cost-effective trade-off for modeling dual-view sequences. Dur-ing online inference, while standard GR models and dense-heavy frameworks (e.g., COBRA) are severely bottlenecked by repeated layer-wise de-coding, our decoupled architecture, combined with parallel sampling, achieves substantially higher QPS, satisfying the strict low-latency requirements of large-scale industrial serving. 0.6 0.8 1.0 1.2 1.4 
+
+> 0.27 0.28 0.29 0.30 0.31 0.32 0.33 0.34
+> Recall (MRR@10)
+> Recall Diversity M=50 M=40 M=30 M=20
+> 010 20 30 40 50
+> Diversity
+
+Figure 6: Impact of normalization temperature τ and candidate set width M on accuracy and diversity. Table 5: Online A/B testing results over a 14-day period. All metrics are statistically significant with paired t-tests at p < 0.05 level.     
+
+> Metric Relative Improvement
+> UV-CTR (Click-Through Rate) +0.77% UV-CXR (Conversion Rate) +2.09% Pay Orders (Order Volume) +2.98%
+
+5.4 Hyperparameter Analysis (RQ5) 
+
+We analyze the sensitivity of critical hyperparame-ters on the Local-Life dataset to evaluate CHAP’s robustness. Regarding training objectives, the alignment weights exhibit an inverted U-shape trend, peaking at γ = 0 .01 and δ = 0 .001 to achieve optimal semantic alignment without dis-rupting the primary reconstruction stability. For the codebook scale, performance peaks at depth 
+
+L = 3 and size K = 512 . Notably, CHAP demon-strates exceptional robustness to these structural parameters; while extreme settings induce minor metric fluctuations, our framework avoids the per-formance collapse typically observed in standard GR models under suboptimal codebook assign-ments. During inference, we regulate the accuracy-diversity equilibrium by varying the normalization temperature τ across parallel sampling sizes M .Ranking accuracy follows an inverted U-shape, suf-fering from over-confident sharp distributions at low τ and excessive exploration noise at high τ .Ultimately, CHAP achieves an optimal balance be-tween semantic discrimination and candidate diver-sity at τ = 1 .1 with M = 50 . Detailed analysis is provided in Fig. 5 and Fig. 6. 
+
+5.5 Online A/B Test (RQ6) 
+
+To verify CHAP’s practical effectiveness and scala-bility, we conducted a rigorous 14-day online A/B test on a leading production local-life service plat-form, covering 20% of user traffic. CHAP was de-ployed via NVIDIA Triton to decouple modules for high-throughput real-time inference, rather than re-lying on query caching. Compared to the highly op-timized online production retrieval system, CHAP achieved consistent improvements: UV-CTR in-creased by 0.77%, demonstrating that HSA en-hances semantic relevance. Moreover, conversion metrics saw substantial lifts, with UV-CXR ris-ing by 2.09% and Pay Order Volume growing by 2.98%, showing that CHAP not only attracts user clicks but, crucially, accurately captures latent user intent to drive final purchasing decisions, yielding tangible business growth in industrial scenarios. 
+
+6 Conclusion 
+
+In this work, we propose CHAP, a novel person-alized GR framework designed to overcome the inherent semantic gap and inference latency bottle-necks of existing GR paradigms. By introducing the HSA module, CHAP effectively maps dynamic user intents directly into the static item quantiza-tion space. Furthermore, our dual-view sequence modeling, coupled with a single-pass Residual Cas-cading Generation mechanism, decouples histori-cal intent routing from layer-wise decoding. This architecture not only ensures fine-grained semantic precision but also acts as a powerful decoding accel-erator. Extensive experiments across four diverse real-world datasets, alongside a rigorous online A/B test on a leading local-life platform, demon-strate that CHAP establishes a new state-of-the-art. It achieves a balance between exact intent align-ment and industrial-grade inference throughput. 
+
+Limitations 
+
+Although CHAP demonstrates strong empirical ef-fectiveness and industrial efficiency, several lim-itations remain for future exploration. First, in the HSA stage, freezing the item-side codebook provides a stable quantization manifold and pre-vents semantic drift. However, this design may also prevent item representations from being dynami-cally updated with collaborative filtering signals or query-side feedback, which could limit the upper bound of personalization in highly dynamic envi-ronments. Second, our dual-view personalized se-quence modeling is mainly validated with hierarchi-cal SIDs generated by RQ-VAE-style quantization. While this setting is representative for recent gen-erative retrieval systems, the generalization ability of the overall framework to other types of ItemIDs, such as lexical identifiers, learned atomic IDs, or tree-based semantic IDs, still requires systematic investigation. Finally, the Residual Cascading Gen-eration module substantially improves inference ef-ficiency by avoiding repeated heavy decoder passes. Nevertheless, how the acceleration ratio evolves when scaling model size, codebook depth, and can-didate budget remains an open question. Further compression techniques, such as model distillation for the residual generation blocks, may provide an additional path toward more efficient large-scale deployment. 
+
+Ethical Considerations 
+
+This research was reviewed and approved by the relevant technical ethics committee. All data col-lection procedures followed the platform’s compli-ance requirements and were conducted with user permission or authorization where applicable. Be-fore being used for model training, evaluation, and analysis, all user-related data were anonymized or de-identified to remove personally identifiable information. Our experiments rely only on aggre-gated statistics and anonymized behavioral signals, and do not attempt to infer or recover individual identities. The online A/B test was conducted un-der the platform’s standard safety and compliance protocols to minimize potential risks to user expe-rience. The open-source implementation of CHAP is released under a CC BY-NC-SA 4.0 license, explicitly disclaiming liability for direct commer-cial deployment to ensure strict non-commercial, research-only usage. 
+
+Acknowledgements 
+
+The work is supported by grants from New Gener-ation Artificial Intelligence-National Science and Technology Major Project (2025ZD0123403), Na-tional Natural Science Foundation of China (No. U24A20253), Scientific Research Innovation Ca-pability Support Project for Young Faculty, and the Meituan Research Fund. 
+
+References  
+
+> Qingyao Ai, Daniel N Hill, SVN Vishwanathan, and W Bruce Croft. 2019a. A zero attention model for personalized product search. In Proceedings of the 28th ACM International Conference on Information and Knowledge Management , pages 379–388.
+
+Qingyao Ai, Yongfeng Zhang, Keping Bi, Xu Chen, and W Bruce Croft. 2017. Learning a hierarchical embedding model for personalized product search. In Proceedings of the 40th International ACM SI-GIR Conference on Research and Development in Information Retrieval , pages 645–654. Qingyao Ai, Yongfeng Zhang, Keping Bi, and W Bruce Croft. 2019b. Explainable product search with a dy-namic relation embedding model. ACM Transactions on Information Systems (TOIS) , 38(1):1–29. Vladimir Baikalov, Iskander Bagautdinov, and Sergey Muravyov. 2026. Mitigating collaborative semantic id staleness in generative retrieval. arXiv preprint arXiv:2604.13273 .Keping Bi, Qingyao Ai, and W Bruce Croft. 2020. A transformer-based embedding model for personalized product search. In Proceedings of the 43rd Inter-national ACM SIGIR Conference on Research and Development in Information Retrieval , pages 1521– 1524. Hongru Cai, Yongqi Li, Wenjie Wang, Fengbin Zhu, Xiaoyu Shen, Wenjie Li, and Tat-Seng Chua. 2025. Large language models empowered personalized web agents. In Proceedings of the ACM on Web Confer-ence 2025 , pages 198–215. Tadeusz Cali´ nski and Jerzy Harabasz. 1974. A den-drite method for cluster analysis. Communications in Statistics-theory and Methods , 3(1):1–27. Shitong Dai, Jiongnan Liu, Zhicheng Dou, Haonan Wang, Lin Liu, Bo Long, and Ji-Rong Wen. 2023. Contrastive learning for user sequence representation in personalized product search. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining , pages 380–389. Zhuyun Dai and Jamie Callan. 2019. Context-aware sentence/passage term importance estimation for first stage retrieval. arXiv preprint arXiv:1910.10687 .David L Davies and Donald W Bouldin. 1979. A cluster separation measure. IEEE transactions on pattern analysis and machine intelligence , (2):224–227. Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. Bert: Pre-training of deep bidirectional transformers for language understand-ing. In Proceedings of the 2019 conference of the North American chapter of the association for com-putational linguistics: human language technologies, volume 1 (long and short papers) , pages 4171–4186. Yan Fang, Jingtao Zhan, Qingyao Ai, Jiaxin Mao, Wei-hang Su, Jia Chen, and Yiqun Liu. 2024. Scaling laws for dense retrieval. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval , pages 1339–1349. Junchen Fu, Xuri Ge, Alexandros Karatzoglou, Ioan-nis Arapakis, Suzan Verberne, Joemon M Jose, and Zhaochun Ren. 2026. Differentiable semantic id for generative recommendation. arXiv preprint arXiv:2601.19711 .Zitian Guo, Yupeng Hou, Clark Mingxuan Ju, Neil Shah, and Julian McAuley. 2026. Mlps are efficient distilled generative recommenders. arXiv preprint arXiv:2605.12617 .Ruining He and Julian McAuley. 2016. Ups and downs: Modeling the visual evolution of fashion trends with one-class collaborative filtering. In proceedings of the 25th international conference on world wide web ,pages 507–517. Angqing Jiang, Gaoming Zhang, Jianchun Song, Kena Qi, Dayao Chen, Wei Lin, and Defu Lian. 2026a. Think-to-personalize: Unifying reasoning and re-trieval for user-centric personalized dense retrieval. 
+
+arXiv preprint arXiv:2608.18855 .Jie Jiang, Xinxun Zhang, Enming Zhang, Yuling Xiong, Jun Zhang, Jingwen Wang, Huan Yu, Yux-iang Wang, Hao Wang, Xiao Yan, and 1 others. 2026b. End-to-end semantic id generation for gener-ative advertisement recommendation. arXiv preprint arXiv:2602.10445 .Vladimir Karpukhin, Barlas Oguz, Sewon Min, Patrick SH Lewis, Ledell Wu, Sergey Edunov, Danqi Chen, and Wen-tau Yih. 2020. Dense passage re-trieval for open-domain question answering. In 
+
+EMNLP (1) , pages 6769–6781. Omar Khattab and Matei Zaharia. 2020. Colbert: Effi-cient and effective passage search via contextualized late interaction over bert. In Proceedings of the 43rd International ACM SIGIR conference on research and development in Information Retrieval , pages 39– 48. Tzu-Lin Kuo, Tzu-Wei Chiu, Tzung-Sheng Lin, Sheng-Yang Wu, Chao-Wei Huang, and Yun-Nung Chen. 2024. A survey of generative information retrieval. 
+
+arXiv preprint arXiv:2406.01197 .Xiaoxi Li, Jiajie Jin, Yujia Zhou, Yuyao Zhang, Peitian Zhang, Yutao Zhu, and Zhicheng Dou. 2025. From matching to generation: A survey on generative infor-mation retrieval. ACM Transactions on Information Systems , 43(3):1–62. Yongqi Li, Nan Yang, Liang Wang, Furu Wei, and Wen-jie Li. 2024. Learning to rank in generative retrieval. In Proceedings of the AAAI Conference on Artificial Intelligence , volume 38, pages 8716–8723. Yupeng Li, Ben Chen, Mingyue Cheng, Zhiding Liu, Xuxin Zhang, Chenyi Lei, and Wenwu Ou. 2026. Kuaisearch: A large-scale e-commerce search dataset for recall, ranking, and relevance. arXiv preprint arXiv:2602.11518 .Jingjing Liu, Chang Liu, and Nicholas J Belkin. 2020. Personalization in text information retrieval: A sur-vey. Journal of the Association for Information Sci-ence and Technology , 71(3):349–369. Jiongnan Liu, Zhicheng Dou, Guoyu Tang, and Sulong Xu. 2023. Jdsearch: A personalized product search dataset with real queries and full interactions. In 
+
+Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Infor-mation Retrieval , pages 2945–2952. Xiaoyu Liu, Fuwei Zhang, Yiqing Wu, Xinyu Jia, Zenghua Xia, Fuzhen Zhuang, Zhao Zhang, Fei Jiang, and Wei Lin. 2025. Cat-id 2: Category-tree integrated document identifier learning for generative retrieval in e-commerce. arXiv preprint arXiv:2511.01461 .Yu A Malkov and Dmitry A Yashunin. 2018. Efficient and robust approximate nearest neighbor search us-ing hierarchical navigable small world graphs. IEEE transactions on pattern analysis and machine intelli-gence , 42(4):824–836. Fengran Mo, Abbas Ghaddar, Kelong Mao, Mehdi Reza-gholizadeh, Boxing Chen, Qun Liu, and Jian-Yun Nie. 2024. Chiq: Contextual history enhancement for improving query rewriting in conversational search. 
+
+arXiv preprint arXiv:2406.05013 .Thong Nguyen and Andrew Yates. 2023. Genera-tive retrieval as dense retrieval. arXiv preprint arXiv:2306.11397 .Jianmo Ni, Gustavo Hernandez Abrego, Noah Constant, Ji Ma, Keith Hall, Daniel Cer, and Yinfei Yang. 2022. Sentence-t5: Scalable sentence encoders from pre-trained text-to-text models. In Findings of the associ-ation for computational linguistics: ACL 2022 , pages 1864–1874. Rodrigo Nogueira, Wei Yang, Jimmy Lin, and Kyunghyun Cho. 2019. Document expansion by query prediction. arXiv preprint arXiv:1904.08375 .Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, and Peter J Liu. 2020. Exploring the lim-its of transfer learning with a unified text-to-text transformer. Journal of machine learning research ,21(140):1–67. Shashank Rajput, Nikhil Mehta, Anima Singh, Raghu-nandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, and 1 others. 2023. Recommender systems with generative retrieval. Advances in Neural Information Process-ing Systems , 36:10299–10315. Juan Ramos and 1 others. 2003. Using tf-idf to de-termine word relevance in document queries. In 
+
+Proceedings of the first instructional conference on machine learning , volume 242, pages 29–48. New Jersey, USA. Chandan K. Reddy, Lluís Màrquez, Fran Valero, Nikhil Rao, Hugo Zaragoza, Sambaran Bandyopadhyay, Arnab Biswas, Anlu Xing, and Karthik Subbian. 2022. Shopping queries dataset: A large-scale ESCI benchmark for improving product search. Nils Reimers and Iryna Gurevych. 2019. Sentence-bert: Sentence embeddings using siamese bert-networks. 
+
+arXiv preprint arXiv:1908.10084 .Stephen Robertson, Hugo Zaragoza, and 1 others. 2009. The probabilistic relevance framework: Bm25 and beyond. Foundations and Trends® in Information Retrieval , 3(4):333–389. Peter J Rousseeuw. 1987. Silhouettes: a graphical aid to the interpretation and validation of cluster analysis. 
+
+Journal of computational and applied mathematics ,20:53–65. Zihua Si, Zhongxiang Sun, Jiale Chen, Guozhang Chen, Xiaoxue Zang, Kai Zheng, Yang Song, Xiao Zhang, Jun Xu, and Kun Gai. 2024. Generative retrieval with semantic tree-structured identifiers and contrastive learning. In Proceedings of the 2024 Annual Inter-national ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region , pages 154–163. Kaitao Song, Xu Tan, Tao Qin, Jianfeng Lu, and Tie-Yan Liu. 2020. Mpnet: Masked and permuted pre-training for language understanding. Advances in neural information processing systems , 33:16857– 16867. Zhongxiang Sun, Zihua Si, Xiaoxue Zang, Dewei Leng, Yanan Niu, Yang Song, Xiao Zhang, and Jun Xu. 2023. Kuaisar: A unified search and recommenda-tion dataset. In Proceedings of the 32nd ACM inter-national conference on information and knowledge management , pages 5407–5411. Yubao Tang, Ruqing Zhang, Jiafeng Guo, Jiangui Chen, Zuowei Zhu, Shuaiqiang Wang, Dawei Yin, and Xueqi Cheng. 2023a. Semantic-enhanced differen-tiable search index inspired by learning strategies. In 
+
+Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining , pages 4904–4913. Yubao Tang, Ruqing Zhang, Jiafeng Guo, and Maarten de Rijke. 2023b. Recent advances in generative in-formation retrieval. In Proceedings of the Annual International ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region , pages 294–297. Yi Tay, Vinh Tran, Mostafa Dehghani, Jianmo Ni, Dara Bahri, Harsh Mehta, Zhen Qin, Kai Hui, Zhe Zhao, Jai Gupta, and 1 others. 2022. Transformer memory as a differentiable search index. Advances in Neural Information Processing Systems , 35:21831–21843. Lidan Wang, Jimmy Lin, and Donald Metzler. 2011. A cascade ranking model for efficient ranked retrieval. In Proceedings of the 34th international ACM SIGIR conference on Research and development in Informa-tion Retrieval , pages 105–114. Yujing Wang, Yingyan Hou, Haonan Wang, Ziming Miao, Shibin Wu, Qi Chen, Yuqing Xia, Chengmin Chi, Guoshuai Zhao, Zheng Liu, and 1 others. 2022. A neural corpus indexer for document retrieval. Ad-vances in Neural Information Processing Systems ,35:25600–25614. Will Williams, Sam Ringer, Tom Ash, David MacLeod, Jamie Dougherty, and John Hughes. 2020. Hierar-chical quantized autoencoders. Advances in Neural Information Processing Systems , 33:4524–4535. Yanjing Wu, Yinfu Feng, Jian Wang, Wenji Zhou, Yu-nan Ye, Rong Xiao, and Jun Xiao. 2024. Hi-gen: Generative retrieval for large-scale personalized e-commerce search. arXiv preprint arXiv:2404.15675 .Ming Xia, Zhiqin Zhou, Guoxin Ma, and Dongmin Huang. 2026. Unleash the potential of long semantic ids for generative recommendation. arXiv preprint arXiv:2602.13573 .Lee Xiong, Chenyan Xiong, Ye Li, Kwok-Fung Tang, Jialin Liu, Paul Bennett, Junaid Ahmed, and Arnold Overwijk. 2020. Approximate nearest neighbor neg-ative contrastive learning for dense text retrieval. 
+
+arXiv preprint arXiv:2007.00808 .Yuhao Yang, Zhi Ji, Zhaopeng Li, Yi Li, Zhonglin Mo, Yue Ding, Kai Chen, Zijian Zhang, Jie Li, Shuanglong Li, and 1 others. 2025. Sparse meets dense: Unified generative recommendations with cas-caded sparse-dense representations. arXiv preprint arXiv:2503.02453 .Peiwen Yuan, Xinglin Wang, Shaoxiong Feng, Boyuan Pan, Yiwei Li, Heda Wang, Xupeng Miao, and Kan Li. 2024. Generative dense retrieval: Memory can be a burden. arXiv preprint arXiv:2401.10487 .Jingtao Zhan, Jiaxin Mao, Yiqun Liu, Jiafeng Guo, Min Zhang, and Shaoping Ma. 2021. Optimizing dense retrieval model training with hard negatives. In Pro-ceedings of the 44th international ACM SIGIR con-ference on research and development in information retrieval , pages 1503–1512. Fuwei Zhang, Xiaoyu Liu, Xinyu Jia, Yingfei Zhang, Zenghua Xia, Fei Jiang, Fuzhen Zhuang, Wei Lin, and Zhao Zhang. 2025a. Hiergr: Hierarchical se-mantic representation enhancement for generative retrieval in food delivery search. In Proceedings of the 63rd Annual Meeting of the Association for Com-putational Linguistics (Volume 6: Industry Track) ,pages 444–455. Fuwei Zhang, Xiaoyu Liu, Xinyu Jia, Yingfei Zhang, Shuai Zhang, Xiang Li, Fuzhen Zhuang, Wei Lin, and Zhao Zhang. 2025b. Multi-level relevance doc-ument identifier learning for generative retrieval. In 
+
+Proceedings of the 63rd Annual Meeting of the As-sociation for Computational Linguistics (Volume 1: Long Papers) , pages 10066–10080. Yingchen Zhang, Ruqing Zhang, Jiafeng Guo, Wenjun Peng, Sen Li, Fuyu Lv, and Xueqi Cheng. 2025c. C2t-id: Converting semantic codebooks to textual document identifiers for generative search. In Pro-ceedings of the 2025 Annual International ACM SI-GIR Conference on Research and Development in In-formation Retrieval in the Asia Pacific Region , pages 331–336. Carolina Zheng, Minhui Huang, Dmitrii Pedchenko, Kaushik Rangadurai, Siyu Wang, Fan Xia, Gaby Nahum, Jie Lei, Yang Yang, Tao Liu, and 1 others. 2025. Enhancing embedding representation stabil-ity in recommendation systems with semantic id. In 
+
+Proceedings of the Nineteenth ACM Conference on Recommender Systems , pages 954–957. Fan Zhou, Xovee Xu, Goce Trajcevski, and Kunpeng Zhang. 2021. A survey of information cascade analy-sis: Models, predictions, and recent advances. ACM Computing Surveys (CSUR) , 54(2):1–36. Yujia Zhou, Zhicheng Dou, and Ji-Rong Wen. 2023. Enhancing generative retrieval with reinforcement learning from relevance feedback. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , pages 12481–12490. Jianbo Zhu, Xing Fang, Jing Wang, Mingmin Jin, Bokang Wang, Guangxin Song, Zhenyu Xie, and Junjie Bai. 2026. Efficient generative retrieval for e-commerce search with semantic cluster ids and expert-guided rl. arXiv preprint arXiv:2605.14434 .A Related Works 
+
+Sparse retrieval methods like BM25 (Robertson et al., 2009) and TF-IDF (Ramos et al., 2003) rely on exact term matching but suffer from vocabulary mismatch. Conversely, dense retrieval approaches (e.g., DPR (Karpukhin et al., 2020), ANCE (Xiong et al., 2020)) map inputs into a shared vector space, enhancing semantic matching but necessi-tating costly external indices like HNSW (Malkov and Yashunin, 2018). To address these limitations, STAR (Zhan et al., 2021) introduces stable negative sampling, while ColBERT (Khattab and Zaharia, 2020) and Sentence-BERT (Reimers and Gurevych, 2019) refine fine-grained similarity and semantic understanding. Recent work also investigates scal-ing laws in dense models (Fang et al., 2024). 
+
+Personalized retrieval tailors results by in-corporating user contexts. QEM (Ai et al., 2019a) investigates personalization mechanisms, while DREM (Ai et al., 2019b) models dynamic user-product relationships via knowledge graphs. Embedding-based approaches like ZAM (Ai et al., 2019a), HEM (Ai et al., 2017), and TEM (Bi et al., 2020) integrate user profiles and history into unified embeddings. In conversational domains, CHIQ (Mo et al., 2024) enhances accuracy by lever-aging historical search queries. TTP (Jiang et al., 2026a) introduces a unified reasoning and retrieval framework for personalized dense retrieval. 
+
+Generative retrieval internalizes corpus knowl-edge to directly generate item identifiers. DSI (Tay et al., 2022) pioneered this paradigm, followed by semantic enhancements in SE-DSI (Tang et al., 2023a). Various optimization strategies have emerged: SEATER (Si et al., 2024) utilizes bal-anced k-ary trees; Tied-Atomic (Nguyen and Yates, 2023) connects GR with dense retrieval; Gen-RRL (Zhou et al., 2023) employs reinforcement learning; and LTRGR (Li et al., 2024) incorporates ranking tasks. TIGER (Rajput et al., 2023) first utilized RQ-VAE for SIDs. Regarding architec-ture, COBRA (Yang et al., 2025) integrates sparse and dense vectors, while Hi-gen (Wu et al., 2024), CAT-ID 2 (Liu et al., 2025), and MERGE (Zhang et al., 2025b) optimize ID generation by exploiting multi-level correlations. 
+
+Recent and concurrent studies have further revisited Semantic ID based generative retrieval from several complementary perspectives. A line of work improves the construction of Semantic IDs beyond item-only reconstruction. For example, CQ-SID introduces category-aware and query-item contrastive objectives for e-commerce generative retrieval (Zhu et al., 2026), while DIGER (Fu et al., 2026) and UniSID (Jiang et al., 2026b) explore differentiable or end-to-end Semantic ID learning to better align identifier assignment with down-stream recommendation objectives. Another direc-tion studies the dynamics and scalability of Seman-tic IDs, such as mitigating collaborative Seman-tic ID staleness under evolving user-item interac-tions (Baikalov et al., 2026) and exploiting longer Semantic IDs to enhance representation capacity while controlling decoding cost (Xia et al., 2026). Closely related to our efficiency motivation, MLP-based distilled generative recommenders show that attention-heavy autoregressive decoders can be dis-tilled into lightweight MLP-based heads for faster Semantic ID generation (Guo et al., 2026), sug-gesting that much of the decoder-side computation is redundant once global user context and prefix structure are properly preserved. These studies are largely orthogonal to CHAP: they mainly focus on identifier learning, temporal ID maintenance, or decoder distillation, whereas CHAP targets per-sonalized generative retrieval by explicitly aligning query representations with the item quantization path, jointly modeling sparse Semantic IDs and dense representations, and using residual cascading generation to reduce autoregressive latency while preserving fine-grained personalized relevance. 
+
+B Proof of Cascaded Sparse-Dense Modeling 
+
+Theorem 1 (Entropy reduction of CHAP’s cas-caded modeling). Let X denote the personal-ized context encoded from Xin , and let Ci =(C0 
+
+> i
+
+, . . . , C L−1 
+
+> i
+
+) and Vi denote the random vari-ables of the target item’s hierarchical SID and dense vector, respectively. Consider an indepen-dent dual-view factorization 
+
+Pind (Ci, Vi|X) = 
+
+> L−1
+
+Y
+
+> l=0
+
+P (Cli |X) · P (Vi|X),
+
+(21) and CHAP’s cascaded sparse-dense factorization 
+
+Pchap (Ci, Vi|X) = 
+
+> L−1
+
+Y
+
+> l=0
+
+P (Cli |C<l i , X )
+
+· P (Vi|Ci, X ). (22) Denote their total uncertainties by Hind and Hchap ,where H(·) is used for discrete SIDs and h(·) for the continuous dense vector. Then 
+
+Hchap (Ci, Vi|X) ≤ H ind (Ci, Vi|X). (23) Equality holds if and only if each SID level is con-ditionally independent of its prefix given X, and 
+
+Vi is conditionally independent of Ci given X.
+
+Proof. Writing Pind and Pchap for the two distri-butions above, the independent dual-view entropy decomposes as 
+
+Hind = −EPind [log Pind ]=
+
+> L−1
+
+X
+
+> l=0
+
+H(Cli |X)+ h(Vi|X). (24) For CHAP’s cascaded factorization, we have 
+
+Hchap = −EPchap [log Pchap ]=
+
+> L−1
+
+X
+
+> l=0
+
+H(Cli |C<l i , X )+ h(Vi|Ci, X ). (25) By the non-negativity of conditional mutual infor-mation, 
+
+H(Cli |X)−H(Cli |C<l i , X ) = I(Cli ; C<l i |X) ≥ 0,
+
+(26) and 
+
+h(Vi|X) − h(Vi|Ci, X ) = I(Vi; Ci|X) ≥ 0.
+
+(27) Substituting these inequalities into the two entropy decompositions yields 
+
+Hind − H chap =
+
+> L−1
+
+X
+
+> l=0
+
+I(Cli ; C<l i |X)+ I(Vi; Ci|X) ≥ 0. (28) Therefore, CHAP’s coarse-to-fine SID generation followed by dense refinement does not increase the modeling uncertainty compared with independently predicting sparse and dense views. The equality condition follows directly from the equality condi-tion of conditional mutual information: all terms above are zero only when Cli ⊥ C<l i | X for every level l and Vi ⊥ Ci | X. This completes the proof. 
+
+C Dataset Details 
+
+In this section, we provide detailed descriptions of the four datasets used to evaluate the proposed CHAP framework. The detailed statistics are sum-marized in Tab. 6. 
+
+ESCI-us. We utilize the large version of the En-glish subset from the ESCI 1 (Reddy et al., 2022) dataset. Unlike the widely used Amazon Product Reviews (He and McAuley, 2016) dataset, which necessitates constructing synthetic queries, ESCI contains authentic queries derived from actual user logs on Amazon, filled with the noise and complex-ity of real-world search traffic. Each query in ESCI is associated with products labeled by relevance levels: Exact (E), Substitute (S), Complement (C), and Irrelevant (I). This dataset is characterized by complex linguistic patterns, including negation con-ditions (e.g., “not” and “without”) and intricate attribute constraints (e.g., dimensions, price, func-tionality). These factors result in a low text overlap between queries and product descriptions, making it a rigorous benchmark for evaluating a model’s semantic understanding capabilities. During se-quence modeling, we treat items labeled “E” and “S” as positive samples. Notably, unlike existing works (Liu et al., 2025; Zhang et al., 2025b) that utilized the small version of the dataset and ap-plied specific cleaning and preprocessing steps, we directly adopt the large version with raw query and item texts. We strictly follow the official pre-defined train and test splits without any additional preprocessing to rigorously test the model’s robust-ness and generalization capabilities. 
+
+KuaiSearch. KuaiSearch 2 (Li et al., 2026) is a large-scale e-commerce search dataset built upon real user search interactions from the Kuaishou platform. In contrast to existing datasets that often rely on heuristically constructed queries or aggres-sively filter out inactive entities, KuaiSearch pre-serves authentic user queries and natural-language product texts without popularity-based filtering. This ensures the retention of cold-start users and long-tail products, accurately reflecting real-world e-commerce long-tail distributions. The whole dataset contains approximately 330,000 users, 18,000,000 products, and 2,500,000 real search queries. Furthermore, it provides extensive long-term user behavior sequences and systematically covers the core stages of industrial search pipelines.                                          
+
+> 1https://github.com/amazon-science/esci-data
+> 2https://github.com/benchen4395/KuaiSearch Table 6: Detailed statistics of the four datasets.
+> Dataset #Items #Queries #Q-I Pairs Train Test Avg. Hist. #Queries #Q-I Pairs #Queries #Q-I Pairs
+> ESCI-us 1,215,854 97,346 1,818,825 74,888 1,393,063 22,458 425,762 -KuaiSearch 6,634,118 295,561 682,228 266,004 613,696 29,557 68,532 10.37 Amazon 35,772 9,070 9,070 6,896 6,896 2,174 2,174 40.12 Local-Life 10,145,542 3,089,026 3,089,026 2,984,294 2,984,294 104,732 104,732 7.47
+
+In our experiments, we specifically utilize the re-call subset. During data construction, we treat both clicked and purchased items as positive samples. Strictly following the methodology described in the original paper, we apply identical data clean-ing steps—filtering out entries that lacked explicit search queries or had no positive samples—and subsequently partition the cleaned dataset into train-ing and testing sets using a random 9:1 split. 
+
+Amazon. To evaluate our model’s capacity for fine-grained personalized retrieval, we utilize the Amazon search dataset from the Personalized Web Agent Benchmark (PersonalWAB) 3 (Cai et al., 2025). Unlike traditional static search benchmarks, PersonalWAB is explicitly designed to assess the integration of user profiles and historical web be-haviors in understanding customized instructions. The dataset originates from real-world Amazon interaction logs and encompasses diverse user pro-files alongside tens of thousands of historical web behaviors. It features highly personalized, human-synthesized natural language instructions tailored to each user’s profile, requiring models to dynami-cally infer specific user preferences. This dataset presents a unique challenge for generative retrieval models, as it necessitates a deep semantic fusion of the current query, user profiles, and heterogeneous historical behaviors to achieve accurate personal-ized product search. To fully preserve the com-plexity and noise of these customized instructions, we utilized this dataset in its original form and di-rectly adopted the officially pre-defined train and test splits without performing any data cleaning or preprocessing. 
+
+Local-Life. To assess performance in a dynamic, personalized environment, we introduce a large-scale industrial dataset collected from 30 days of user interaction logs on a leading Local-Life ser-vice platform. Compared to public datasets like KuaiSAR (Sun et al., 2023) or JDSearch (Liu et al., 2023), which only provide encrypted token IDs 
+
+> 3https://github.com/HongruCai/PersonalWAB
+
+preventing semantic verification, this dataset com-prises raw natural language text. This transparency is crucial for verifying our model’s ability to align semantics between queries and items. The dataset covers diverse scenarios (e.g., Dining, Entertain-ment, Travel) and heterogeneous search intents (e.g., Brand Search, Ambiguous Intent, Exact Item Search, and Long-tail or Cold-start Search), com-prehensively reflecting real-world user behaviors. We construct interaction sequences from the first 29 days for training and the last day for testing. 
+
+D Baseline Descriptions 
+
+To rigorously evaluate the proposed CHAP frame-work, we comprehensively compare it against 14 representative baselines categorized into sparse re-trieval, dense retrieval, personalized retrieval, and generative retrieval (GR) methods. 
+
+Sparse Retrieval Methods. 
+
+• BM25 (Robertson et al., 2009): A classical probabilistic information retrieval model that relies on exact lexical matching based on term frequency and inverse document frequency. • Doc2Query (Nogueira et al., 2019): A doc-ument expansion technique that utilizes a sequence-to-sequence model to predict poten-tial queries for each document prior to index-ing, thereby enriching the vocabulary and mit-igating the vocabulary mismatch problem. • DeepCT (Dai and Callan, 2019): A deep con-textualized term weighting framework that leverages BERT-based text representations to estimate the document-specific semantic im-portance of terms, translating them into en-hanced term weights for first-stage sparse re-trieval. 
+
+Dense Retrieval Methods. 
+
+• DPR (Karpukhin et al., 2020): Dense Pas-sage Retriever, a highly effective bi-encoder architecture optimized via in-batch and hard negative contrastive learning to map queries and items into a shared semantic vector space. • Sen-T5 (Ni et al., 2022): A scalable sentence encoding model built upon the T5 framework, pre-trained on massive text-to-text and con-trastive tasks to generate high-quality, contin-uous text representations. • MPNet (Song et al., 2020): A robust unified pre-training framework that successfully com-bines the advantages of masked language mod-eling (e.g., BERT) and permuted language modeling (e.g., XLNet) for enhanced docu-ment embeddings. 
+
+Personalized Retrieval Methods. 
+
+• TEM (Bi et al., 2020): Transformer-based Embedding Model, which explicitly encodes user search history alongside current queries to construct dynamic user profiles, aligning retrieval representations with personalized in-tents. • CoPPS (Dai et al., 2023): Contrastive learn-ing for Personalized Product Search, a frame-work that discriminates fine-grained user in-tents by applying multi-view contrastive learn-ing over user behavior sequence representa-tions. 
+
+Generative Retrieval (GR) Methods. 
+
+• DSI (Tay et al., 2022): A pioneering end-to-end differentiable search index that directly generates relevant document identifiers using a Transformer memory based on semantic clustering. • NCI (Wang et al., 2022): Neural Corpus Indexer, a strong GR baseline that utilizes a prefix-aware decoder and a query genera-tion strategy to optimize hierarchical semantic identifiers effectively. • TIGER (Rajput et al., 2023): A generative recommender and retrieval model that lever-ages a Residual Quantized Variational Au-toEncoder (RQ-VAE) to generate hierarchical, semantically rich discrete IDs strictly based on item textual features. • LTRGR (Li et al., 2024): Learning-to-Rank in Generative Retrieval, which integrates ranking-aware principles into the generation process by optimizing the log-probabilities of generation according to target ranking metrics like ListMLE. • MERGE (Zhang et al., 2025b): A recent gen-erative retrieval framework that aims to opti-mize identifier assignments by aligning mul-tiple positive target items across varying rele-vance signals for multi-level ranking. • COBRA (Yang et al., 2025): A state-of-the-art cascading generative framework that unites sparse identifier generation and dense repre-sentation regression within a joint optimiza-tion landscape to improve retrieval coverage and accuracy. 
+
+E Evaluation Metrics Details 
+
+To comprehensively evaluate the retrieval accuracy and ranking quality of the proposed CHAP frame-work, we employ four widely adopted metrics: Recall, Hit Ratio (HR), Mean Reciprocal Rank (MRR), and Normalized Discounted Cumulative Gain (NDCG). Here, we detail their formulations and the specific rationales for selecting them based on the characteristics of different datasets. 
+
+Recall (R@K). Recall evaluates the model’s ability to retrieve all relevant items. It provides a macroscopic view of coverage, which is essential for measuring overall semantic alignment. R@ K = 1
+
+|Q|
+
+X
+
+> q∈Q
+
+|R q ∩ ˆIq,K ||R q| , (29) where Q is the set of queries, Rq denotes the ground-truth relevant items for query q, and ˆIq,K 
+
+represents the top-K retrieved candidates. 
+
+Hit Ratio (HR@K). Hit Ratio measures the probability that a user’s target item successfully appears in the top-K retrieved list. It is formulated as an indicator function: HR@ K = 1
+
+|Q|
+
+X
+
+> q∈Q
+
+I(|R q ∩ ˆIq,K | > 0) , (30) where I(·) evaluates to 1 if the condition is true and 0 otherwise. Rationale: In practical industrial scenarios (e.g., e-commerce purchases or local-life orders), user intent is often highly focused on a single specific item. HR effectively reflects the suc-cess rate of fulfilling this distinct user intent, mak-ing it highly suitable for evaluating performance on datasets like Local-Life and KuaiSearch. 
+
+Mean Reciprocal Rank (MRR@K). MRR strictly assesses the ranking quality by focusing on the position of the first relevant item retrieved: MRR@ K = 1
+
+|Q|
+
+X
+
+> q∈Q
+
+1
+
+rank ∗
+
+> q
+
+, (31) where rank ∗ 
+
+> q
+
+is the rank position of the first relevant item in the top-K list (if no relevant item is in the top K, the score is 0). Rationale: For single-target or exact-intent datasets (such as PersonalWAB and Local-Life), users typically stop browsing once they find the exact match. MRR rigorously penal-izes models that place the target item lower down the list, directly correlating with user satisfaction and online CTR. 
+
+Normalized Discounted Cumulative Gain (NDCG@K). NDCG evaluates the ranking quality by considering both the presence and the position of multiple relevant items, factoring in multi-level relevance scores: DCG@ K =
+
+> K
+
+X
+
+> i=1
+
+2rel i − 1log 2(i + 1) , (32) NDCG@ K = DCG@ K
+
+IDCG@ K , (33) where rel i is the graded relevance score of the item at rank i, and IDCG@ K is the ideal DCG obtained by perfectly sorting all relevant items. Rationale: 
+
+For datasets like ESCI-us, a single query often maps to multiple items with varying relevance lev-els (e.g., Exact, Substitute, Complement). NDCG is uniquely capable of capturing these fine-grained grading differences, rewarding models that place highly relevant items at the top while tolerating lower-ranked partially relevant items. 
+
+F Implementation Details for CHAP and Baselines 
+
+To ensure reproducibility and address concerns re-garding experimental fairness, particularly about candidate generation budgets and ranking proto-cols, we provide the comprehensive implemen-tation and optimization details for our proposed CHAP framework and all evaluated baseline mod-els. 
+
+F.1 Training Details of CHAP 
+
+The training of CHAP consists of two primary stages. In the SID Learning Stage, we pre-train the RQ-VAE to discretize item embeddings. We use the AdamW optimizer with a learning rate of 
+
+1 × 10 −4 and a batch size of 1024, training the au-toencoder for 500 epochs with the commitment loss weight β = 0 .5 to ensure semantic stability and avoid codebook collapse. In the Hierarchical Se-mantic Alignment and Generation Stage, we freeze the pre-trained item codebook and fine-tune the Transformer backbone along with the alignment modules. This stage is trained for 50 epochs us-ing the AdamW optimizer with a reduced learning rate of 1 × 10 −5, a warm-up ratio of 0.1, and a linear learning rate decay schedule. The maximum sequence length for the dual-view user behavior input is truncated to 512 tokens to balance context modeling and computational memory. All experi-ments are implemented in PyTorch and conducted on eight NVIDIA A100 (80GB) GPUs. 
+
+F.2 Implementation Settings of Baselines 
+
+To ensure a strictly fair, apples-to-apples compari-son, all deep learning-based baselines are equipped with backbones of comparable capacity to CHAP and are provided with identical raw textual features and historical sequence lengths. Specifically, for English datasets, we uniformly use BERT-base and T5-base; for Chinese datasets, we replace them with Chinese-BERT-base and mT5-base to handle the specific tokenization and vocabulary. BERT-base has about 110M parameters, Chinese-BERT-base about 102M, T5-base about 220M, and mT5-base about 580M. All GR baselines reported in Tab. 4 use the same-capacity T5-base or mT5-base backbone as CHAP, so the efficiency comparison mainly reflects framework-level design differences rather than backbone scale. 
+
+Sparse Retrieval. We utilize the Pyserini 
+
+toolkit for BM25, setting parameters k1 = 1 .2
+
+and b = 0 .75 . For Doc2Query, we generate 40 synthetic queries per document using a pre-trained T5 (or mT5) model before indexing. For DeepCT, we employ the respective BERT-base models to project contextualized token embeddings into term weights. 
+
+Dense and Personalized Retrieval. For DPR, Sen-T5, MPNet, TEM, and CoPPS, we reproduce their results on this dataset using the official open-source implementations and default training strate-gies. For personalized models (TEM and CoPPS), we explicitly feed the same historical interaction sequences (up to the exact same length as used in CHAP) into their sequence encoders to construct the user profile embeddings. Crucially, their dual-tower inner-product search is accelerated using the FAISS library to perform exhaustive vector search over the entire corpus. This ensures they are evalu-ated under an unbounded candidate budget, making the comparison strictly fair against CHAP, which operates under a restricted generative candidate pool. 
+
+Generative Retrieval (GR) and Ranking Fair-ness. To eliminate discrepancies caused by model scale and evaluate the intrinsic capability of each framework, all GR baselines (DSI, NCI, TIGER, LTRGR, MERGE, COBRA) are implemented us-ing the same T5-base (or mT5-base) backbone. For ItemID construction in DSI and NCI, we em-ploy Hierarchical K-Means on BERT embeddings to build semantic tree IDs. For TIGER and CO-BRA, we utilize their default RQ-VAE architecture configured with depth L = 3 and codebook size 
+
+K = 512 , strictly matching our CHAP’s dimen-sionality. To directly address potential concerns regarding evaluation fairness, particularly the candidate gen-eration budgets: no external heavy rerankers (e.g., Cross-Encoders) are applied to any baseline or our CHAP model. During inference, we ensure a rigor-ously fair evaluation by restricting all GR models to the exact same candidate budget ( M = 50 ). Cru-cially, rather than enforcing an identical decoding algorithm that might artificially impair baseline performance (e.g., generating invalid IDs), we al-low all GR baselines to employ their optimal Con-strained Beam Search with a beam width of 50. In contrast, leveraging our decoupled architecture, CHAP efficiently generates 50 candidates via a Par-allel Sampling strategy. For pure generative base-lines, their final ranking relies exclusively on the beam search probabilities over their 50 candidates; for hybrid baselines (e.g., COBRA, MERGE), they utilize their internal scoring mechanisms over the same pool. Similarly, CHAP simply fuses its in-ternally generated sparse probabilities and dense similarities in a parameter-free manner within its 50 samples. By aligning the language backbone, enforcing identical candidate budgets ( M = 50 ), maintaining the optimal decoding integrity of baselines, and re-stricting all models to internal parameter-free scor-ing, we guarantee that CHAP’s superior ranking ac-curacy and remarkable inference throughput (QPS) stem entirely from our core architectural innova-tions. 
+
+G Ablation Variant Definitions 
+
+In our ablation study (Sec. 5.3), we systematically deconstruct CHAP to validate the contribution of each module. The specific configurations of the ablated variants are defined as follows: 
+
+(A) Hierarchical Semantic Alignment (HSA) Variants: 
+
+• w/o HSA : Replaces our trainable, aligned query encoder with a standard RQ-VAE en-coder whose weights are strictly frozen after the item-side pre-training stage. • w/o LCSA : Excludes the cross-sample align-ment losses (both Cross-Commitment and Cross-Reconstruction), relying only on con-trastive and distillation objectives. • w/o LHCL : Removes the hierarchical-aware contrastive learning objective, eliminating the explicit multi-granular alignment penalty. • w/o LDistill : Omits the soft probability distil-lation module that regularizes the fine-tuned encoder’s output distribution. 
+
+(B) Sequence Modeling Variants: 
+
+• w/o Dense Refinement : Eliminates the dense continuous vector from both the input se-quence and the generation target. The model relies entirely on discrete sparse SIDs for se-quence modeling and ranking. 
+
+(C) Residual Cascading Generation Variants: 
+
+• w/o Residual Gen. (Autoregressive) : Re-places the lightweight layer-wise residual fu-sion mechanism with a standard flat autore-gressive generation, forcing the heavy Trans-former Decoder to execute sequentially for all 
+
+L layers. • w/o Self-Attention : Retains the residual cas-cading mechanism but structurally removes all Masked Self-Attention sub-layers within the Transformer Decoder, retaining only the Cross-Attention mechanism to interact with the encoded history. • w/o Decoder (Pooling + MLP) : Entirely re-moves the Transformer Decoder. Instead, it relies on mean pooling over the encoder’s out-puts to derive a static global context vector, which is then fed directly into the residual blocks for SID and dense vector prediction. 
+
+H Definitions of Intent-wise Query Segments 
+
+In industrial Local-Life search scenarios, user in-tents are highly heterogeneous. To rigorously eval-uate the model’s robustness and the specific contri-bution of each architectural component, we extract four intent-wise query segments from the Local-Life dataset based on query attributes and historical interaction frequencies. Notably, to ensure a rigor-ous and realistic evaluation, the Ambiguous, Cold-Start, and LongTail subsets share the exact same entire candidate item pool (i.e., over 10 million items) as the General set during retrieval. The de-tailed statistics of these segments are summarized in Tab. 7. • General: This segment is exactly the entire set of the Local-Life dataset. It encompasses the natural flow of daily user search traffic, reflecting the macroscopic ranking ability of the model across all scenarios. • Ambiguous: This segment comprises short, highly ambiguous queries with generalized intents (e.g., “Dinner”, “Nearby attractions”, “Weekend entertainment”). These queries typ-ically map to a vast number of potential can-didate items across multiple categories. Ex-celling in this segment rigorously tests the model’s Personalized Sequence Modeling ca-pability, as accurate retrieval strictly requires deducing explicit user preferences from his-torical behaviors to disambiguate the broad intent. • ColdStart: This segment targets queries that exclusively lead to items introduced to the platform within the last 14 days. These items have extremely sparse or zero historical click logs. Standard generative models typically struggle on these data because they lack col-laborative training signals for the new SIDs and fail to integrate dense representations for semantic fallback. This scenario directly eval-uates the model’s pure zero-shot semantic matching capability. • LongTail: This segment focuses on queries whose historical interaction frequencies fall into the bottom 10% of the entire search logs (e.g., highly specific long-tail constraints, niche store names, or complex negated con-ditions). Similar to the ColdStart segment, standard GR models often exhibit poor per-formance on these data because they do not combine dense representations to capture pre-cise textual semantics, falling back instead on memorized popularity bias. In contrast, excelling in this segment heavily relies on our model’s intrinsic Hierarchical Semantic Alignment (HSA) and dual-view design to ac-curately map complex linguistics. 
+
+I Additional Diagnostics for Semantic Alignment 
+
+In addition to visualization, we use clustering-oriented quantitative diagnostics to measure whether the aligned representation space becomes more compact and separable. We consider Silhou-ette Score (Rousseeuw, 1987), Calinski-Harabasz Index (Cali´ nski and Harabasz, 1974), and Davies-Bouldin Index (Davies and Bouldin, 1979) over coarse product-category clusters constructed from the sampled encoder representations. Higher Sil-houette and Calinski-Harabasz scores, together with a lower Davies-Bouldin score, indicate better intra-category compactness and inter-category sep-aration. Tab. 8 reports the corresponding metrics computed from 10,000 sampled encoder represen-tations in ESCI-us using product-category labels as cluster assignments. Following the matrix-style diagnostic in prior cascaded retrieval analysis, Fig. 7 further provides a similarity-matrix view of the same trend. RQ-VAE shows a relatively noisy off-diagonal background, suggesting that item-only quantization leaves resid-ual similarity between unrelated product categories. MERGE produces a clearer diagonal structure but still contains coarse diagonal blocks, indicating that its multi-level merging improves local consis-tency while retaining some coarse-grained seman-tic entanglement. CHAP exhibits a sharper local-neighborhood diagonal and a lighter off-diagonal background, suggesting that HSA better concen-trates category-consistent representations while re-ducing spurious cross-category similarity. Table 7: Detailed statistics of the intent-wise query segments extracted from the Local-Life dataset. 
+
+Segment #Items #Queries #Q-I Pairs Train Test Avg. Hist. #Queries #Q-I Pairs #Queries #Q-I Pairs 
+
+General 10,145,542 3,089,026 3,089,026 2,984,294 2,984,294 104,732 104,732 7.47 Ambiguous 10,145,542 10,000 10,000 - - 10,000 10,000 6.21 ColdStart 10,145,542 5,000 5,000 - - 5,000 5,000 5.74 LongTail 10,145,542 10,000 10,000 - - 10,000 10,000 10.16 0 4999 9999     
+
+> Query index
+> 04999 9999
+> Query index
+> (a) RQ-VAE
+> 04999 9999
+> Query index
+> 04999 9999
+> Query index
+> (b) MERGE
+> 04999 9999
+> Query index
+> 04999 9999
+> Query index
+> (c) CHAP
+> 0.1 0.2 0.3 0.4 0.5 0.6 0.7
+> Cosine similarity
+
+Figure 7: Similarity matrix diagnostics over 10,000 sampled queries from ESCI-us. The figure compares pairwise similarity matrices of RQ-VAE, MERGE, and CHAP, where CHAP exhibits a clearer local-neighborhood structure and fewer coarse diagonal blocks after semantic alignment. 
+
+Method Silhouette ↑ CH Index ↑ DB Index ↓
+
+RQ-VAE 0.218 612.4 1.684 MERGE 0.331 948.7 1.153 CHAP 0.387 1136.2 0.912 
+
+Table 8: Semantic alignment diagnostics computed from 10,000 sampled encoder representations in ESCI-us. 
+
+J SID-Level Visualization Examples 
+
+Following the qualitative SID analyses in MERGE (Zhang et al., 2025b), we further inspect how CHAP organizes items across hierarchical SID layers. We use the real item-to-SID mappings from RQ-VAE, MERGE, and CHAP on ESCI-us, and select representative queries whose candidate items contain multiple relevance levels. Fig. 8 visualizes the layer-wise SID concentra-tion across six representative ESCI-us queries. For each query, we count the number of unique SID prefixes occupied by query-relevant items at each layer. Lower curves therefore indicate that relevant items are assigned to fewer hierarchical branches. Compared with RQ-VAE and MERGE, CHAP con-sistently produces more concentrated layer-wise distributions, especially at deeper SID layers. This trend suggests that HSA encourages the SID hier-archy to better follow query-conditioned relevance rather than only item-side lexical similarity. To examine the semantic meaning of SID layers, Fig. 9 summarizes frequent product-title keywords along one aligned camera-related SID path. The first-layer prefix (133) captures a coherent coarse-grained visual-device cluster, including camera, security camera, webcam, night vision, and mo-tion detection products. The second-layer prefix 
+
+(133 , 121) narrows this cluster toward webcam and USB video-camera products, while the third-layer prefix (133 , 121 , 293) further concentrates on we-bcam products with microphone, desktop, laptop, and streaming attributes. This coarse-to-fine key-word evolution is consistent with CHAP’s hierar-chical alignment objective. Tab. 9 provides item-level examples for a sep-arate query, “crustless sandwich maker”. Since CHAP is initialized from and fine-tuned upon the RQ-VAE codebook, the RQ-VAE and CHAP SID columns are comparable. In contrast, MERGE learns a separate codebook with its alignment loss, so its numeric SIDs should only be interpreted within MERGE’s own codebook space rather than compared token by token with RQ-VAE or CHAP. In these selected examples, exact sandwich cutter and sealer products are mapped to the same CHAP SID, whereas irrelevant items such as generic cookie cutters, handheld sandwich grills, and craft makers remain separated. This example illustrates Layer 1 Layer 2 Layer 3 0246810 
+
+> # unique SID prefixes
+
+9 relevant items 
+
+15 xbox gift card 
+
+Layer 1 Layer 2 Layer 3 
+
+5 relevant items 
+
+armorsuit z3 play screen protector 
+
+Layer 1 Layer 2 Layer 3 
+
+4 relevant items 
+
+mattress topper memory foam full 
+
+Layer 1 Layer 2 Layer 3 0246810 
+
+> # unique SID prefixes
+
+12 relevant items 
+
+9-14 propane regulator 
+
+Layer 1 Layer 2 Layer 3 
+
+9 relevant items 
+
+burgundy pregnancy dress 
+
+Layer 1 Layer 2 Layer 3 
+
+9 relevant items 
+
+nintendo eshop card digital code 
+
+RQ-VAE MERGE CHAP Figure 8: Layer-wise SID concentration over multiple representative ESCI-us queries. The curves are computed from the real item-to-SID mappings of RQ-VAE, MERGE, and CHAP. The y-axis reports the number of unique SID prefixes among query-relevant items, where lower values indicate more compact hierarchical assignments. (a) First Layer SID: (133) 
+
+> 963 products
+
+# camera 
+
+night vision 
+
+video 
+
+night vision 
+
+security 
+
+webcam 
+
+wifi 
+
+motion 
+
+security camera motion detection 
+
+outdoor detection 
+
+audio home usb way audio wireless cam 
+
+microphone 
+
+way zoom 
+
+cameras 
+
+indoor home security 
+
+monitor web camera waterproof streaming web webcam microphone vision motion mini laptop 
+
+desktop baby 
+
+computer screen card 
+
+surveillance spy camera recording digital hidden remote spy wide angle nanny system battery baby monitor full wide live video calling video camera indoor outdoor nanny cam angle plug play camcorder 
+
+hidden camera 
+
+camera system car projector 
+
+(b) Second Layer SID: (133, 121) 
+
+> 115 products
+
+# webcam 
+
+camera 
+
+webcam microphone microphone 
+
+usb 
+
+desktop web camera 
+
+web 
+
+laptop 
+
+video computer 
+
+streaming 
+
+laptop desktop 
+
+video calling 
+
+plug play computer camera 
+
+calling 
+
+recording 
+
+conferencing privacy cover zoom mac 
+
+gaming skype plug play 
+
+streaming webcam usb web desktop laptop privacy usb computer cover 
+
+calling recording  
+
+> conference
+> usb webcam mac laptop online
+> web cam youtube skype facetime computer web calling conferencing tripod
+> cam zoom skype live streaming camera usb wide angle noise reduction angle full youtube skype microphone usb camera laptop autofocus facetime built noise wide
+> webcam usb streaming web
+> conferencing recording video conferencing live meeting
+
+(c) Third Layer SID: (133, 121, 293) 
+
+> 24 products
+
+# webcam 
+
+## camera 
+
+webcam microphone 
+
+microphone usb 
+
+web computer 
+
+desktop web camera 
+
+streaming video laptop 
+
+computer camera 
+
+laptop desktop 
+
+mac 
+
+video calling privacy cover conference 
+
+privacy calling gaming usb computer plug play 
+
+recording 
+
+usb web video conference 
+
+> cover
+
+web cam 
+
+streaming webcam cam tripod conferencing plug play 
+
+> online
+> camera usb calling conferencing computer web desktop laptop
+> skype
+> microphone desktop desktop usb webcam usb mac laptop webcam privacy pro streaming camera mac
+> conferencing recording usb webcam microphone usb mac video calling recording
+> recording streaming conference gaming microphone web desktop computer camera video wide angle camera computer pro wide angle
+
+Figure 9: Product-title keyword-cloud visualization along an aligned camera-related SID path. The prefixes become progressively more specific from a broad camera-related cluster to webcam-oriented products and then to webcam products with microphone and streaming attributes. 
+
+how aligned SIDs improve the consistency of gen-erated ItemIDs for query-relevant items. 
+
+K AI Usage Disclosure 
+
+In compliance with the conference guidelines re-garding the use of artificial intelligence tools, we transparently disclose our light usage of AI as-sistants during the preparation of this manuscript. Specifically, AI tools were strictly limited to serv-ing as utility aids for language polishing (e.g., cor-recting grammar, refining sentence structures, and improving readability for non-native speakers) and basic programming support (e.g., generating boil-erplate scripts for data visualization). The AI assistants did not generate any novel scientific claims, experimental designs, or core methodology. All research conceptualization, model implementation, data analysis, and the intel-lectual contributions of this paper are exclusively the original work of the human authors. Label Product Title RQ-VAE SID MERGE SID CHAP SID E Sandwich Cutter and Sealer for Kids (14 , 127 , 331) (287 , 375 , 142) (14 , 127 , 294) 
+
+E Decruster Sandwich Maker Set (14 , 502 , 331) (287 , 64 , 411) (14 , 127 , 331) 
+
+E DIY Uncrustables Sandwich Cutters (160 , 127 , 393) (287 , 64 , 411) (14 , 127 , 331) 
+
+E Fun Sandwich Cutters for Lunch Box (14 , 127 , 441) (287 , 64 , 156) (14 , 127 , 226) 
+
+I Cookie Cutters with Irreverent Phrases (435 , 359 , 375) (93 , 382 , 27) (435 , 241 , 88) 
+
+I Toas-Tite Handheld Sandwich Grill (472 , 154 , 266) (316 , 45 , 390) (472 , 308 , 119) 
+
+I Cricut Champagne Maker (46 , 491 , 265) (446 , 220 , 108) (46 , 73 , 402) 
+
+Q crustless sandwich maker (14 , 127 , 393) (287 , 64 , 411) (14 , 127 , 331)

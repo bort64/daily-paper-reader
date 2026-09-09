@@ -1,0 +1,341 @@
+Title: CAMIE: Co-Engagement-Aware Multimodal Item Embeddings for Snap Dynamic Product Ads Retrieval
+
+URL Source: https://arxiv.org/pdf/2608.30255v1
+
+Published Time: Tue, 01 Sep 2026 02:00:18 GMT
+
+Number of Pages: 7
+
+Markdown Content:
+# CAMIE: Co-Engagement-Aware Multimodal Item Embeddings for Snap Dynamic Product Ads Retrieval 
+
+# Xiaodong Liu 
+
+Snap Inc. Bellevue, WA, USA xliu9@snapchat.com 
+
+# Siman Wang 
+
+Snap Inc. Bellevue, WA, USA swang7@snapchat.com 
+
+# Congfei Zhang 
+
+Snap Inc. Bellevue, WA, USA czhang3@snapchat.com 
+
+# Hsiang-wei Chao 
+
+Snap Inc. Seattle, WA, USA hchao@snapchat.com 
+
+# Xiao Bai 
+
+Snap Inc. Palo Alto, CA, USA xbai@snapchat.com 
+
+# Wen Zhang 
+
+Snap Inc. Bellevue, WA, USA wzhang7@snapchat.com 
+
+# Jingxiao Ma 
+
+Snap Inc. Bellevue, WA, USA jma3@snapchat.com 
+
+# Zhe Liu 
+
+Snap Inc. Palo Alto, CA, USA zliu11@snapchat.com 
+
+# Yunzhi Zhou 
+
+Snap Inc. Palo Alto, CA, USA yzhou10@snapchat.com 
+
+# Yajun Wang 
+
+Snap Inc. Palo Alto, CA, USA ywang30@snapchat.com 
+
+# Jinchao Li 
+
+Snap Inc. Bellevue, WA, USA jli18@snapchat.com 
+
+# Yu Zhang 
+
+Snap Inc. Palo Alto, CA, USA yzhang3@snapchat.com 
+
+## Abstract 
+
+Item-to-item (I2I) retrieval is a core primitive in large-scale rec-ommendation and advertising systems. In production Snap Dy-namic Product Ads (DPA), I2I retrieval faces two challenges: sep-arate visual, textual, and multimodal encoders fragment the re-trieval stack, and content-only training does not align embeddings with the co-engagement behavior that drives downstream conver-sions. We present CAMIE , a co-engagement-aware multimodal item embedding framework for Snap DPA retrieval. CAMIE builds on LLM/MLLM backbones, using their native multimodal interfaces to represent item images and metadata in a shared embedding space. It then fine-tunes the backbone on co-engaged item pairs mined from user journeys with a symmetric in-batch InfoNCE objective. Offline, CAMIE outperforms the strongest commercial multimodal embedding model on Recall@10 and serves text-only retrieval from the same checkpoint with minimal quality loss. Online, CAMIE serves as a drop-in replacement for two deployed content-based I2I encoders, delivering +0.390% CTR / +10 .832% CVR over the multi-modal control, +18 .958% CTR / +13 .12% CVR over the text control, and +0.211% CTR / +1.911% CVR on overall DPA traffic. CAMIE is deployed in production. 
+
+## CCS Concepts 
+
+• Information systems → Retrieval models and ranking ; Rec-ommender systems .
+
+## Keywords 
+
+Item-to-item retrieval, multimodal large language models, con-trastive learning, recommender systems 
+
+ACM Reference Format: 
+
+Xiaodong Liu, Siman Wang, Congfei Zhang, Hsiang-wei Chao, Xiao Bai, Wen Zhang, Jingxiao Ma, Zhe Liu, Yunzhi Zhou, Yajun Wang, Jinchao Li, and Yu Zhang. 2027. CAMIE: Co-Engagement-Aware Multimodal Item Embeddings for Snap Dynamic Product Ads Retrieval. In Proceedings of The 
+
+> KDD ’27, ADS Track, Under Review, San Jose, CA, USA
+> 2027.
+
+33rd ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD ’27, ADS Track, Under Review). ACM, New York, NY, USA, 7 pages. 
+
+## 1 Introduction 
+
+Item-to-item (I2I) retrieval is a core candidate-generation primitive in recommendation and advertising systems [11]. Given a seed item, an I2I retriever returns related catalog items. Production systems typically encode the catalog offline, build an approximate-nearest-neighbor (ANN) [5, 8] index, and answer each request with a single index lookup. This design keeps online latency low, scales to large catalogs, and naturally covers cold-start and long-tail items that two-tower personalized retrievers [3, 7, 17] struggle to serve. Two constraints limit content-based production I2I. First, modal-ity fragmentation : different item modalities capture different no-tions of similarity. Images are useful for visual substitutes, text and category metadata capture product semantics and catalog structure, and multimodal encoders combine both. In practice this leads to multiple coexisting retrieval stacks: text-only encoders, image-only encoders, and multimodal encoders (commonly CLIP/SigLIP vari-ants [13, 15, 19]), each with its own fine-tune, refresh pipeline, and ANN index. What is missing is a single multimodal item encoder that can also serve single-modality use cases when only text or only an image is available. Second, content-only supervision : most content-based I2I models learn from item metadata itself, including image, title, de-scription, brand, and category, so their embedding space is opti-mized for content similarity rather than the engagement space used by the recommender system. User-journey logs, however, pro-vide a dense behavioral signal: users repeatedly view, click, add to cart, and purchase related items within coherent journeys. Ignoring these co-engagement events leaves the retriever weakly aligned with the downstream objective. The two problems compound: pro-duction systems maintain separate modality-specific encoders, and those encoders are usually not trained on the journey signal most predictive of what users will engage with next. Behavior-aware LLM/MLLM retrieval methods [20, 21] show that engagement signals can adapt pretrained representations, but arXiv:2608.30255v1 [cs.IR] 31 Aug 2026 KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Liu et al. 
+
+they do not target a drop-in production I2I encoder serving multi-modal, text-only, and image-only retrieval. This setting motivates a general-purpose embedding model with native multimodal in-puts and shared attention over item fields, fine-tuned to reflect Snap DPA co-engagement patterns. It also raises an attribution question that prior work leaves open: how much of the resulting quality comes from the pretrained backbone, and how much from the co-engagement supervision? We answer it directly by training purpose-built non-LLM dual encoders under an identical recipe, and find that the supervision accounts for most of the gain while the MLLM backbone adds a small but significant multimodal advantage and a large text-only advantage. We present CAMIE, a co-engagement-supervised LLM/MLLM embedding framework for industrial I2I retrieval in Snap Dynamic Product Ads (DPA). CAMIE renders item images and metadata as a single multimodal record, fine-tunes an embedding backbone on co-engaged item pairs mined from user journeys, and serves the resulting vectors through the existing ANN retrieval path. The same trained checkpoint is designed to support multimodal, text-only, and image-only I2I retrieval. Our contributions are: (1) We propose CAMIE, a co-engagement-supervised LLM/MLLM embedding framework for industrial I2I retrieval. A single mul-timodal backbone is fine-tuned on co-engaged item pairs with symmetric in-batch InfoNCE and serves multimodal, text-only, and image-only retrieval from one checkpoint. (2) On a held-out Snap DPA test set, CAMIE outperforms the strongest commercial multimodal embedding model on Re-call@10, and the same checkpoint serves text-only retrieval at near-parity with a dedicated text-only fine-tune. A matched-recipe comparison against purpose-built dual encoders credits most of the gain to the co-engagement supervision rather than to the backbone, with image-only retrieval the exception. To our knowledge this is the first controlled attribution of this kind for a deployed multimodal I2I encoder. (3) CAMIE is deployed in Snap DPA as a drop-in replacement for two content-based I2I encoders, with +0.390% CTR / +10 .832% CVR over the multimodal control and +18 .958% CTR / +13 .12% CVR over the text control in online A/B tests, and +0.211% CTR / +1.911% CVR on overall DPA traffic, demonstrating effective-ness in a production recommendation system. 
+
+## 2 Related Work 
+
+Content-based I2I. Classical I2I estimates similarity from co-purchase or co-occurrence counts [11]. These methods are simple and scalable but rely on historical interactions, limiting cold-start coverage. Content-based I2I improves coverage by representing items from metadata, commonly with CLIP [13] or SigLIP/SigLIP2 backbones [15, 19]. 
+
+Industrial multimodal and unified item embeddings. The closest industrial systems learn a single item representation shared across surfaces. ItemSage [2] aggregates text and image features with a transformer to produce one set of Pinterest product em-beddings serving user-, image-, and search-based recommenda-tions, and uses multi-task learning over several engagement types. CommerceMM [18] pre-trains a commerce multimodal model with omni-retrieval tasks spanning text-, image-, and multimodal-to-multimodal mappings. OmniSearchSage [1] jointly learns query, pin, and product embeddings for Pinterest search, with compati-bility constraints to pre-existing embeddings. MERLIN [14] builds multimodal, multilingual recommendations from a product graph of mined item associations using a GNN with dual embeddings and cold-start metadata. CAMIE shares the goal of one unified item representation, but differs in three ways: the encoder is an MLLM consumed through its native multimodal interface rather than a fusion module over frozen unimodal features; supervision comes from co-engagement pairs mined from DPA journeys rather than content or graph associations; and a single checkpoint is evaluated 
+
+and deployed across multimodal, text-only, and image-only serving. 
+
+LLM/MLLM-based retrieval. NoteLLM [20] compresses a note into a single [EMB] token with a co-engagement contrastive loss, and NoteLLM-2 [21] extends this idea to a multimodal backbone with a visual contrastive routing loss. Both target note recommenda-tion and introduce architectural machinery (a compression token, a visual routing loss) to fuse modalities; CAMIE keeps the backbone’s native multimodal interface unchanged and instead targets a drop-in production I2I encoder that serves multimodal, text-only, and image-only traffic from one checkpoint. LLM-I2I [4] and LLaRA [10] use LLMs for augmentation or reasoning rather than as the serving item encoder. CAMIE instead studies LLM/MLLM backbones as the serving item encoder for Snap DPA: pretrained world knowledge gives the model a broad product representation across modalities, and co-engagement fine-tuning aligns that representation with production DPA behavior. The resulting embeddings are served through a standard ANN index, and one checkpoint is evaluated for multimodal, text-only, and image-only retrieval. 
+
+## 3 Method 3.1 Overview 
+
+CAMIE aligns a pretrained LLM/MLLM embedding backbone with item co-engagement behavior. The pipeline has four steps: (1) mine unordered positive item pairs from user journeys; (2) render each item as a modality-conditioned record; (3) encode both items with a shared backbone and trainable projection head; and (4) optimize the embeddings with a symmetric in-batch contrastive objective, then serve them through a standard ANN index. Figure 1 summarizes steps (2)–(4). The framework is backbone-agnostic; we focus on LLM/MLLM backbones because their native multimodal inputs and pretrained knowledge of products, brands, attributes, and categories motivate the modality-unified design. Section 4.1 describes the concrete Snap DPA instantiation used in our experiments. 
+
+## 3.2 Co-engagement pair construction 
+
+We construct supervision as a graph of co-engaged item pairs. Let a user journey be a time-ordered sequence of engagement events 
+
+(𝑢, 𝑖, 𝑡, 𝑎 ), where user 𝑢 interacts with item 𝑖 at time 𝑡 through action type 𝑎 (for example, view, click, add-to-cart, or purchase). A pair miner maps journeys to unordered positive edges 
+
+D = {( 𝑖, 𝑗, 𝜔 𝑖 𝑗 ) : ∃𝑢, 𝑖 ≠ 𝑗, 𝑖, 𝑗 ∈ J 𝑢 , scope (𝑖 ) = scope ( 𝑗 )} , (1) CAMIE KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA 
+
+Item 𝑖        
+
+> optional image +title +brand
+> +description +category
+
+Item 𝑗        
+
+> optional image +title +brand
+> +description +category
+
+LLM/MLLM embedding backbone 
+
+> optional adapter fine-tune
+
+Projection head 
+
+𝐿 2 normalize 
+
+𝑧 𝑖 𝑧 𝑗 
+
+Symmetric in-batch InfoNCE 
+
+Figure 1: The CAMIE framework. Two items from a co-engagement pair are rendered with the fields available for the target serving mode, encoded by a shared LLM/MLLM embedding backbone, passed through a projection head, and 
+
+𝐿 2-normalized. Training uses symmetric in-batch InfoNCE with in-batch and cross-device negatives. 
+
+where J𝑢 is the set of items observed in a local session or attribution window for user 𝑢 , scope (·) denotes the serving scope in which retrieval is allowed, and 𝜔 𝑖 𝑗 ∈ ( 0, 1] is an optional reliability weight. CAMIE does not require positives to come only from high-intent events. The pair miner can use the full engagement funnel and apply quality filters for attribution confidence, required item fields, serving-scope consistency, temporal proximity, and taxonomy co-herence. Temporal weights, when enabled, down-weight distant co-engagements with an exponential half-life; the unweighted ob-jective is the special case 𝜔 𝑖 𝑗 = 1. Concrete filters and thresholds are data-dependent and are reported with the experimental setup (Section 4.1). 
+
+## 3.3 Modality-conditioned item encoder 
+
+Item input format. Each item 𝑖 can expose a primary image I𝑖 ,title 𝑡 𝑖 , brand 𝑏 𝑖 , free-text description 𝑑 𝑖 , and product category path 
+
+𝑐 𝑖 . A renderer 𝑅 𝑚 converts those fields into the input sequence for serving mode 𝑚 ∈ { multimodal , text-only , image-only }:
+
+𝑥 (𝑚 ) 
+
+> 𝑖
+
+= 𝑅 𝑚 
+
+ I𝑖 , "Title: " 𝑡 𝑖 , "Brand: " 𝑏 𝑖 ,
+
+"Description: " 𝑑 𝑖 , "Category: " 𝑐 𝑖 
+
+. (2) For multimodal serving, the renderer includes both image and text fields. For text-only serving, it omits the image; for image-only serv-ing, it omits the text fields. The image, when present, is processed by the backbone’s native visual input pipeline, and text fields are pro-cessed by the backbone tokenizer. No modality-specific projection head is required. 
+
+Shared encoder and projection. Let 𝑓 𝜃 denote the shared embed-ding backbone and 𝑔 𝜙 the projection head used for serving. The backbone may be a decoder-only multimodal embedding model, a text-only LLM embedding model, or another embedding-capable architecture. Decoder-only models use last-token pooling; mod-els with native pooling can use their own pooling head. The final serving vector is 
+
+𝑧 (𝑚 ) 
+
+> 𝑖
+
+= 𝑔 𝜙 (𝑓 𝜃 (𝑥 (𝑚 ) 
+
+> 𝑖
+
+)) ∥𝑔 𝜙 (𝑓 𝜃 (𝑥 (𝑚 ) 
+
+> 𝑖
+
+))∥ 2
+
+∈ R𝑑 . (3) The same 𝑓 𝜃 and 𝑔 𝜙 are used for all serving modes, so changing modality changes only which fields are rendered in 𝑥 (𝑚 ) 
+
+> 𝑖
+
+.
+
+## 3.4 Symmetric in-batch InfoNCE 
+
+In distributed training, embeddings are all-gathered across de-vices, so the denominator uses both local and cross-device neg-atives. Let B = {( 𝑖 𝑛 , 𝑗 𝑛 , 𝜔 𝑛 )} 𝑁 𝑛 =1 denote the gathered batch of 𝑁 
+
+co-engagement pairs. The weighted symmetric InfoNCE [16] ob-jective is 
+
+L = − 12 Í𝑁 𝑛 =1 𝜔 𝑛 𝑁 ∑︁ 
+
+> 𝑛 =1
+
+𝜔 𝑛 
+
+"
+
+log exp (𝑧 ⊤ 
+
+> 𝑖 𝑛
+
+𝑧 𝑗 𝑛 /𝜏 )
+
+Í𝑁 𝑘 =1 exp (𝑧 ⊤ 
+
+> 𝑖 𝑛
+
+𝑧 𝑗 𝑘 /𝜏 )+ log exp (𝑧 ⊤ 
+
+> 𝑗 𝑛
+
+𝑧 𝑖 𝑛 /𝜏 )
+
+Í𝑁 𝑘 =1 exp (𝑧 ⊤ 
+
+> 𝑗 𝑛
+
+𝑧 𝑖 𝑘 /𝜏 )
+
+#
+
+,
+
+(4) where 𝜏 is a temperature parameter. Symmetry treats (𝑖, 𝑗 ) and 
+
+( 𝑗, 𝑖 ) as the same positive relation, which matches unordered item co-engagement. In the unweighted configuration, all 𝜔 𝑛 are set to 1. 
+
+## 3.5 ANN serving 
+
+Index build. At each catalog refresh, every active item is rendered under the target index modality, encoded once by 𝑓 𝜃 and 𝑔 𝜙 , nor-malized, and written to an ANN index. The embedding dimension, index type, and quantization settings are deployment choices; the framework requires only that the same item representation used in training can be materialized offline for retrieval. 
+
+Online retrieval. At request time, a seed item is served by identifier lookup when its embedding is already cached, or by encoding a fresh query record under the appropriate modality. The request then issues a single ANN top-𝐾 query. Because the embedding backbone runs at index-build time for catalog items, the online path keeps the same latency shape as conventional content-based I2I retrieval. 
+
+Modality-conditioned serving. The same trained checkpoint can support multimodal, text-only, and image-only surfaces by chang-ing the renderer 𝑅 𝑚 while holding the encoder and index inter-face fixed. Section 4.3 measures the quality cost of those modality-restricted serving modes in the Snap DPA instantiation. 
+
+## 4 Experiments 
+
+We evaluate CAMIE on a fixed Snap DPA train/test split. The sec-tion is organized around four questions: (Q1) How much does co-engagement fine-tuning improve over pretrained backbones and commercial APIs? (Q2) Can one fine-tuned checkpoint serve multi-modal, text-only, and image-only retrieval? (Q3) Does training-data KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Liu et al. 
+
+scale matter more than filtering for high-intent events? (Q4) How much of the gain comes from the LLM/MLLM backbone as opposed to the co-engagement supervision itself? 
+
+## 4.1 Experimental setup 
+
+Data. We instantiate the generic pair miner from Section 3.2 on an internal 30-day Snap DPA user-journey table. We deduplicate each user’s journey by item_id , compute pairwise temporal-decay weights with a 7-day half-life, and sample up to 2 pairs per user. We keep page views, clicks, add-to-carts, and purchases, and remove noisy pairs by requiring EXACT match attribution, non-empty title and image fields, the same advertiser, decay weight at least 0 .5, and coherent top-level category. The offline split used for all tables in this section contains 10M training pairs and 100K test pairs; the deployed checkpoint in Section 4.6 is trained on a larger 100M-pair production set built with the same pipeline. 
+
+Metrics and protocol. Offline metrics are Recall@K for 𝐾 ∈{1, 10 , 50 } and MRR. For each test pair, the query item is scored against the candidate pool of all unique items appearing in the test pairs. Online metrics are relative CTR and CVR changes, reported under Snap’s disclosure policy. 
+
+Implementation details. Our primary LLM/MLLM instantiation uses Qwen3-VL-Embedding 2B [9]. We freeze the backbone, add LoRA adapters [6] ( 𝑟 =32, 𝛼 =64) on {𝑞, 𝑘, 𝑣, 𝑜 } attention projec-tions, and train the adapters with the projection head. We use AdamW [12] with peak learning rate 2 ×10 −5, 200 warm-up steps, cosine decay, BF16, and a learnable temperature initialized to 0 .07. Effective batch size is 32–64 on 8 × NVIDIA A100 40 GB GPUs. The primary checkpoint trains for 1 epoch over the training set. Offline tables use 512-dimensional embeddings. Online serving uses the first 128 dimensions so the index footprint matches the existing I2I_MM index. All CAMIE fine-tunes in Table 1 use the same training pairs. OSS rows use native pretrained weights; API 
+
+rows use commercial API inference at default configuration. 
+
+## 4.2 Q1: Model comparison 
+
+We first compare the Qwen3-VL instantiation of CAMIE with pre-trained open-source checkpoints (OSS) and commercial embedding APIs (API). 
+
+Co-engagement fine-tuning aligns the pretrained backbone. 
+
+With the same Qwen3-VL-Embedding 2B backbone and the same multimodal inputs, CAMIE reaches 137 .7% R@10 versus 100 .0% for the pretrained checkpoint. Fine-tuning also changes how the model uses images: the pretrained checkpoint is better with text-only input than with multimodal input (111 .1% vs. 100 .0% R@10), while the fine-tuned checkpoint benefits from multimodal input (137 .7% vs. 122 .5% R@10). 
+
+CAMIE is stronger than the commercial baselines at 𝐾 ≥ 10 .
+
+Gemini Embedding 2 is the strongest zero-shot baseline at 129 .9% R@10. CAMIE improves on it by ∼6% relative while using smaller embeddings ( 𝑑 =512 vs. 𝑑 =3072). Gemini stays ahead at 𝐾 =1 (129 .1% vs. 126 .4%), so CAMIE’s advantage is concentrated at the larger cut-offs that matter for candidate generation. 
+
+Backbone choice still matters. Fine-tuned Gemma 4 E2B reaches 108 .2% R@10 with multimodal input and improves over its pre-trained checkpoint on the modality they share (103 .3% vs. 95 .2% text-only), but remains 29 .5pp below the Qwen3-VL instantiation. This suggests that the co-engagement framework is portable, while the starting embedding backbone remains important. 
+
+## 4.3 Q2: Modality flexibility 
+
+The primary fine-tune is trained with multimodal inputs. The pro-duction fleet, however, also includes text-only and image-only re-trieval surfaces that today consume dedicated unimodal encoders. We therefore evaluate the same multimodal-trained checkpoint under three input regimes and compare it with dedicated unimodal fine-tunes trained on the matching modality (Table 2). 
+
+Text-only serving is effectively unified. The multimodal-trained checkpoint served with text-only input comes within 1 .1pp of a dedicated text-only fine-tune on R@10 (87 .9% vs. 89 .0%) and within 0.5pp on MRR (88 .7% vs. 89 .2%). This supports replacing the separate text encoder with the same checkpoint used for multimodal serving. 
+
+Image-only serving is limited by the modality, not by consol-idation. Image-only serving is markedly weaker than multimodal serving for the unified checkpoint (67 .0% R@10), but a dedicated image-only fine-tune is barely better (68 .8%, a 1 .8pp gap). Consol-idating onto one checkpoint therefore costs little on this surface; what costs quality is discarding text at query time. Text appears to be the dominant co-engagement signal in this catalog: text-only serving stays within 13pp of multimodal serving, whereas both image-only configurations lose roughly a third of multimodal R@10. Section 4.5 revisits this surface with matched non-LLM baselines and shows that a contrastively-trained vision tower is substantially stronger there than either configuration above, making a dedicated image encoder the better choice for image-only traffic. 
+
+## 4.4 Q3: Training-data scale vs. conversion-type purity 
+
+High-intent events provide cleaner positives, but filtering to them removes many usable pairs. We compare the full all-event training set with a high-intent subset containing add-to-cart and purchase pairs (Table 3). The high-intent subset is roughly one third of the full training set; the all-event 1 /3 row is a random downsample matched to that size. 
+
+Scale matters more than event purity. At matched scale, high-intent filtering is slightly better than all-pairs ( +1.6% relative R@10). At matched filter, using the full all-event training set improves R@10 by +8.9% relative. The full all-event training set therefore beats high-intent-only by +7.2% relative R@10: the scale gained by keeping more pairs is larger than the purity gained by filtering. 
+
+## 4.5 Q4: Backbone vs. co-engagement supervision 
+
+Sections 4.2–4.3 compare CAMIE against pretrained checkpoints and commercial APIs, which leaves the attribution question open: is the gain due to the MLLM backbone, or would any encoder trained on the same co-engagement pairs do as well? To answer this we train two purpose-built non-LLM dual encoders, namely SigLIP2-large ( patch16-384 ) [15] and CLIP ViT-L/14 (336px) [13], under a recipe that is identical to CAMIE in every controllable respect. 
+
+Matched protocol. All backbones use the same co-engagement pairs, the same symmetric in-batch InfoNCE objective with the CAMIE KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA 
+
+Table 1: Model comparison on the held-out test set. Scores are normalized to the pretrained Qwen3-VL-Embedding 2B multimodal row; higher is better. CAMIE rows are fine-tuned on the training set; OSS rows are pretrained open-source checkpoints; API rows are commercial embedding services. Best per column is bold.                                                                         
+
+> Model Type Input R@1 R@10 R@50 MRR Qwen3-VL-Embedding 2B CAMIE Multimodal 126 .4% 137 .7%141 .8%130 .5%Qwen3-VL-Embedding 2B OSS Multimodal 100 .0% 100 .0% 100 .0% 100 .0% Qwen3-VL-Embedding 2B CAMIE Text-only 117 .8% 122 .5% 134 .1% 116 .4% Qwen3-VL-Embedding 2B OSS Text-only 113 .2% 111 .1% 109 .7% 111 .9% Gemini Embedding 2 API Multimodal 129 .1%129 .9% 129 .2% 129 .4% Gemini Embedding 2 API Text-only 128 .6% 126 .6% 125 .9% 127 .1% Gemma 4 E2B CAMIE Multimodal 94 .5% 108 .2% 124 .4% 100 .0% Gemma 4 E2B CAMIE Text-only 93 .0% 103 .3% 120 .9% 97 .1% Gemma 4 E2B OSS Text-only 93 .8% 95 .2% 97 .3% 93 .7% Gemma 4 E2B-it CAMIE Text-only 91 .6% 94 .2% 108 .2% 93 .1% Gemma 4 E2B-it OSS Text-only 93 .7% 89 .6% 91 .3% 91 .5%
+
+Table 2: Modality-restricted serving on the held-out test set. All rows use Qwen3-VL-Embedding 2B and the same train-ing pairs. Scores are normalized to the multimodal-trained checkpoint served with multimodal input; higher is better.                   
+
+> Training input Eval input R@10 MRR
+> Single multimodal-trained checkpoint:
+> Multimodal Multimodal 100 .0%100 .0%Multimodal Text-only 87 .9% 88 .7% Multimodal Image-only 67 .0% 65 .7%
+> Dedicated unimodal fine-tunes:
+> Text-only Text-only 89 .0% 89 .2% Image-only Image-only 68 .8% 67 .8%
+
+Table 3: Training-pair scale vs. high-intent filtering on the held-out test set. R@10 and MRR are normalized to the all-pairs 1/3 baseline; higher is better.             
+
+> Training filter Scale R@10 MRR All pairs 1108 .9%107 .5%High-intent only 1/3101 .6% 101 .8% All pairs 1/3100 .0% 100 .0%
+
+same number of cross-device gathered negatives, the same 512-dimensional output, the same adaptation mechanism (frozen back-bone + LoRA 𝑟 =32, 𝛼 =64 on attention projections + MLP projec-tion head), the same optimizer, learning rates, warm-up and cosine schedule, and the same number of optimizer steps (1 full epoch). The dual encoders reuse CAMIE’s data loader, text renderer and loss implementation, so the pairs, the field rendering and the neg-ative pool are identical by construction; the only differences are those intrinsic to the backbone (its feature dimensionality, its image preprocessing, and joint image–text attention versus dual-tower late fusion). Because a 2B MLLM does not fit the dual encoders’ largest feasible batch on 40 GB accelerators, we fix the negative count for all backbones at the largest value the MLLM supports, 
+
+Table 4: Matched backbones × serving modes. Within each serving mode, all backbones share the same co-engagement pairs, objective, negatives, output dimension, adaptation, schedule and number of steps, so the only difference down a column is the backbone. R@10 normalized to the CAMIE (Qwen3-VL) multimodal entry. Best per serving mode in bold.              
+
+> Backbone Type Multimodal Text-only Image-only Qwen3-VL 2B (CAMIE) MLLM 100 .0%89 .0%68 .8% SigLIP2-large dual-enc. 95 .7% 60 .1% 87 .3%CLIP ViT-L/14 dual-enc. 94 .5% 77 .7% 73 .8%
+
+making compute and negatives matched rather than favorable to CAMIE. 
+
+Co-engagement supervision is the dominant lever, but the backbone still matters. Table 4 shows that every backbone be-comes a usable co-engagement retriever once trained on the mined pairs: all three land within 5 .5pp of each other on multimodal serv-ing. The spread across backbones is 5 .8% relative from best to worst, against the 37 .7% relative gain that co-engagement fine-tuning adds to the MLLM over its own pretrained checkpoint (Table 1); we re-port pretrained baselines only for the MLLM, so the rows here compare the three fine-tuned models. The supervision, not the ar-chitecture, produces the bulk of the gain: a useful and reassuring result for practitioners, since it means the approach is portable. On top of that shared gain the MLLM retains a small but statistically significant multimodal advantage: 4 .3pp over SigLIP2 and 5 .5pp over CLIP (paired bootstrap and sign-flip permutation tests over the 100K test queries, 𝑛 =2000 resamples, 𝑝 < 0.001 for both; SigLIP2 versus CLIP is not significant). On text-only serving the MLLM’s margin is much larger (89 .0% versus 77 .7% and 60 .1%), consistent with product text being better served by a language model than by a caption-oriented dual-encoder text tower. 
+
+The deployed encoder is the same backbone under different supervision. The production I2I_MM control is itself a SigLIP2-large encoder; what separates it from the SigLIP2 row of Table 4 KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA Liu et al. 
+
+Table 5: Multimodal R@10 versus optimizer steps for the matched runs of Table 4, normalized to the final CAMIE checkpoint. CAMIE rises monotonically; the dual encoders plateau early.                   
+
+> Steps (frac. of epoch) CAMIE SigLIP2 CLIP 20% 97 .1% 94 .8% 93 .6% 40% 98 .4% 96 .2% 94 .1% 60% 99 .5% 96 .4% 93 .7% 80% 99 .6% 95 .4% 94 .4% 100% 100 .0%95 .7% 94 .5%
+
+is that it is trained on content-derived labels rather than on co-engagement pairs. The offline split cannot price that difference fairly, because it is itself built from co-engagement pairs and so fa-vors any model trained on that signal. The comparison that does set-tle it is the online A/B of Section 4.6, where CAMIE replaces I2I_MM 
+
+on live traffic and lifts CTR by +0.390% and CVR by +10 .832%. Read together with the matched rows above, which hold the supervi-sion fixed and vary only the backbone, this points to the change of supervision rather than a change of encoder architecture as the source of the production gain. 
+
+The MLLM keeps improving with training while the dual encoders saturate. Evaluating intermediate checkpoints of the same three multimodal runs (Table 5) shows the mechanism behind the multimodal gap. CAMIE improves monotonically across the epoch, whereas both dual encoders plateau after roughly 40% of it and then flatten. The MLLM therefore has more headroom to align with the engagement signal, and comparisons made at short training budgets understate it: at 20% of the epoch the gap to SigLIP2 is 2 .3pp, and by the end it has widened to 4 .3pp. 
+
+A dedicated vision encoder remains better for image-only retrieval. The one mode where a dual encoder wins is pure image-only serving, where SigLIP2 reaches 87 .3% against CAMIE’s 68 .8%. We read this as a property of the readout rather than a claim about visual understanding in general: SigLIP2’s vision tower is contrastively trained specifically to produce a standalone image embedding, whereas the MLLM must express an image-only item through last-token pooling over an image followed by empty text, which is outside its pretraining regime. This is consistent with, and sharpens, the image-only gap already reported in Section 4.3: on image-only traffic the cost comes from the backbone rather than from consolidation. Collapsing the two MLLM checkpoints into one costs 1 .8pp (Table 2), whereas choosing an MLLM over a contrastively-trained vision tower costs 18 .5pp, so a dedicated visual encoder remains the better choice on that surface. 
+
+## 4.6 Online experiments 
+
+We validate the offline findings in production. CAMIE is deployed in Snap DPA as a drop-in replacement for two content-based en-coders: the multimodal I2I_MM encoder and the text-only I2I_TEXT 
+
+encoder, which we do not evaluate on the offline split and therefore compare against online only. We run standard randomized A/B experiments with other serving components unchanged (Table 6). 
+
+CVR improves on every comparison, while CTR gains con-centrate on the text surface. At the system level, CAMIE raises 
+
+Table 6: Online A/B lifts for CAMIE in Snap DPA. The first block reports the system-level effect on overall DPA traffic; the second reports per-surface lifts where CAMIE replaces a specific deployed content encoder. Values are relative lifts. All three CVR lifts and the CTR lift against I2I_TEXT are statistically significant at the 99% confidence level.               
+
+> Comparison ΔCTR ΔCVR Overall DPA traffic +0.211% +1.911% vs. I2I_MM (MM) +0.390% +10 .832% vs. I2I_TEXT (text) +18 .958% +13 .12%
+
+overall DPA CVR by +1.911%; the overall CTR change ( +0.211%) is positive but does not reach significance. These aggregate figures are measured on total DPA traffic, of which the two replaced encoders serve a subset, so the per-surface lifts below do not translate propor-tionally to the system level. Restricted to the surfaces it takes over, the effect is sharper. Against I2I_MM , the measurable gain is entirely in conversion: CVR rises +10 .832% while the CTR change ( +0.390%) is not significant, indicating that co-engagement supervision sur-faces more conversion-relevant candidates without changing which items look clickable. Against I2I_TEXT , both metrics move sharply (+18 .958% CTR and +13 .12% CVR), and here the ordering reverses (the CTR gain exceeds the CVR gain), consistent with the offline finding that adding image understanding to a text-only retriever recovers candidates the control did not retrieve at all. 
+
+## 5 Conclusion 
+
+We presented CAMIE, a co-engagement-aware framework for train-ing modality-flexible item embeddings for industrial I2I retrieval. CAMIE uses LLM/MLLM backbones to represent item images and metadata in a shared embedding space, then aligns that space with production DPA co-engagement signals using symmetric in-batch InfoNCE. The resulting embeddings fit the existing ANN serving path and support multimodal, text-only, and image-only retrieval modes. On Snap DPA, the Qwen3-VL-Embedding 2B instantiation out-performs pretrained open-source backbones and the strongest com-mercial multimodal embedding model on offline Recall@10, serves text-only retrieval at near-parity with a dedicated text encoder from the same checkpoint, and benefits more from training-data scale than from filtering co-engagement pairs down to high-intent events. A matched-recipe comparison against purpose-built dual encoders locates the gain: the co-engagement supervision accounts for most of it and transfers across backbone families, while the MLLM adds a modest multimodal and a large text-only advantage, with image-only retrieval the exception. In production A/B tests CAMIE delivers +0.390% CTR / +10 .832% CVR over the multimodal control, +18 .958% CTR / +13 .12% CVR over the text control, and 
+
++0.211% CTR / +1.911% CVR on overall DPA traffic; it has since launched in place of both encoders. The lesson for practitioners is that the behavioral supervision, not the backbone family, buys most of the quality, and that the value of an MLLM is one checkpoint serving the multimodal and text surfaces competitively. CAMIE KDD ’27, ADS Track, Under Review, August 1–5, 2027, San Jose, CA, USA 
+
+## References 
+
+[1] Prabhat Agarwal, Minhazul Islam Sk, Nikil Pancha, Kurchi Subhra Hazra, Jiajing Xu, and Chuck Rosenberg. 2024. OmniSearchSage: Multi-Task Multi-Entity Embeddings for Pinterest Search. In Companion Proceedings of the ACM Web Conference 2024 (WWW ’24 Companion) . arXiv:2404.16260 [cs.IR] doi:10.1145/ 3589335.3648309 [2] Paul Baltescu, Haoyu Chen, Nikil Pancha, Andrew Zhai, Jure Leskovec, and Charles Rosenberg. 2022. ItemSage: Learning Product Embeddings for Shop-ping Recommendations at Pinterest. In Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD ’22) . 2703–2711. arXiv:2205.11728 [cs.IR] doi:10.1145/3534678.3539170 [3] Paul Covington, Jay Adams, and Emre Sargin. 2016. Deep Neural Networks for YouTube Recommendations. In Proceedings of the 10th ACM Conference on Recommender Systems (RecSys ’16) . ACM, 191–198. doi:10.1145/2959100.2959190 [4] Yinfu Feng, Yanjing Wu, Rong Xiao, and Xiaoyi Zen. 2025. LLM-I2I: Boost Your Small Item2Item Recommendation Model with Large Language Model. arXiv:2512.21595 [cs.IR] https://arxiv.org/abs/2512.21595 [5] Ruiqi Guo, Philip Sun, Erik Lindgren, Quan Geng, David Simcha, Felix Chern, and Sanjiv Kumar. 2020. Accelerating Large-Scale Inference with Anisotropic Vector Quantization. In Proceedings of the 37th International Conference on Machine Learning (ICML) (Proceedings of Machine Learning Research, Vol. 119) . PMLR, 3887–3896. arXiv:1908.10396 [cs.LG] [6] Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen. 2022. LoRA: Low-Rank Adaptation of Large Language Models. In International Conference on Learning Representations (ICLR) .arXiv:2106.09685 [cs.CL] [7] Po-Sen Huang, Xiaodong He, Jianfeng Gao, Li Deng, Alex Acero, and Larry P. Heck. 2013. Learning Deep Structured Semantic Models for Web Search using Clickthrough Data. In Proceedings of the 22nd ACM International Conference on Information & Knowledge Management (CIKM ’13) . ACM, 2333–2338. doi:10.1145/ 2505515.2505665 [8] Jeff Johnson, Matthijs Douze, and Hervé Jégou. 2021. Billion-Scale Similar-ity Search with GPUs. IEEE Transactions on Big Data 7, 3 (2021), 535–547. arXiv:1702.08734 [cs.CV] doi:10.1109/TBDATA.2019.2921572 [9] Mingxin Li, Yanzhao Zhang, Dingkun Long, Keqin Chen, Sibo Song, Shuai Bai, Zhibo Yang, Pengjun Xie, An Yang, Dayiheng Liu, Jingren Zhou, and Junyang Lin. 2026. Qwen3-VL-Embedding and Qwen3-VL-Reranker: A Unified Framework for State-of-the-Art Multimodal Retrieval and Ranking. arXiv:2601.04720 [cs.CV] https://arxiv.org/abs/2601.04720 [10] Jiayi Liao, Sihang Li, Zhengyi Yang, Jiancan Wu, Yancheng Yuan, Xiang Wang, and Xiangnan He. 2024. LLaRA: Large Language-Recommendation Assis-tant. In Proceedings of the 47th International ACM SIGIR Conference on Re-search and Development in Information Retrieval (SIGIR ’24) . ACM, 1785–1795. arXiv:2312.02445 [cs.IR] doi:10.1145/3626772.3657690 [11] Greg Linden, Brent Smith, and Jeremy York. 2003. Amazon.com Recommenda-tions: Item-to-Item Collaborative Filtering. IEEE Internet Computing 7, 1 (2003), 76–80. doi:10.1109/MIC.2003.1167344 [12] Ilya Loshchilov and Frank Hutter. 2019. Decoupled Weight Decay Reg-ularization. In International Conference on Learning Representations (ICLR) .arXiv:1711.05101 [cs.LG] [13] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, and Ilya Sutskever. 2021. Learning Transferable Visual Models From Natural Language Supervision. In Proceedings of the 38th International Conference on Machine Learning (ICML) (Proceedings of Machine Learning Research, Vol. 139) . PMLR, 8748–8763. arXiv:2103.00020 [cs.CV] [14] Sambeet Tiady, Arihant Jain, Dween Rabius Sanny, Khushi Gupta, Srinivas Vir-inchi, Swapnil Gupta, Anoop Saladi, and Deepak Gupta. 2024. MERLIN: Mul-timodal & Multilingual Embedding for Recommendations at Large-scale via Item Associations. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management (CIKM ’24) . doi:10.1145/3627673.3680106 [15] Michael Tschannen, Alexey Gritsenko, Xiao Wang, Muhammad Ferjad Naeem, Ibrahim Alabdulmohsin, Nikhil Parthasarathy, Talfan Evans, Lucas Beyer, Ye Xia, Basil Mustafa, Olivier Hénaff, Jeremiah Harmsen, Andreas Steiner, and Xiaohua Zhai. 2025. SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic Understanding, Localization, and Dense Features. arXiv:2502.14786 [cs.CV] https://arxiv.org/abs/2502.14786 [16] Aaron van den Oord, Yazhe Li, and Oriol Vinyals. 2018. Representation Learning with Contrastive Predictive Coding. arXiv:1807.03748 [cs.LG] [17] Xinyang Yi, Ji Yang, Lichan Hong, Derek Zhiyuan Cheng, Lukasz Heldt, Aditee Kumthekar, Zhe Zhao, Li Wei, and Ed Chi. 2019. Sampling-Bias-Corrected Neural Modeling for Large Corpus Item Recommendations. In Proceedings of the 13th ACM Conference on Recommender Systems (RecSys ’19) . ACM, 269–277. doi:10. 1145/3298689.3346996 [18] Licheng Yu, Jun Chen, Animesh Sinha, Mengjiao MJ Wang, Hugo Chen, Tamara L. Berg, and Ning Zhang. 2022. CommerceMM: Large-Scale Commerce Multi-Modal Representation Learning with Omni Retrieval. In Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD ’22) .arXiv:2202.07247 [cs.CV] [19] Xiaohua Zhai, Basil Mustafa, Alexander Kolesnikov, and Lucas Beyer. 2023. Sigmoid Loss for Language Image Pre-Training. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) . 11975–11986. arXiv:2303.15343 [cs.CV] [20] Chao Zhang, Shiwei Wu, Haoxin Zhang, Tong Xu, Yan Gao, Yao Hu, Di Wu, and Enhong Chen. 2024. NoteLLM: A Retrievable Large Language Model for Note Recommendation. In Companion Proceedings of the ACM Web Conference 2024 (WWW ’24) . ACM, 170–179. arXiv:2403.01744 [cs.IR] doi:10.1145/3589335.3648314 [21] Chao Zhang, Haoxin Zhang, Shiwei Wu, Di Wu, Tong Xu, Xiangyu Zhao, Yan Gao, Yao Hu, and Enhong Chen. 2025. NoteLLM-2: Multimodal Large Representation Models for Recommendation. In Proceedings of the 31st ACM SIGKDD Confer-ence on Knowledge Discovery and Data Mining V.1 (KDD ’25) . ACM, 2815–2826. arXiv:2405.16789 [cs.IR] doi:10.1145/3690624.3709440

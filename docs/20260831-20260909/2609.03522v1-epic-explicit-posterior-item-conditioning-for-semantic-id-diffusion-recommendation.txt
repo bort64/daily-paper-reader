@@ -1,0 +1,750 @@
+Title: EPIC: Explicit Posterior Item Conditioning for Semantic ID Diffusion Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.03522v1
+
+Published Time: Fri, 04 Sep 2026 00:42:06 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# EPIC : Explicit Posterior Item Conditioning for Semantic ID Diffusion Recommendation 
+
+## Tuan-Binh Tran 
+
+College of Engineering and Computer Science VinUniversity Hanoi, Vietnam binh.tt2@vinuni.edu.vn 
+
+## Thanh Tam Nguyen 
+
+School of Information and Communication Technology Griffith University Gold Coast, Queensland, Australia t.nguyen19@griffith.edu.au 
+
+## Quoc Viet Hung Nguyen 
+
+School of Information and Communication Technology Griffith University Gold Coast, Queensland, Australia henry.nguyen@griffith.edu.au 
+
+## Dung D. Le 
+
+College of Engineering and Computer Science VinUniversity Hanoi, Vietnam dung.ld@vinuni.edu.vn 
+
+## Tung Kieu 
+
+Department of Computer Science Aalborg University Copenhagen, Denmark tungkvt@cs.aau.dk 
+
+## Thanh Trung Huynh ∗
+
+College of Engineering and Computer Science VinUniversity Hanoi, Vietnam trung.ht@vinuni.edu.vn 
+
+## Abstract 
+
+Semantic ID (SID) generative recommendation predicts the next item by generating a short tuple of discrete tokens. Recent masked-diffusion methods improve this process through bidirectional con-text and flexible decoding, yet recommendation ultimately requires selecting among complete catalog items. At each denoising step, a partial SID can correspond to multiple feasible items, while existing methods primarily reason through position-wise token predictions. We propose Explicit Posterior Item Conditioning (EPIC ), which introduces explicit item-level competition into SID denoising. EPIC 
+
+constructs a personalized posterior over feasible candidate items us-ing the current generation context and the user’s recent interactions, then projects this distribution back to unresolved SID positions to guide subsequent token decisions. The pretrained backbone remains frozen and requires no additional decoder forward pass. Experi-ments on four Amazon benchmarks show consistent improvements over strong baselines, while diagnostic analyses indicate that the gains primarily arise from personalized transition evidence that preserves promising item hypotheses during denoising. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems ; Retrieval models and ranking .
+
+## Keywords 
+
+generative recommendation, semantic IDs, masked diffusion, se-quential recommendation, item-level modeling 
+
+## 1 Introduction 
+
+Sequential recommendation predicts the next item a user will inter-act with from a chronologically ordered history. Classical sequential recommenders score catalog items directly, such that both learning and evaluation are defined at item granularity [9, 18]. Generative recommendation instead formulates the output as a sequence, such as natural-language text or an item identifier [3]. A prominent re-alization of this paradigm represents each item by a Semantic ID 
+
+> ∗
+
+Corresponding author. Fuse item and token evidence                        
+
+> MASK MASK a6c8
+> a6c8
+> a6c8
+> User’s History
+> Time
+> a6c8
+> Feasible Candidate Set
+> State t State t -1State t -2
+> a6c8
+> a6c8b6
+> Token Evidence
+> a6c8b6
+> Token Evidence
+> a6c8M
+> Item Evidence
+> a6c8b5
+> Item Evidence
+> Token -only denoising
+> Existing method
+> Ours
+> a6c8
+> Partial SID
+> M
+> d12 d12
+> d7
+> b6
+> b5
+> d7
+> d12
+> ……
+> b6
+> b5
+> b5
+> b6
+> b6
+> b9
+> d12
+> d7
+> d12
+> d7
+> d12
+> a6c8b9d4
+> d7
+> d12 .65
+> d7.25
+> d4.10
+> d12 b5
+> b5.65
+> .25
+> .10
+> b6
+> b9
+> Feasibility only;
+> no explicit item ranking.
+> Item preference guides
+> each denoising step.
+
+×
+
+✓
+
+Figure 1: Why item evidence must act during denoising. A partial SID defines a feasible candidate set that contracts with each token commitment. Top: token-only denoising follows locally plausible evidence but can eliminate the starred tar-get, making it unreachable for later generation or reranking. 
+
+Bottom: EPIC uses the user’s recent interactions to compare feasible candidates and maps the resulting item posterior to unresolved SID positions, guiding token commitments while the target remains reachable. The star denotes the ground-truth item for illustration only. 
+
+(SID), a short tuple of discrete codes obtained by quantizing its content representation, and recommends an item by generating its SID [15]. Because related items can share codes, SIDs support parameter sharing across large catalogs while retaining a compact generative interface. Early SID recommenders generate these codes autoregressively, so each decision conditions only on the preceding codes and an early error constrains all subsequent predictions [15]. Recent masked-diffusion methods replace this fixed left-to-right process with iter-ative denoising: they learn to recover masked SID positions from arXiv:2609.03522v1 [cs.IR] 3 Sep 2026 Tran et al. 
+
+bidirectional context and can resolve positions in a confidence-driven order, potentially several at once [10, 12, 16, 17]. These developments substantially improve how SID tokens are generated. However, they retain a token-level decision interface even though the recommended object is a complete catalog item. Figure 1 illustrates the resulting gap. At any intermediate de-noising step, the resolved SID positions restrict the catalog to a 
+
+feasible candidate set : the complete items whose identifiers remain consistent with the current state. Feasibility alone does not indicate which candidate best matches the user’s preference. Token-level decoding determines how this set contracts through position-wise predictions, leaving competition among the feasible complete items implicit. This matters because every token commitment is simulta-neously an item-level elimination decision. A locally plausible code can remove a promising item from the feasible set; once removed, that item is unreachable to subsequent denoising and cannot be recovered by post-hoc reranking over the generated candidates. Item-level evidence is therefore most useful while candidates still compete and remain reachable. Motivated by this observation, we propose Explicit Posterior Item Conditioning ( EPIC ), which introduces explicit item-level competition into Semantic ID denoising. At each step, EPIC identi-fies the feasible item hypotheses and constructs a normalized item posterior over a retained candidate support using the current back-bone context and the user’s recent interactions. It then marginalizes this posterior back to the unresolved SID positions and fuses the resulting item-level evidence with the backbone predictions, allow-ing preference over complete items to influence subsequent token decisions. As denoising proceeds, the feasible set and posterior are recomputed, so item-level evidence guides which hypotheses remain reachable throughout the generation trajectory. Two components make this interaction effective. First, candidate-conditioned transition evidence compares each candidate with the user’s recent complete items, allowing different hypotheses to re-ceive support from different parts of the interaction history. Second, 
+
+frontier-aware learning concentrates direct item-level supervision on states where multiple feasible candidates genuinely compete. The resulting module is lightweight and additive: the pretrained backbone remains frozen, and EPIC reuses its existing hidden states, token representations, and logits without requiring an additional backbone forward pass. Experiments on four Amazon benchmarks show that EPIC con-sistently improves full-catalog next-item recommendation over strong baselines. Further analyses attribute the gains primarily to personalized transition evidence acting during denoising: it pre-serves promising candidates as the feasible set contracts, and it depends on the correct user’s recent interactions rather than a generic catalog-level signal. In summary, our main contributions are as follows: 
+
+• We identify the token–item inference gap in masked SID dif-fusion: every partial SID induces a feasible set of complete-item hypotheses, yet their personalized competition re-mains implicit in token-level denoising. 
+
+• We propose EPIC , which constructs an explicit item pos-terior from candidate-conditioned transition evidence and feeds its item-level marginals back to unresolved SID po-sitions, with frontier-aware learning focusing supervision on states where candidate competition is informative. 
+
+• We demonstrate consistent improvements on four Amazon benchmarks and show that personalized transition evidence is the primary source of the gains, acting by preserving promising candidates throughout denoising. Our full implementation and reproducibility scripts are publicly available. 1
+
+## 2 Related Work 
+
+Semantic ID Generative Recommendation. Generative retrieval replaces the conventional score-and-index interface with sequence generation, where a model directly emits the identifier of a docu-ment or entity and constrained decoding ensures valid outputs [2, 20]. TIGER extends this paradigm to recommendation by assigning each item a semantic identifier through residual quantization of con-tent embeddings and autoregressively generating the next item’s identifier [15]. Subsequent work has explored SID construction from several directions. Vector-quantized text representations [13, 22] support transferable recommendation across domains [5]; learn-able tokenizers incorporate collaborative signals and reduce code-assignment bias [24, 31]; contextual tokenization adapts identifiers to the interaction sequence [8]; and longer unordered identifiers trade collision reduction against decoding complexity [7]. Gener-ative recommendation has also been demonstrated at industrial scale [28]. Despite these advances, the common interface remains token-based: preference over a complete item is induced through the generation of its constituent SID tokens rather than represented explicitly during generation. 
+
+Masked and Diffusion Generative Recommendation. Discrete diffusion replaces fixed left-to-right decoding with iterative denois-ing from a masked state [1], an approach recently extended to large language models [14]. A separate line applies continuous diffusion to recommendation by denoising interaction representations or generating target item embeddings [25, 27]; these methods oper-ate outside the SID generation setting considered here. For SIDs, 
+
+LLaDA-Rec addresses the unidirectional context and error propaga-tion of autoregressive decoding by learning a bidirectional model to recover masked target tokens [17]. DiffGRM similarly exploits bidirectional dependencies among codes that jointly identify an item [10], while MaskGR and MDGR further develop masked-token objectives with parallel or adaptive decoding [12, 16]. Related work also improves the history representation itself: masked history learning reconstructs historical items to capture a broader behav-ioral trajectory [26]. These methods substantially improve SID generation and condition their token predictors on user interaction histories. However, their training and inference remain primarily parameterized at the token level: supervision is applied to masked positions, and decoding proceeds from per-position vocabulary dis-tributions. Consequently, competition among the complete items compatible with a partial identifier is not explicitly parameterized as a normalized item-level distribution during the denoising process. 
+
+> 1https://anonymous.4open.science/r/EPIC/ EPIC
+
+Item-Level Modeling in Generative Recommendation. Re-cent studies have highlighted the limitations of relying solely on token-level generation for item ranking. SimGR shows theoretically and empirically that item-preference distributions induced from generated tokens can be incomplete or distorted, and therefore re-places identifier generation with direct item scoring [30]. Gryphon 
+
+retains the generative interface but applies item-level rescoring after candidate identifiers have been generated [21]. Concurrently, 
+
+ISD constructs a user-specific item ranking before generation and uses it to support autoregressive SID prefixes prior to beam prun-ing [23]. Another related line focuses on output validity, using trie-or graph-constrained decoding to restrict generation to valid cata-log identifiers [2, 7, 16]. These approaches differ from EPIC in when and how item-level information is introduced. SimGR bypasses SID generation, Gryphon applies item evidence after candidate gen-eration, and ISD guides autoregressive decoding with a ranking fixed before generation. In contrast, EPIC operates on arbitrary non-prefix states arising during masked diffusion, recomputes item-level evidence from the current partial SID and user history at each denoising step, and feeds this evidence back to unresolved positions before the next token commitment. 
+
+## 3 Preliminaries and Problem Formulation 
+
+Sequential recommendation. Let I denote the item catalog. For a user 𝑢 , let H𝑢 = (𝑖 1, . . . , 𝑖 𝐿 ) be the chronologically ordered inter-action history, where 𝑖 ℓ ∈ I . Sequential recommendation aims to rank the next item 𝑖 ★ given H𝑢 .
+
+Semantic ID generative recommendation. Each catalog item 𝑖 ∈ I 
+
+is represented by an 𝐻 -tuple of discrete codes, 
+
+𝑖 ←→ s𝑖 = (𝑠 1 
+
+> 𝑖
+
+, . . . , 𝑠 𝐻 𝑖 ), 𝑠 ℎ𝑖 ∈ V ℎ, (1) obtained by quantizing an item representation [7, 15]. The mapping from items to tuples need not be injective: two items may collide under the fixed tokenizer. The catalog therefore induces the finite set of distinct complete tuples 
+
+SI = {s𝑖 : 𝑖 ∈ I} ⊆ V 1 × · · · × V 𝐻 . (2) A generative recommender predicts 𝑖 ★ by generating s𝑖 ★ . A gener-ated tuple identifies a unique item only when its catalog preimage is a singleton. Importantly, the valid catalog tuple forms only a small subset of the combinatorial product space. 
+
+## 3.1 Masked Semantic ID Generation 
+
+A masked-diffusion recommender treats the target tuple as a se-quence to be iteratively denoised. During training, a sampled subset of target positions is replaced with MASK , and the model learns to recover the original codes. At inference, generation starts from a fully masked target and progressively resolves positions over 𝑇 
+
+denoising steps. At step 𝑡 , the current target state is 
+
+x𝑡 = (𝑥 1 
+
+> 𝑡
+
+, . . . , 𝑥 𝐻 𝑡 ). (3) Let 
+
+O𝑡 = {ℎ : 𝑥 ℎ𝑡 ≠ MASK }, M𝑡 = {1, . . . , 𝐻 } \ O 𝑡 (4) denote its resolved and masked positions. Given x𝑡 and the user history, the masked backbone produces target hidden states hℎ𝑡 and token logits ℓℎ𝑡 . The corresponding token distribution is 
+
+𝑝 ℎ𝜃,𝑡 (𝑣 ) = softmax (ℓℎ𝑡 )𝑣 , ℎ ∈ M 𝑡 . (5) The base decoder then uses these distributions to select both the codes and the positions to resolve, producing x𝑡 −1. We use a pre-trained masked-diffusion recommender as this token-level back-bone and keep it frozen when learning our item-level module. 
+
+## 3.2 Partial States as Feasible Candidate Sets 
+
+Although the backbone predicts individual codes, every partial state already defines a set of complete item hypotheses. Intuitively, once some positions of the target tuple are resolved, only the catalog items whose SIDs agree with those positions can still be the final recommendation. Formally, we call 
+
+C𝑡 = 𝑖 ∈ I : 𝑠 ℎ𝑖 = 𝑥 ℎ𝑡 , ∀ℎ ∈ O 𝑡 (6) the feasible candidate set . Feasibility here means only SID consis-tency; it does not imply personalized relevance. Because the catalog and SID table are fixed, C𝑡 is obtained exactly by matching resolved positions against all catalog tuples. For masked diffusion, O𝑡 may be any subset of positions rather than a prefix. The feasible candidate set is the item-hypothesis space induced by the current state. When |C 𝑡 | > 1, several items remain indis-tinguishable from the resolved codes; when |C 𝑡 | = 1, the item is already identified even if redundant codes remain masked. A fully resolved tuple can still have |C 𝑡 | > 1 under a tokenizer collision. 
+
+## 3.3 The Token–Item Inference Gap 
+
+The token distributions in Equation (5) and the support in Equa-tion (6) do not constitute a distribution over complete items: 
+
+𝑝 ℎ𝜃,𝑡 (𝑣 ) ≠ 𝑃 (𝑖 | x𝑡 , H𝑢 ). (7) The first quantity represents uncertainty at one SID position. The second must compare complete candidates, incorporate which can-didate is a plausible continuation of this user’s behavior, and nor-malize that competition over the current item-hypothesis space. Further, support restriction only determines which candidates re-main feasible; it does not distinguish their personalized preference. Our goal is therefore to construct an explicit, learned item poste-rior during denoising and to make that posterior actionable for the token-level generator. 
+
+## 4 Explicit Posterior Item Conditioning 4.1 Framework Overview 
+
+Figure 2 follows one denoising step. From the feasible candidate set C𝑡 induced by the partial SID, EPIC retains at most 𝑀 candi-dates, constructs complete-item and history representations, and scores each candidate using both the current backbone context and personalized transition evidence. The normalized item posterior is projected to SID codes and injected into the token logits before the ordinary transfer decision, and the updated partial state re-enters the same loop at the next step. The design follows two principles. First, item-level reasoning is strictly additive: the backbone remains frozen, and every new component, namely the pairwise item encoder, the history path, the transition field, and the feedback gate, enters through a residual Tran et al. d12Masked Backbone                                                     
+
+> (1) Token -level evidence
+> (2) Item -level evidence
+> (3) In -Denoising Posterior Feedback State x t-1
+> Partial noisy SID -state xt
+> Feasible
+> Candidate Set
+> Input
+> Token Logits
+> a6MASK c8MASK
+> b5d12
+> b6d7
+> b9d4
+> ……
+> Pos 2Pos 4
+> …
+> User history H u
+> …
+> iKiK-1i1
+> Pos 2
+> Pos 4
+> Pos L
+> …
+> Token Interaction
+> Item Representation
+> a6MASK c8
+> Item posterior SID marginals
+> zu,K
+> Context query qtCandidate z i
+> Transition Evidence
+> T( i, H u)
+> .55
+> .32
+> .11
+> …
+> Personalized Transition Field
+> qtTzi
+> Selective Matching
+> History
+> Attention …
+> Ambiguity -
+> aware gate
+> Item 1
+> Item 2
+> Item M
+> Item Posterior
+> Item 1 .55
+> Item 2 .32
+> Item M .11
+> ……
+> Structured Item
+> Representation
+> Encoder
+> SID Tokens
+> Item Energy
+> …Diff
+> |-|
+> Agree
+> History
+> Refined Token Posterior
+> Pos 2Pos 4
+> .21 .12
+> MASK MASK MASK
+> T0Iterative denoising steps …tt-1…
+> MASK MASK MASK MASK
+> Step t
+> a6c8b5d12
+> Final Recommendation:
+> a6c8a6c8d12
+> .52
+> .02 .02
+> .82
+> b5
+> b6d9d7d4
+> d12
+> Pos 2
+> Pos 4
+> Pos L
+> …
+
+Figure 2: EPIC within iterative SID denoising. At state x𝑡 , the frozen backbone provides token evidence, while the item-level branch encodes a retained support of feasible candidates and the user’s recent history. Personalized transition evidence yields an item posterior, which is marginalized to unresolved SID positions and fused with the backbone logits through an ambiguity-aware gate. The refined token posterior produces x𝑡 −1, and the procedure repeats. 
+
+with a zero-initialized scale. The initial model therefore recovers backbone inference exactly and departs from it only to the extent that item evidence proves useful during training. Second, item evidence is exact where it matters: the feasible candidate set is com-puted exactly at every step, and direct item supervision is restricted to states where the posterior is normalized over the complete set rather than a truncation, as detailed in Section 4.2.4. 
+
+## 4.2 Item-Level Posterior Construction 
+
+4.2.1 Feasible candidates and retained support. Scoring the full catalog at every step is unnecessary because resolved SID positions already restrict the hypotheses to C𝑡 . We use the frozen backbone as a non-differentiable proposal mechanism. For 𝑖 ∈ C 𝑡 ,
+
+𝐵 𝑡 (𝑖 ) =∑︁ 
+
+ℎ∈ M 𝑡 
+
+log 𝑝 ℎ𝜃,𝑡 (𝑠 ℎ𝑖 ), (8) 
+
+S𝑡 = TopM 𝑖 ∈ C 𝑡 𝐵 𝑡 (𝑖 ), |S 𝑡 | ≤ 𝑀. (9) We call S𝑡 the retained candidate support ; it equals C𝑡 whenever 
+
+|C 𝑡 | ≤ 𝑀 . Gradients do not pass through Equation (9). Thus, token likelihood determines which hypotheses are scored, but not their learned posterior ranking. This separation is deliberate: it prevents the same token evidence from being counted twice, once in pro-posal formation and again in the posterior energy, and Section 6.3 shows that folding token likelihood into the posterior is consis-tently harmful. Intuitively, token likelihood is a reliable instrument for pruning hypotheses but a poor one for ranking the survivors. The feasibility-only rung in the capability ladder uses the same C𝑡 
+
+restriction but omits the learned item posterior and transition field. 
+
+4.2.2 Structured item and history representations. Candidates and historical items share an encoder over complete SIDs, so both sides of the later comparison live in one representation space. Reusing the frozen code embeddings also introduces no new item vocabulary: an item is represented purely through the codes the backbone already understands. Let cℎ𝑖 = w(𝑠 ℎ𝑖 ) + dℎ combine the frozen code embedding with a learned position embedding, and let ¯z𝑖 = 𝑓 tuple ([ c1
+
+𝑖 ; . . . ; c𝐻 𝑖 ]) . Concatenation alone, however, does not represent interactions among SID heads, which describe comple-mentary facets of the same item. With uℎ𝑖 = 𝑊 𝑝 cℎ𝑖 we therefore add 
+
+m𝑖 =
+
+ Í ℎ uℎ𝑖 
+
+ ⊙2 − Íℎ (uℎ𝑖 )⊙2
+
+𝐻 (𝐻 − 1) , (10) 
+
+z𝑖 = norm  ¯z𝑖 + tanh (𝛾 𝑝 )𝑓 𝑝 (m𝑖 ) . (11) This computes the mean pairwise SID-head interaction in 𝑂 (𝐻 )
+
+time. The same encoder maps the 𝐾 most recent items to z𝑢, 1, . . . , z𝑢,𝐾 ,ordered from newest to oldest. Items sharing a complete SID remain tied because EPIC adds no item-identity feature. The backbone states supply the current denoising context, while a lightweight GRU summarizes the retained history window: 
+
+q𝑡 = norm 
+
+"
+
+𝑓 𝑞 
+
+1
+
+𝐻 
+
+𝐻 ∑︁ 
+
+ℎ=1
+
+hℎ𝑡 
+
+!
+
++ tanh (𝛾 ℎ ) GRU (z𝑢,𝐾 , . . . , z𝑢, 1)
+
+#
+
+. (12) The GRU consumes items chronologically from oldest to newest; 
+
+q𝑡 is shared when scoring all candidates in S𝑡 .EPIC 
+
+4.2.3 Personalized transition field and item posterior. As illustrated by the selective-matching block in Figure 2, history attention deter-mines which recent interactions matter at the current state, while the candidate–history interaction determines how each candidate relates to them: 
+
+𝑎 𝑡,𝑟 = softmax 𝑟 
+
+ q⊤ 
+
+> 𝑡
+
+z𝑢,𝑟 /𝜏 𝐻 + 𝑏 𝑟 
+
+ , (13) 
+
+𝜙 (𝑖, 𝑟 ) = 𝑓 trans 
+
+ [ z𝑖 ⊙ z𝑢,𝑟 ; |z𝑖 − z𝑢,𝑟 | ]  , (14) 
+
+𝑇 𝑡 (𝑖, H𝑢 ) =
+
+> 𝐾
+
+∑︁  
+
+> 𝑟 =1
+
+𝑎 𝑡,𝑟 𝜙 (𝑖, 𝑟 ). (15) Here 𝑏 𝑟 is a learned recency bias for the 𝑟 -th newest item, so the shape of the recency prior is estimated from data rather than im-posed as a fixed temporal decay. Although 𝑎 𝑡,𝑟 is shared across can-didates, the agreement/difference features in 𝜙 (𝑖, 𝑟 ) make 𝑇 𝑡 (𝑖, H𝑢 )
+
+candidate-specific: different hypotheses can draw support from different parts of the recent history, which a single pooled history representation cannot express. We combine direct context relevance with transition evidence and normalize over complete candidates: 
+
+𝐸 𝑡 (𝑖 ) = q⊤ 
+
+> 𝑡
+
+z𝑖 + tanh (𝛾 𝑇 )𝑇 𝑡 (𝑖, H𝑢 )
+
+𝜅 , (16) 
+
+𝜋 𝑡 (𝑖 ) = 1[𝑖 ∈ S 𝑡 ] exp 𝐸 𝑡 (𝑖 )
+
+Í𝑗 ∈ S 𝑡 exp 𝐸 𝑡 ( 𝑗 ) . (17) Thus 𝜋 𝑡 explicitly represents competition among complete items in the retained support and covers all feasible candidates when |C 𝑡 | ≤ 
+
+𝑀 . Here, posterior denotes the normalized learned distribution in Equation 17. Importantly, 𝐵 𝑡 (𝑖 ) forms S𝑡 but is not added to 𝐸 𝑡 (𝑖 );the principal posterior is learned independently of token likelihood. Relaxing this separation yields the product-of-experts and cavity alternatives evaluated in the ablation study, and setting 𝛾 𝑇 = 0 gives the generic-posterior rung, while the full model includes transition memory. 
+
+4.2.4 Frontier-aware learning. Direct item supervision is most in-formative when several exact hypotheses compete. We therefore apply it only on the identification frontier 𝑤 𝑡 = 1[ 2 ≤ |C 𝑡 | ≤ 𝑀 ].The lower bound removes singleton states, where the item is already determined and there is nothing to discriminate; the upper bound guarantees S𝑡 = C𝑡 , so the supervised posterior is normalized over every feasible candidate rather than a truncated proposal set. At heavily masked states, however, insisting on the exact target is a noisy objective, since many candidates share most of the target’s SID structure. To retain this structure under heavy masking, let 
+
+𝑑 SID (𝑖, 𝑖 ★) = 1
+
+𝐻 
+
+> 𝐻
+
+∑︁ 
+
+> ℎ=1
+
+1[𝑠 ℎ𝑖 ≠ 𝑠 ℎ𝑖 ★ ], (18) 
+
+𝑟 𝑡 (𝑖 | 𝑖 ★) = exp [− 𝑑 SID (𝑖, 𝑖 ★)/ 𝜏 𝑆 ]
+
+Í𝑗 ∈ C 𝑡 exp [− 𝑑 SID ( 𝑗, 𝑖 ★)/ 𝜏 𝑆 ] . (19) With masked fraction 𝜌 𝑡 = |M 𝑡 |/ 𝐻 , the objectives are 
+
+Litem = 𝑤 𝑡 
+
+− log 𝜋 𝑡 (𝑖 ★) + 𝜂𝜌 𝑡 CE (𝑟 𝑡 , 𝜋 𝑡 ) , (20) 
+
+L = Ltok (eℓ) + 𝛽 Litem . (21) The 𝜌 𝑡 scaling makes the structured smoothing strongest when the target is most corrupted and lets it vanish as the SID resolves, so the objective anneals toward exact-item discrimination. The pairwise residual, transition term, frontier restriction, and SID kernel are separable components used in the removal study. Only the item-level adapter is updated; the masked-diffusion backbone receives no gradients. 
+
+## 4.3 In-Denoising Posterior Feedback 
+
+4.3.1 Item-to-token marginalization. For unresolved position ℎ and code 𝑣 ∈ V ℎ , we project the same complete-item posterior to the SID vocabulary: 
+
+𝑝 ℎ𝐼,𝑡 (𝑣 ) =∑︁  
+
+> 𝑖 ∈ S 𝑡
+
+𝜋 𝑡 (𝑖 )1[𝑠 ℎ𝑖 = 𝑣 ]. (22) This is the exact positional marginal of 𝜋 𝑡 . It preserves joint item-level competition across positions and assigns mass only to codes used by at least one retained complete item. 
+
+4.3.2 Ambiguity-aware residual fusion. A straightforward fusion would be a convex mixture of 𝑝 ℎ𝐼,𝑡 and 𝑝 ℎ𝜃,𝑡 . Yet, such a mixture con-strains the feedback to be positive and combines two distributions whose calibration may differ. We instead express item guidance as a clipped log-probability residual, 
+
+Δℎ𝑡 (𝑣 ) = clip 
+
+
+
+log [𝑝 ℎ𝐼,𝑡 (𝑣 ) + 𝜖 ] − log [𝑝 ℎ𝜃,𝑡 (𝑣 ) + 𝜖 ], −𝑐, 𝑐 
+
+
+
+, (23) where 𝜖 > 0 handles codes absent from the retained support. The gate uses the target state hℎ𝑡 , normalized feasible-set size 𝐴 𝑡 =
+
+log max (1, |C 𝑡 |)/ log |I| , normalized item-posterior entropy ¯ 𝐻 (𝜋 𝑡 ),top-two posterior margin 𝑚 𝑡 , masked fraction 𝜌 𝑡 , and normalized backbone-token entropy ¯ 𝐻 (𝑝 ℎ𝜃,𝑡 ):
+
+zℎ𝑡 = [ hℎ𝑡 ; 𝐴 𝑡 ; ¯ 𝐻 (𝜋 𝑡 ); 𝑚 𝑡 ; 𝜌 𝑡 ; ¯ 𝐻 (𝑝 ℎ𝜃,𝑡 ) ] ,𝑔 ℎ𝑡 = 𝜆 𝐹 tanh 𝑓 𝑔 (zℎ𝑡 ) 1[ℎ ∈ M 𝑡 ], (24) 
+
+eℓℎ𝑡 (𝑣 ) = ℓℎ𝑡 (𝑣 ) + 𝑔 ℎ𝑡 Δℎ𝑡 (𝑣 ). (25) We normalize the item- and token-level entropies as ¯𝐻 (𝜋 𝑡 ) = 𝐻 (𝜋 𝑡 )
+
+logmax {2, |S 𝑡 |} ,
+
+¯𝐻 (𝑝 ℎ𝜃,𝑡 ) = 𝐻 (𝑝 ℎ𝜃,𝑡 )
+
+log |V ℎ | .
+
+Moreover, 𝑚 𝑡 = 𝜋 (1) 
+
+> 𝑡
+
+− 𝜋 (2) 
+
+> 𝑡
+
+when |S 𝑡 | ≥ 2, and 𝑚 𝑡 = 1 otherwise. The gate is position-specific and conditioned on both item- and token-level uncertainty because the reliability of item evidence changes throughout denoising: early states carry broad feasible sets and diffuse posteriors, whereas late states may already be determined by the resolved codes. The signed gate can promote or suppress item evidence accordingly, and its zero-initialized final layer makes feedback an exact initial no-op. 
+
+Iterative inference and cost. The base transfer rule consumes softmax (eℓℎ𝑡 ) to produce x𝑡 −1, and applying the loop at every step yields a sequence of posteriors 𝜋 𝑇 , . . . , 𝜋 0 over progressively con-tracting feasible sets. At each step, C𝑡 , S𝑡 , and 𝜋 𝑡 are recomputed from the updated state; no posterior state is carried across denois-ing steps. Item evidence therefore changes the denoising trajectory itself, which separates EPIC from both post-hoc reranking and a recurrent latent-posterior model. Regarding cost, the exact feasible-candidate scan costs 𝑂 (|I| 𝐻 ), the candidate–history interaction Tran et al. 
+
+Table 1: Dataset statistics after preprocessing. Beauty Sports Toys Musical 
+
+Users 22,363 35,598 19,412 57,439 Items 12,101 18,357 11,924 24,587 Interactions 198,502 296,337 167,597 511,836 Mean sequence length 8.88 8.32 8.63 8.91 costs 𝑂 (𝑀𝐾𝑑 ), and marginalization costs 𝑂 (𝑀𝐻 ) per step. All com-putations reuse the current backbone states and logits, requiring no additional backbone forward pass; an inverted SID index could replace the dense catalog scan at larger scale. 
+
+## 5 Experimental Setup 5.1 Datasets and Evaluation Protocol 
+
+We evaluate full-catalog next-item recommendation on four 5-core Amazon Review categories, which are used by prior SID recom-menders [6, 15]. For each user, interactions are ordered chronologi-cally. The final interaction is held out for testing, the penultimate in-teraction is used for validation, and all preceding interactions form the training sequence. Table 1 summarizes the resulting datasets. 
+
+## 5.2 Baselines and Metrics 
+
+We compare EPIC with 3 groups of baselines. The first group in-cludes Item ID-based sequential recommenders, represented by 
+
+BERT4Rec [18], S3-Rec [34] and HSTU [28]. The second group con-tains SID-based generative baselines, such as TIGER [15], Action-Piece [8] and RPG [7]. The third group consists of masked-diffusion generative recommenders, including MaskGR [16], LLaDA -Rec [17] and DiffGRM [10]. Full baseline citations are given in Table 2. A †
+
+indicates a method for which at least one released implementation was executed locally. We retain a local result only when its data split, full-catalog ranking protocol, seen-item handling, and met-ric implementation match ours. All remaining baseline values are taken from the cited sources and marked with ‡.We report full-catalog Recall@ 𝐾 and NDCG@ 𝐾 for 𝐾 ∈ { 5, 10 }
+
+under a unique-SID item-level protocol. For tokenizers that retain collisions and do not introduce item-specific disambiguation tokens, a predicted SID receives item-level credit only when it is catalog-valid, has a singleton catalog preimage, and maps to the target item. Ambiguous SIDs receive no credit. Results for EPIC are reported as mean ±sample standard devia-tion over five independently trained runs, with checkpoints selected using validation NDCG@5 only. For each of the 16 dataset–metric combinations, we compare the per-user scores of EPIC with those of the corresponding second-best method using a two-sided paired 
+
+𝑡 -test. All second-best methods were reproduced locally under the same evaluation protocol, enabling matched per-user comparisons. We apply Holm correction jointly across the 16 tests; all adjusted comparisons satisfy 𝑝 adj < 0.05. 
+
+## 5.3 Training and Inference Details 
+
+Following LLaDA-Rec [17], we use its pretrained Sentence-T5 -based tokenizer [13], which maps each item to a four-position SID with 256 codes per position. The tokenizer and the resulting item-to-SID mapping remain fixed and are shared across all matched comparisons. 
+
+EPIC adopts the bidirectional Transformer and four-step trans-fer schedule of LLaDA-Rec . We freeze the backbone and optimize only the item-reasoning adapter. During inference, EPIC injects item-level evidence into each denoising step using the procedure described in Section 4. All matched interventions use the same tokenizer, backbone decoder, beam width, candidate budget, and completion rule. We select the backbone depth, learning rate, candidate budget 
+
+𝑀 , and recency window 𝐾 using validation NDCG@5, searching over 𝐿 ∈ { 4, 6}, 𝑙𝑟 ∈ { 10 −3, 3×10 −3 }, 𝑀 ∈ { 64 , 128 , 256 }, and 𝐾 ∈{2, 4, 8}. All remaining settings are shared across datasets: hidden dimension 256, four attention heads, four SID positions and transfer steps, AdamW with weight decay 0 .01 and warmup ratio 0 .05, batch size 512, at most 8,000 updates, posterior temperature 𝜅 = 0.1, and transition temperature 𝜏 = 0.25. Training uses early stopping according to validation NDCG@5. Efficiency measurements are conducted on one Tesla T4 using the same software stack and batch configuration for both methods. 
+
+## 6 Results and Analysis 
+
+We organize our evaluation around four research questions that separate overall effectiveness from the mechanism, source, and cost of EPIC’s gains: 
+
+RQ1. Overall effectiveness. Does EPIC improve full-catalog next-item recommendation over conventional, Semantic ID gen-erative, and masked-diffusion baselines across datasets? 
+
+RQ2. In-denoising mechanism. Does item evidence improve rec-ommendation by preserving promising target hypotheses during denoising, rather than merely reranking completed outputs? 
+
+RQ3. Source of improvement. Which model components and per-sonalized history signals account for the gains, and how does the chosen item-posterior construction affect perfor-mance? 
+
+RQ4. Operating regimes and cost. Under what ambiguity and partial-resolution regimes is EPIC effective, and what pa-rameter, training, and inference costs does its item-level reasoning introduce? We address RQ1 in Section 6.1, RQ2 in Sections 6.2 and 6.5, RQ3 in Section 6.3, and RQ4 in Section 6.4. 
+
+## 6.1 Overall Performance 
+
+Table 2 summarizes full-catalog next-item recommendation perfor-mance on the four benchmarks. EPIC achieves the best mean in all 16 metric–dataset combinations. Relative to the second-best result in each column, its gains range from 1.2% to 16.8%. The largest im-provements occur on ranking-sensitive metrics: 16.8% in NDCG@5 and 14.1% in NDCG@10 on Toys and Games , 13.1% in NDCG@10 on Beauty , and 12.9% in NDCG@10 on Sports and Outdoors .Even against strong locally reproduced competitors, EPIC remains consistently better. The improvements are stable across independent training runs, with sample standard deviations of at most .0011 across all reported EPIC 
+
+Table 2: Full-catalog next-item recommendation. R@K and N@K denote Recall@K and NDCG@K; best and second-best results are bold and underlined. Sports and Outdoors Beauty Toys and Games Musical Instruments Model R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 
+
+Item ID-based Methods 
+
+Caser [19] ‡ .0116 .0072 .0194 .0097 .0205 .0131 .0347 .0176 .0166 .0107 .0270 .0141 .0241 .0151 .0386 .0197 GRU4Rec [4] ‡ .0129 .0086 .0204 .0110 .0164 .0099 .0283 .0137 .0097 .0059 .0176 .0084 .0324 .0209 .0501 .0266 HGN [11] ‡ .0189 .0120 .0313 .0159 .0325 .0206 .0512 .0266 .0321 .0221 .0497 .0277 .0321 .0202 .0517 .0265 BERT4Rec [18] ‡ .0115 .0075 .0191 .0099 .0203 .0124 .0347 .0170 .0116 .0071 .0203 .0099 .0307 .0195 .0485 .0252 SASRec [9] ‡ .0233 .0154 .0350 .0192 .0387 .0249 .0605 .0318 .0463 .0306 .0675 .0374 .0333 .0213 .0523 .0274 HSTU [28] † .0274 .0176 .0438 .0229 .0563 .0348 .0853 .0442 .0630 .0390 .0916 .0483 .0343 .0221 .0553 .0289 FDSA [29] ‡ .0182 .0122 .0288 .0156 .0267 .0163 .0407 .0208 .0228 .0140 .0381 .0189 .0347 .0230 .0545 .0293 S3-Rec [34] ‡ .0251 .0161 .0385 .0204 .0387 .0244 .0647 .0327 .0443 .0294 .0700 .0376 .0317 .0199 .0496 .0257 VQ-Rec [5] ‡ .0208 .0144 .0300 .0173 .0457 .0317 .0664 .0383 .0497 .0346 .0737 .0423 .0361 .0231 .0578 .0301 
+
+Semantic ID-based Generative Methods 
+
+TIGER [15] † .0233 .0149 .0364 .0191 .0382 .0249 .0615 .0323 .0328 .0207 .0514 .0266 .0341 .0221 .0537 .0284 LETTER [24] ‡ .0288 .0198 .0435 .0244 .0500 .0340 .0708 .0406 .0547 .0389 .0741 .0452 .0372 .0246 .0580 .0313 LC-Rec [31] ‡ .0276 .0188 .0417 .0233 .0478 .0334 .0675 .0397 .0540 .0384 .0734 .0447 .0379 .0251 .0587 .0318 ActionPiece [8] † .0330 .0224 .0500 .0264 .0553 .0379 .0775 .0424 .0559 .0398 .0760 .0463 .0383 .0243 .0615 .0318 RPG [7] † .0304 .0211 .0441 .0255 .0533 .0368 .0788 .0450 .0574 .0390 .0859 .0481 .0191 .0132 .0272 .0158 
+
+Diffusion-based Generative Methods 
+
+MaskGR [16] ‡ .0302 .0191 .0454 .0249 .0538 .0351 .0815 .0441 .0548 .0375 .0846 .0445 – – – –LLaDA-Rec [17] † .0287 .0186 .0441 .0235 .0525 .0359 .0770 .0438 .0484 .0328 .0718 .0403 .0405 .0265 .0630 .0337 DiffGRM [10] † .0183 .0117 .0287 .0150 .0321 .0207 .0498 .0264 .0301 .0208 .0435 .0251 .0237 .0152 .0348 .0189 
+
+EPIC (Ours) .0353 ∗ 
+
+> ±.0003
+
+.0244 ∗ 
+
+> ±.0001
+
+.0521 ∗ 
+
+> ±.0006
+
+.0298 ∗ 
+
+> ±.0002
+
+.0610 ∗ 
+
+> ±.0004
+
+.0426 ∗ 
+
+> ±.0003
+
+.0866 ∗ 
+
+> ±.0002
+
+.0509 ∗ 
+
+> ±.0002
+
+.0662 ∗ 
+
+> ±.0009
+
+.0465 ∗ 
+
+> ±.0007
+
+.0927 ∗ 
+
+> ±.0011
+
+.0551 ∗ 
+
+> ±.0007
+
+.0424 ∗ 
+
+> ±.0001
+
+.0282 ∗ 
+
+> ±.0001
+
+.0640 ∗ 
+
+> ±.0003
+
+.0352 ∗
+
+> ±.0001
+
+Gain vs. second-best +7.0% +8.9% +4.2% +12.9% +8.3% +12.4% +1.5% +13.1% +5.1% +16.8% +1.2% +14.1% +4.7% +6.4% +1.6% +4.5% 
+
+† denotes locally reproduced results, whereas ‡ denotes paper-reported results. Citations beside model names identify the original methods. The paper-reported cells were consolidated from the benchmark tables of MHL [26], UTGRec [32], Pctx [33], and LLaDA-Rec [17]. Section 5 details the evaluation protocol. A dash denotes an unavailable result. 
+
+EPIC reports mean ±sample standard deviation over five independent runs. The gain row gives the relative improvement of the EPIC mean over the second-best result in each column. ∗ marks a significant improvement over the corresponding second-best method under a two-sided paired 𝑡 -test over users, with Holm correction jointly applied across all 16 dataset–metric comparisons ( 𝑝 adj < 0.05 ). 
+
+metrics. Moreover, every gain over the corresponding second-best method remains statistically significant under a two-sided paired 𝑡 -test after Holm correction across all 16 dataset–metric comparisons (𝑝 adj < 0.05). Together, these results indicate that explicit posterior item conditioning consistently improves both top-ranked accuracy and deeper-list recall. 
+
+## 6.2 Does Item Evidence Preserve Hypotheses During Denoising? 
+
+Inline versus post-hoc evidence. Figure 3 compares when the same item evidence is introduced during inference, testing whether EPIC improves recommendation by altering the denoising trajectory and preserving target hypotheses rather than merely refining final scores. This matched intervention holds the trained scorer, checkpoint, decoder, beam width, and candidate budget fixed. Post-hoc inference applies the scorer only after token denoising has completed, whereas inline inference feeds the same evidence into every active denoising step. Inline inference improves NDCG@5 over its matched post-hoc counterpart by 15.7%, 26.6%, and 26.8% on Beauty , Sports , and Toys , respectively. This gap cannot be closed by retuning the post-hoc scoring strength. Control and post-hoc beam signatures remain identical at every audited query-step state, and runtime audits confirm that no token-feedback calls occur in the post-hoc arms. The comparison 
+
+> Inline Delay 1 Delay 2 Delay 3 Post-hoc
+
+.02 .03 .04 Test NDCG@5   
+
+> Beauty Sports Toys
+
+(a) Later feedback lowers NDCG@5. 
+
+> −100 0100 200 300
+
+Beauty Sports Toys    
+
+> Lost hits Recovered hits
+> Outside pool
+> Net +154
+> Net +231
+> Net +253
+
+Users with changed top-5 outcome 
+
+(b) Inline feedback recovers more top-5 hits than it loses. 
+
+Figure 3: Inline item evidence changes denoising. Delayed feedback lowers NDCG@5. Inline feedback recovers more top-5 targets than it loses; light segments identify recoveries absent from the final control pool. 
+
+therefore isolates whether item evidence changes the denoising trajectory, rather than whether a stronger final scorer is used. The timing sweep further shows that the gain accumulates throughout denoising. Delaying feedback until step 2 reduces NDCG@5 Tran et al. 
+
+> Base +Feas.Set +Posterior +Transition .036 .038 .040 .042 .044
+> .0359 .0370
+> +.0011
+> +.0
+> +.0066
+> EPIC .0436
+> Beauty NDCG@5
+
+(a) Personalized transitions drive item-to-token feedback.     
+
+> −16 −12 −8−40
+> w/o Transition w/o Frontier w/o Pairwise w/o SID kernel Cavity messages Product-of-experts
+> COMPONENT REMOVAL POSTERIOR CONSTRUCTION
+> −15 .1
+> −4.1
+> −2.0
+> −1.9
+> −2.3
+> −3.7
+> NDCG@5 change vs. EPIC (%)
+
+(b) Item-posterior design ablations on Beauty. 
+
+Figure 4: The capability progression and matched design ablations locate the gain: personalized transition dominates, while separated item scoring outperforms token-coupled posterior constructions. 
+
+by 4.3–9.3%, while restricting item evidence to conditional comple-tion leads to an 8.6–14.9% reduction. Nevertheless, every interme-diate timing remains better than pure post-hoc scoring, ruling out a single final scoring pass as the sole source of improvement. 
+
+Trajectory preservation and hard rescues. We examine how inline feedback changes the search trajectory by following the ground-truth target through each denoising state. A target counts toward trajectory Recall@128 if it remains compatible with at least one active beam and ranks among the top 128 items under the combined beam and conditional completion score. At the final state, inline inference retains more targets on every dataset, yielding net gains of 315/371/360 trajectory hits on Beauty /Sports /Toys .Figure 3b decomposes the corresponding changes in top-5 ac-curacy. A recovered hit is a user for whom the control misses the target but inline inference ranks it in the top 5; a lost hit is the re-verse. Inline inference recovers 261/337/366 hits while losing only 107/106/113, for net gains of 154/231/253 on Beauty /Sports /Toys .In 25/48/49 recovered cases, the target is absent from every final control beam and from the control top-128 pool. These outside-pool recoveries cannot be produced by a reranker restricted to the final control candidates. For the remaining recovered hits, the target is still accessible to the control, and the gain may reflect either better trajectory preservation or better ranking. The outside-pool recoveries show that inline feedback acts be-fore final ranking. In these cases, the target is absent from the final control candidate pool and therefore cannot be recovered by post-hoc reranking. Inline feedback instead changes the denoising trajectory, preserving the target as successive SID positions narrow the feasible candidate set. 
+
+## 6.3 What Drives the Improvement? 
+
+Capability ladder and component removals. We next sepa-rate gains due to catalog-valid decoding from gains due to explicit item reasoning. Figure 4a constructs this capability ladder under the same Beauty split and evaluation protocol. Feasible-candidate-set fusion modestly improves the unmodified LLaDA-Rec decoder,      
+
+> 0510 15 20
+> Beauty Sports Toys
+> 1.7 4.1 1.5 12.4 12.7 17.9
+> Relative NDCG@5 drop (%)
+> Reverse order Wrong user
+
+(a) User identity matters more than temporal order.    
+
+> 0246
+> Beauty Sports Toys
+> 2.26.43.8
+> NDCG@5 gain over uniform (%)
+
+(b) Learned weighting improves all three datasets. 
+
+Figure 5: EPIC depends on user-specific history; learned po-sition weights further improve history aggregation. 
+
+but adding a generic item posterior without transition memory is neutral relative to this decode-matched control. The clear improve-ment appears only when the posterior is conditioned on the user’s transition history. This indicates that adding a catalog-level scoring head alone does not explain the observed gain. The component-removal group in Figure 4b leads to the same conclusion. Removing transition memory causes a 15.13% NDCG@5 drop and returns the model to the decode-control regime. Frontier supervision is the second-largest isolated component contribution (4.05%), while pairwise item structure and the SID kernel provide smaller but consistent gains. 
+
+Is the transition signal personalized? We determine whether transition memory captures user-specific evidence or merely a dataset-level popularity prior. Replacing a user’s history with an-other user’s history reduces NDCG@5 by 12.4–17.9% across the three datasets (Figure 5a). Reversing the correct history preserves its item set but destroys temporal order and yields a smaller, consis-tent 1.5–4.1% degradation. Thus, user identity explains most of the transition gain, while temporal order provides additional signal. The transition module also benefits from learning which his-tory positions to trust. At each dataset’s default history window, learned weighting improves over uniform aggregation by 2.2–6.4% (Figure 5b), with the largest gain on Sports . This intervention es-tablishes that position-dependent weighting is useful. 
+
+Posterior construction. We examine whether the item pos-terior should be learned independently of the backbone’s token evidence or derived from it. In the principal model, token likelihood forms the candidate support and contributes at final fusion, but is not added to the posterior energy (Section 4.2.3). Two alternative constructions fold token evidence directly into the exponent: a product-of-experts prior that adds the token-induced tuple score of Equation (8) to 𝐸 𝑡 (𝑖 ), and leave-one-position-out cavity messages (Figure 4b). Both are consistently worse than the independently learned scorer on Beauty , by 3.7% and 2.3% validation NDCG@5, respectively. These results support separating candidate-support construction from item-preference estimation. Backbone likelihood provides a tractable support for item inference and remains available at final fusion, whereas including it again in the item-posterior energy degrades validation ranking. This finding is consistent with prior EPIC      
+
+> 50 100 150 0.035 0.04 0.045
+> 0 SID 1 SID 2 SID
+> best 3 SID 4 SID
+> Latency (ms/user) Beauty test NDCG@5
+
+(a) Two resolved SID positions give the best quality–latency operating point.        
+
+> 12–4 5–16 17–64 0.01 .02 .03 𝑛 =34
+> Final | C | bin EPIC  − control NDCG@5  Beauty Sports Toys
+
+(b) Gain is positive across feasible-set strata; the final Toys point is descriptive only. 
+
+Figure 6: EPIC helps across ambiguity regimes, while partial SID resolution provides a favorable quality–latency operat-ing point. 
+
+evidence that sequence likelihood need not be calibrated for item elevance [21, 30]. Accordingly, Equation (9) treats preselection as a non-differentiable support operation, and the posterior energy is learned without an additional token-score term. This prevents token likelihood from being reused as a second preference signal within the item posterior. 
+
+## 6.4 When Is EPIC Effective, and at What Cost? 
+
+Partial SID resolution and ambiguity. Figure 6a varies the number of SID positions explicitly resolved before catalog rank-ing. Resolving two positions achieves the best Beauty NDCG@5 (.04385) and is 1.72 × faster than resolving all four. The nearly flat quality from two to four positions suggests that a short partial SID is often sufficient to identify the useful item-hypothesis region; it does not imply that every item is uniquely identified after two positions. We also stratify gains by the size of the final feasible candidate set on the control trajectory (Figure 6b). EPIC improves every popu-lated stratum, but ambiguity alone does not guarantee a large gain. 
+
+Sports receives almost no benefit in its broadest feasible-set bin, while the largest Toys point contains only 34 users and is therefore descriptive. Positive gain at |C| = 1 reflects benefit accumulated at earlier states, before the final set became unique. 
+
+Parameter and compute cost. EPIC adds item-level reasoning through parameter-efficient adaptation. On the same Tesla T4, its adapter stage trains only 0.391M parameters, 94.3% fewer than full 
+
+LLaDA-Rec fine-tuning, while improving adapter-training through-put by 42.7% and reducing peak training memory by 55.9%. This comparison excludes the cost of pretraining the frozen backbone, which is shared by both inference systems. Candidate reasoning increases inference latency by 34.2%, from 93.0 to 124.8 ms/user, but leaves peak inference memory nearly unchanged. The resolved-SID result in Figure 6a further shows that this latency cost is control-lable: resolving two SID positions attains the best observed quality while requiring less latency than the complete trajectory. 
+
+Table 3: Parameter and compute cost on one Tesla T4. Relative changes are measured against LLaDA-Rec. 
+
+Measurement LLaDA-Rec EPIC Change 
+
+Training adaptation 
+
+Trainable parameters (M) 6.847 0.391 −94 .3% Throughput (ex/s) 333.8 476.3 +42 .7% Peak memory (MiB) 4299.6 1895.4 −55 .9% 
+
+Inference 
+
+Latency (ms/user) 93.0 124.8 +34 .2% Peak memory (MiB) 3359.8 3361.3 +0.04% 
+
+> Recent history
+
+· · · Skin Genesis Daily Serum Skin Genesis Night Cream Target: Skin Genesis Eye Serum             
+
+> Gold-item rank Step 0 Step 1 Step 2 Final
+> Inline Control / post-hoc path
+> #4 #6 #7 #3
+> #27 #175 #77 pruned NDCG@5 =.50
+> post-hoc: unrecoverable
+
+Figure 7: An audited hard rescue on Beauty. For the first hard rescue in deterministic test order, inline feedback preserves the target through denoising and ranks it third. The control path prunes the target from every final beam, leaving no candidate for post-hoc scoring to recover. 
+
+## 6.5 Case Study: A Hard Rescue 
+
+We conclude the analysis with an audited test instance that illus-trates the trajectory-preservation mechanism identified above in Figure 7. To avoid selecting an example based on semantic appear-ance, we use the first Beauty hard rescue in deterministic test order. Its two most recent interactions are a Skin Genesis daily serum and night cream, while the target is an eye serum from the same prod-uct line. This history makes the relevant transition interpretable without requiring product images or additional metadata. The quantitative trajectory shows why timing matters. Under control denoising, the target moves from ranks 27 to 175 and 77 before being pruned from every final beam. Pure post-hoc scoring follows this same trajectory and therefore has no surviving target candidate to recover. With inline item feedback, the target remains available at every state, following ranks 4, 6, and 7 before finishing at rank 3, for an NDCG@5 of .50. This example provides a concrete instance of the elimination mechanism quantified by the aggregate hard-rescue analysis. 
+
+## 7 Conclusion 
+
+Semantic ID diffusion improves how identifier tokens are generated, but recommendation ultimately requires selecting a complete cata-log item. This mismatch creates a token–item inference gap: locally plausible token decisions may prematurely eliminate the preferred item before its item-level evidence is considered. EPIC addresses this gap by explicitly reasoning over the feasible candidates rep-resented by each partial SID. At every denoising step, it compares Tran et al. 
+
+these candidates using user-specific item evidence and projects the resulting posterior back into token generation, allowing promising items to influence decoding while they remain reachable rather than only reranking the final survivors. Across four Amazon benchmarks, EPIC improves all 16 dataset– metric combinations, demonstrating consistent benefits across dif-ferent catalog domains and ranking cutoffs. Matched inline–post-hoc comparisons further show that applying item evidence during denoising is substantially more effective than using the same scorer only after generation. Together with history-perturbation analyses, these results attribute the gains primarily to user-specific transition evidence guiding intermediate decoding decisions, rather than to a generic change in candidate scoring. Future work could replace the current exact catalog scan with approximate candidate construc-tion, adapt the candidate budget across denoising steps, and extend item inference to distinguish catalog items sharing the same SID. 
+
+## Ethical Considerations 
+
+This work uses publicly available, de-identified Amazon review benchmarks and involves neither new data collection nor human-subject intervention. Nevertheless, historical interactions and item metadata may encode popularity, exposure, demographic, and rep-resentation biases. If deployed, these biases could be amplified through repeated recommendation and feedback loops, potentially disadvantaging long-tail items or underrepresented user groups. The method should therefore be evaluated beyond ranking accuracy, including subgroup performance, catalog exposure, diversity, and robustness to sparse interaction histories. Interaction logs should be collected with appropriate consent, minimized, securely stored, and protected against re-identification. Sensitive attributes should not be used for personalization without a clear, justified, and lawful purpose. Finally, real-world deployment would require ongoing bias auditing, user controls, and mechanisms for identifying and correcting harmful recommendations. 
+
+## References 
+
+[1] Jacob Austin, Daniel D. Johnson, Jonathan Ho, Daniel Tarlow, and Rianne van den Berg. 2021. Structured Denoising Diffusion Models in Discrete State-Spaces. In 
+
+Advances in Neural Information Processing Systems .[2] Nicola De Cao, Gautier Izacard, Sebastian Riedel, and Fabio Petroni. 2021. Au-toregressive Entity Retrieval. In Proceedings of the International Conference on Learning Representations .[3] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. 2022. Recommendation as Language Processing (RLP): A Unified Pretrain, Personalized Prompt & Predict Paradigm (P5). In Proceedings of the 16th ACM Conference on Recommender Systems .[4] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2016. Session-based Recommendations with Recurrent Neural Networks. In 
+
+Proceedings of the International Conference on Learning Representations .[5] Yupeng Hou, Zhankui He, Julian McAuley, and Wayne Xin Zhao. 2023. Learn-ing Vector-Quantized Item Representation for Transferable Sequential Recom-menders. In Proceedings of the ACM Web Conference 2023 .[6] Yupeng Hou, Jiacheng Li, Xiangjun Fu, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. 2026. Bridging Language and Items for Retrieval and Recom-mendation: Benchmarking LLMs as Semantic Encoders. In Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) .[7] Yupeng Hou, Jiacheng Li, Ashley Shin, Jinsung Jeon, Abhishek Santhanam, Wei Shao, Kaveh Hassani, Ning Yao, and Julian McAuley. 2025. Generating Long Semantic IDs in Parallel for Recommendation. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2 .[8] Yupeng Hou, Jianmo Ni, Zhankui He, Noveen Sachdeva, Wang-Cheng Kang, Ed H. Chi, Julian McAuley, and Derek Zhiyuan Cheng. 2025. ActionPiece: Contextually Tokenizing Action Sequences for Generative Recommendation. In Proceedings of the 42nd International Conference on Machine Learning .[9] Wang-Cheng Kang and Julian McAuley. 2018. Self-Attentive Sequential Recom-mendation. In 2018 IEEE International Conference on Data Mining .[10] Zhao Liu, Yichen Zhu, Yiqing Yang, Xiao Lv, Guoping Tang, Rui Huang, Qiang Luo, Ruiming Tang, Kun Gai, and Guorui Zhou. 2026. DiffGRM: Diffusion-based Generative Recommendation Model. In Proceedings of the ACM Web Conference 2026 .[11] Chen Ma, Peng Kang, and Xue Liu. 2019. Hierarchical Gating Networks for Se-quential Recommendation. In Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining .[12] Lingyu Mu, Hao Deng, Haibo Xing, Jinxin Hu, Yu Zhang, Xiaoyi Zeng, and Jing Zhang. 2026. Masked Diffusion Generative Recommendation. arXiv preprint arXiv:2601.19501 (2026). [13] Jianmo Ni, Gustavo Hernandez Abrego, Noah Constant, Ji Ma, Keith B. Hall, Daniel Cer, and Yinfei Yang. 2022. Sentence-T5: Scalable Sentence Encoders from Pre-trained Text-to-Text Models. In Findings of the Association for Computational Linguistics: ACL 2022 .[14] Shen Nie, Fengqi Zhu, Zebin You, Xiaolu Zhang, Jingyang Ou, Jun Hu, Jun Zhou, Yankai Lin, Ji-Rong Wen, and Chongxuan Li. 2025. Large Language Diffusion Models. In Advances in Neural Information Processing Systems .[15] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan H. Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Q. Tran, Jonah Samost, Maciej Kula, Ed H. Chi, and Maheswaran Sathiamoorthy. 2023. Recommender Systems with Generative Retrieval. In Advances in Neural Information Processing Systems .[16] Kulin Shah, Bhuvesh Kumar, Neil Shah, and Liam Collins. 2025. Masked Diffusion for Generative Recommendation. arXiv preprint arXiv:2511.23021 (2025). [17] Teng Shi, Chenglei Shen, Weijie Yu, Shen Nie, Chongxuan Li, Xiao Zhang, Ming He, Yan Han, and Jun Xu. 2025. LLaDA-Rec: Discrete Diffusion for Parallel Seman-tic ID Generation in Generative Recommendation. arXiv preprint arXiv:2511.06254 
+
+(2025). [18] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential Recommendation with Bidirectional Encoder Rep-resentations from Transformer. In Proceedings of the 28th ACM International Conference on Information and Knowledge Management .[19] Jiaxi Tang and Ke Wang. 2018. Personalized Top-N Sequential Recommendation via Convolutional Sequence Embedding. In Proceedings of the Eleventh ACM International Conference on Web Search and Data Mining .[20] Yi Tay, Vinh Q. Tran, Mostafa Dehghani, Jianmo Ni, Dara Bahri, Harsh Mehta, Zhen Qin, Kai Hui, Zhe Zhao, Jai Gupta, Tal Schuster, William W. Cohen, and Donald Metzler. 2022. Transformer Memory as a Differentiable Search Index. In 
+
+Advances in Neural Information Processing Systems .[21] Daria Tikhonovich, Oleg Sorokin, Vladislav Dodonov, Mariia Ulianova, and Ilya Murzin. 2026. Gryphon: A Unified Architecture for Semantic-ID Gener-ation and Item-Level Scoring in Industrial Recommendations. arXiv preprint arXiv:2606.08604 (2026). [22] Aäron van den Oord, Oriol Vinyals, and Koray Kavukcuoglu. 2017. Neural Discrete Representation Learning. In Advances in Neural Information Processing Systems .EPIC 
+
+[23] Junting Wang, Xinrui He, Yunzhe Li, and Hari Sundaram. 2026. Understand-ing Semantic IDs: From Item Representation to Item Selection in Generative Recommendation. arXiv preprint arXiv:2607.24995 (2026). [24] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable Item Tokenization for Generative Recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management .[25] Wenjie Wang, Yiyan Xu, Fuli Feng, Xinyu Lin, Xiangnan He, and Tat-Seng Chua. 2023. Diffusion Recommender Model. In Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval .[26] Kaiwen Wei, Kejun He, Xiaomian Kang, Jie Zhang, Yuming Yang, Li Jin, Zhenyang Li, Jiang Zhong, He Bai, and Junnan Zhu. 2026. From Past To Path: Masked History Learning for Next-Item Prediction in Generative Recommendation. In 
+
+Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) .[27] Zhengyi Yang, Jiancan Wu, Zhicai Wang, Xiang Wang, Yancheng Yuan, and Xiangnan He. 2023. Generate What You Prefer: Reshaping Sequential Recom-mendation via Guided Diffusion. In Advances in Neural Information Processing Systems .[28] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhaojie Gong, Fangda Gu, Jiayuan He, Yinghai Lu, and Yu Shi. 2024. Actions Speak Louder than Words: Trillion-Parameter Sequential Transducers for Gener-ative Recommendations. In Proceedings of the 41st International Conference on Machine Learning .[29] Tingting Zhang, Pengpeng Zhao, Yanchi Liu, Victor S. Sheng, Jiajie Xu, Deqing Wang, Guanfeng Liu, and Xiaofang Zhou. 2019. Feature-level Deeper Self-Attention Network for Sequential Recommendation. In Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence .[30] Yuanbo Zhao, Ruochen Liu, Senzhang Wang, Jun Yin, Yuxin Dong, Huan Gong, Hao Chen, Shirui Pan, and Chengqi Zhang. 2026. SimGR: Escaping the Pit-falls of Generative Decoding in LLM-based Recommendation. arXiv preprint arXiv:2602.07847 (2026). [31] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. 2024. Adapting Large Language Models by Integrating Collaborative Semantics for Recommendation. In 2024 IEEE 40th International Conference on Data Engineering .[32] Bowen Zheng, Hongyu Lu, Yu Chen, Wayne Xin Zhao, and Ji-Rong Wen. 2026. Universal Item Tokenization for Transferable Generative Recommendation. In 
+
+Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval .[33] Qiyong Zhong, Jiajie Su, Yunshan Ma, Julian McAuley, and Yupeng Hou. 2025. Pctx: Tokenizing Personalized Context for Generative Recommendation. arXiv preprint arXiv:2510.21276 (2025). [34] Kun Zhou, Hui Wang, Wayne Xin Zhao, Yutao Zhu, Sirui Wang, Fuzheng Zhang, Zhongyuan Wang, and Ji-Rong Wen. 2020. S3-Rec: Self-Supervised Learning for Sequential Recommendation with Mutual Information Maximization. In Pro-ceedings of the 29th ACM International Conference on Information and Knowledge Management .
