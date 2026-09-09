@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-08-31 ~ 2026-09-09</span>
+      <span class="dpr-home-dashboard-kicker">2026-08-11 ~ 2026-09-09</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 21 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 24 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
-    <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>2 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>10</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>13</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>11</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-09 10:01:23 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-09 13:02:29 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日共完成21篇论文追踪，其中精读10篇、速读11篇，重点覆盖生成式检索与推荐系统前沿。最值得关注两篇9分精读：个性化语义对齐的生成检索、电商场景联合学习嵌入与码本的生成检索，均指向“生成式检索”核心突破。建议优先细读这两篇高分工作，并留意多兴趣检索与LLM对话推荐的联动扩展。</p>
+<p>今日精读13篇、速读11篇，共24篇推荐系统论文，聚焦生成式推荐新范式。</p>
+<p>最值得关注：10分的端到端生成式Slate推荐（统一语义-协同ID）与9分的联邦跨域生成推荐，均指向生成模型重构推荐流程。</p>
+<p>后续可优先看高分的生成式方法如何落地，再结合速读中的图感知LLM与无需训练的后处理方案扩展思路。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">10 篇</strong>
+    <strong class="dpr-home-dashboard-count">13 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Preference Shapes Relevance: Cross-component Hierarchical Semantic Alignment for Personalized Generative Retrieval">Preference Shapes Relevance: Cross-component Hierarchical Semantic Alignment for Personalized Generative Retrieval</span></li><li><span class="dpr-home-dashboard-paper-title" title="Generative Retrieval for E-commerce: Jointly Learning Embedding and Codebook with Same Product Cluster">Generative Retrieval for E-commerce: Jointly Learning Embedding and Codebook with Same Product Cluster</span></li><li><span class="dpr-home-dashboard-paper-title" title="It Takes Two to Match: Co-Evolving Generative Retriever with Reinforcement Learning">It Takes Two to Match: Co-Evolving Generative Retriever with Reinforcement Learning</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Once Generated, Ranked: End-to-End Generative Slate Recommendation with Unified Semantic-Collaborative IDs">Once Generated, Ranked: End-to-End Generative Slate Recommendation with Unified Semantic-Collaborative IDs</span></li><li><span class="dpr-home-dashboard-paper-title" title="FedCGR: Federated Cross-Domain Generative Recommendation">FedCGR: Federated Cross-Domain Generative Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Learning from Unreachable Rewards: Hint-Conditioned Reinforcement Learning for Generative Recommendation">Learning from Unreachable Rewards: Hint-Conditioned Reinforcement Learning for Generative Recommendation</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>10</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>13</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,7 +96,7 @@
     <strong class="dpr-home-dashboard-count">11 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="SetMIR: Multi-Interest Retrieval as Set Prediction">SetMIR: Multi-Interest Retrieval as Set Prediction</span></li><li><span class="dpr-home-dashboard-paper-title" title="Retrieval, Scoring, and Decoding Shape Performance and Stability in LLM-based Conversational Recommendation">Retrieval, Scoring, and Decoding Shape Performance and Stability in LLM-based Conversational Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="From Feature Interaction to Feature Transport - A Unified Block for Scalable Recommendation Models">From Feature Interaction to Feature Transport - A Unified Block for Scalable Recommendation Models</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Multi Interests for Joint Search-Recommendation Modeling">Multi Interests for Joint Search-Recommendation Modeling</span></li><li><span class="dpr-home-dashboard-paper-title" title="Making Collaborative Signals Count: Graph-Aware Large Language Models for Sequential Recommendation">Making Collaborative Signals Count: Graph-Aware Large Language Models for Sequential Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Training-Free LLM-Based Recommendation with Post-LLM Item Refinement Using Collaborative Signals">Training-Free LLM-Based Recommendation with Post-LLM Item Refinement Using Collaborative Signals</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>11</strong></span></div>
 </section>

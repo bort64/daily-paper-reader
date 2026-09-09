@@ -1,0 +1,507 @@
+Title: Training-Free LLM-Based Recommendation with Post-LLM Item Refinement Using Collaborative Signals
+
+URL Source: https://arxiv.org/pdf/2608.19665v1
+
+Published Time: Fri, 21 Aug 2026 00:33:25 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# Training-Free LLM-Based Recommendation with Post-LLM Item Refinement Using Collaborative Signals 
+
+## Kyungho Kim 
+
+KAIST Seoul, Republic of Korea kkyungho@kaist.ac.kr 
+
+## Sunwoo Kim 
+
+KAIST Seoul, Republic of Korea kswoo97@kaist.ac.kr 
+
+## Geon Lee 
+
+KAIST Seoul, Republic of Korea geonlee0325@kaist.ac.kr 
+
+## Shinhwan Kang 
+
+KAIST Seoul, Republic of Korea shinhwan.kang@kaist.ac.kr 
+
+## Sojeong Kim 
+
+KAIST Seoul, Republic of Korea kimsojeong@kaist.ac.kr 
+
+## Liam Collins 
+
+Snap Inc. Bellevue, WA, USA lcollins2@snapchat.com 
+
+## Bhuvesh Kumar 
+
+Snap Inc. Bellevue, WA, USA bkumar4@snapchat.com 
+
+## Donald Loveland 
+
+Snap Inc. Bellevue, WA, USA dloveland@snapchat.com 
+
+## Kijung Shin 
+
+KAIST Seoul, Republic of Korea kijungs@kaist.ac.kr 
+
+## Abstract 
+
+Large language models (LLMs) have shown promise for training-free recommendation, but LLM-generated user interests are often too broad for fine-grained item retrieval. Existing methods incor-porate collaborative filtering (CF) signals in a pre-LLM manner through candidate reranking or prompt augmentation, yielding limited gains. We propose CoRRe, a training-free recommenda-tion framework with a post-LLM paradigm that injects CF signals into LLM-generated item representations, which are later matched with LLM-generated user interests for ranking. Specifically, CoRRe refines the directions of item embeddings using an item-item co-purchase graph and their magnitudes using item popularity. Exper-iments on real-world datasets show that CoRRe consistently out-performs existing training-free methods and achieves competitive or superior performance compared with training-based methods, without requiring any model training or task-specific fine-tuning. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems .
+
+## Keywords 
+
+Training-free recommendation, Large language model, Refinement 
+
+ACM Reference Format: 
+
+Kyungho Kim, Sunwoo Kim, Geon Lee, Shinhwan Kang, Sojeong Kim, Liam Collins, Bhuvesh Kumar, Donald Loveland, and Kijung Shin. 2026. Training-Free LLM-Based Recommendation with Post-LLM Item Refine-ment Using Collaborative Signals. In Proceedings of the 35th ACM Interna-tional Conference on Information and Knowledge Management (CIKM ’26), November 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3799682.3839925 
+
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3839925 LLM Rec
+> (Reranker )
+> LLM Rec
+> (RAG)
+> Ours
+> (CoRRe )
+> LLM Rec
+> (wo CF)
+
+Figure 1: Pre-LLM strategies leverage collaborative signals before LLM inference, either through CF-based candidate reranking or RAG-based prompting, but show limited gains. In contrast, CoRRe, our proposed method with a post-LLM 
+
+strategy, achieves substantially larger gains. 
+
+## 1 Introduction & Related Work 
+
+Large language models (LLMs) have been widely used for recom-mendation [8, 9, 15, 16, 24] due to their strong reasoning capabilities for understanding user behavior and inferring preferences from interaction histories. Among them, training-free approaches, where LLMs perform zero-shot recommendation without task-specific fine-tuning, have recently gained increasing attention [1, 10, 15, 21]. However, naively leveraging LLMs for direct item recommenda-tion remains challenging. While LLMs can infer a user’s high-level interests from interaction histories, such interests often correspond to many semantically similar items rather than a specific target item. For example, an LLM may infer a user’s interest in soccer uniforms, which still encompasses numerous products that differ only in subtle attributes such as design, color, or season. Distin-guishing among these alternatives requires fine-grained item-level discrimination beyond high-level semantic understanding. Collaborative signals, such as co-purchase patterns and item popularity, provide valuable information for fine-grained item dis-crimination. To incorporate such signals into LLMs, most existing LLM-based recommendation methods adopt a pre-LLM strategy, arXiv:2608.19665v1 [cs.IR] 20 Aug 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Kyungho Kim et al. 
+
+where collaborative information is introduced before the LLM makes a recommendation [9, 24]. Specifically, collaborative filtering (CF) is first used to narrow the search space by retrieving a set of candidate items, which are subsequently reranked by the LLM [1, 2, 8, 14]. Alternatively, retrieval-augmented generation (RAG) approaches use CF to retrieve relevant users, items, or interaction histories and append them to the LLM prompt as additional context for recommendation [5, 10, 22, 25]. However, as shown in Figure 1, incorporating collaborative sig-nals in a pre-LLM manner is suboptimal, yielding only limited and inconsistent gains over LLM recommendation without any collab-orative signals. Reranking-based approaches depend heavily on CF-retrieved candidates, making the final recommendation sensi-tive to the quality of the initial candidate set. RAG-based approaches incorporate collaborative signals only indirectly through retrieved context. As a result, collaborative signals are not fully exploited for final item selection. To address this limitation, we propose CoRRe, a training-free LLM recommendation framework that incorporates collaborative filtering (CF) signals in a post-LLM manner. CoRRe first uses an LLM to infer a user’s intent toward future purchases from interac-tion histories and generate a user profile, which is encoded into a user embedding using an LLM embedding model [20]. Then, item embeddings, which are used for matching with the user embedding, are initialized by encoding item titles with the same embedding model. To incorporate collaborative signals, CoRRe refines the item embeddings through two complementary steps: direction refinement ,which propagates item embeddings over an item–item co-purchase graph, and magnitude refinement , which adjusts their magnitudes according to item popularity. Recommendations are then generated by retrieving items whose refined embeddings are most similar to the user embedding. Notably, CoRRe remains fully training-free, requiring neither model training nor task-specific fine-tuning. Experiments on real-world datasets demonstrate that CoRRe con-sistently outperforms training-free methods and achieves perfor-mance competitive with, or superior to, training-based approaches. Our key contributions are summarized below: 
+
+• New paradigm. We introduce a post-LLM recommendation par-adigm that incorporates CF signals into LLM-generated item representations for matching, rather than into LLM inputs. 
+
+• New method. We propose CoRRe, a training-free framework that refines LLM-generated item embeddings in two ways using co-purchase and popularity signals. 
+
+• Strong performance. CoRRe consistently outperforms existing training-free methods and matches or surpasses training-based approaches on real-world datasets. Supplementary materials, code, and datasets are provided at https: //github.com/K-Kyungho/CoRRe. 
+
+## 2 Preliminaries 
+
+Problem definition. Let U and I denote the user and item sets, respectively. In the sequential recommendation setting, each user 
+
+𝑢 ∈ U is represented by a chronological purchase sequence u :=
+
+[𝑖 (𝑢 ) 
+
+> 1
+
+, 𝑖 (𝑢 ) 
+
+> 2
+
+, · · · , 𝑖 (𝑢 )|u| ], where 𝑖 (𝑢 ) 
+
+> 𝑘
+
+∈ I denotes the 𝑘 -th item pur-chased by user 𝑢 . Each item 𝑖 ∈ I is associated with textual infor-mation (e.g., titles) title 𝑖 . The interactions can also be represented by a binary user-item matrix R ∈ 0, 1| U | × | I | , where 𝑅 𝑢𝑖 = 1 if user 
+
+𝑢 interacted with item 𝑖 , and 0 otherwise. Given a user’s interac-tion sequence u, the goal is to rank candidate items in I \ u and recommend the top-𝐾 items that best match the user’s preferences. 
+
+Embedding-based recommendation. Many recommendation mod-els represent users and items as vectors in a shared embedding space, where relevance is determined by their proximity [3, 12]. Let 
+
+e𝑢 , e𝑖 ∈ R𝑑 denote the embeddings of user 𝑢 and item 𝑖 , respectively. A common choice is to measure relevance using their inner product (i.e., e⊤ 
+
+> 𝑢
+
+e𝑖 ). Items with higher scores are considered more relevant and are ranked higher in the recommendation list. 
+
+## 3 Proposed Method: CoRRe 
+
+We introduce a simple yet effective training-free framework, CoRRe 
+
+(Co llaborative Retrieval Re finement). CoRRe consists of three com-ponents: LLM-based user profiling, item embedding refinement, and item ranking. First, CoRRe generates a user profile and encodes it as a query embedding. It then refines semantic item embeddings through direction and magnitude refinement, and finally retrieves items by measuring query-item similarity. 
+
+## 3.1 LLM-based User Profiling 
+
+First, we perform LLM-based user profiling by generating a natural language profile from the user’s interaction history, capturing the user’s preferences and likely next-item interactions. Consider a target user 𝑢 ∈ U for whom we aim to generate recommendations. For the target user, we prompt an LLM to generate a user profile 
+
+P𝑢 from the user’s item interaction history by inferring the user’s preferences and the types of items the user is likely to interact with next. We provide an example prompt template in [7]. Then, we obtain the user embedding e𝑢 ∈ R𝑑 by encoding the user profile 
+
+P𝑢 using a text encoder Enc (i.e., e𝑢 = Enc (P 𝑢 )). 
+
+## 3.2 Item Embedding Refinement 
+
+Next, we generate item embeddings, which are later matched with the LLM-generated user embedding for ranking. A straightforward approach is to encode each item 𝑖 ∈ I using its title or description with the same text encoder as user profiles (Section 3.1): 
+
+eSEM  
+
+> 𝑖
+
+= Enc (title 𝑖 ) ∈ R𝑑 .
+
+While such embeddings capture semantic information, they over-look collaborative signals, such as co-purchase patterns and item popularity, that are crucial for recommendation [3, 12]. To incorporate collaborative signals into semantic item embed-dings, CoRRe applies two training-free refinement steps: (1) di-rection refinement , which injects collaborative relationships into embedding directions, and (2) magnitude refinement , which adjusts embedding norms according to item popularity. 
+
+Direction refinement. We first refine the directions of semantic item embeddings so that items with similar interaction patterns are more closely aligned in the embedding space. To this end, we construct an item-item co-purchase graph from the user-item in-teraction matrix by computing A = R⊤R, where A𝑖 𝑗 denotes the number of users who interacted with both items 𝑖 and 𝑗 , indicating the strength of their co-purchase relationship. Let 𝑑 𝑖 = Í𝑗 ∈ I A𝑖 𝑗 
+
+denote the degree of item 𝑖 in the co-purchase graph. We then Training-Free LLM-Based Recommendation with Post-LLM Item Refinement Using Collaborative Signals CIKM ’26, November 07–11, 2026, Rome, Italy Wiffle  Ball 
+
+> Original Brand
+> Baseballs
+> G-Form
+> Pro -S Soccer
+> Shin Guards
+> MacGregor
+> Batting
+> Tee
+> Reebok
+> Baseball
+> Gloves
+
+Given  your  mix  of  baseball  practice  gear  and  protective  sports 
+
+equipment  (G -Form  shin  guards),  you’re  likely  to  look  next  at  more 
+
+training/protection  essentials —such  as  a set  of  baseball  batting 
+
+gloves  (e .g., Franklin  Sports)  or  additional  youth  soccer  protection 
+
+like  G-Form  ankle/leg  sleeves  or  soccer  socks/ shinguard  straps .
+
+[Query] 
+
+∗ 𝑝 𝐴 𝛼 
+
+∗ 𝑝 𝐵 
+
+> 𝛼
+
+∗ 𝑝 𝐶 
+
+> 𝛼
+
+∗ 𝑝 𝐸 
+
+> 𝛼
+
+Direction & magnitude refinement (Section 3.2) 
+
+LLM -based user profiling (Section 3.1) 
+
+Graph 
+
+Propagation 
+
+Refined direction Item -Item co -purchase graph 
+
+Popularity 
+
+Calibration  ∗ 𝑝 𝐷 𝛼 
+
+Refined magnitude 
+
+Ranking 
+
+(Section 3.3)      
+
+> [A] Berkl ey
+> Tackle Bag
+> [B] Franklin
+> Soft Teeball
+> [C] Amazon
+> Foam Roller
+> [D] Easton Bat
+> and Ball set
+> [E] Reebok
+> Baseball Gloves
+
+Item title encoding 
+
+Interacted items 
+
+Figure 2: Overview of CoRRe. CoRRe first infers a user profile from the interaction history and uses it as a query to retrieve items from direction- and magnitude-refined item representations. 
+
+propagate semantic item embeddings over the co-purchase graph: 
+
+eGP  
+
+> 𝑖
+
+=∑︁  
+
+> 𝑗 ∈ I
+
+A𝑖 𝑗 √︁ 
+
+𝑑 𝑖 𝑑 𝑗 
+
+eSEM  
+
+> 𝑗
+
+, (1) which encourages items with strong co-purchase relationships to have more closely aligned representations. Then, we aggregate the propagated embedding with the original semantic embedding and normalize the combined embedding: 
+
+eDR  
+
+> 𝑖
+
+= ˜eDR 
+
+> 𝑖
+
+∥ ˜eDR  
+
+> 𝑖
+
+∥2
+
+where ˜eDR  
+
+> 𝑖
+
+= 𝜆 eSEM  
+
+> 𝑖
+
++ ( 1 − 𝜆 )eGP  
+
+> 𝑖
+
+.
+
+Here, 𝜆 controls the balance between the original semantic embed-ding and the graph-propagated embedding. 
+
+Magnitude refinement. Next, we refine the magnitude of item embeddings. Beyond embedding direction, magnitude also influ-ences retrieval scores and carries important popularity information in collaborative filtering models. We therefore calibrate the norm of each direction-refined embedding according to item popularity: 
+
+eDR +MR  
+
+> 𝑖
+
+= 𝑝 𝛼 𝑖 · eDR  
+
+> 𝑖
+
+, (2) where 𝑝 𝑖 denotes the popularity of item 𝑖 (i.e., 𝑝 𝑖 = Í𝑢 ∈ U R𝑢𝑖 ) and 
+
+𝛼 controls the strength of popularity calibration. For simplicity, we denote the final refined item embedding by e𝑖 = eDR +MR  
+
+> 𝑖
+
+hereafter. 
+
+## 3.3 Item Ranking 
+
+Now that we have obtained both the user embedding and the refined item embeddings, we rank items according to their similarity to the user and recommend the top-𝐾 items: TopK (𝑢 ) = TopK 𝑖 ∈ I\ u sim (e𝑢 , e𝑖 ) ,
+
+where sim (· , ·) denotes a similarity function. We use the dot product in our experiments (Section 4). 
+
+## 4 Experimental Results 
+
+In this section, we examine the following four research questions: RQ1. Accuracy: How does CoRRe perform compared with existing training-free and training-based recommendation methods? RQ2. Ablation study: How does each component of CoRRe con-tribute to performance? RQ3. Case study: Does CoRRe correctly identify the ground-truth next item beyond semantically similar alternatives? RQ4. Hyperparameter sensitivity: How sensitive is CoRRe to the strengths of direction and magnitude refinement? 
+
+## 4.1 Experimental Setting 
+
+Datasets and evaluation. We evaluate CoRRe on three domains from the latest Amazon Reviews dataset [4]: Sports & Outdoors (Sports), Toys & Games (Toys), and Beauty & Personal Care (Beauty). For evaluation, we adopt the leave-one-out protocol following prior work [10, 11, 23], using each user’s second-to-last purchased item for validation and the last purchased item for testing, while exclud-ing historical items from ranking. We randomly sample 1,000 users from each dataset and evaluate all baselines on the same sampled user set for a fair comparison. We report Hit Ratio (H@K) and NDCG (N@K) with 𝐾 ∈ { 10 , 20 }.
+
+Hyperparameter configurations. CoRRe has two key hyperpa-rameters: 𝜆 for direction refinement and 𝛼 for magnitude refine-ment. We tune them over {0.2, 0.4, 0.5, 0.6, 0.8} and {0.0, 0.05 , 0.1,
+
+0.15 , 0.2}, respectively, using the validation set. 
+
+Baselines. We compare CoRRe with training-based and training-free methods. Training-based methods include task-specific rec-ommenders (LightGCN [3], SASRec [6], RecFormer [13], RLM-Rec [17], AlphaRec [18]) and LLM reranking methods that rerank candidates retrieved by a trained recommender (Rerank, Rerank-Coral [23], Rerank-ItemRAG [10]). 1 Training-free methods include global popularity, title-based retrieval (Embed-Semantic), LLM-generated query retrieval (Embed-LLM), and their RAG-based vari-ants (Embed-Coral [23], Embed-ItemRAG [10]). For both reranking and embedding-based LLM baselines, we evaluate both vanilla ver-sions using only item titles and RAG-based variants using Coral [23] and ItemRAG [10]. For all LLM-based methods, we use GPT-5.2 as the backbone LLM and text-embedding-3-large as the text encoder.  
+
+> 1In our experiments, we rerank the top-K items retrieved by LightGCN. CIKM ’26, November 07–11, 2026, Rome, Italy Kyungho Kim et al.
+
+Table 1: (RQ1&2) Main results & Ablation study . H@K and N@K denote Hit Ratio@K and NDCG@K, respectively. Green boxes and yellow boxes indicate the best and second-best results. All results are averaged over three runs. In the “Train-free” column, 
+
+✓/✗ indicate training-free and training-based methods, respectively. In the “CF” column, ✓ denotes CF methods without LLM involvement, while ✓(▲) and ✓(★) indicate methods that use collaborative signals before and after LLM inference, respectively. CoRRe outperforms training-free baselines in 12 out of 12 cases and training-based baselines in 8 out of 12 cases. 
+
+Methods Train -free CF Sports & Outdoors Toys & Games Beauty & Personal Care H@10 H@20 N@10 N@20 H@10 H@20 N@10 N@20 H@10 H@20 N@10 N@20 LightGCN [3] ✗ ✓ 0.0333 0.0487 0.0206 0.0244 0.0297 0.0440 0.0151 0.0187 0.0257 0.0380 0.0139 0.0170 SASRec [6] ✗ ✓ 0.0136 0.0220 0.0089 0.0108 0.0108 0.0198 0.0054 0.0071 0.0131 0.0225 0.0085 0.0112 RecFormer [13] ✗ ✓ 0.0263 0.0407 0.0158 0.0194 0.0447 0.0627 0.0239 0.0284 0.0247 0.0350 0.0124 0.0150 RLMRec [17] ✗ ✓(★) 0.0403 0.0587 0.0229 0.0275 0.0403 0.0550 0.0221 0.0257 0.0363 0.0547 0.0180 0.0226 
+
+AlphaRec [18] ✗ ✓(★) 0.0343 0.0507 0.0174 0.0215 0.0450 0.0633 0.0240 0.0286 0.0287 0.0417 0.0141 0.0174 Rerank [19] ✗ ✓(▲) 0.0333 0.0487 0.0156 0.0187 0.0297 0.0440 0.0147 0.0198 0.0257 0.0380 0.0136 0.0175 Rerank-Coral [23] ✗ ✓(▲) 0.0333 0.0487 0.0168 0.0235 0.0297 0.0440 0.0144 0.0190 0.0257 0.0380 0.0117 0.0165 Rerank-ItemRAG [10] ✗ ✓(▲) 0.0333 0.0487 0.0158 0.0220 0.0297 0.0440 0.0139 0.0188 0.0257 0.0380 0.0107 0.0159 Popularity ✓ ✓ 0.0150 0.0200 0.0070 0.0083 0.0060 0.0110 0.0025 0.0038 0.0090 0.0150 0.0044 0.0058 Embed-Semantic ✓ ✗ 0.0200 0.0370 0.0111 0.0153 0.0360 0.0510 0.0206 0.0245 0.0180 0.0220 0.0097 0.0108 Embed-LLM [19] ✓ ✗ 0.0203 0.0307 0.0095 0.0121 0.0387 0.0567 0.0186 0.0232 0.0103 0.0190 0.0050 0.0071 Embed-Coral [23] ✓ ✓(▲) 0.0183 0.0300 0.0088 0.0117 0.0407 0.0597 0.0203 0.0252 0.0097 0.0177 0.0056 0.0077 Embed-ItemRAG [10] ✓ ✓(▲) 0.0163 0.0300 0.0082 0.0116 0.0427 0.0607 0.0215 0.0259 0.0103 0.0187 0.0058 0.0079 
+
+CoRRe (Ours) ✓ ✓(★) 0.0453 0.0627 0.0258 0.0301 0.0507 0.0657 0.0264 0.0302 0.0303 0.0473 0.0147 0.0189 
+
+Ablation on CoRRe 
+
+w/o propagated emb. ✓ ✓(★) 0.0343 0.0483 0.0180 0.0214 0.0470 0.0650 0.0244 0.0289 0.0167 0.0323 0.0082 0.0121 w/o semantic emb. ✓ ✓(★) 0.0403 0.0617 0.0233 0.0289 0.0233 0.0407 0.0114 0.0157 0.0250 0.0387 0.0137 0.0171 w/o magnitude ref. ✓ ✓(★) 0.0220 0.0400 0.0104 0.0150 0.0433 0.0613 0.0217 0.0263 0.0097 0.0180 0.0057 0.0078 
+
+## 4.2 RQ1. Accuracy 
+
+As shown in Table 1, CoRRe outperforms all training-free baselines in all settings, with up to 132.43% improvement over the strongest baseline. The limited gains of Coral and ItemRAG suggest that sim-ply providing additional retrieved information to the LLM before inference is insufficient for accurate recommendation. Furthermore, compared with training-based methods, CoRRe achieves the best performance on Sports and Toys and the second-best performance on Beauty, demonstrating the effectiveness of our refinement strat-egy without any model training. We provide additional experiments with different LLM backbones in [7]. 
+
+## 4.3 RQ2. Ablation Study 
+
+We evaluate three variants of CoRRe. (V1) w/o propagated embedding: removes the graph-propagated em-bedding from direction refinement, retaining only the original title-based semantic embedding. (V2) w/o semantic embedding: removes the original title-based se-mantic embedding from direction refinement, retaining only the graph-propagated embedding. (V3) w/o magnitude refinement: removes magnitude refinement. As shown in Table 1, (V1) and (V2) lead to a performance drop, indicating that semantic information from item titles and collabo-rative information from the co-purchase graph are both important. Moreover, (V3) substantially degrades performance, indicating that incorporating popularity information into the embedding magni-tude is important for final retrieval. 
+
+## 4.4 RQ3. Case Study 
+
+We compare items retrieved (a) using only title embeddings, (b) after direction refinement, and (c) after direction and magnitude refinement on the Sports and Beauty datasets. As shown in Fig-ure 3, retrieval based solely on semantic item embeddings tends to identify items that are textually relevant to the LLM-generated user profile, but may fail to distinguish the ground-truth item from other semantically similar candidates. After direction refinement, items with stronger co-purchase relationships to the user’s inter-acted items are promoted, improving the rank of the ground-truth item. Magnitude refinement further incorporates item popularity, helping distinguish the ground-truth item among candidates with similar semantic and collaborative relevance. 
+
+## 4.5 RQ4. Hyperparameter Sensitivity 
+
+We analyze the sensitivity of CoRRe to two key hyperparameters: 𝜆 ,which controls the balance between the original semantic embed-ding and the graph-propagated embedding in direction refinement, and 𝛼 , which controls the strength of magnitude refinement. As shown in Figure 4a, the effect of 𝜆 varies across datasets. Sports favors a smaller 𝜆 , indicating a larger benefit from collab-orative information propagated through the co-purchase graph, whereas Toys benefits from a larger 𝜆 , placing more emphasis on the original semantic representation. Similarly, Figure 4b shows dataset-dependent behavior for 𝛼 . Sports benefits from a moder-ate degree of popularity calibration, while Toys and Beauty favor Training-Free LLM-Based Recommendation with Post-LLM Item Refinement Using Collaborative Signals CIKM ’26, November 07–11, 2026, Rome, Italy Bones Super     
+
+> REDS Skateboard
+> Bearings 8 Pack
+> Bones Reds
+> Bearings 8 pk
+> w/Spacers &
+> Bones Super
+> REDS Skateboard
+> Bearings 8 Pack
+> Bones Super Swiss
+> 6 Skateboard
+> Bearings 8 Pack
+> Bones … Skate
+> Bearing Lubricant
+> Skateboarding …
+> Speed Washers
+
+Rank 19 
+
+Direction Refinement ( 𝐞 𝐃𝐑 ) Magnitude Refinement ( 𝐞 𝐃𝐑+𝐌𝐑 )
+
+Given  your  recent  skate  hardware  buys  (Bones  REDS  bearings, 
+
+spacers/washers,  and  a bearing  cleaning  unit)  plus  a skate  tool, 
+
+you’re  likely  to  shop  next  for  a fresh  set  of  skateboard  wheels  (e .g.,
+
+Spitfire  Formula  Four)  or  new  grip  tape  and  hardware  bolts  to 
+
+complete  a full  board  refresh .
+
+LLM -Generated User Profile User’s Interacted Items  
+
+> Unit
+> Skateboarding
+> Tool
+> Iron Gym
+> Pull -Up, Chin -
+> Up Bar
+> Bones REDS
+> Skateboard
+> Bearings
+> Standard Speed KIT
+> (Bearing spacers /
+> washers)
+> Bones Skate
+> Bearings Cleaning
+> Unit
+
+Rank  5 Rank  1Rank 1  Rank 2  Rank 1  Rank 2  Rank  2 Rank 5 
+
+…
+
+Semantic Item Embedding ( 𝐞 𝐒𝐄𝐌 )
+
+… … …  
+
+> Bones … Skate
+> Bearing Lubricant
+> Bones … Skate
+> Bearing Lubricant
+> Bones Super
+> REDS Skateboard
+> Bearings 8 Pack
+
+(a) Sports dataset. Wet n Wild Edit 
+
+> Makeup Set
+> NYX Professional
+> … Makeup Spray
+> Wet n Wild Edit
+> Eye Makeup Set
+> NYX Professional …
+> Jumbo Eye Pencil
+> NYX Professional
+> … Slim Lip Pencil
+> NYX Professional …
+> Ultimate Shadow
+
+Rank 19 
+
+Direction Refinement ( 𝐞 𝐃𝐑 ) Magnitude Refinement ( 𝐞 𝐃𝐑+𝐌𝐑 )
+
+Given  your  recent  mix  of  drugstore  makeup  staples  … plus  hair 
+
+styling  tools  (spiral  ties  and  jumbo  rollers),  you’re  likely  to  pick  up 
+
+a coordinating  lip  liner  and  a long -wear  setting  spray —something 
+
+like  NYX  Slim  Lip  Pencil  (in  a plum/nude  shade)  and  NYX  Matte 
+
+Finish  Setting  Spray —to  lock  in  the  look  while  you  style  your  hair .
+
+LLM -Generated User Profile User’s Interacted Items 
+
+> Lash
+> Waterproof
+> NYX MAKEUP
+> Butter Gloss
+> Kitsch Spiral
+> Hair Ties
+> Bag Balm Vermont's
+> Hand Moisturizer
+> Jumbo Size Hair
+> Roller Sets
+
+Rank 6  Rank 2 
+
+> NYX Professional
+> … Plump Finish
+
+Rank 1  Rank 2  Rank 1  Rank 2  Rank 1  Rank 5 
+
+…
+
+Semantic Item Embedding ( 𝐞 𝐒𝐄𝐌 )
+
+… … …
+
+> NYX Professional
+> … Slim Lip Pencil
+> NYX Professional
+> … Slim Lip Pencil
+
+(b) Beauty dataset. 
+
+Figure 3: (RQ3) Case studies on two datasets. As refinement proceeds, the ground-truth item ranks higher among similar items. Sports  Toys  Beauty 
+
+> NDCG@10
+
+𝝀  𝝀 𝝀 
+
+(a) Hyperparameter sensitivity to 𝜆 .Sports  Toys  Beauty 
+
+> NDCG@10
+
+𝜶  𝜶 𝜶 
+
+(b) Hyperparameter sensitivity to 𝛼 .
+
+Figure 4: (RQ4) Hyperparameter sensitivity of CoRRe to (a) 
+
+𝜆 , which controls the balance between semantic and graph-propagated item embeddings, and (b) 𝛼 , which controls the strength of popularity-based magnitude calibration. 
+
+smaller values of 𝛼 , suggesting that overly emphasizing popularity can degrade retrieval performance. 
+
+## 5 Conclusion 
+
+In this work, we propose CoRRe, a training-free recommendation framework that separates user intent inference from item-level retrieval. CoRRe incorporates collaborative signals into item repre-sentations in a post-LLM manner through direction and magnitude refinement. Experiments demonstrate that CoRRe consistently out-performs existing training-free recommenders and achieves com-petitive or superior performance compared with training-based rec-ommenders. For reproducibility, we provide our code, datasets, and supplementary materials at https://github.com/K-Kyungho/CoRRe. 
+
+## Acknowledgements. 
+
+This work was partly supported by the National Research Founda-tion of Korea (NRF) grant funded by the Korea government (MSIT) (No. RS-2024-00406985, 30%). This work was partly supported by Institute of Information & Communications Technology Planning & Evaluation (IITP) grant funded by the Korea government (MSIT) (No. RS-2024-00438638, EntireDB2AI: Foundations and Software for Comprehensive Deep Representation Learning and Prediction on Entire Relational Databases, 30%) (No. RS-2024-00457882, National AI Research Lab Project, 30%) (No. RS-2019-II190075, Artificial In-telligence Graduate School Program (KAIST), 10%). 
+
+## GenAI Usage Disclosure 
+
+We used LLM-based tools solely to assist with minor writing edits and code debugging. All generated outputs were carefully reviewed and revised by the authors to ensure accuracy and integrity. CIKM ’26, November 07–11, 2026, Rome, Italy Kyungho Kim et al. 
+
+## References 
+
+[1] Jingtong Gao, Bo Chen, Weiwen Liu, Xiangyang Li, Yichao Wang, Wanyu Wang, Huifeng Guo, Ruiming Tang, and Xiangyu Zhao. 2025. LLM4Rerank: LLM-based Auto-Reranking Framework for Recommendations. In WWW .[2] Donghee Han, Hwanjun Song, and Mun Yong Yi. 2025. Rethinking LLM-Based Recommendations: A Personalized Query-Driven Parallel Integration. In EMNLP Findings .[3] Xiangnan He, Kuan Deng, Xiang Wang, Yan Li, Yongdong Zhang, and Meng Wang. 2020. LightGCN: Simplifying and powering graph convolution network for recommendation. In SIGIR .[4] Yupeng Hou, Jiacheng Li, Xiangjun Fu, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. 2026. Bridging Language and Items for Retrieval and Recom-mendation: Benchmarking LLMs as Semantic Encoders. In ACL .[5] Zheng Hu, Yongsen Pan, Zetao Li, Jiaming Huang, Satoshi Nakagawa, Jiawen Deng, Shimin Cai, and Fuji Ren. 2026. Retrieval-enhanced, Adaptively Collabora-tive, and Temporal-aware user behavior comprehension for LLM-based sequential recommendation. Information Processing & Management 63, 1 (2026), 104354. [6] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-mendation. In ICDM .[7] Kyungho Kim, Sunwoo Kim, Geon Lee, Shinhwan Kang, Sojeong Kim, Liam Collins, Bhuvesh Kumar, Donald Loveland, and Kijung Shin. 2026. Supplementary materials, code, and datasets for this work. https://github.com/K-Kyungho/ CoRRe. [8] Sein Kim, Hongseok Kang, Seungyoon Choi, Donghyun Kim, Minchul Yang, and Chanyoung Park. 2024. Large language models meet collaborative filtering: An efficient all-round llm-based recommender system. In KDD .[9] Sunwoo Kim, Geon Lee, Kyungho Kim, Liam Collins, Neil Shah, and Kijung Shin. 2025. Retrieval-Augmented Generation for LLM-based Recommender Systems: A Comprehensive Survey. HAL preprint (2025). https://hal.science/hal-05561909 [10] Sunwoo Kim, Geon Lee, Kyungho Kim, Jaemin Yoo, and Kijung Shin. 2026. Item-RAG: Item-Based Retrieval-Augmented Generation for LLM-Based Recommen-dation. In SIGIR .[11] Genki Kusano, Kosuke Akimoto, and Kunihiro Takeoka. 2025. Revisiting Prompt Engineering: A Comprehensive Evaluation for LLM-based Personalized Recom-mendation. In RecSys .[12] Geon Lee, Kyungho Kim, and Kijung Shin. 2024. Post-Training Embedding Enhancement for Long-Tail Recommendation. In CIKM .[13] Jiacheng Li, Ming Wang, Jin Li, Jinmiao Fu, Xin Shen, Jingbo Shang, and Julian McAuley. 2023. Text Is All You Need: Learning Language Representations for Sequential Recommendation. In KDD .[14] Qin Luo, Erjia Chen, Zhao Shi, and Bang Wang. 2025. Anchor-based Pairwise Comparison via Large Language Model for Recommendation Reranking. In 
+
+CIKM .[15] Hanjia Lyu, Song Jiang, Hanqing Zeng, Yinglong Xia, Qifan Wang, Si Zhang, Ren Chen, Chris Leung, Jiajie Tang, and Jiebo Luo. 2024. LLM-Rec: Personalized Recommendation via Prompting Large Language Models. In NAACL Findings .[16] Qiyao Peng, Hongtao Liu, Hua Huang, Jian Yang, Qing Yang, and Minglai Shao. 2025. A Survey on LLM-powered Agents for Recommender Systems. In EMNLP Findings .[17] Xubin Ren, Wei Wei, Lianghao Xia, Lixin Su, Suqi Cheng, Junfeng Wang, Dawei Yin, and Chao Huang. 2024. Representation Learning with Large Language Models for Recommendation. In WWW .[18] Leheng Sheng, An Zhang, Yi Zhang, Yuxin Chen, Xiang Wang, and Tat-Seng Chua. 2025. Language Models Encode Collaborative Signals in Recommendation. In ICLR .[19] Aaditya Singh, Adam Fry, Adam Perelman, Adam Tart, Adi Ganesh, Ahmed El-Kishky, Aidan McLaughlin, Aiden Low, AJ Ostrow, Akhila Ananthram, et al. 2025. Openai gpt-5 system card. arXiv preprint arXiv:2601.03267 (2025). [20] Chongyang Tao, Tao Shen, Shen Gao, Junshuo Zhang, Zhen Li, Kai Hua, Wenpeng Hu, Zhengwei Tao, and Shuai Ma. 2024. Llms are also effective embedding models: An in-depth overview. arXiv preprint arXiv:2412.12591 (2024). [21] Lei Wang and Ee-Peng Lim. 2024. The whole is better than the sum: Using aggregated demonstrations in in-context learning for sequential recommendation. In NAACL .[22] Shijie Wang, Wenqi Fan, Yue Feng, Lin Shanru, Xinyu Ma, Shuaiqiang Wang, and Dawei Yin. 2025. Knowledge Graph Retrieval-Augmented Generation for LLM-based Recommendation. In ACL .[23] Junda Wu, Cheng-Chun Chang, Tong Yu, Zhankui He, Jianing Wang, Yupeng Hou, and Julian McAuley. 2024. Coral: collaborative retrieval-augmented large language models improve long-tail recommendation. In KDD .[24] Likang Wu, Zhi Zheng, Zhaopeng Qiu, Hao Wang, Hongchao Gu, Tingjia Shen, Chuan Qin, Chen Zhu, Hengshu Zhu, Qi Liu, et al. 2024. A survey on large language models for recommendation. World Wide Web 27, 5 (2024), 60. [25] Tong Zhang. 2025. AdaptRec: A Self-Adaptive Framework for Sequential Recom-mendations with Large Language Models. arXiv:2504.08786 (2025).

@@ -1,0 +1,738 @@
+Title: EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment
+
+URL Source: https://arxiv.org/pdf/2608.14011v1
+
+Published Time: Mon, 17 Aug 2026 00:29:54 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment 
+
+## Haokai Ma ∗
+
+haokai.ma1997@gmail.com National University of Singapore Singapore, Singapore 
+
+## Aoqi Hu ∗
+
+huaoqi800@gmail.com National University of Singapore Singapore, Singapore 
+
+## Yueao Xing 
+
+sd513@bupt.edu.cn Beijing University of Posts and Telecommunications Beijing, China 
+
+## Ruobing Xie 
+
+xrbsnowing@163.com Tencent Beijing, China 
+
+## Yonghui Yang 
+
+yyh.hfut@gmail.com National University of Singapore Singapore, Singapore 
+
+## Teng Tu 
+
+teng.tu@u.nus.edu National University of Singapore Singapore, Singapore 
+
+## Lei Meng 
+
+lmeng@sdu.edu.cn Shandong University Jinan, China 
+
+## Tat-Seng Chua 
+
+dcscts@nus.edu.sg National University of Singapore Singapore, Singapore 
+
+Abstract 
+
+Generative recommendation autoregressively generates the seman-tic IDs of the target item, unifying preference modeling and index retrieval within the shared token space. Recent attempts have in-troduced Multi-Token Prediction (MTP) into this field, yet they primarily inherit its efficiency merit, leaving its potential as dense supervision unexplored. Unlocking this potential hinges on whether future behaviors qualify as informative supervision. Our analysis reveals that future behaviors carry a semantic echo of the current one far above that of random pairs, which nevertheless decays along horizons under intent transitions, making them informative yet order-dependent signals. Motivated by this, we propose EchoRec ,which empowers MTP with cycle-consistent holistic preference alignment across multi-h orizon for generative rec ommendation. It comprises two synergistic modules. Horizon-aware Preference Gen-eration (HPG) sequentially chains lightweight auxiliary branches upon the base recommender, where each branch conditions on its predecessor to respect preference evolution. Verifiable Holistic-Preference Alignment (VHA) further consolidates them into the holistic preference and echoes it back through cycle-consistent pro-jectors to suppress spurious alignment, with theoretical guarantees that exclude the rank-collapse form of spurious alignment under an invertible transport, enabling the holistic preference to be retained in the decoding representation. All auxiliary components serve as disposable scaffolding discarded at inference, introducing negligible 
+
+> *Equal Contribution. Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+> Conference acronym ’XX, Woodstock, NY
+> © 2027 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM ISBN 978-x-xxxx-xxxx-x/YYYY/MM https://doi.org/XXXXXXX.XXXXXXX
+
+online serving overhead. Extensive experiments on three datasets demonstrate the superiority of our EchoRec , together with its nat-urally acquired multi-item generation ability. Our code and datasets will be available upon acceptance. 
+
+CCS Concepts 
+
+• Information systems → Recommender systems .
+
+Keywords 
+
+Multi-Token Prediction, Generative Recommendation 
+
+ACM Reference Format: 
+
+Haokai Ma, Aoqi Hu, Yueao Xing, Ruobing Xie, Yonghui Yang, Teng Tu, Lei Meng, and Tat-Seng Chua. 2027. EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment. In Proceedings of Make sure to enter the correct conference title from your rights confirmation email (Conference acronym ’XX). ACM, New York, NY, USA, 10 pages. https://doi.org/XXXXXXX.XXXXXXX 
+
+1 Introduction 
+
+Generative recommendation (GR) has recently emerged as a promis-ing paradigm that tokenizes each item into a tuple of discrete semantic IDs (SIDs) and generates the target item token by to-ken [20, 24, 26]. Instead of ranking candidates over the entire corpus, GR unifies preference modeling and index retrieval within a single process, where the shared token space anchors semantically related items to overlapping SIDs [7, 8, 13]. It enables recommenders to function well in sparse scenarios by exploiting external semantics, attracting increasing attention from e-commerce and streaming services. Drilling down into this topic, existing works generally build the GR pipeline around two key components: item tokenization and autoregressive generation [9]. Regarding the former, TIGER [27] utilizes Residual Quantized Variational Autoencoder (RQ-VAE) to generate SIDs for items, DiscRec [17] injects position embeddings arXiv:2608.14011v1 [cs.IR] 14 Aug 2026 Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haokai Ma et al. i1 i2 in
+
+…  
+
+> in+1
+> Inference
+> in+2 in+3
+> i1i2in
+
+…   
+
+> in+2 in+3 in+1
+> Homogenized predictions Wasted future signals
+> i1i2in
+
+… in+1 in+2 in+3        
+
+> (a) Next-Item Prediction (b) Parallel Multi-Item Prediction
+> Holistic Preference
+> Inference
+> Representations
+> (c) Our EchoRec : Forward Propagation and Echo-Back Verification
+> 𝑃𝑟𝑜𝑗 !→# (&) 𝑃𝑟𝑜𝑗 #→! (&) 𝑧 $!𝑧 $%& &𝑧 $%& '𝑧 #
+> ≈≈
+
+Figure 1: Conceptual comparison of future-behavior model-ing paradigms. (a) Next-item prediction underutilizes future-behavior supervision. (b) Parallel multi-item prediction risks homogenizing the horizons. (c) EchoRec propagates supervi-sion across horizons and cycle-consistently aligns the decod-ing representation with holistic preference. 
+
+into token sequences for item-aware alignment and Pctx [35] in-corporates user contexts during SID generation for personalization. For the latter, EAGER [30] and LETTER [29] equip the Transformer-based generator with modality-aware contrastive objectives to in-tegrate behavioral and semantic information, while ETEGRec [18] devises an alternating optimization technique to foster sequence-item alignment and preference-semantic alignment simultaneously. Inspired by the remarkable capabilities of Multi-Token Prediction (MTP) in advanced Large Language Models (LLMs) [6, 16], several pioneering efforts have introduced it into recommendation. For instance, GReF [15] generates multiple ordered future items with MTP for reranking efficiency, RPG [12] applies MTP to expand the token number of items to boost expressiveness, and GPR [32] and EGA-V2 [33] adopt MTP to capture concurrent interests and generate advertisement content in industrial scenarios. Notably, beyond the decoding efficiency that MTP is best known for, it also serves as dense supervision that densifies training signals and encourages pre-planned representations [1, 34]. However, existing efforts primarily transplant the former merit, leaving the latter potential as future-behavior supervision largely unexplored. However, translating such potential into GR is non-trivial, as existing attempts leave two fundamental challenges unresolved: (1) How to exploit future behaviors as sequentially dependent supervision across horizons? Unlike consecutive tokens tightly coupled by grammar in LLMs, consecutive behaviors are driven by evolving user intents, where 𝑖 𝑛 +2 depends on the intent transition triggered by 𝑖 𝑛 +1 rather than on the historical sequence alone. Ex-isting MTP-empowered recommenders either repurpose MTP as an efficiency-oriented device [12, 32, 33] or decode multiple items simultaneously from the same context for reranking efficiency [15], degenerating multi-horizon prediction into homogenized next-item prediction tasks that disregard preference evolution. (2) How to guarantee that the incorporated future signals are actually internalized? Even equipped with future-aware supervision, such signals shape the decoding representation only indirectly through auxiliary objectives. A natural remedy is to align this representa-tion toward the aggregated holistic target via projectors, yet such one-way alignment is inherently unverifiable , as the projector can absorb the discrepancy between the two subspaces to satisfy it while leaving the representation oblivious to the holistic prefer-ence, a failure mode that we term spurious alignment . To our knowledge, no existing GR study offers a mechanism to rule it out. To address these challenges, we propose EchoRec , a frame-work that empowers MTP with cycle-consistent holistic preference alignment across multi-h orizon for GR. Drawing an analogy to the acoustic echo, EchoRec regards preference modeling as an echoing process: user preferences are propagated forward across future horizons as sequentially dependent supervision, and echoed back for verifying their internalization. Specifically, we devise the 
+
+Horizon-aware Preference Generation (HPG) module to extend the next-item objective to multiple future horizons through sequential MTP branches, which conditions on its predecessor’s representa-tion to capture intent transition between adjacent horizons, thereby delivering the structural-level supervision that respects preference evolution. To further guarantee actual internalization, we design a Verifiable Holistic-Preference Alignment (VHA) module to realize the echo-back verification, which consolidates all branches into the holistic preference and pulls the decoding representation toward it. Considering that such one-way alignment remains unverifiable, VHA further imposes a bidirectional cycle-consistency constraint on the projector pair, which shapes the round-trip geometry of the transport ( cf. Lemma 1) and excludes the rank-collapse form of spurious alignment ( cf. Theorem 2), suppressing the spurious alignment that plagues the one-way objective. Notably, EchoRec remains lightweight on both sides, as the auxiliary branches of HPG reuse the shared output head and decoding graph at negligible training overhead, while the projectors of VHA serve as dispos-able scaffolding discarded at inference, preserving the decoding efficiency during online serving. We conduct extensive experiments on three real-world datasets to demonstrate the effectiveness of our EchoRec . We further con-duct analyses on multi-horizon prediction, component ablation, and efficiency to verify its robustness, universality and the superiority of each design. The main contributions are as follows: 
+
+• We propose EchoRec , which empowers MTP with cycle-consistent holistic preference alignment to capture the horizon-aware preference. To our knowledge, it is among the pioneering efforts to unlock MTP as sequentially dependent future-behavior supervision in generative recommendation. 
+
+• We devise HPG to structurally inject sequentially dependent su-pervision across horizons and VHA to verifiably internalize the holistic preference via cycle-consistent alignment, with theoret-ical guarantees that characterize the round-trip geometry and exclude the rank-collapse form of spurious alignment. 
+
+• We conduct extensive experiments on three datasets, where 
+
+EchoRec consistently improves diverse SOTA backbones while exhibiting the multi-item generation ability. 
+
+2 Related Works 
+
+Generative Recommendation. Inspired by the remarkable achievement of generative models, several pioneering recom-menders assign each item a set of discrete but shared tokens, re-ferred to as semantic ID (SID), where tokenization discretizes item EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+semantics into SIDs and generation predicts the target item condi-tioned on them. Specifically, VQ-Rec [10] and SeeDRec [25] respec-tively utilize transferable “codes” and “sememe” to represent items from the content information. TIGER [27] discretizes item repre-sentations into SIDs via RQ-VAE and predicts the target item with the Transformer-based generator. EAGER [30] and LETTER [29] design contrastive alignment objectives to integrate behavioral and semantic information. DiscRec [17] incorporates item-level position embeddings to enable the item-aware alignment and disentangle semantic and collaborative signals, while Pctx [35] devises a context-aware tokenizer for personalized SID generation. To further unify the two stages into a cohesive objective, ETEGRec [18] fosters mu-tual enhancement between sequence-item and preference-semantic levels via alternating optimization. However, these efforts uniformly follow the next-item objective, leaving future behaviors beyond the immediate target untouched, which is the focus of our work. 
+
+Multi-Token Prediction for Recommendation. Multi-Token Prediction (MTP) extends the next-token objective of large lan-guage models to predict multiple tokens within a single step, allevi-ating their inefficiency and limited long-range dependency model-ing [5, 19, 28, 34]. Inspired by its superiority, several attempts have integrated MTP into recommendation. GReF [15] generates mul-tiple ordered future items simultaneously for real-time reranking efficiency. RPG [12] allocates longer SIDs to each item and decodes them in parallel to enhance item expressiveness. GPR [32] maps both advertisements and organic content into a shared multi-level SID space and integrates MTP to capture concurrent interests, while EGA-V2 [33] chains MTP branches across modalities to jointly gen-erate advertisement sequences and creative content. Nevertheless, these works predominantly inherit the efficiency merit of MTP, whereas our work unlocks its potential as sequentially dependent future-behavior supervision with verifiable internalization. 
+
+3 Preliminary 3.1 Multi-Token Prediction 
+
+As the name implies, Multi-token prediction (MTP) extends the conventional next-token prediction objective by predicting multiple future tokens within a single step, thereby providing longer-range dependencies during training. Given the token se-quence 𝑥 1: 𝑡 , the generic MTP objective can be written as LMTP =
+
+− Í𝑡 log 𝑃 𝜃 (𝑥 𝑡 +1: 𝑡 +𝑛 | 𝑥 1: 𝑡 ), where 𝑛 denotes the prediction hori-zon. A representative implementation [6] adopts a shared Trans-former trunk 𝑓 𝑠 (·) with 𝑛 independent prediction heads 𝑓 (𝑖 ) 
+
+> ℎ
+
+(·) 
+
+to predict these future tokens in parallel from the same con-textual representation. Let 𝑧 1: 𝑡 = 𝑓 𝑠 (𝑥 1: 𝑡 ) represent the hidden state produced by 𝑓 𝑠 (·) , the 𝑖 -th future token can be predicted as 
+
+𝑃 𝜃 (𝑥 𝑡 +𝑖 | 𝑥 1: 𝑡 ) = softmax  𝑓 𝑢 (𝑓 (𝑖 ) 
+
+> ℎ
+
+(𝑧 1: 𝑡 )) , where 𝑓 𝑢 (·) denotes the shared unembedding matrix. Instead of predicting all future tokens independently from the same state, DeepSeek-V3 [16] sequentially chains MTP modules to preserve the causal dependencies among fu-ture predictions and sequentially predict additional 𝑛 tokens. To be specific, the 𝑘 -th MTP module combines the representation from its predecessor with the embedding of the (𝑖 +𝑘 )-th token to generate the input 𝒉 ′𝑘 𝑖 of the additional Transformer block: 
+
+𝒉 ′𝑘 𝑖 = 𝑀 𝑘 
+
+RMSNorm (𝒉 𝑘 −1 
+
+> 𝑖
+
+); RMSNorm (Emb (𝑖 𝑖 +𝑘 ))  , (1) 0x 8x 16x 24x                             
+
+> 00.1M 0.2M
+> 0×
+> 16 ×
+> 8×
+> 24 ×𝑖 !-> 𝑖 !"# 𝑖 !-> 𝑖 !"$ 𝑖 !-> 𝑖 !"%
+> Arts
+> Lift over random pairs
+> 9.68 ×
+> 3.93 ×2.89 ×
+> 21.02 ×
+> 11.67 ×
+> 8.79 ×
+> 15.59 ×
+> 7.75 ×
+> 5.82 ×
+> Game Baby
+> (a) Persistent semantic echo across future offsets
+> 𝒞 #𝒞 $𝒞 %𝒞 &𝒞 '𝒞 (𝒞 )𝒞 *Avg.
+> 14.7 ×
+> 7.0 ×
+> 5.2 ×
+> 18.0 ×
+> 9.8 ×
+> 7.5 ×
+> 15.9 ×
+> 7.8 ×
+> 5.9 ×
+> 15.2 ×
+> 7.5 ×
+> 5.8 ×
+> 15.7 ×
+> 7.7 ×
+> 5.8 ×
+> 16.1 ×
+> 8.0 ×
+> 6.0 ×
+> 14.7 ×
+> 7.0 ×
+> 5.3 ×
+> 15.2 ×
+> 7.4 ×
+> 5.5 ×
+> 15.6 ×
+> 7.8 ×
+> 5.8 ×
+> 20 ×
+> 0×
+> 5×
+> 10 ×
+> 15 ×
+> 1.0 ×1.0 ×1.0 ×1.0 ×1.0 ×1.0 ×1.0 ×1.0 ×1.0 ×Random
+> 𝑖 !-> 𝑖 !"#
+> 𝑖 !-> 𝑖 !"$
+> 𝑖 !-> 𝑖 !"%
+> (b) Consistent semantic echo across codebooks
+
+Figure 2: Analysis of the usefulness of future information for next-item prediction. (a) shows the SID overlap lift of 
+
+(𝑖 𝑛 , 𝑖 𝑛 +ℎ ) over random pairs across three datasets, which re-mains well above random even at larger offsets. (b) presents the codebook-wise lift on Game, where the semantic echo stays consistent across all codebooks. 
+
+where RMSNorm (·) , 𝑀 𝑘 ∈ R𝑑 ×2𝑑 , and Emb (·) denote the Root Mean Square Layer Normalization, the projection matrix and the shared embedding layer, respectively. The Transformer block TRM 𝑘 (·) 
+
+then produces the output representation 𝒉 𝑘 𝑖 +𝑘 , upon which the shared output head predicts the (𝑖 +𝑘 +1)-th token. In this work, we adopt this sequential design to preserve coherent causal dependen-cies across multiple prediction depths, providing denser supervision over future tokens while keeping the auxiliary objective compatible with the generation process. 
+
+3.2 Motivation Analysis on Future Behaviors 
+
+Exploiting future behaviors as auxiliary supervision is appealing yet non-trivial, which hinges on two fundamental questions: (1) whether future behaviors convey informative signals for next-item prediction, rather than mere noise induced by drifting intents and (2) whether multiple future behaviors can be faithfully forecast in parallel from the shared context, rather than collapsing into homogenized variants? 
+
+We conduct two motivation analyses to respectively answer them. 
+
+3.2.1 Semantic Echo across Future Behaviors. To answer the first question, we measure the SID overlap of each observed pair 
+
+(𝑖 𝑛 , 𝑖 𝑛 +ℎ ) with offset ℎ ∈ { 1, 2, 3} on three datasets, and illustrate the 
+
+lift in Figure 2, which is defined as the ratio of this overlap to that of randomly sampled item pairs. The lift of 1 .0× indicates that the fu-ture item 𝑖 𝑛 +ℎ is semantically indistinguishable from a random one, whereas a higher lift indicates the future behaviors are semantically anchored to the current interaction 𝑖 𝑛 . As shown in Figure 2 (a), fu-ture behaviors 𝑖 𝑛 +ℎ persistently echo the related semantics of the current interaction 𝑖 𝑛 across all offsets : the lift reaches up to 21 .02 × at ℎ=1 and remains 2 .89 ×–8 .79 × even at ℎ=3 across three datasets. This indicates that interactions beyond 𝑖 𝑛 +1 still echo the semantics of the current one rather than degenerating into noise, thus potentially constituting informative supervision for preference modeling. Besides, the consistent decay along ℎ reveals that this echo is progressively reshaped by intent transitions, suggesting that different horizons carry order-dependent signals and should be modeled as sequentially dependent targets rather than being treated equally. Moreover, Figure 2 (b) shows that such semantic echo remains consistent across all codebooks , where all eight codebooks exhibit comparable lift on Game across all offsets, indi-cating that such semantic echo is not driven by certain dominant codebooks but consistently spans all semantic subspaces. Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haokai Ma et al. 0.0 0.3 0.6 0.9 item 1 item 2 item 3              
+
+> 65.68% 56.17% 66.34% 62.73% 47.27% 41.32% 71.05% 53.21%
+> 𝑖 !"# -𝑖 !"$ 𝑖 !"# -𝑖 !"% 𝑖 !"$ -𝑖 !"% Avg.
+> 060 30 90
+> Jaccard Similarity (%)
+> 0x 0x 0x 0x
+> item 1 item 2 item 3
+> 0.01 0.07 0.04 0.10
+> 𝑖 !"# 𝑖 !"$ 𝑖 !"%
+> Performance
+> RPG-Seq. (HR@10) RPG-Seq. (NDCG@10) RPG-Par. (HR@10) RPG-Par. (NDCG@10) RPG-Seq. RPG-Par.
+> (a) Inter-horizon overlap of decoded items (b) Performance comparison across horizons
+
+Figure 3: Analysis of the homogenization pitfall of paral-lel MTP structures on Game. (a) reports the inter-horizon Jaccard similarity of the top-10 decoded items, where RPG-Par. exhibits higher overlap than RPG-Seq. on average. (b) compares the performance across horizons, where RPG-Par. 
+
+merely matches the rollout without horizon-specific super-vision yet underperforms at the immediate horizon 𝑖 𝑛 +1.
+
+3.2.2 Homogenization Pitfall of Parallel MTP Structures. To answer the second question, we instantiate two multi-horizon variants upon the same base recommender [12], where RPG-Par. decodes three future items from the shared context following the paral-lel MTP structure [6], while RPG-Seq. autoregressively rolls out the prediction as the input sequence to decode the next horizon. Figure 3 (a) reports the Jaccard similarity between the top-10 predic-tions decoded at different horizons on Game, showing that parallel MTP homogenizes multi-horizon predictions : RPG-Par. yields higher average inter-horizon overlap than RPG-Seq. (62.73% vs. 53.21%), especially on the pairs involving the immediate horizon 
+
+𝑖 𝑛 +1 (65.68% vs. 47.27% for 𝑖 𝑛 +1–𝑖 𝑛 +2 pair and 56.17% vs. 41.32% for 
+
+𝑖 𝑛 +1–𝑖 𝑛 +3 pair). This indicates that predicting all horizons from the same context blurs the intermediate intent transition, whereas even the naive rollout that conditions each horizon on its predecessor differentiates the predictions across horizons better. Figure 3 (b) further compares the performance of these two variants at each horizon, revealing that such homogenization fails to translate into performance gains . Despite the dedicated supervision on each horizon, RPG-Par. merely matches the unsupervised rollout of RPG-Seq. at 𝑖 𝑛 +2 and 𝑖 𝑛 +3, yet underperforms at the immediate horizon 𝑖 𝑛 +1 that directly determines the recommendation quality. This clearly indicates that the future signals injected by parallel MTP are not effectively absorbed into horizon-specific predictions, and instead interfere with the immediate objective. 
+
+4 Methodology 4.1 Problem Formulation 
+
+We define the behavioral sequence of user 𝑢 ∈ U as 𝑆 𝑢 =
+
+{𝑖 𝑢  
+
+> 1
+
+, 𝑖 𝑢  
+
+> 2
+
+, · · · , 𝑖 𝑢 𝑛 }, where 𝑖 𝑢 𝑡 ∈ V denotes the 𝑡 -th behavior of 𝑆 𝑢 
+
+and 𝑛 denotes the sequence length. We adopt optimized prod-uct quantization [4, 10] to represent item 𝑖 𝑡 as a 𝑘 -token tuple 
+
+𝜙 (𝑖 𝑡 )={𝑐 (𝑡, 1) , 𝑐 (𝑡, 2) , · · · , 𝑐 (𝑡,𝑘 ) }, where 𝜙 (𝑖 𝑡 ) denotes the SID of item 
+
+𝑖 𝑡 and 𝑐 (𝑡,𝑗 ) ∈ C 𝑗 denotes the code selected from the 𝑗 -th codebook 
+
+C 𝑗 . Given 𝑆 𝑢 and the SIDs of all involved items, our goal is to pre-dict the 𝑘 -token tuple 𝜙 (𝑖 𝑢 𝑛 +1) = {𝑐 (𝑛 +1,1) , 𝑐 (𝑛 +1,2) , · · · , 𝑐 (𝑛 +1,𝑘 ) } of the target item 𝑖 𝑛 +1 1 that user 𝑢 will interact with. 2    
+
+> 1For brevity, we omit the superscript 𝑢 in 𝑖 𝑢 𝑡 in the following sections.
+> 2The key notations are summarized in Appendix.
+
+4.2 Overall Structure 
+
+The structure of EchoRec is illustrated in Figure 4, which regards preference modeling as an acoustic echoing process. Specifically, the Horizon-aware Preference Generation module ( cf. Section 4.4) prop-agates user preferences forward across future horizons, extending the next-item objective through sequential MTP branches where each branch conditions on its predecessor to capture the intent transition. The Verifiable Holistic-Preference Alignment module (cf. Section 4.5) then echoes them back for verification, consoli-dating the multi-horizon representations into a holistic preference and pulling the decoding representation toward it under a cycle-consistency constraint that suppresses spurious alignment. 
+
+4.3 Base Recommender 
+
+We adopt RPG [12] as the base recommender to tokenize each item using a long semantic ID and generate its tokens in parallel. Follow-ing Section 4.1, each item 𝑖 𝑡 is encoded as 𝜙 (𝑖 𝑡 ) = (𝑐 (𝑡, 1) , · · · , 𝑐 (𝑡,𝑘 ) ),with 𝑐 (𝑡,𝑗 ) ∈ C 𝑗 . To avoid inflating the context length under such long SIDs, we aggregate all token embeddings of item 𝑖 𝑡 into a single representation 𝒗 𝑖 𝑡 = Agg (𝒆 (𝑡, 1) , · · · , 𝒆 (𝑡,𝑘 ) ) via pooling. Given a user sequence 𝑆 𝑢 , the corresponding item representations 
+
+𝑯 = [𝒗 1, 𝒗 2, · · · , 𝒗 𝑛 ] are encoded by multiple Transformer blocks into the sequence representation 𝒔 at position 𝑛 . The shared output head 𝑔 (·) then splits its output into 𝑘 codebook-specific vectors, and the token-level distribution of 𝑗 -th codebook is computed as 
+
+𝑃 𝑗 = softmax  𝑬 𝑗 · [ 𝑔 (𝒔 )] 𝑗 /𝜏 , 𝑗 = 1, · · · , 𝑘, (2) where [𝑔 (𝒔 )] 𝑗 denotes the 𝑗 -th split vector, 𝑬 𝑗 is the embedding matrix of C 𝑗 , and 𝜏 is the temperature. Assuming the tokens of target item 𝑖 𝑡 to be conditionally independent given 𝒔 , we optimize the token-level MTP loss LRPG =− Í𝑘 𝑗 =1 log 𝑃 𝑗 (𝑐 (𝑡,𝑗 ) ) to score the target SID against all token combinations across codebooks [12]. For inference, the graph-constrained decoding samples an initial beam of valid SIDs from {𝑃 𝑗 }𝑘 𝑗 =1, propagates it over a similarity graph G, scores each candidate by Í𝑘 𝑗 =1 log 𝑃 𝑗 (𝑐 𝑗 ), and retains the top-𝐵 candidates per step, yielding the top-𝐾 recommendations without exhaustive scoring over the entire item pool. 
+
+4.4 Horizon-aware Preference Generation 
+
+Although existing MTP-based recommenders improve decoding efficiency or item expressiveness, most of them still follow the next-item prediction paradigm, optimizing only toward the next item 
+
+𝑖 𝑛 +1 given a sequence 𝑆 𝑢 . However, user behaviors are inherently se-quential and evolving, where the later interactions beyond 𝑖 𝑛 +1 may reveal dynamic intent transitions and future-oriented dependencies that cannot be characterized by the single target. Meanwhile, the attempt that generates multiple future items [15] decodes them in parallel from the same context, overlooking these inter-item depen-dencies and collapsing these items into homogenized candidates. To exploit the intent transition between adjacent horizons under the sequentially dependent supervision, we introduce a Horizon-aware Preference Generation (HPG) module, which structurally extends the next-item objective to multiple future horizons. Specifically, given a behavioral sequence 𝑆 𝑢 of user 𝑢 , we follow the base recommender in Section 4.3 to convert each item 𝑖 into its aggregated representation 𝒗 𝑖 . The original branch (MTP-0) encodes EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Embedding Layer Transformer Block Transformer Block Projector Transformer Block Norm Norm Projector Transformer Block Norm Norm Transformer Block c11 c28 c84 … c15 c28 c82 …̂𝚤 !"#   
+
+> c17 c24 c82
+
+…̂𝚤 !"$ 
+
+𝑖 % 𝑖 # 𝑖 $ 𝑖 !
+
+…   
+
+> c18 c16 c11 c13
+
+… c11 c15 Output Head 
+
+𝑖 !"# ̂𝚤 !"% 
+
+𝑖 # 𝑖 !… 
+
+> c18 c11
+
+…
+
+𝑖 !"% 𝑖 $ … 
+
+> c18 c11
+
+…
+
+𝑖 !"% 
+
+> …
+
+Verifiable Holistic-Preference Alignment 
+
+> (Training Only!)
+
+Holistic Preference Construction Cycle-Constrain Alignment      
+
+> 𝒛 != MLP "#$#%& ([𝑠𝑔(𝒛 '(), 𝑠𝑔(𝒛 ')* *), 𝑠𝑔(𝒛 ')+ +)]) 𝒛 '(
+> Decoding rep.
+> 𝒛 ')* *
+> Horizon-1 rep.
+> 𝒛 ')+ +
+> Horizon-2 rep.
+> 𝒛 !
+> Holistic preference
+> 𝑠𝑔(2) 𝑠𝑔(2) 𝑠𝑔(2)
+> One-way Alignment
+> Proj !→# (𝒛 $!) ≈ 𝒛 #
+> ℒ,-./0
+> Cycle-Consistency Verification
+> Proj #→! (Proj !→# (𝒛 $!)) ≈ 𝒛 $!
+> ℒ/1/
+> Proj !→# (Proj #→! (𝒛 #)) ≈ 𝒛 #
+> Proj !→# Proj #→!
+> 𝒛 #
+> 𝒛 $!
+> Holistic preference Space Decoding representation Space
+> MLP !2,2-0
+
+Figure 4: Overall structure of our EchoRec. 
+
+the item-level sequence 𝑯 0 = [𝒗 1, 𝒗 2, · · · , 𝒗 𝑛 ] as follows: 
+
+𝒁 0 = MTRM 0 (𝑯 0) = [𝒛 01, 𝒛 02, · · · , 𝒛 0 
+
+> 𝑛
+
+], (3) where MTRM 0 (·) denotes the multi-layer Transformer backbone within MTP-0. It then feeds the last representation 𝒛 0 
+
+> 𝑛
+
+into the shared output head 𝑔 (·) to produce the token-level distributions {𝑃 0 
+
+> 𝑗
+
+}𝑘 𝑗 =1 as in Eq. (2) for graph-constrained decoding, where the superscript 𝑏 
+
+in 𝑃 𝑏 𝑗 indexes the branch hereafter. MTP-0 thus reproduces the base recommender [12], upon which HPG appends lightweight auxiliary branches as additional supervision pathways while leaving the original architecture and decoding pipeline intact, as detailed below. Beyond the original branch, HPG appends auxiliary branches to predict the subsequent items beyond 𝑖 𝑛 +1, which not only enriches the supervision for capturing preference transitions but also en-ables multi-item generation when required. Since both auxiliary branches share the same architecture, we take MTP-1 as an example. Following the sequential MTP design [16], MTP-1 generates the SID of item 𝑖 𝑛 +2 by additionally conditioning on the intermediate item 𝑖 𝑛 +1, extending the preference generation from a single-step objective to horizon-aware preference modeling while capturing intent transition between adjacent horizons. It fuses the predicted representations [𝒛 01, · · · ,𝒛 0 
+
+> 𝑛
+
+] from MTP-0 with the embeddings of the shifted sequence 𝑆 1 
+
+> 𝑢
+
+= [𝑖 2, · · · ,𝑖 𝑛 +1] as follows: 
+
+𝑯 1 =Proj 1  [RMSNorm ([ 𝒛 01,· · · ,𝒛 0
+
+> 𝑛
+
+]) ;RMSNorm ([ 𝒗 2,· · · ,𝒗 𝑛 +1])] , (4) where Proj 1 (·) aligns the concatenated representation into the hid-den space of MTP-1. The one-layer Transformer block TRM 1 (·) 
+
+then encodes the projected representation 𝑯 1 into the future-aware representations 𝒁 1 =TRM 1 (𝑯 1) = [𝒛 12, · · · , 𝒛 1
+
+> 𝑛 +1
+
+], whose last entry 
+
+𝒛 1 
+
+> 𝑛 +1
+
+is fed into the shared output head 𝑔 (·) to generate {𝑃 1 
+
+> 𝑗
+
+}𝑘 𝑗 =1 for decoding 𝑖 𝑛 +2 over the similarity graph G. Likewise, MTP-2 con-ditions on 𝒁 1 and the further shifted sequence 𝑆 2 
+
+> 𝑢
+
+= [𝑖 3, · · · , 𝑖 𝑛 +2]
+
+to predict 𝑖 𝑛 +3, thereby chaining the branches into sequentially dependent horizons. MTP-1 and MTP-2 predict over the same item pool and SID space as MTP-0, which allows them to reuse the to-ken embeddings {𝑬 𝑗 }𝑘 𝑗 =1, the output head 𝑔 (·) , and the decoding graph G of MTP-0, while only introducing Proj 𝑏 (·) and TRM 𝑏 (·) 
+
+per branch, keeping the auxiliary branches lightweight. 
+
+4.5 Verifiable Holistic-Preference Alignment 
+
+Although HPG injects future-behavior supervision at the structural 
+
+level, such supervision is distributed across several branch-wise ob-jectives and thus reaches the original branch only indirectly through the auxiliary pathways. Consequently, the decoding representation 
+
+𝒛 0 
+
+> 𝑛
+
+that directly generates the recommendation is never explicitly required to internalize the consolidated multi-horizon preference, leaving the future signals under-exploited at the representation level. To bridge this gap, we devise a Verifiable Holistic-Preference Align-ment (VHA) module to consolidate them into a holistic target and explicitly pull 𝒛 0 
+
+> 𝑛
+
+toward it in representation space. Specifically, we aggregate the predicted representations of the three branches in Section 4.4 into a holistic preference representation 𝒛 𝑓 as: 
+
+𝒛 𝑓 = MLP future 
+
+   sg (𝒛 0 
+
+> 𝑛
+
+), sg (𝒛 1
+
+> 𝑛 +1
+
+), sg (𝒛 2
+
+> 𝑛 +2
+
+)  , (5) where MLP future (·) is a two-layer projection and sg (·) denotes the stop-gradient operation, which prevents the alignment objective from back-propagating into the other branches to reshape their supervised signals. Here, the future representations 𝒛 1 
+
+> 𝑛 +1
+
+and 𝒛 2
+
+> 𝑛 +2
+
+convey the evolving intents across horizons, while the present one 𝒛 0 
+
+> 𝑛
+
+serves as an anchor against over-committing to distant and noisier future intents. We then align the decoding representation toward this holistic preference via a representation-level objective: 
+
+Ltrace = 1 − cos  Proj 0→𝑓 (𝒛 0 
+
+> 𝑛
+
+), 𝒛 𝑓 
+
+, (6) where Proj 0→𝑓 (·) transports 𝒛 0 
+
+> 𝑛
+
+into holistic preference space. Note that the stop-gradient in Eq. (5) acts only on the construction of 𝒛 𝑓 ,whereas the 𝒛 0 
+
+> 𝑛
+
+in Eq. (6) remains differentiable. Hence, the gradient of Ltrace on the 𝒛 𝑓 side merely calibrates MLP future (·) , while that on the 𝒛 0 
+
+> 𝑛
+
+side directly drives the decoding representation to encode the holistic preference. Meanwhile, the detached anchor prevents 
+
+𝒛 𝑓 from trivially collapsing onto 𝒛 0 
+
+> 𝑛
+
+to shortcut the objective. However, such one-way alignment is inherently unverifi-able , as minimizing Eq. (6) is consistent with two opposite out-comes, a faithful one where 𝒛 0 
+
+> 𝑛
+
+truly internalizes the holistic pref-erence, and a spurious one where Proj 0→𝑓 (·) overfits a shortcut mapping from an uninformed 𝒛 0 
+
+> 𝑛
+
+to 𝒛 𝑓 . This alignment objective alone cannot distinguish between them. Since 𝒛 0 
+
+> 𝑛
+
+and 𝒛 𝑓 reside in Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haokai Ma et al. 
+
+different subspaces, this spurious alignment is generic rather than incidental: the forward projector Proj 0→𝑓 (·) can simply absorb the discrepancy between the two subspaces within its own mapping, satisfying Eq. (6) while leaving 𝒛 0 
+
+> 𝑛
+
+oblivious to the holistic pref-erence ( cf. Theorem 2). To suppress such spurious alignment, we require the transport between 𝒛 0 
+
+> 𝑛
+
+and 𝒛 𝑓 to be invertible, which prevents Proj 0→𝑓 (·) from discarding any direction of the holistic space, so that a low alignment loss reflects the genuine encoding of the holistic preference. To this end, we introduce a backward projector Proj 𝑓 →0 (·) and impose a bidirectional cycle-consistency constraint that enforces both round trips to return to their origins: 
+
+Lcyc =  1 − cos  Proj 𝑓 →0 (Proj 0→𝑓 (sg (𝒛 0 
+
+> 𝑛
+
+))) , sg (𝒛 0 
+
+> 𝑛
+
+)  
+
++  1 − cos  Proj 0→𝑓 (Proj 𝑓 →0 (sg (𝒛 𝑓 ))) , sg (𝒛 𝑓 )  . (7) Since both round trips are detached, Lcyc reshapes only the projec-tor pair rather than the representations, jointly driving them toward a mutually invertible transport between the two subspaces [2, 31]. We abbreviate 𝒛 ≜ 𝒛 0 
+
+> 𝑛
+
+, 𝑃 ≜ Proj 0→𝑓 and 𝑄 ≜ Proj 𝑓 →0, which map between R𝐷 and R𝑟 with 𝑟 < 𝐷 . Let Λ = diag (𝜌 1,· · · , 𝜌 𝑟 ) collect the canonical correlations between 𝒛 and 𝒛 𝑓 , let ¯ 𝑄 be the scale-calibrated representative of 𝑄 , and let cond (·) denote the ratio of the largest to the smallest singular value. We formalize this intuition as follows ( cf. Appendix for the full proofs): 
+
+Lemma 1 (Cycle-consistency characterizes the round-trip geome-try) . Let 𝑃 ★ and 𝑄 ★ minimize the matching risks E∥𝑃 𝒛 − 𝒛 𝑓 ∥2 and 
+
+E∥𝑄 𝒛 𝑓 − 𝒛 ∥2. Then 𝑃 ★𝑄 ★ has eigenvalues {𝜌 2 
+
+> 𝑖
+
+}𝑟 𝑖 =1, where 𝜌 𝑖 denotes the 𝑖 -th canonical correlation between 𝒛 and 𝒛 𝑓 , and the scale-fixed counterpart of Eq. (7) satisfies eLcyc =2Í𝑟 𝑖 =1 (1−𝜌 2 
+
+> 𝑖
+
+)2 and ∥𝑃 ★𝑄 ★−𝐼 ∥op 
+
+≤√︃ eLcyc /2 in the canonical reduction of Appendix. A small eLcyc cor-responds to a well-conditioned round trip between the subspaces. 
+
+The overall alignment objective of VHA is formulated as LVHA =
+
+𝜆 trace Ltrace + 𝜆 cyc Lcyc , where 𝜆 cyc balances the alignment objec-tive against the invertibility that makes it verifiable. Building on Lemma 1, we further characterize how this invertible transport constrains the minimizers of Ltrace :
+
+Theorem 2 (Cycle-consistency drives projected alignment) . At the pair of Lemma 1, one-way alignment may settle on a direction other than the back-projected preference whenever Λ−1𝒛 𝑓 and Λ𝒛 𝑓 are not positively collinear. Let 𝐴 ≜ 𝑃 ¯𝑄 be invertible, and set Π ≜ ¯𝑄𝐴 −1𝑃 , 𝒛 ⋄ ≜
+
+¯𝑄𝐴 −1𝒛 𝑓 , and 𝒛 ★ ≜ ¯𝑄 𝒛 𝑓 . Then every minimizer 𝒛 min of Ltrace obeys 
+
+Π𝒛 min =𝜆 𝒛 ⋄ for some 𝜆 > 0, with ∥𝒛 ⋄−𝒛 ★ ∥ ≤ cond ( ¯𝑄 )∥ 𝐴 −1−𝐼 ∥op ∥𝒛 ★ ∥.
+
+That is, once the transport is invertible, the projected component of the alignment minimizer is pinned to a single direction, and its deviation from the back-projected preference shrinks as the round trip approaches the identity, which excludes the rank-collapse form of spurious alignment. 
+
+4.6 Optimization Objective 
+
+Following the base recommender in Section 4.3, each branch 𝑏 ∈{0, 1, 2} of HPG utilizes its predicted representation 𝒛 𝑏 𝑛 +𝑏 to generate the semantic ID of the target 𝑖 𝑛 +𝑏 +1 with a token-level MTP loss: 
+
+L𝑏 = −
+
+> 𝑘
+
+∑︁ 
+
+> 𝑗 =1
+
+log softmax 
+
+
+
+𝑬 𝑗 · [ 𝑔 (𝒛 𝑏 𝑛 +𝑏 )] 𝑗 /𝜏 
+
+  
+
+> 𝑐 (𝑛 +𝑏 +1,𝑗 )
+
+, (8) 
+
+Table 1: Statistics of three real-world datasets. Dataset #User #Item #Interactions Sparsity 
+
+Game 22,970 30,642 310,554 99.96% Baby 40,501 49,783 485,607 99.98% Arts 20,965 76,985 280,931 99.98% where 𝑬 𝑗 is the embedding matrix of the 𝑗 -th codebook, and 
+
+𝑐 (𝑛 +𝑏 +1,𝑗 ) denotes the 𝑗 -th SID of the target item 𝑖 𝑛 +𝑏 +1 within MTP-
+
+𝑏 . Hence, the overall objective of HPG is LHPG = L0 + 𝜆 1 L1 + 𝜆 2 L2,where 𝜆 1 and 𝜆 2 control the contribution of each future-behavior supervision term. Together with LVHA in Section 4.5, the final optimization objective of EchoRec is formulated as: 
+
+L = LHPG + L VHA , (9) where the former propagates preferences across horizons and the latter verifiably echoes them back to the decoding representation. 3
+
+Further Discussion. Due to space limitations, we provide the computational complexity analysis, comparison with MTP-related recommenders, and discussion of EchoRec’s threefold novelty in Appendix. 
+
+5 Experiments 5.1 Experimental Setups 
+
+5.1.1 Dataset. To evaluate the effectiveness of EchoRec , we con-struct three datasets based on the Amazon Reviews ’23 4. Following the traditional GR protocol [12, 21–23], we chronologically orga-nize each user’s historical interactions and extend the leave-one-out evaluation to the specific multi-item prediction task by reserving the last three interacted items as test set, using the fourth-to-last item as the validation set, and treating all the remaining interactions as training set. The statistical details are summarized in Table 1, and the complete construction process is elaborated in Appendix. 
+
+5.1.2 Baselines. To evaluate the effectiveness of EchoRec , we compare it with six representative generative recommenders, in-cluding EAGER [30], TIGER [27], LETTER [29], ETEGRec [18], 
+
+SETRec [14], and RPG [12]. Due to space limitations, detailed descriptions of them are provided in Appendix. 
+
+5.1.3 Evaluation Metrics. We choose Hit Rate (HR@K) and Nor-malized Discounted Cumulative Gain (NDCG@K) for evaluation, where k ∈ { 10 , 20 }. Following conventional GR works [3, 11, 17], we adopt the all-ranking paradigm to avoid selection bias. 
+
+5.1.4 Implementation Details. All methods are trained and eval-uated under identical environments on each dataset, sharing the same data splits, pre-computed SID representations, and evaluation protocol, where EchoRec retains its three-horizon training objec-tive within the training split yet sees no extra supervision beyond the baselines, and is evaluated solely with MTP-0. Each method is independently run three times with different seeds. Due to space limitations, more details are provided in Appendix.  
+
+> 3Due to the space limitation, the detailed training and inference pseudocode and training strategies are provided in Appendix.
+> 4https://amazon-reviews-2023.github.io/ EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+Table 2: Performance comparison of EchoRec against six baselines across three datasets. ∗ denotes statistically significant improvements of EchoRec over its corresponding backbone ( p < 0.01 with paired t-tests). Algorithm Game Baby Arts H@10 N@10 H@20 N@20 H@10 N@10 H@20 N@20 H@10 N@10 H@20 N@20 
+
+EAGER [30] 0.0266 0.0132 0.0376 0.0160 0.0172 0.0094 0.0241 0.0111 0.0024 0.0016 0.0030 0.0018 TIGER [27] 0.0831 0.0443 0.1275 0.0554 0.0220 0.0110 0.0352 0.0143 0.0583 0.0364 0.0791 0.0417 LETTER [29] 0.0361 0.0179 0.0544 0.0225 0.0210 0.0108 0.0352 0.0144 0.0177 0.0095 0.0262 0.0116 ETEGRec [18] 0.0631 0.0328 0.0968 0.0413 0.0206 0.0106 0.0330 0.0137 0.0384 0.0214 0.0557 0.0258 RPG [12] 0.0931 0.0564 0.1249 0.0644 0.0362 0.0243 0.0452 0.0266 0.0625 0.0421 0.0802 0.0466 
+
+EchoRec (RPG) 0.1035* 0.0628* 0.1382* 0.0715* 0.0426* 0.0295* 0.0528* 0.0321* 0.0716* 0.0498* 0.0911* 0.0547* 
+
+Rel. Imp. +11.17% +11.35% +10.65% +11.02% +17.68% +21.40% +16.81% +20.68% +14.56% +18.29% +13.59% +17.38% 
+
+SETRec [14] 0.1157 0.0610 0.1722 0.0752 0.0322 0.0164 0.0511 0.0212 0.0746 0.0412 0.1086 0.0498 
+
+EchoRec (SETRec) 0.1231* 0.0657* 0.1839* 0.0810* 0.0373* 0.0193* 0.0587* 0.0247* 0.0838* 0.0468* 0.1197* 0.0559* 
+
+Rel. Imp. +6.40% +7.70% +6.79% +7.71% +15.84% +17.68% +14.87% +16.51% +12.33% +13.59% +10.22% +12.25% 0.1 0.1 0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0 0.1 0.1       
+
+> (b) Baby 0.0 0.0 0.1 0.1 0.1 0.1 0.1 0.1
+> (c) Arts
+> EchoRec EchoRec −ℒ !"! EchoRec −VHA EchoRec −HPG −VHA
+> 0.12 0.13 0.14
+> (a) Game 0.04 0.05 0.06 0.07 0.08 0.09 0.10 0.03 0.05 0.06 H@20 N@20 0.06 0.07 0.08 0.02 0.03 0.04 0.04
+
+Figure 5: Results of EchoRec and its ablation versions on Game, Baby, and Arts. All components are effective. 
+
+5.2 Performance Comparison 
+
+To demonstrate the effectiveness of EchoRec , we implement it with two diverse backbones and compare them with six GR baselines across three datasets in Table 2, from which we observe that: (1) 
+
+EchoRec consistently and significantly outperforms its base recom-mender on all datasets and metrics, implying that the sequentially dependent supervision of HPG and the verifiable alignment of VHA effectively convert the informative signals within future behav-iors into recommendation gains. (2) The relative improvements on NDCG generally exceed those on HR, indicating that EchoRec not only retrieves more correlated target items but ranks them higher, as the holistic preference internalized by VHA refines the decoding representation toward fine-grained preference discrimination. (3) Among the baselines, the methods with stronger tokenization or decoding mechanism ( e.g., SETRec and RPG) generally surpass the earlier generative recommenders, yet their relative strengths fluctu-ate across datasets, reflecting the sensitivity of the single next-item objective to data characteristics. In contrast, EchoRec delivers sta-ble gains over its backbone on every dataset, showing the value of exploiting future behaviors beyond this single target. 
+
+5.3 Ablation Study 
+
+To verify the contribution of each design within our EchoRec ,we quantify the contribution of each module in Section 5.3.1, and further justify the superiority of the tailored HPG in Section 5.3.2. 
+
+5.3.1 Component Ablation. To verify the contribution of each mod-ule, we compare EchoRec with three ablated variants in Figure 5, where EchoRec −L 𝑐𝑦𝑐 keeps the one-way alignment without the cycle-consistency constraint, EchoRec −VHA retains only the multi-horizon supervision, and EchoRec −HPG −VHA equals the base rec-ommender. We observe that: (1) EchoRec −VHA consistently sur-passes EchoRec −HPG −VHA across all datasets, indicating that the 0.0 0.3 0.6 0.9 item 1 item 2 item 3 𝑖 !"# − 𝑖 !"$ 𝑖 !"# − 𝑖 !"% 𝑖 !"$ − 𝑖 !"% Avg. 060 30 90       
+
+> Jaccard Similarity (%)
+> 0.0 0.1 0.1 0.1
+> 0.0 0.0 0.1 0.1
+> item 1 item 2 item 3
+> 0.01 0.05 0.03 0.07
+> 𝑖 !"# 𝑖 !"$ 𝑖 !"%
+> NDCG@10
+> RPG-Seq. RPG-Par.
+> (b) Inter-horizon overlap of decoded items (a) Horizon-wise performance comparison
+> RPG+HPG
+> 0.03 0.09 0.06 0.12 HR@10
+> RPG+HPG RPG-Par. RPG-Seq.
+
+Figure 6: Multi-horizon prediction performance of RPG+HPG against RPG-Seq. and RPG-Par. on Game, in terms of (a) the horizon-wise performance and (b) the inter-horizon overlap of the decoded items at three future horizons. 
+
+sequentially dependent supervision of HPG indeed converts fu-ture behaviors into informative signals. (2) Appending the one-way alignment brings further gains, indicating that the consolidated 
+
+𝒛 𝑓 carries holistic information beyond the decoding repre-sentation rather than trivially replicating 𝒛 0 
+
+> 𝑛
+
+, since aligning toward such a shortcut target would yield no improvement. This empirically rules out the target-side shortcut concern in Eq. (5). (3) 
+
+EchoRec achieves the best performance on all datasets, indicating that the cycle-consistency constraint further suppresses the spuri-ous alignment that the one-way objective alone cannot exclude. 
+
+5.3.2 Multi-Horizon Structure Ablation. To justify the sequential chaining design of HPG, we follow the protocol of Section 3.2.2 to replace it with two alternative multi-horizon structures upon the same base recommender, where RPG-Par. decodes all horizons from the shared context and RPG-Seq. rolls out the prediction without horizon-specific supervision. As shown in Figure 6, the horizon-wise performance measures whether the future horizons are accu-rately predicted without compromising the immediate one, while the inter-horizon overlap examines whether the predictions across horizons are genuinely differentiated rather than homogenized replicas. We observe that: (1): Sequential chaining within HPG improves the future horizons without compromising the imme-diate one. RPG+HPG achieves the best performance at 𝑖 𝑛 +1 and 
+
+𝑖 𝑛 +2 on both metrics, and remains competitive at 𝑖 𝑛 +3. In contrast, 
+
+RPG-Seq. lags behind across future horizons for lacking any supervi-sion, while RPG-Par. suffers from interference at 𝑖 𝑛 +1, a degradation that never emerges on RPG+HPG whose future signals are absorbed without sacrificing the immediate objective. (2): Horizon-specific su-pervision differentiates the predictions across horizons. RPG+HPG Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haokai Ma et al. (a) Loss weight 𝜆 !"#$% (b) Loss weight 𝜆 $&$            
+
+> 00.1 0.3 0.5 1.0 2.0 0.038 0.040 0.042 0.044 00.1 0.3 0.5 1.0 2.0 0.038 0.040 0.042 0.044 HR@10 HR@10
+
+Figure 7: Sensitivity of EchoRec to the loss weights (a) 𝜆 𝑡𝑟𝑎𝑐𝑒 
+
+and (b) 𝜆 𝑐𝑦𝑐 on Baby, where ★ marks the adopted value. 0.0 0.0 0.0 0.1                
+
+> 00.1M0.2M0.5M 1M
+> 0.04 0.02 0.06 HR@10
+> 0.0 0.0 0.1 0.1
+> 00.1M0.2M0.5M 1M
+> 0.06 0.03 0.09 HR@10 EchoRec RPG EchoRec RPG
+> 0% 5% 10% 50% 20% 30% 40% 000% 5% 10% 60% 20% 30% 40% 80% 0% 5% 10% 60% 20% 30% 40% 80%
+> (b) Arts (a) Baby
+
+Figure 8: Robustness analysis of EchoRec against RPG on Baby and Arts, where the proportion 𝜂 of historical interac-tions is randomly replaced with sampled items. 
+
+exhibits the lowest average inter-horizon overlap among all vari-ants, even below the unsupervised rollout of RPG-Seq. , indicating that each auxiliary branch captures the intent transition of its own horizon rather than replicating the immediate prediction, which resolves the homogenization pitfall identified in Section 3.2.2. These results justify the sequential chaining of HPG, which additionally endows EchoRec with the multi-item generation ability to forecast a coherent yet non-redundant trajectory within a single model. 
+
+5.4 Robustness Analysis 
+
+5.4.1 Robustness Analysis on Important Parameters. We examine the sensitivity of EchoRec to the two loss weights of VHA on Baby, varying 𝜆 trace and 𝜆 cyc within {0, 0.1, 0.3, 0.5, 1.0, 2.0} in Figure 7. Both parameters exhibit a unimodal trend that peaks at moderate values ( 𝜆 trace =0.5 and 𝜆 cyc = 0.3): a smaller weight under-exploits the one-way alignment or the cycle constraint, while an over-large one distracts the optimization from the primary next-item objective. 
+
+EchoRec outperforms its base recommender under all configura-tions, implying its robustness against the hyper-parameter selection rather than relying on delicate tuning. 
+
+5.4.2 Robustness Analysis on Noisy Interactions. To evaluate the robustness of EchoRec against noisy behavioral sequences, we randomly replace a proportion 𝜂 ∈ { 0% , 5% , 10% , 20% , 30% , 40% , 60% ,
+
+80% } of items in each historical sequence with items uniformly sampled from the corpus, where 𝜂 = 0% corresponds to the original input. As reported in Figure 8, EchoRec consistently outperforms RPG under mild to moderate noise, and the relative improvement first enlarges with the noise ratio ( e.g., from 17.68% at 𝜂 = 0% to 54.89% at 𝜂 = 20% on HR@10 of Baby) before narrowing under heavier corruption. We attribute this to the holistic preference in-ternalized by VHA, where the decoding representation is aligned to the consolidated multi-horizon preference rather than individual interactions, sporadically corrupted items are less likely to distort prediction. Only under extreme corruption ( 𝜂 ≥ 60%) do both meth-ods degrade to comparable and unusable performance, which is expected as the behavioral evidence itself becomes unreliable. 
+
+Table 3: Efficiency comparison results of EchoRec (RPG) against SETRec and RPG, where “#Tra.” and “#Inf.” denote the average training and inference latency per batch, while “#Mem.” denotes the GPU memory usage during inference.                                
+
+> Dataset Algorithm #Tra. (ms) #Inf. (ms) #Mem. (MiB)
+> Game SETRec 125.61 41.57 1464.07 RPG 30.11 87.44 181.04
+> EchoRec (RPG) 61.87 85.46 181.04 Baby SETRec 139.81 46.46 2231.32 RPG 11.25 64.13 171.54
+> EchoRec (RPG) 32.81 64.21 171.54 Arts SETRec 141.68 48.33 2964.74 RPG 12.50 67.32 215.40
+> EchoRec (RPG) 32.97 68.96 215.40
+
+5.4.3 Robustness Analysis on Diverse Backbones. Since EchoRec 
+
+only appends the auxiliary branches and optimization objectives upon the base recommender while leaving the recommender itself unmodified, it can be seamlessly plugged into diverse backbones. To verify such robustness, we further instantiate it upon SETRec [14], whose order-agnostic set identifiers differ fundamentally from RPG. As reported in Table 2, EchoRec (SETRec) consistently and sig-nificantly outperforms SETRec across all datasets and metrics, ex-hibiting the same trend as EchoRec (RPG) . Considering that these two backbones diverge in both tokenization and decoding strategy, these consistent gains indicate that the multi-horizon supervision of HPG and the verifiable alignment of VHA jointly capture the backbone-agnostic value of future behaviors, rendering EchoRec 
+
+a plug-and-play framework for generative recommenders. 
+
+5.5 In-depth Analysis 
+
+5.5.1 Computational Complexity Analysis. To verify the complex-ity analysis in Appendix, we compare the training latency, infer-ence latency per batch, and the inference GPU memory usage of 
+
+EchoRec against SETRec and RPG in Table 3. We notice that: (1) 
+
+The training overhead of EchoRec remains affordable. Com-pared with RPG, EchoRec increases the training latency ( e.g., from 11.25ms to 32.81ms on Baby) due to the auxiliary branches and alignment objectives, whereas such training-only cost is well amor-tized as a one-off investment. (2) EchoRec introduces negligible inference overhead. The inference latency of EchoRec stays nearly identical to RPG on all datasets, empirically confirming that 
+
+all auxiliary components serve as disposable scaffolding dis-carded at inference . (3) The memory footprint of EchoRec stays lightweight at serving. Its inference memory usage remains nearly identical to RPG and substantially below SETRec, as all auxil-iary components are discarded and only MTP-0 is activated during serving. Overall, EchoRec delivers its gains at marginal train-ing cost while fully preserving the online serving efficiency .
+
+5.5.2 Case Study. To illustrate how EchoRec benefits from the future-behavior supervision, we show two representative cases from Baby. Figure 9 (a) presents a next-item recommendation case, where RPG recommends generally relevant items such as booster seats and baby wipes, whereas EchoRec accurately ranks “Diapers (Size 5, 96 Count)” at the top, with a same-series “Diapers (Size 5, 25 Count)” immediately after. We attribute this to the holistic EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Historical Sequence: Mattress Pad Cover                                 
+
+> →…→Infant Car Seat →Diapers (Size 1) →
+> stationary baby rocker →Baby Hair Oil
+> Ground Truth: Diapers (Size 5, 96 Count)
+> Top-1: Folding Booster Seat Top-2: Sensitive Baby Wipes Top-3: Care Baby Wipes Top-1: Diapers (Size 5, 96 Count)
+> Top-2: Diapers (Size 5, 25 Count)
+> Top-3: Sensitive Baby Wipes
+> Historical Sequence: Portable Baby & Toddler Dining Chair →Premium Cotton Muslin Swaddle Blanket →100% Cotton Muslin Swaddle Blanket →Audio Baby Monitor →
+> Baby Playard Mattress Cover
+> Ground Truth: Square Corner Playmat →Travel Booster Seat →Baby Cleansing Water
+> (a) Next-item Recommendation (b) Multi-horizon Recommendation
+> RPG-Seq. EchoRec
+> Cotton Mini-Crib Sheet →Cotton Mini-Crib Sheet →Travel Booster Seat Square Corner Playmat →Cotton Portable Sheet →Quilted Playard Sheet
+> RPG EchoRec
+
+Figure 9: Case study of EchoRec on Baby, including (a) the next-item recommendation and (b) the multi-horizon recom-mendation, where the ground-truth items are marked in red. 
+
+preference internalized by VHA, which captures the temporal pro-gression of user demands rather than merely matching the seman-tics of recent interactions. Figure 9 (b) illustrates a multi-horizon recommendation case, where EchoRec correctly generates “Square Corner Playmat” at the immediate horizon and continues with di-verse yet semantically coherent items, whereas the predictions of 
+
+RPG-Seq. remain close to each other across the first two horizons. These cases qualitatively imply that the multi-horizon supervision of HPG and the verifiable alignment of VHA enable EchoRec to forecast a reasonable trajectory of future behaviors. 
+
+6 Conclusion 
+
+In this paper, we investigate how to unlock the dense-supervision potential of MTP to enhance generative recommendation, sup-ported by the empirical observation that future behaviors semanti-cally echo the current interaction and thus qualify as informative supervision. Considering that this echo decays under intent transi-tions and thereby demands sequentially dependent modeling across horizons, we propose EchoRec , which regards preference mod-eling as an acoustic echoing process. Specifically, HPG converts future behaviors into sequentially dependent supervision through chained MTP branches where each horizon conditions on its prede-cessor, while VHA consolidates them into the holistic preference and echoes it back through a cycle-consistent projector pair, with theoretical guarantees that exclude the rank-collapse form of spu-rious alignment. Extensive experiments on three datasets demon-strate the effectiveness of our EchoRec , together with its naturally acquired multi-item generation ability. In the future, we plan to explore adaptive horizon selection that calibrates the supervision strength against the decaying semantic echo, and to investigate a mesh-style prediction architecture that captures the fine-grained correlation evolution across both tokens and items. 
+
+References 
+
+[1] Gregor Bachmann and Vaishnavh Nagarajan. 2024. The pitfalls of next-token prediction. In Proceedings of the 41st International Conference on Machine Learning .2296–2318. [2] Hyojin Bahng, Caroline Chan, Fredo Durand, and Phillip Isola. 2025. Cycle consistency as reward: Learning image-text alignment without human prefer-ences. In Proceedings of the IEEE/CVF International Conference on Computer Vision .22934–22946. [3] Junchen Fu, Xuri Ge, Alexandros Karatzoglou, Ioannis Arapakis, Suzan Ver-berne, Joemon M Jose, and Zhaochun Ren. 2026. Differentiable Semantic ID for Generative Recommendation. arXiv preprint arXiv:2601.19711 (2026). [4] Tiezheng Ge, Kaiming He, Qifa Ke, and Jian Sun. 2013. Optimized product quantization. IEEE transactions on pattern analysis and machine intelligence 36, 4 (2013), 744–755. [5] Anastasios Gerontopoulos, Spyros Gidaris, and Nikos Komodakis. 2025. Multi-token prediction needs registers. arXiv preprint arXiv:2505.10518 (2025). [6] Fabian Gloeckle, Badr Youbi Idrissi, Baptiste Rozière, David Lopez-Paz, and Gabriel Synnaeve. 2024. Better & faster large language models via multi-token prediction. arXiv preprint arXiv:2404.19737 (2024). [7] Ruidong Han, Bin Yin, Shangyu Chen, He Jiang, Fei Jiang, Xiang Li, Chi Ma, Mincong Huang, Xiaoguang Li, Chunzhen Jing, et al. 2025. Mtgr: Industrial-scale generative recommendation framework in meituan. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management .5731–5738. [8] Yingzhi He, Yan Sun, Junfei Tan, Yuxin Chen, Xiaoyu Kong, Chunxu Shen, Xiang Wang, An Zhang, and Tat-Seng Chua. 2026. Reasoning over semantic ids enhances generative recommendation. arXiv preprint arXiv:2603.23183 (2026). [9] Min Hou, Le Wu, Yuxin Liao, Yonghui Yang, Zhen Zhang, Yu Wang, Changlong Zheng, Han Wu, and Richang Hong. 2026. A survey on generative recommenda-tion: Data, model, and tasks. AI Open (2026). [10] Yupeng Hou, Zhankui He, Julian McAuley, and Wayne Xin Zhao. 2023. Learning vector-quantized item representation for transferable sequential recommenders. In Proceedings of the ACM Web Conference 2023 . 1162–1171. [11] Yupeng Hou, Haven Kim, Clark Mingxuan Ju, Eduardo Escoto, Neil Shah, and Julian McAuley. 2026. Expressiveness Limits of Autoregressive Semantic ID Generation in Generative Recommendation. arXiv preprint arXiv:2605.06331 
+
+(2026). [12] Yupeng Hou, Jiacheng Li, Ashley Shin, Jinsung Jeon, Abhishek Santhanam, Wei Shao, Kaveh Hassani, Ning Yao, and Julian McAuley. 2025. Generating long semantic ids in parallel for recommendation. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 2 . 956–966. [13] Peiyu Hu, Wayne Lu, and Jia Wang. 2026. From ids to semantics: A generative framework for cross-domain recommendation with adaptive semantic tokeniza-tion. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 40. 14874–14882. [14] Xinyu Lin, Haihan Shi, Wenjie Wang, Fuli Feng, Qifan Wang, See-Kiong Ng, and Tat-Seng Chua. 2025. Order-agnostic identifier for large language model-based generative recommendation. In Proceedings of the 48th international ACM SIGIR conference on research and development in information retrieval . 1923–1933. [15] Zhijie Lin, Zhuofeng Li, Chenglei Dai, Wentian Bao, Shuai Lin, Enyun Yu, Haoxi-ang Zhang, and Liang Zhao. 2025. GReF: A Unified Generative Framework for Efficient Reranking via Ordered Multi-token Prediction. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management .5879–5887. [16] Aixin Liu, Bei Feng, Bing Xue, Bingxuan Wang, Bochao Wu, Chengda Lu, Cheng-gang Zhao, Chengqi Deng, Chenyu Zhang, Chong Ruan, et al. 2024. Deepseek-v3 technical report. arXiv preprint arXiv:2412.19437 (2024). [17] Chang Liu, Yimeng Bai, Xiaoyan Zhao, Yang Zhang, Fuli Feng, and Wenge Rong. 2025. Discrec: Disentangled semantic-collaborative modeling for generative recommendation. arXiv preprint arXiv:2506.15576 (2025). [18] Enze Liu, Bowen Zheng, Cheng Ling, Lantao Hu, Han Li, and Wayne Xin Zhao. 2025. Generative recommender with end-to-end learnable item tokenization. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 729–739. [19] Xiaohao Liu, Xiaobo Xia, Weixiang Zhao, Manyi Zhang, Xianzhi Yu, Xiu Su, Shuo Yang, See-Kiong Ng, and Tat-Seng Chua. 2026. L-mtp: Leap multi-token prediction beyond adjacent context for large language models. Advances in Neural Information Processing Systems 38 (2026), 102569–102600. [20] Zhanyu Liu, Shiyao Wang, Xingmei Wang, Rongzhou Zhang, Jiaxin Deng, Honghui Bao, Jinghao Zhang, Wuchao Li, Pengfei Zheng, Xiangyu Wu, et al. 2025. Onerec-think: In-text reasoning for generative recommendation. arXiv preprint arXiv:2510.11639 (2025). [21] Haokai Ma, Yunshan Ma, Ruobing Xie, Lei Meng, Jialie Shen, Xingwu Sun, Zhan-hui Kang, and Tat-Seng Chua. 2026. Large Language Model Empowered Rec-ommendation Meets All-Domain Continual Pre-Training. IEEE Transactions on Knowledge and Data Engineering (2026), 1–14. doi:10.1109/TKDE.2026.3717059 [22] Haokai Ma, Ruobing Xie, Lei Meng, Xin Chen, Xu Zhang, Leyu Lin, and Zhanhui Kang. 2024. Plug-In Diffusion Model for Sequential Recommendation. In Thirty-Eighth AAAI Conference on Artificial Intelligence, AAAI 2024, February 20-27, 2024, Vancouver, Canada . 8886–8894. doi:10.1609/AAAI.V38I8.28736 [23] Haokai Ma, Ruobing Xie, Lei Meng, Xin Chen, Xu Zhang, Leyu Lin, and Jie Zhou. 2024. Triple Sequence Learning for Cross-domain Recommendation. ACM Trans. Inf. Syst. 42, 4 (2024). doi:10.1145/3638351 [24] Haokai Ma, Ruobing Xie, Lei Meng, Fuli Feng, Xiaoyu Du, Xingwu Sun, Zhanhui Kang, and Xiangxu Meng. 2026. Negative Sampling in Recommendation: A Survey and Future Directions. ACM Trans. Inf. Syst. (2026). doi:10.1145/3793855 [25] Haokai Ma, Ruobing Xie, Lei Meng, Yimeng Yang, Xingwu Sun, and Zhanhui Kang. 2024. SeeDRec: Sememe-based Diffusion for Sequential Recommendation.. In IJCAI . 2270–2278. [26] Gustavo Penha, Edoardo D’Amico, Marco De Nadai, Enrico Palumbo, Alexandre Tamborrino, Ali Vardasbi, Max Lefarov, Shawn Lin, Timothy Heath, Francesco Fabbri, et al. 2025. Semantic ids for joint generative search and recommendation. In Proceedings of the Nineteenth ACM Conference on Recommender Systems . 1296– 1301. [27] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, et al. Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haokai Ma et al. 
+
+2023. Recommender systems with generative retrieval. Advances in Neural Information Processing Systems 36 (2023), 10299–10315. [28] Mohammad Samragh, Arnav Kundu, David Harrison, Kumari Nishu, Devang Naik, Minsik Cho, and Mehrdad Farajtabar. 2025. Your llm knows the future: Uncovering its multi-token prediction potential. arXiv preprint arXiv:2507.11851 
+
+(2025). [29] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable item tokenization for generative recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 2400–2409. [30] Ye Wang, Jiahao Xun, Minjie Hong, Jieming Zhu, Tao Jin, Wang Lin, Haoyuan Li, Linjun Li, Yan Xia, Zhou Zhao, et al. 2024. Eager: Two-stream generative recommender with behavior-semantic collaboration. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 3245–3254. [31] Hongye Xu and Bartosz Krawczyk. 2026. Two-Way Is Better Than One: Bidirec-tional Alignment with Cycle Consistency for Exemplar-Free Class-Incremental Learning. arXiv preprint arXiv:2606.05675 (2026). [32] Jun Zhang, Yi Li, Yue Liu, Changping Wang, Yuan Wang, Yuling Xiong, Xun Liu, Haiyang Wu, Qian Li, Enming Zhang, et al. 2025. GPR: Towards a Generative Pre-trained One-Model Paradigm for Large-Scale Advertising Recommendation. 
+
+arXiv preprint arXiv:2511.10138 (2025). [33] Zuowu Zheng, Ze Wang, Fan Yang, Jiangke Fan, Teng Zhang, Yongkang Wang, and Xingxing Wang. 2025. Ega-v2: An end-to-end generative framework for industrial advertising. arXiv preprint arXiv:2505.17549 (2025). [34] Qimin Zhong, Hao Liao, Siwei Wang, Mingyang Zhou, Xiaoqun Wu, Rui Mao, and Wei Chen. 2025. Understanding and Enhancing the Planning Capability of Language Models via Multi-Token Prediction. arXiv preprint arXiv:2509.23186 
+
+(2025). [35] Qiyong Zhong, Jiajie Su, Yunshan Ma, Julian McAuley, and Yupeng Hou. 2025. Pctx: Tokenizing Personalized Context for Generative Recommendation. arXiv preprint arXiv:2510.21276 (2025).

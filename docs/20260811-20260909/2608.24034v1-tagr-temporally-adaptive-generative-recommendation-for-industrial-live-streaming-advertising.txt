@@ -1,0 +1,633 @@
+Title: TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising
+
+URL Source: https://arxiv.org/pdf/2608.24034v1
+
+Published Time: Wed, 26 Aug 2026 00:31:43 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising 
+
+# Wencai Ye 1,∗, Guangyi Liu 1,2,∗, Chaoyi Wang 1, Wenbin Luo 1, Shengyu Wang 1, Mingjie Sun 1, Peng Wang 1, Quanming Yao 2, Wenjin Wu 1,†, Peng Jiang 1
+
+> 1
+
+Kuaishou Technology, Beijing, China 2Tsinghua University, Beijing, China {yewencai,liuguangyi06,wangchaoyi,luowenbin03,wangshengyu,wangpeng16,wuwenjin,jiangpeng}@kuaishou.com 
+
+## Abstract 
+
+Live-streaming advertising has become an important monetiza-tion channel on short-video and e-commerce platforms. Its rapidly evolving live content, promoted products, and user feedback im-pose stringent freshness requirements on recommendation models. Existing generative recommenders are largely designed for rela-tively stationary item domains and therefore adapt inadequately at three levels: static semantic IDs (SID) cannot represent evolving live-ad targets, single-scale user behavior modeling cannot reliably capture users’ rapidly changing intent, and preference optimization struggles to balance fresh on-policy feedback with training stability. We propose TAGR , a generative recommendation framework that performs temporal adaptation at three levels: live-ad tokeniza-tion, user intent modeling, and preference alignment. At the token level, Live Semantic-Collaborative ID (LSID) periodically up-dates each active live ad’s SID assignment according to its current live scene and promoted products, while retaining a stable hier-archical token vocabulary for autoregressive generation. At the intent level, Intent-Aware Generation (IAG) models live-room entry histories at multiple temporal granularities as the primary intent sequence, preserves auxiliary behavior sequences as sepa-rate input channels, and weights next-token prediction (NTP) using post-request intent evidence and business value . At the alignment level, Intermittent On-Policy Preference Optimization (IOPO) 
+
+periodically samples fresh candidate groups from the current policy and performs behavior- and value-aligned preference updates inter-leaved with supervised NTP maintenance to preserve the learned behavior distribution. Deployed on a large-scale e-commerce live-stream advertising platform, TAGR improves live-room entry and shopping-cart click rates by 8.5% and 7.4% , respectively, and achieves a 16.1% revenue lift in this e-commerce live-stream advertising setting over the pro-duction baseline. These results demonstrate the effectiveness and industrial viability of temporally adaptive generative recommenda-tion for live-stream advertising. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems .
+
+## Keywords 
+
+Recommender Systems, Generative Recommendation, Live-Streaming Advertising, Temporal Adaptation, Semantic IDs.        
+
+> ∗Equal contribution. †Corresponding author. This work was done when G. Liu was an intern at Kuaishou Technology. t1t2t3
+> Exposure
+> See live ad
+> Live-room Entry
+> Enter the room
+> Live-cart Click
+> Browse products
+> Order Pay
+> Complete purchase
+> User
+> Behaviors
+> Live Ad Starts Live Scene Changes Live Product Changes
+> ...
+
+Figure 1: Live-stream advertising evolves at multiple time scales: live scenes and promoted products reshape live-ad tokens, user actions reveal shifting intent, and post-exposure feedback provides delayed preference signals. 
+
+## 1 Introduction 
+
+Live-streaming advertising has become a major monetization for-mat on short-video and e-commerce platforms, where rapidly chang-ing content and feedback place strong freshness demands on rec-ommendation [1, 9, 11, 13, 18]. Unlike a conventional ad associated with a relatively stable creative or item, a live ad is jointly defined by two time-varying objects: the current live scene and the set of products promoted in that scene. As illustrated in Figure 1, the scene captures how the streamer is currently selling, while the product set captures what is being promoted, along with current prices, promotions, and inventories; either the scene or product set may change within minutes, even when the live room remains unchanged. In parallel, a user’s intent may evolve from casual view-ing to product exploration and purchase as new live content and feedback arrive. Consequently, neither a persistent room identifier nor an individual product identifier alone can represent the serving target. Live-stream advertising must instead retrieve time-sensitive live ads according to the current scene, promoted products, and user intent across multiple time scales. Industrial advertising systems commonly use multi-stage dis-criminative pipelines [14, 15, 34]. Their retrieval stages construct candidate sets through fixed indexes and cached representations, af-ter which downstream models progressively estimate engagement and conversion. Generative recommendation provides a different retrieval paradigm by directly producing discrete candidate identi-fiers from user history and context [5, 8, 17, 27, 30]. Its hierarchical output space supports end-to-end retrieval and structured search, and offers a natural interface for representing sparse or newly arXiv:2608.24034v1 [cs.IR] 25 Aug 2026 Ye et al. 
+
+emerged targets. Recent work further enriches generative recom-mendation with semantic knowledge and more expressive user conditioning [24–26, 29, 31, 32]; in live-streaming recommendation, OneLive and SSRLive additionally explore dynamic tokenization and time-aware modeling [20, 23]. Despite this progress, applying generative recommendations to live-stream advertising presents three temporal challenges. First, live token-side temporal adaptation is required as the live ad evolves. Most non-live generative recommenders use static semantic IDs [5, 17, 27, 30]. Recent live-streaming methods intro-duce dynamic tokens for evolving live content [20, 23]. However, their targets primarily characterize the live stream or streamer. Live advertising further requires tokens to jointly track the current scene and promoted products while preserving a stable genera-tion space. Second, user intent-side temporal adaptation must account for user behavioral scale, behavior type, and super-vision reliability. Conventional sequential generation commonly conditions on a single chronological behavior history [5, 17, 20], which can obscure either transient or longer-range intent and lose behavior-specific signals. Moreover, standard next-token learning treats logged targets uniformly [17], although deeper feedback, such as cart clicks or purchases, provides stronger intent evidence than a brief live-room entry. Intent modeling therefore requires multi-scale, behavior-specific context and reliability-aware supervision. 
+
+Third, preference alignment-side temporal adaptation must balance policy-feedback freshness with behavioral preser-vation. Existing off-policy alignment methods learn from lagged-policy candidates [5, 27], which may cause reward mismatch as the policy and traffic distribution evolve. Continuous online RL improves policy-feedback freshness, but can destabilize training by repeatedly perturbing the behavior distribution learned from super-vised NTP. Preference alignment therefore requires current-policy feedback together with a mechanism that preserves supervised behavior. These challenges motivate a system-level approach to live-stream advertising that adapts jointly at the token, intent, and alignment levels. At the token level, Live Semantic-Collaborative ID (LSID) learns a stable hierarchical vocabulary through user-scene-product alignment, while periodically refreshing each active live ad’s request-independent token assignment according to its current scene and promoted products. At the intent level, Intent-Aware Generation (IAG) models the primary live-room entry sequence at multiple temporal granularities while preserving auxiliary be-havior streams and long-term profiles as separate input channels. During supervised training, post-request feedback provides intent evidence for how reliably each logged target reflects intent, while user and commercial signals determine its business value train-ing priority. At the alignment level, Intermittent On-Policy Preference Optimization (IOPO) periodically learns from can-didate groups produced by the current generator and interleaves these updates with supervised maintenance. Its behavior-aligned signal anchors generated targets to observed user feedback, while its value-aligned signal incorporates engagement and commercial feedback. Together, the three components adapt the generation token space, user-intent representation, and preference alignment to the temporal dynamics of live-stream advertising. To the best of our knowledge, TAGR is the first system-level study of generative recommendation for industrial live-stream advertising. We deploy its generative retrieval stage on a large-scale e-commerce platform and evaluate it through offline retrieval, component anal-ysis, and multi-week production experiments. TAGR improves live-room entry and shopping-cart click rates, as well as cold-start and mid-to-tail coverage, and the full system increases revenue by 16.1% 
+
+over the production discriminative baseline. These results show that three-level temporal adaptation is both effective and practical under industrial freshness, throughput, and latency constraints. Our main contributions are summarized as follows: 
+
+• We formulate live-stream advertising as a generative rec-ommendation problem requiring temporal adaptation at the token, intent, and alignment levels. 
+
+• We propose TAGR, comprising LSID for dynamic live to-ken construction, Intent-Aware Generation for multi-scale, multi-behavior intent representation, and IOPO for fresh yet stable preference alignment. 
+
+• We validate TAGR through large-scale offline and produc-tion experiments in e-commerce live-stream advertising, obtaining a 16.1% revenue lift together with improved post-exposure engagement, cold-start performance, and mid-to-tail coverage. 
+
+## 2 Methodology 2.1 Overview 
+
+We study live-streaming advertising recommendations in an indus-trial serving scenario. For each user request at time 𝑡 , the system observes a user context C𝑢 (𝑡 ), including the user profile, histori-cal behaviors, and recent interactions, together with the available live-stream ads A ( 𝑡 ). Each ad 𝑎 ∈ A ( 𝑡 ) is jointly defined by a live scene 𝑆 𝑎 (𝑡 ), which describes how the streamer is currently selling, and a promoted-product set 𝑃 𝑎 (𝑡 ), which describes the products being promoted and their product-side information at that moment. The objective is to generate a Top-𝐾 serve list that reflects the user’s current intent and contains live ads likely to produce consequential engagement and advertising revenue. TAGR connects the three levels of temporal adaptation in a sequential generation pipeline. LSID first converts each active live ad’s current scene and promoted-product set into a time-indexed discrete target y𝑎 (𝑡 ); these refreshed assignments define both the supervised labels for generation and the LSID-LiveID index used at serving time. Given these targets, Intent-Aware Generation (IAG) constructs a time-dependent request-time representation M𝑢 (𝑡 )
+
+from multi-scale live-room entries, separate auxiliary behavior channels, and long-term profiles, and refreshes M𝑢 (𝑡 ) whenever new user behaviors arrive. It then trains the decoder to predict y𝑎 (𝑡 ).Within this stage, MF-NTP uses post-request feedback as intent evidence and user and commercial signals as business value weights, thereby determining how strongly each logged target supervises the base generator. The resulting supervised generator initializes IOPO, which periodically samples fresh candidate groups from the current policy for preference updates and interleaves them with NTP steps that maintain the learned behavior distribution. At serving time, the refined generator produces Top-𝐾 serve LSIDs through beam search, and the same serving index resolves them to active live-stream ads. TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising 
+
+Figure 2: Overview of TAGR, which performs temporal adaptation at three levels: token-side target construction (dynamically updating identifier tokens for live ads), intent-side generation (modeling multi-scale, request-time user intent), and alignment-side optimization (intermittent on-policy preference optimization to align ranking with feedback). 
+
+## 2.2 Live Semantic-Collaborative ID 
+
+At the token level, accurate live-ad retrieval needs an identifier that tracks changes in the live scene and promoted products. A static identifier cannot jointly represent multiple products or distinguish the same product set across live scenes, while a purely semantic identifier misses collaborative evidence from user feedback. We thus propose Live Semantic-Collaborative ID (LSID) , which periodically updates the token assignment of each active live ad based on its latest scene and product-side features. To keep changing assignments learnable, LSID retains a stable hierarchical vocabulary for autoregressive generation and beam search. It learns this target space through user-scene-product alignment while keeping the assignment of each live ad canonical and request-independent. LSID constructs the live ad token representation from its two defining objects, the scene and product, and uses the user represen-tation to inject collaborative preference information during repre-sentation learning. The scene encoder summarizes the streamer’s historical selling style, current live-stream content, and real-time scene features; the product encoder summarizes product text, at-tributes, order status, and product-side features; and the user en-coder summarizes long-term interests and profile features. Con-cretely, vstyle denotes the streamer’s long-term selling style ex-tracted from historical product-carrying behaviors, vclip (𝑡 ) denotes the real-time live clip representation, and f𝑆 (𝑡 ) denotes other scene-side features. On the product side, etitle and ecaption are text embed-dings, aattr denotes structured product attributes, oorder (𝑡 ) captures real-time order status, and f𝑃 denotes additional product features. For the user, ginterest and hprofile denote global interest and profile features. We use three dedicated encoders, implemented as MLPs with ReLU activations [22], to project these heterogeneous inputs into a shared space: 
+
+s = Enc 𝑆 
+
+ [ vstyle ; vclip (𝑡 ); f𝑆 (𝑡 ) ] ,
+
+p = Enc 𝑃 
+
+ [ etitle ; ecaption ; aattr ; oorder (𝑡 ); f𝑃 ],
+
+u = Enc 𝑈 
+
+ [ ginterest ; hprofile ].
+
+(1) Ye et al. 
+
+We align the three representations along complementary direc-tions to make the target space both semantically meaningful and behavior-aware. User-to-Scene (U2S) and User-to-Product (U2P) alignments use live-room entry and cart-click signals to encode collaborative preference, while Scene-to-Product (S2P) alignment captures the co-occurrence structure between live scenes and pro-moted products. We optimize the following contrastive alignment loss [21]: 
+
+Lalign = LU2S (u, s) + L U2P (u, p) + L S2P (s, p). (2) After alignment, we construct the time-dependent live-ad em-bedding by fusing the current scene and product representations, followed by L2 normalization: 
+
+zlive (𝑡 ) = norm  𝛼 s(𝑡 ) + 𝛽 p(𝑡 ). (3) The user representation participates only in contrastive align-ment; token assignment itself depends on the scene and product representations in Eq. (3). Concretely, collaborative information is injected through the user-to-scene and user-to-product (U2S/U2P) contrastive objectives, which shape the shared embedding space (and hence the quantization/codebook geometry) before request-independent scene–product fusion and token assignment. LSID therefore incorporates collaborative structure without making the serving target specific to the requesting user. We quantize zlive (𝑡 )
+
+into a hierarchical token sequence using an RQ-KMeans code-book [8], which defines the vocabulary used by the generator. The live-ad embedding is periodically recomputed from the latest scene and product-side features and reassigned against this vocabulary. To reduce collisions without overfitting to individual live streams, the final level uses a streamer-aware hash bucket. Each live-stream ad is thus represented as: 
+
+y𝑎 (𝑡 ) = (𝑠 1, 𝑠 2, . . . , 𝑠 𝐷 ), 𝑠 ℓ ∈ V ℓ , (4) where 𝑠 ℓ denotes the token at level ℓ, 𝐷 is the LSID depth, and Vℓ is the vocabulary at that level. We omit the request-time index from individual tokens when the context is unambiguous. LSID thus realizes token-level temporal adaptation by allowing each active live-ad to follow its current scene and promoted prod-ucts while retaining a consistent hierarchical space for learning and decoding. 
+
+## 2.3 Intent-Aware Generation 
+
+At the intent level, effective user modeling should capture both the temporal structure of user intent and the different ways in which that intent is expressed, while also distinguishing which logged tar-gets reliably reflect it. We implement Intent-Aware Generation (IAG) with a Lazy Decoder [33], a lightweight Transformer de-coder [22], and two complementary designs. Multi-Scale Intent En-coding (MSI-Encoding) constructs the time-dependent request-time representation M𝑢 (𝑡 ) from a multi-scale live-room-entry sequence, separate auxiliary behavior streams, and long-term profile features. Whenever a new behavior arrives, IAG refreshes M𝑢 (𝑡 ) so that the representation evolves with the user’s latest evidence. Multi-Factor Weighted Next-Token Prediction (MF-NTP) then uses post-request feedback as intent evidence and user- and monetization-side signals as business value weights during supervised learning. Given the user representation M𝑢 (𝑡 ) and the previously gener-ated prefix, the decoder autoregressively predicts the LSID sequence 
+
+y = (𝑠 1, . . . , 𝑠 𝐷 ):
+
+𝑃 𝜃 (y | M𝑢 (𝑡 )) =
+
+> 𝐷
+
+Ö
+
+> ℓ=1
+
+𝑃 𝜃 (𝑠 ℓ | 𝑠 <ℓ , M𝑢 (𝑡 )) .
+
+MSI determines how intent is represented across behavioral scales and behavior types at request time, while MF-NTP determines how strongly the corresponding logged target should supervise the generator. 
+
+2.3.1 Multi-Scale Intent Encoding. User intent is revealed not only at different temporal granularities but also through heterogeneous behavioral channels. We therefore organize the request-time input into three parts: a primary intent sequence of live-room entries, aux-iliary behavior sequences such as likes, cart clicks, and orders, and 
+
+long-term user profiles containing profile and persistent-intent fea-tures. This separation allows the model to capture broad exploratory intent with dense behavioral coverage, deeper purchase-oriented intent with sparser but higher-confidence actions, and the user’s stable preference prior. Live-room entry forms the primary intent sequence because it is much denser than downstream purchase-oriented behaviors and provides broad coverage for request-time intent modeling after ad exposure. Let aentry (𝑡 ) = [aentry 1 , . . . , aentry  
+
+> 𝐿
+
+] denote the most recent entry actions available at request time 𝑡 . MSI applies strides 
+
+S = {1, 2, 10 } to construct fine-, intermediate-, and coarse-grained entry tokens. Fine-grained tokens preserve rapid short-term intent shifts, whereas coarser tokens summarize longer-range behavioral patterns; together with the long-term profile, they capture both the user’s immediate intent and stable preferences. For each stride 
+
+𝑠 ∈ S :
+
+T(𝑠 ) 
+
+> entry ,𝑗
+
+(𝑡 ) = W𝑠 
+
+h
+
+aentry    
+
+> 𝑠 (𝑗 −1)+ 1
+
+; . . . ; aentry 
+
+> 𝑠 𝑗
+
+i
+
++ p(𝑠 ) 
+
+> 𝑗
+
+, 𝑗 = 1, . . . , 
+
+ 𝐿 𝑠 
+
+
+
+.
+
+The resulting sequences form the multi-scale representation of primary intent: 
+
+Tmulti entry (𝑡 ) =
+
+h
+
+T(𝑠 1 ) 
+
+> entry
+
+(𝑡 ); T(𝑠 2 ) 
+
+> entry
+
+(𝑡 ); T(𝑠 3 ) 
+
+> entry
+
+(𝑡 )
+
+i
+
+.
+
+Entry actions capture the user’s immediate willingness to ex-plore a live room, whereas auxiliary behaviors characterize intent depth and item-level preference: likes indicate content recognition, cart clicks indicate purchase consideration, and orders indicate com-pleted purchase commitment. We denote these auxiliary streams as Aaux = {alike , acart , aorder , . . . }. These streams differ substantially in sparsity and temporal pattern. TAGR therefore preserves their action semantics by encoding each stream separately, rather than merging all actions into a single chronological history. The result-ing behavior-specific token sequences are concatenated with the multi-scale entry representation and long-term profile tokens: 
+
+M𝑢 (𝑡 ) = LN 
+
+ Tmulti entry (𝑡 ); Tlike (𝑡 ); Tcart (𝑡 ); Torder (𝑡 ); ... ; Tprofile 
+
+ 
+
+.
+
+The resulting M𝑢 (𝑡 ) exposes both the behavioral scale and be-havior type directly to the decoder. Attention can therefore select not only the temporal horizon most relevant to the current request, TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising 
+
+but also the action channel that best expresses the user’s current decision stage. MSI thus forms a time-dependent, multi-scale, multi-behavior representation of request-time intent, anchored by the dense entry sequence and refined by deeper auxiliary behavior streams. As new behaviors enter these sequences, refreshing M𝑢 (𝑡 )
+
+adapts the representation without discarding the coarse-grained patterns and profile features that encode stable preference. 
+
+2.3.2 Multi-Factor Weighted Next-Token Prediction. Multi-scale conditioning represents intent using information available at re-quest time, but it does not determine how reliably the subsequent logged target expresses that intent. In live-stream advertising, a brief exposure or entry provides only weak evidence that the dis-played live ad matches the user’s underlying product intent, whereas downstream actions such as cart clicks and orders provide pro-gressively stronger evidence. Treating all logged targets uniformly allows frequent but weak signals to dominate next-token learning. We therefore weight each logged target according to behavior-depth intent evidence , user value tier , and commercial value . Specifically, we assign each training sample 𝑥 a multiplicative weight: 
+
+𝑤 (𝑥 ) = 𝑤 feedback (𝑥 )
+
+| {z }
+
+> Intent Evidence
+
+· 𝑤 user (𝑥 ) · 𝑤 eCPM (𝑥 )
+
+| {z }
+
+> Business Value
+
+.
+
+• Intent evidence 𝑤 feedback (𝑥 ): The intent evidence weight uses post-request behavior depth as intent evidence that the logged target matches the user’s intent. Samples fol-lowed by deeper feedback, such as cart clicks or orders, receive more likelihood mass than those with only shallow exposure or entry feedback. 
+
+• Business value: The user-value-tier term 𝑤 user (𝑥 ) assigns a stratum-specific base weight using the user’s long-term advertising-value label 𝑢 type . The commercial-value term 
+
+𝑤 eCPM (𝑥 ) maps eCPM into a normalized quantile space and increases the contribution of samples in higher inter-vals; quantile normalization prevents extreme values from dominating optimization. These factors play distinct roles. The behavior-depth intent evi-dence weight estimates how reliably the logged target reflects user intent, whereas the user value tier and commercial value terms determine how much value weight the sample should receive in advertising recommendation; none of them is intended to estimate a calibrated outcome probability. MSI thus determines which request-time behavioral signals represent intent, and 𝑤 feedback determines 
+
+how confidently the logged target supervises that intent. Since LSID generation proceeds from coarse to fine levels, we additionally in-troduce level-wise factors 𝛾 = [𝛾 1, . . . , 𝛾 𝐷 ]. The MF-NTP objective is: 
+
+LNTP = −
+
+Í𝑥 ∈ B 𝑤 (𝑥 ) Í𝐷 ℓ=1 𝛾 ℓ · log 𝑃 𝜃 (𝑠 𝑥 ℓ |𝑠 𝑥  
+
+> <ℓ
+
+, M𝑥 𝑢 (𝑡 𝑥 )) 
+
+Í𝑥 ∈ B 𝑤 (𝑥 ) · Í𝐷 ℓ=1 𝛾 ℓ
+
+(5) where B is a training batch and 𝑡 𝑥 is the request time of sam-ple 𝑥 . In implementation, the sample weights are normalized and clipped for robustness. Post-request real-user feedback is used only to weight supervision during training; serving-time generation depends solely on the request-time context M𝑢 (𝑡 ) and does not re-quire future feedback. Together, MSI and MF-NTP construct intent from multi-scale, multi-behavior histories and learn it from logged 
+
+Figure 3: Preference alignment in SID-based generative rec-ommendation systems: (a) Typical off-policy preference opti-mization learns from a lagged-policy candidate pool, whereas (b) IOPO performs on-policy candidate generation and ap-plies intermittent preference updates while jointly training the Reward Model. 
+
+targets weighted by behavior-depth intent evidence and business value. 
+
+## 2.4 Intermittent On-Policy Preference Optimization 
+
+At the preference alignment level, reliable online adaptation de-pends on feedback that remains representative of the current pol-icy’s candidate distribution. Traditional SID-based generative rec-ommendation systems [5, 27] typically perform off-policy prefer-ence optimization, relying on candidates generated by a lagged policy; similar off-policy effects have also been observed in efficient RL training pipelines [28]. Consequently, their supervision may be-come stale as the current policy and traffic distribution move away from the collection policy. As shown in Figure 3, this off-policy paradigm differs from IOPO in that training candidates are not produced by the current generator being optimized. While such a design supports scalable deployment, it introduces two limitations in live-stream advertising: 
+
+• Policy mismatch and training instability. Candidates generated by 𝜋 old gradually deviate from the current policy 
+
+𝜋 𝜃 as the generator and traffic distribution evolve. The resulting distribution mismatch makes reward supervision biased and noisy, which can destabilize training in rapidly changing live-stream scenarios. 
+
+• High operational cost. Operating the sample server in-curs substantial overhead for SID generation, reward com-putation, and pool management. When multiple policy ver-sions iterate concurrently, each version requires a separate sample pool, further compounding resource demand. To address these challenges, we propose Intermittent On-Policy Preference Optimization (IOPO) , a plug-and-play RL preference optimization method integrated into our streaming online training strategy. In TAGR, newly collected real-user feedback is used to up-date both the NTP model and the RL policy online. IOPO organizes this online learning into two sequential phases. During warmup ,we jointly train the NTP module and Reward Model (RM) to ob-tain a reliable base policy 𝜋 𝜃 and a stable value estimator. During Ye et al. 
+
+intermittent on-policy adaptation , the current policy periodi-cally generates fresh candidate groups, followed by short bursts of group-relative policy optimization (GRPO) updates every 𝑇 steps; intervening online NTP maintenance steps continue learning from logged user feedback, anchor the generator to the observed be-havior distribution, and mitigate catastrophic forgetting [7]. Each GRPO burst combines Behavior-Aligned GRPO (BA-GRPO), which preserves faithfulness to user behavior, with Value-Aligned GRPO (VA-GRPO), which incorporates downstream commercial utility. By replacing continuous online RL with intermittent preference up-dates, IOPO retains current-policy feedback while reducing reward-gradient interference with supervised NTP and improving training stability. 
+
+2.4.1 Behavior-Aligned GRPO (BA-GRPO). BA-GRPO provides the behavioral anchor needed during current-policy adaptation. It en-courages generated LSIDs to remain close to the user’s next ob-served interaction in the learned token embedding space, prevent-ing value optimization from drifting away from actual user behavior. We use a lightweight on-policy GRPO variant that directly weights each current-policy sequence log-likelihood by its clipped, group-normalized advantage. Let ˆ 𝑠 (𝑘 ) = [ˆ𝑠 (𝑘 ) 
+
+> 1
+
+, . . . , ˆ𝑠 (𝑘 ) 
+
+> 𝐷
+
+] denote the 𝑘 -th generated LSID se-quence, and 𝑠 ∗ = [𝑠 ∗
+
+> 1
+
+, . . . , 𝑠 ∗ 
+
+> 𝐷
+
+] the ground-truth LSID, which is the same next-LSID label used in supervised NTP (i.e., the next ob-served interaction mapped to an LSID under the same labeling pipeline). We embed both sequences by summing level-wise token embeddings and define: ˆe𝑘 =
+
+> 𝐷
+
+∑︁ 
+
+> ℓ=1
+
+Eℓ ( ˆ𝑠 (𝑘 ) 
+
+> ℓ
+
+), e∗ =
+
+> 𝐷
+
+∑︁ 
+
+> ℓ=1
+
+Eℓ (𝑠 ∗ 
+
+> ℓ
+
+) (6) 
+
+𝑟 ba  
+
+> 𝑘
+
+= 1 + cos (ˆe𝑘 , e∗)
+
+2 ∈ [ 0, 1] (7) ˆ𝐴 ba  
+
+> 𝑘
+
+= clip 𝑟 ba  
+
+> 𝑘
+
+− 𝜇 ba 
+
+𝜎 ba + 𝜖 , 𝑐 low , 𝑐 high 
+
+!
+
+(8) 
+
+Lba GRPO = − 1
+
+|B| 𝐺 ∑︁ 𝑥 ∈ B 
+
+> 𝐺
+
+∑︁ 
+
+> 𝑘 =1
+
+𝑤 (𝑥 ) log 𝜋 𝜃 ( ˆ𝑠 (𝑘 ) | M𝑥 𝑢 (𝑡 𝑥 )) ˆ𝐴 ba  
+
+> 𝑘
+
+(9) where 𝜇 ba and 𝜎 ba are the mean and standard deviation within the 𝐺 
+
+candidates generated for the same request, 𝜖 is a numerical stabilizer, and 𝑤 (𝑥 ) is the intent-and-utility sample weight in Eq. (5). The group-normalized advantage makes rewards comparable within each current-policy rollout. 
+
+2.4.2 Value-Aligned GRPO (VA-GRPO). Behavioral similarity alone does not ensure that the generated set contains high-value can-didates. VA-GRPO therefore complements the behavioral anchor with an RM that scores generated LSIDs using business-aware sig-nals. The RM shares bottom-layer LSID embeddings with TAGR for representation consistency, while task-specific heads predict post-exposure live-room entry and normalized eCPM; in our system, the eCPM label is taken from the production fine-ranking score, and the post-exposure LRE label is the real user feedback after expo-sure. A stop-gradient is applied during RM scoring to keep reward estimation stable. Let c𝑘 denote the eCPM context features. The value-aligned reward is: 
+
+𝑟 post  
+
+> 𝑘
+
+= 𝜎  MLP post ([ ¯M𝑢 (𝑡 𝑥 ); ˆ e𝑘 ])  (10) 
+
+𝑟 eCPM  
+
+> 𝑘
+
+= clamp  MLP eCPM ([ ¯M𝑢 (𝑡 𝑥 ); ˆ e𝑘 ; c𝑘 ]) , 0, 1 (11) 
+
+𝑟 va  
+
+> 𝑘
+
+= 𝑟 post  
+
+> 𝑘
+
++ 𝛽 va · 𝑟 eCPM  
+
+> 𝑘
+
+(12) ˆ𝐴 va  
+
+> 𝑘
+
+= clip 
+
+ 𝑟 va  
+
+> 𝑘
+
+− 𝜇 va 
+
+𝜎 va + 𝜖 , 𝑐 low , 𝑐 high 
+
+
+
+(13) 
+
+Lva GRPO = − 1
+
+|B| 𝐺 ∑︁ 𝑥 ∈ B 
+
+> 𝐺
+
+∑︁ 
+
+> 𝑘 =1
+
+𝑤 (𝑥 ) log 𝜋 𝜃 ( ˆ𝑠 (𝑘 ) | M𝑥 𝑢 (𝑡 𝑥 )) ˆ𝐴 va  
+
+> 𝑘
+
+(14) BA-GRPO and VA-GRPO optimize the same current policy but play complementary roles. BA-GRPO supplies a parameter-free behavior signal that preserves relevance to the user’s next interac-tion, whereas VA-GRPO steers generation toward candidates with stronger business value. Here, 𝜇 va and 𝜎 va are computed within the current-policy candidate group, analogously to BA-GRPO. 
+
+2.4.3 Combined GRPO Loss. The final preference objective com-bines the two GRPO losses: 
+
+LGRPO = 𝜆 ba Lba GRPO + 𝜆 va Lva GRPO (15) where 𝜆 ba and 𝜆 va balance behavior and value alignment. The overall training objective applies the GRPO loss only during scheduled RL steps: 
+
+L = LNTP + IRL · L GRPO , (16) where IRL equals 1 during scheduled on-policy steps and 0 otherwise. IOPO thus realizes alignment-level temporal adaptation: scheduled current-policy updates keep preference feedback fresh, while in-tervening supervised maintenance prevents reward optimization from continuously overwriting the learned behavior distribution. 
+
+## 3 System Deployment 3.1 Online Training Platform 
+
+We have deployed TAGR as a generative retrieval in Kuaishou’s live-stream advertising system, serving more than 400 million daily active users. As shown in Figure 4, the closed-loop system connects real-time LSID construction, online training, and real-time serving. The platform processes streaming request logs and interaction feedback to update IAG and IOPO. IAG jointly trains MSI-encoder and live decoder to model user intent and balance intent evidence with business value (Sections 2.3.1 and 2.3.2). IOPO periodically samples current-policy candidates and uses the reward model (RM) to estimate engagement and commercial value; intermittent updates preserve stable preference alignment in the non-stationary live-stream environment (Section 2.4). TAGR, including its generator and RM, is updated from the same streaming data pipeline with separate task-specific objectives. The generator and RM share bottom-layer LSID embeddings for rep-resentation consistency, while a stop-gradient is applied during RM scoring to keep reward estimation stable. The platform per-forms continual mini-batch training and periodically synchronizes updated parameters to the serving cluster. TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising 
+
+Figure 4: System deployment: training and serving of TAGR. 
+
+## 3.2 Real-time LSID Construction 
+
+When a new live ad becomes active or its scene and promoted prod-ucts change, the LSID Construction module computes its LSID as described in Section 2.2; active live ads are re-encoded every minute. The refreshed assignment is immediately written to online LSID storage as the canonical token label and propagated to the bidi-rectional LSID–LiveID index within seconds. Because only token assignments are refreshed while the hierarchical vocabulary re-mains fixed, new and evolving live ads become retrievable without resource-intensive global index rebuilding. 
+
+## 3.3 Real-time Serving Engine 
+
+Upon receiving a request, the Real-time Serving Engine performs beam search with the latest TAGR decoder to generate the Top-
+
+𝐾 serve LSIDs ( 𝐾 serve = 256), resolves them to active live ads through the LSID–LiveID index, and passes the candidates to downstream fil-tering and ranking. Optimized decoding and result caching sustain more than 2500 QPS per L20 GPU with end-to-end retrieval latency below 100 ms. The request, generated LSIDs, user feedback, and fine-ranking signals such as eCPM are logged back to the Online Training Platform, completing the closed loop. 
+
+## 4 Experiments 4.1 Experimental Setup 
+
+4.1.1 Dataset and Evaluation Metrics. We conduct experiments on a billion-scale dataset collected from a real-world e-commerce live-stream advertising platform. We use a temporal split comprising 5 days of training logs, the subsequent 2 days for validation, and the following 2 days for testing, thereby evaluating forward-looking generalization under rapid content drift. To avoid temporal leakage, all post-request feedback used for sample weighting and target construction is strictly restricted to the corresponding data split. The dataset contains behavior logs from over 400 million users and hundreds of thousands of live ads (at the live ad granularity), covering the full conversion funnel from exposure to live-room entry, shopping-cart clicks, and purchases. For each request, the user behavior sequences are built from the most recent 30 days of interactions. 
+
+Offline metrics. We evaluate retrieval quality using Hit Rate at multiple cutoffs (HR@K) for two critical engagement actions: live-room entry ( LRE , live_room_entry ) and shopping-cart click (SCC , shopping_cart_click ). For each action, we construct su-pervised examples by taking the live ad associated with the user’s 
+
+next occurrence of that action as the single ground-truth target (requests without a subsequent target action are excluded under a fixed post-request window, consistently applied to all methods). Following the standard protocol for generative retrieval, HR@K is computed by resolving the model-generated Top-𝐾 serve LSIDs to active live ads and matching them against the ground-truth tar-get under the full candidate space. HR@K is a useful offline proxy because it directly measures whether the truly engaged live ad appears in the limited Top-𝐾 serve retrieval set, a prerequisite for downstream ranking and monetization; in our production experi-ments, relative HR@K improvements are directionally consistent with online behavior-rates and revenue lifts. 
+
+Online metrics. We conduct an online A/B test on production traffic and report two complementary business metrics: (1) Behav-ior Rate Lift (%) , which measures the relative improvement in post-exposure live-room entry rate ( LRE-Rate ) and shopping-cart click rate ( SCC-Rate ) over the DLRM baseline; and (2) Revenue Lift (%) , which measures the relative improvement in realized adver-tising revenue and captures end-to-end commercial effectiveness. 
+
+4.1.2 Baseline Methods. We compare against DLRM (base) , a two-tower multi-channel discriminative retrieval baseline implemented on the DLRM architecture [14], and OneRec v2 (GR base) , a strong industrial generative recommendation baseline [33]. DLRM uses fixed-ID ANN retrieval across multiple channels; since its offline HR@K reflects ranking quality over the full candidate corpus— different from autoregressive Top-𝐾 LSID decoding where candi-dates are directly generated—the two metrics are not directly com-parable and HR@K for DLRM is therefore not reported. OneRec v2 is deployed as a production generative retrieval baseline for online comparison. All methods share the same data budget and infrastructure constraints. 
+
+## 4.2 Overall Performance 
+
+Table 1 presents a comprehensive comparison of all methods across offline recall and online business metrics. 
+
+Generative vs. discriminative retrieval. DLRM is the online two-tower multi-channel retrieval baseline and provides the refer-ence point for production A/B lifts, while its offline HR@K is not directly comparable with generative Top-𝐾 LSID decoding. OneRec v2 serves as the deployed generative retrieval baseline and already improves online business metrics over DLRM. TAGR further im-proves both offline recall and online business metrics by replacing static target identifiers with LSIDs, modeling temporal user intent, and performing intermittent current-policy preference optimiza-tion. These results demonstrate the benefit of jointly modeling live-stream dynamics and advertising value within an end-to-end generative retriever. 
+
+Progressive gains from three-level temporal adaptation. 
+
+Each stage contributes consistent and additive improvements. At the token level, replacing static identifiers with LSID raises revenue lift to 9.9% by refreshing the generation target with the current live scene and promoted products. At the intent level, MSI-Encoding increases the lift to 11.2% through multi-scale, multi-behavior user Ye et al. 
+
+Table 1: Overall performance comparison. Offline recall is evaluated by HR@K on the live-streaming dataset for generative retrieval methods; online metrics are measured by A/B tests on production traffic under the same downstream filtering/ranking stack and comparable traffic buckets. Best results are bolded. All lifts are relative to DLRM (base). LRE = live-room entry, SCC = shopping-cart click. LRE-Rate Lift and SCC-Rate Lift denote relative improvements in post-exposure rate. 
+
+Method LRE (Offline) SCC (Offline) Online (A/B) 
+
+HR@64 HR@128 HR@64 HR@128 LRE-Rate Lift SCC-Rate Lift Revenue Lift DLRM (base) — — — — Ref. Ref. Ref. OneRec v2 (GR base) 0.5945 0.6568 0.5649 0.6216 +2.1% +1.8% +6.1% TAGR w/ LSID 0.6413 0.7024 0.6058 0.6551 +4.2% +3.6% +9.9% + IAG (MSI-Encoding) 0.6678 0.7276 0.6174 0.6709 +5.1% +4.5% +11.2% + IAG (MF-NTP) 0.6871 0.7468 0.6319 0.6836 +6.7% +6.0% +13.5% + IOPO (BA-GRPO) 0.7026 0.7604 0.6397 0.6901 +7.5% +6.6% +14.7% + IOPO (VA-GRPO) 0.7135 0.7723 0.6461 0.6965 +8.5% +7.4% +16.1% 
+
+conditioning, and MF-NTP further reaches 13.5% by combining post-request intent signal with user and commercial value weighting. At the alignment level, BA-GRPO and VA-GRPO raise the lift to 14.7% and 16.1%, respectively, showing the complementary effects of behavior and value alignment under IOPO’s intermittent current-policy updates. This progression directly supports TAGR’s token-, intent-, and alignment-level decomposition. 
+
+Full TAGR. The complete model with all components achieves state-of-the-art results across all metrics, yielding +8.5% and +7.4% 
+
+relative lifts in LRE-Rate and SCC-Rate, respectively, and a +16.1% 
+
+Revenue Lift over the DLRM baseline. Notably, the revenue lift sub-stantially exceeds the behavior-rate improvements, indicating that TAGR not only retrieves more engaging ads but also surfaces higher-value inventory. This result is consistent with the commercial-value weighting in MF-NTP and the value-aligned reward in VA-GRPO. 
+
+## 4.3 Online A/B Test 
+
+We conduct a multi-week randomized experiment on 10% of pro-duction traffic, covering more than 40 million users, with realized advertising revenue as the primary metric. Relative to the produc-tion DLRM, TAGR improves LRE rate by 8.5%, SCC rate by 7.4%, and revenue by 16.1% . Segment analysis shows a 28.8% revenue lift among low-value users and an 18.4% lift for cold-start live streams. These results are consistent with the broader mid-to-tail coverage in Figure 7: token-side refresh improves access to newly active inventory, multi-scale and multi-behavior encoding tracks request-time intent, and MF-NTP together with IOPO prioritize candidates supported by stronger intent signals and advertising value. 
+
+## 4.4 Ablation Studies 
+
+4.4.1 Token-Side Adaptation: LSID. Table 2 reports four metrics. 
+
+Cpr (compression ratio ↓) is the number of live-ad items divided by the number of distinct LSIDs assigned to them, and therefore measures the average number of items represented by each LSID; the ideal value is 1.0. Col (collision rate ↓) is the fraction of distinct LSIDs that are assigned to multiple items rather than mapping one-to-one. Stability ↑ measures the proportion of live ads whose level-1 assignment remains unchanged throughout a live session, 
+
+Table 2: Ablation of LSID along two dimensions: target con-struction and codebook size. “+H” denotes streamer-ID hash-ing at the final hierarchical level (see Section 2.2).                                       
+
+> Token Settings Metrics
+> Token Construction Cpr ↓Col ↓Stability ↑Revenue ↑
+> Static SID (baseline) 1.42 0.42 100% -Dynamic SID 1.36 0.39 92% +1.7% Dynamic SID + H 1.09 0.15 92% +2.5% LSID (full, +H) 1.01 0.02 90% +3.8%
+> Codebook Size Cpr ↓Col ↓Stability ↑Revenue †↑
+> [256,256,256] 1.02 0.02 90% -[128,128,128] 1.14 0.16 93% -1.4% [512,512,512] 1.01 0.01 86% +0.12%
+
+reflecting target consistency during serving; and Revenue reports online revenue lift. Revenue lifts in the Target Construction block are relative to Static SID, whereas those in the Codebook Size block are relative to LSID with codebook size [256,256,256]. All refreshed variants maintain at least 90% level-1 stability, indicating that token-side temporal adaptation remains sufficiently stable for production serving. 
+
+Token-construction evolution. Each upgrade reduces the com-pression ratio towards the ideal value of 1.0. A lower Cpr means that each generated identifier maps to fewer live ads in the serving index, making candidate expansion more targeted and efficient. Dynamic SID periodically updates each live ad’s semantic repre-sentation and token assignment as its content evolves but does not incorporate collaborative signals from user–scene–product align-ment. This semantic-only dynamic update lowers Cpr from 1.42 to 1.36 and yields a 1.7% revenue gain. Adding streamer-ID hash-ing (+H) further lowers Cpr to 1.09 and raises the gain to 2.5%. Finally, full LSID incorporates user–scene–product collaborative alignment into the dynamically updated scene–product represen-tation, achieving near-ideal compression (Cpr=1.01), the lowest collision rate, and the largest revenue lift of 3.8%. These results TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising 
+
+Table 3: Fine-grained ablation of Multi-Scale Intent-Aware Generation.                                
+
+> Intent-Side Settings Metrics
+> MSI-Encoding: Scales LRE HR@128 SCC HR@128
+> Entry stride ={1}(baseline) 0.7024 0.6551 Entry strides ={1,2}0.7141 0.6638 Entry strides ={1,2,10 }0.7276 0.6709
+> MF-NTP: Weighting Factors LRE HR@128 SCC HR@128
+> Uniform NTP (baseline) 0.7276 0.6709
+> +𝑤 feedback 0.7352 0.6757
+> +𝑤 feedback +𝑤 user 0.7405 0.6789 Full MF-NTP ( +𝑤 eCPM )0.7468 0.6836
+
+show that dynamic semantic updates and collaborative alignment provide complementary benefits. 
+
+Codebook size trade-off. With the LSID construction fixed, varying the codebook size primarily affects compression and serv-ing costs. A smaller codebook [128,128,128] over-compresses the target space (Cpr=1.14), forcing dissimilar live ads to share identi-fiers; each generated LSID consequently expands to a larger and noisier candidate list, degrading revenue by 1.4%. A larger code-book [512,512,512] achieves near-ideal compression (Cpr=1.01), but its larger vocabulary increases decoding costs for only a marginal revenue gain of 0.12%. The default [256,256,256] achieves the same near-ideal compression at a lower serving cost, offering the best revenue-efficiency trade-off. 
+
+4.4.2 Intent-Side Adaptation: IAG. Table 3 provides a fine-grained analysis of how MSI-Encoding represents request-time intent and how MF-NTP weights the corresponding logged targets. 
+
+MSI-Encoding Ablation. We vary the temporal granularities of the primary live-room-entry sequence (as defined in Section 2.3.1). Stride 1 captures the most recent entries and short-term intent shifts, stride 2 captures local exploration patterns, and stride 10 summarizes longer-range browsing intent. As shown in the first block of Table 3, progressively incorporating these temporal scales improves both live-room-entry and shopping-cart-click retrieval. The consistent gains indicate that fine-grained recent actions and coarser browsing patterns provide complementary evidence for request-time intent. 
+
+MF-NTP Ablation. The second block of Table 3 introduces the weighting factors in the same conceptual order as the method. Start-ing from uniform NTP, the intent-evidence weight 𝑤 feedback uses post-request behavior depth as evidence that the logged live ad matches the user’s intent, while the user-value and eCPM terms further adjust the training priority according to long-term user value and normalized commercial value. Their progressive inclu-sion yields sustained performance improvements, supporting the separation of intent signal from value weighting rather than treating heterogeneous outcomes as a single undifferentiated importance signal. 
+
+Table 4: Ablation of on-policy update strategy. Stability = proportion of training windows without loss spikes ( >0.1 above running mean). Method NTP Loss ↓ Reward ↑ Stability ↑ LRE HR@128             
+
+> Off-policy
+> GRPO 1.79 0.675 low 0.6982
+> On-policy
+> Continuous GRPO 1.68 0.864 moderate 0.7469 Intermittent GRPO (IOPO) 1.53 0.913 high 0.7723
+
+Figure 5: NTP Loss: Continuous vs. Intermittent RL Updates. 
+
+4.4.3 Alignment-Side Adaptation: IOPO. We dissect IOPO from three angles: (1) on-policy vs. off-policy candidates and update frequency; (2) the behavior-alignment contribution of BA-GRPO; and (3) the reward dynamics of VA-GRPO. We further compare preference-optimization backbones in Appendix B.1. 
+
+On-Policy vs. Off-Policy and Update Frequency. As shown in Ta-ble 4, we compare three update strategies across two axes: candidate source and update frequency. Off-policy GRPO follows prior off-policy alignment schemes [27], drawing candidates from a fixed lagged policy 𝜋 old ; the resulting distribution gap yields the lowest reward and poorest stability. Among the current-policy variants, 
+
+Continuous GRPO removes this gap but suffers from repeated reward-gradient interference with supervised learning. Intermit-tent GRPO (IOPO) achieves the best NTP loss (1.53), reward (0.913), and stability at only one-third of the training cost of continuous updates. Figure 5 zooms into the on-policy frequency comparison. During warm-up (0–20K steps), loss drops from ∼5.5 to ∼1.7. At step 20K, RL is activated: continuous learning (orange) immediately begins oscillating with a large amplitude (ranging ∼1.5–2.0) and stagnates at ∼1.68, reflecting persistent gradient interference with the NTP signal. Intermittent learning (green), by alternating RL bursts with NTP maintenance steps, produces significantly smaller oscillations and settles at ∼1.53. The off-policy variant is omitted from the figure as its unstable trajectory obscures the on-policy comparison; its final metrics are reported in Table 4. 
+
+Behavior-Aligned GRPO.. Table 5 isolates the two ingredients of BA-GRPO. Starting from the supervised Multi-Scale Intent-Aware Generation model, unweighted BA-GRPO introduces current-policy Ye et al. 
+
+Table 5: Ablation of behavior alignment and MF-NTP sample weighting in BA-GRPO. Method LRE HR@128 SCC HR@128       
+
+> Supervised IAG 0.7468 0.6836 +BA-GRPO (w/o sample weighting) 0.7501 0.6858 +BA-GRPO (with MF-NTP weighting) 0.7604 0.6901
+
+Figure 6: Training dynamics of the reward components in VA-GRPO. 
+
+optimization using token-space similarity to the user’s next ob-served interaction. Reusing the MF-NTP sample weight 𝑤 (𝑥 ) fur-ther accounts for the reliability of the post-request intent signal and the value priority of each sample. The progressive gains show that behavioral alignment benefits from both a request-level similarity reward and sample-level supervision strength. 
+
+Value-Aligned GRPO.. Figure 6 illustrates the training dynamics of the post-exposure response score 𝑟 post , normalized commercial-value score 𝑟 eCPM , and their value-aligned combination 𝑟 va . All three curves exhibit a consistent upward trend, showing that current-policy optimization progressively shifts candidate generation to-ward stronger engagement and commercial outcomes. Following Eq. (12), VA-GRPO uses 𝑟 va = 𝑟 post + 𝛽 va 𝑟 eCPM : the response compo-nent supplies the primary engagement signal, while the weighted eCPM component incorporates commercial value without over-whelming behavioral relevance. 
+
+## 5 Related Work 5.1 Live-Streaming Recommendation 
+
+Live-streaming recommendation must react to rapidly changing content, short item lifecycles, and delayed or heterogeneous user feedback [4, 6, 18]. Discriminative studies improve freshness and real-time modeling through sliding-window streams, cross-domain live signals, and future behavior and content prediction [1, 2, 9–13]. More recently, generative models have been introduced into this sce-nario. OneLive [23] employs dynamic tokenization and time-aware modeling for end-to-end live-stream generation, and SSRLive [20] combines dynamic SIDs with user–streamer interaction signals in a generative–discriminative framework. Existing work primarily targets general live recommendation; TAGR instead treats each live ad as a dynamic scene–product target and couples refreshed LSIDs with intent- and value-aware learning. 
+
+## 5.2 Generative Recommendation 
+
+Generative recommendation reformulates retrieval as autoregres-sive generation over discrete item tokens, replacing large-vocabulary ID classification or ANN retrieval with structured decoding. TIGER [17] establishes a representative semantic-ID paradigm by quan-tizing item representations into hierarchical codes. Subsequent work enriches the generated token space and user conditioning with collaborative and semantic information [24–26]. LC-Rec [31] integrates collaborative semantics into language-model-based rec-ommendation, OneRec [5] unifies retrieval and ranking in an end-to-end generative architecture, and Align 3GR [29] performs token-, behavior-, and preference-level alignment for LLM-based gener-ative recommendation. In industrial advertising, GR4AD [27] de-velops a production-oriented generative recommender with ad-aware tokenization, efficient decoding, and value-oriented learning. Most non-live generative recommenders nevertheless assume stable target semantics; TAGR instead refreshes each live ad’s request-independent LSID as its scene or product changes while preserving a stable vocabulary. 
+
+## 5.3 Preference Optimization 
+
+Preference optimization complements supervised next-token learn-ing by directly shaping generated candidates according to com-parative user or value signals. DPO [16] provides a simple offline objective for learning from pairwise preferences without an explicit policy-gradient loop, and S-DPO [3] adapts this idea to recommen-dation by incorporating multiple negatives and ranking-aware soft-max structure. Recent generative recommenders further integrate preference alignment into end-to-end systems: OneRec [5] con-structs iterative preference data for DPO, Align 3GR [29] combines self-play and real-feedback DPO for progressive alignment, and GR4AD [27] introduces a list-wise value-oriented preference objec-tive for advertising. Group Relative Policy Optimization (GRPO) [19] offers another alternative by normalizing rewards within a group of sampled candidates and avoiding a separate critic. Existing align-ment faces stale off-policy feedback or unstable continuous updates; IOPO balances freshness and stability through intermittent current-policy GRPO interleaved with NTP maintenance. 
+
+## 6 Conclusion 
+
+We present TAGR , a temporally adaptive generative recommen-dation framework for industrial live-stream advertising. TAGR ad-dresses temporal variation at three complementary levels. LSID refreshes token assignments as live scenes and promoted products change while preserving a stable hierarchical token vocabulary. IAG constructs a time-dependent user representation from multi-scale behavior encoding; its MF-NTP objective further weights supervision by the reliability of post-request intent evidence and by business value. IOPO incorporates fresh current-policy feed-back through intermittent preference updates while using super-vised NTP maintenance to stabilize online learning. Experiments on a large-scale live-stream advertising platform show that TAGR outperforms discriminative and generative baselines, including a 
+
++16.1% revenue lift in production. These results establish temporal adaptation as an effective design principle for generative retrieval in non-stationary industrial environments. TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising 
+
+## References 
+
+[1] Jiangxia Cao, Shen Wang, Yue Li, Shenghui Wang, Jian Tang, Shiyao Wang, Shuang Yang, Zhaojie Liu, and Guorui Zhou. 2024. Moment&Cross: Next-Generation Real-Time Cross-Domain CTR Prediction for Live-Streaming Recom-mendation at Kuaishou. arXiv preprint arXiv:2408.05709 (2024). [2] Jiangxia Cao, Ruochen Yang, Xiang Chen, Changxin Lao, Yueyang Liu, Yusheng Huang, Yuanhao Tian, Xiangyu Wu, Shuang Yang, Zhaojie Liu, et al. 2025. Fore-sight Prediction Enhanced Live-Streaming Recommendation. arXiv preprint arXiv:2512.06700 (2025). [3] Yuxin Chen, Junfei Tan, An Zhang, Zhengyi Yang, Leheng Sheng, Enzhi Zhang, Xiang Wang, and Tat-Seng Chua. 2024. On Softmax Direct Preference Optimiza-tion for Recommendation. In Advances in Neural Information Processing Systems ,Vol. 37. [4] Jiaxin Deng, Dong Shen, Shiyao Wang, Xiangyu Wu, Fan Yang, Guorui Zhou, and Gaofeng Meng. 2023. ContentCTR: Frame-Level Live Streaming Click-Through Rate Prediction with Multimodal Transformer. arXiv preprint arXiv:2306.14392 
+
+(2023). [5] Jiaxin Deng, Shiyao Wang, Kuo Cai, Lejian Ren, Qigen Hu, Weifeng Ding, Qiang Luo, and Guorui Zhou. 2025. OneRec: Unifying Retrieve and Rank with Generative Recommender and Iterative Preference Alignment. arXiv preprint arXiv:2502.18965 (2025). [6] Jiaxin Deng, Shiyao Wang, Yuchen Wang, Jiansong Qi, Liqin Zhao, Guorui Zhou, and Gaofeng Meng. 2024. MMBee: Live Streaming Gift-Sending Recommenda-tions via Multi-Modal Fusion and Behaviour Expansion. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 4896–4905. doi:10.1145/3637528.3671511 [7] James Kirkpatrick, Razvan Pascanu, Neil Rabinowitz, Joel Veness, Guillaume Desjardins, Andrei A. Rusu, Kieran Milan, John Quan, Tiago Ramalho, Agnieszka Grabska-Barwinska, Demis Hassabis, Claudia Clopath, Dharshan Kumaran, and Raia Hadsell. 2017. Overcoming Catastrophic Forgetting in Neural Networks. 
+
+Proceedings of the National Academy of Sciences 114, 13 (2017), 3521–3526. doi:10. 1073/pnas.1611835114 [8] Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho, and Wook-Shin Han. 2022. Autoregressive Image Generation Using Residual Quantization. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition . 11513– 11522. doi:10.1109/CVPR52688.2022.01123 [9] Rui Li, Pengyuan Gao, Haihan Li, Ling Chai, Shaohao Huang, and Ting Xie. 2025. A Bilateral Perspective for Modeling Real-Time Traffic Trends in Live-Streaming Recommendation. In 2025 IEEE 41st International Conference on Data Engineering (ICDE) . IEEE, 4142–4155. [10] Xiaodong Li, Ruochen Yang, Shuang Wen, Shen Wang, Yueyang Liu, Guoquan Wang, Weisong Hu, Qiang Luo, Jiawei Sheng, Tingwen Liu, et al. 2025. FARM: Frequency-Aware Model for Cross-Domain Live-Streaming Recommendation. 
+
+arXiv preprint arXiv:2502.09375 (2025). [11] Fengqi Liang, Baigong Zheng, Liqin Zhao, Guorui Zhou, Qian Wang, and Yanan Niu. 2024. Ensure Timeliness and Accuracy: A Novel Sliding Window Data Stream Paradigm for Live Streaming Recommendation. arXiv preprint arXiv:2402.14399 (2024). [12] Yueyang Liu, Jiangxia Cao, Shen Wang, Shuang Wen, Xiang Chen, Xiangyu Wu, Shuang Yang, Zhaojie Liu, Kun Gai, and Guorui Zhou. 2025. LLM-Alignment Live-Streaming Recommendation. arXiv preprint arXiv:2504.05217 (2025). [13] Yucheng Lu, Jiangxia Cao, Xu Kuan, Wei Cheng, Wei Jiang, Jiaming Zhang, Shuang Yang, Zhaojie Liu, and Liyin Hong. 2025. LiveForesighter: Generating Future Information for Live-Streaming Recommendations at Kuaishou. arXiv preprint arXiv:2502.06557 (2025). [14] Maxim Naumov, Dheevatsa Mudigere, Hao-Jun Michael Shi, Jianyu Huang, Narayanan Sundaraman, Jongsoo Park, Xiaodong Wang, Udit Gupta, Carole-Jean Wu, Alisson G. Azzolini, Dmytro Dzhulgakov, Andrey Mallevich, Ilia Cherni-avskii, Yinghai Lu, Raghuraman Krishnamoorthi, Ansha Yu, Volodymyr Kon-dratenko, Stephanie Pereira, Xianjie Chen, Wenlin Chen, Vijay Rao, Bill Jia, Liang Xiong, and Misha Smelyanskiy. 2019. Deep Learning Recommendation Model for Personalization and Recommendation Systems. arXiv preprint arXiv:1906.00091 
+
+(2019). [15] Qi Pi, Guorui Zhou, Yujing Zhang, Zhe Wang, Lejian Ren, Ying Fan, Xiaoqiang Zhu, and Kun Gai. 2020. Search-Based User Interest Modeling with Lifelong Sequential Behavior Data for Click-Through Rate Prediction. In Proceedings of the 29th ACM International Conference on Information & Knowledge Management .2685–2692. doi:10.1145/3340531.3412744 [16] Rafael Rafailov, Archit Sharma, Eric Mitchell, Christopher D. Manning, Stefano Ermon, and Chelsea Finn. 2023. Direct Preference Optimization: Your Language Model Is Secretly a Reward Model. In Advances in Neural Information Processing Systems , Vol. 36. [17] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Q. Tran, Jonah Samost, Maciej Kula, Ed H. Chi, and Maheswaran Sathiamoorthy. 2023. Recommender Systems with Generative Retrieval. In Advances in Neural Information Processing Systems .[18] Jérémie Rappaz, Julian McAuley, and Karl Aberer. 2021. Recommendation on Live-Streaming Platforms: Dynamic Availability and Repeat Consumption. In 
+
+Proceedings of the 15th ACM Conference on Recommender Systems . 390–399. doi:10. 1145/3460231.3474267 [19] Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, Y. K. Li, Y. Wu, and Daya Guo. 2024. DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models. arXiv preprint arXiv:2402.03300 (2024). [20] Teng Shi, Zhaoheng Li, Yuanhang Qu, Yi Liu, Lixiang Lai, and Yuning Jiang. 2026. SSRLive: Live Streaming Recommendation with Dynamic Semantic ID. arXiv preprint arXiv:2606.06970 (2026). [21] Aäron van den Oord, Yazhe Li, and Oriol Vinyals. 2018. Representation Learning with Contrastive Predictive Coding. arXiv preprint arXiv:1807.03748 (2018). [22] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention Is All You Need. In Advances in Neural Information Processing Systems , Vol. 30. 5998– 6008. [23] Shen Wang, Yusheng Huang, Ruochen Yang, Shuang Wen, Pengbo Xu, Jiangxia Cao, Yueyang Liu, Kuo Cai, et al. 2026. OneLive: Dynamically Unified Generative Framework for Live-Streaming Recommendation. arXiv preprint arXiv:2602.08612 
+
+(2026). [24] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable Item Tokenization for Generative Recommendation. In Proceedings of the 33rd ACM International Conference on In-formation and Knowledge Management . 2400–2409. doi:10.1145/3627673.3679569 [25] Ye Wang, Jiahao Xun, Minjie Hong, Jieming Zhu, Tao Jin, Wang Lin, Haoyuan Li, Linjun Li, Yan Xia, Zhou Zhao, and Zhenhua Dong. 2024. EAGER: Two-Stream Generative Recommender with Behavior-Semantic Collaboration. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining .3245–3254. doi:10.1145/3637528.3671775 [26] Yi Xu, Moyu Zhang, Chaofan Fan, Jinxin Hu, Xiaochen Li, Yu Zhang, Xiaoyi Zeng, and Jing Zhang. 2025. MMQ-v2: Align, Denoise, and Amplify: Adaptive Behavior Mining for Semantic ID Learning in Recommendation. arXiv preprint arXiv:2510.25622 (2025). [27] Ben Xue, Dan Liu, Lixiang Wang, Mingjie Sun, Peng Wang, Pengfei Zhang, Shaoyun Shi, Tianyu Xu, Yunhao Sha, Zhiqiang Liu, Bo Kong, Bo Wang, Hang Yang, Jieting Xue, Junhao Wang, Shengyu Wang, Shuping Hui, Wencai Ye, Xiao Lin, Yongzhi Li, Yuhang Chen, Zhihui Yin, Quan Chen, Shiyang Wen, Wenjin Wu, Han Li, Guorui Zhou, Changcheng Li, and Peng Jiang. 2026. Generative Recommendation for Large-Scale Advertising. arXiv preprint arXiv:2602.22732 
+
+(2026). [28] Feng Yao, Liyuan Liu, Dinghuai Zhang, Chengyu Dong, Jingbo Shang, and Jianfeng Gao. 2025. Your Efficient RL Framework Secretly Brings You Off-Policy RL Training. https://fengyao.notion.site/off-policy-rl [29] Wencai Ye, Mingjie Sun, Shuhang Chen, Wenjin Wu, and Peng Jiang. 2026. Align 3GR: Unified Multi-Level Alignment for LLM-based Generative Recommen-dation. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 40. 16154–16162. doi:10.1609/aaai.v40i19.38651 [30] Wencai Ye, Mingjie Sun, Shaoyun Shi, Peng Wang, Wenjin Wu, and Peng Jiang. 2025. DAS: Dual-Aligned Semantic IDs Empowered Industrial Recommender System. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management . 6217–6224. [31] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. 2024. Adapting Large Language Models by Integrating Collaborative Semantics for Recommendation. In 2024 IEEE 40th International Conference on Data Engineering (ICDE) . 1435–1448. doi:10.1109/ICDE60146.2024. 00118 [32] Guorui Zhou, Honghui Bao, Jiaming Huang, Jiaxin Deng, Jinghao Zhang, Junda She, Kuo Cai, Lejian Ren, Lu Ren, Qiang Luo, Qianqian Wang, Qigen Hu, Rongzhou Zhang, Ruiming Tang, Shiyao Wang, et al. 2025. OpenOneRec Techni-cal Report. arXiv preprint arXiv:2512.24762 (2025). [33] Guorui Zhou, Hengrui Hu, Hongtao Cheng, Huanjie Wang, Jiaxin Deng, Jinghao Zhang, Kuo Cai, Lejian Ren, Lu Ren, Liao Yu, et al. 2025. OneRec-V2 Technical Report. arXiv preprint arXiv:2508.20900 (2025). [34] Guorui Zhou, Xiaoqiang Zhu, Chengru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. 2018. Deep Interest Network for Click-Through Rate Prediction. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining . 1059–1068. doi:10.1145/3219819.3219823 Ye et al. 
+
+## A Implementation Details 
+
+For reproducibility, this section reports implementation details omit-ted from the main text, including the model architecture, data and sequence settings, training and serving hyperparameters, and the hyperparameter-selection protocol. 
+
+## A.1 Model Architecture and Hyperparameters 
+
+Table 6 summarizes the Lazy Decoder architecture and the main hyperparameters used in training and serving. The decoder follows a lightweight Transformer design with cross-attention over the encoded user context and autoregressive self-attention over the generated LSID prefix. General training settings are shared by the supervised NTP stage and IOPO stage unless otherwise specified. 
+
+## A.2 User Behavior Data and Sequence Settings 
+
+Primary entry sequence. We truncate the primary live-room entry history to the most recent 𝐿 = 300 entry actions. MSI ap-plies three strides S = {1, 2, 10 } over this sequence, yielding subse-quences of lengths 𝐿 , ⌊𝐿 /2⌋, and ⌊𝐿 /10 ⌋, respectively. This multi-scale construction allows the model to capture recent entry intent, local exploration patterns, and longer-range browsing tendencies within the same request-time representation. 
+
+Auxiliary behavior streams. Auxiliary behavior streams, in-cluding product clicks, likes, shopping-cart clicks, and orders, are maintained and encoded separately from the primary entry se-quence. This design preserves action semantics and avoids mix-ing dense exploratory signals with sparse but stronger purchase-oriented signals. 
+
+## A.3 Hyperparameter Selection 
+
+We tune the non-architectural hyperparameters on the held-out val-idation set comprising two days of offline data. The validation objec-tive jointly considers LRE HR@128, SCC HR@128, and training sta-bility. The search ranges include 𝛾 ℓ ∈ { 1.0, 0.8, 0.6, 0.5} for the level-wise NTP factors, 𝑤 max ∈ { 5, 10 , 20 } for sample-weight clipping, 
+
+[𝑐 low , 𝑐 high ] ∈ {[− 2, 2], [− 2.5, 2.5], [− 3, 3]} for GRPO advantage clipping, 𝜆 ba ∈ { 0.1, 0.5, 1.0}, 𝜆 va ∈ { 0.5, 1.0}, 𝛽 va ∈ { 0.1, 0.2, 0.5},
+
+[𝛼, 𝛽 ] ∈ {[ 0.7, 0.3], [0.8, 0.2], [0.9, 0.1]} , and 𝑇 ∈ { 100 , 200 , 500 }.The selected values are reported in Table 6. 
+
+## B Complementary Experiments 
+
+This section provides two complementary analyses omitted from the main text: a comparison of preference-optimization backbones and an analysis of retrieval coverage across advertiser spend tiers. 
+
+## B.1 Preference Optimization Backbone 
+
+All three backbones are evaluated with the same intermittent current-policy rollouts, isolating the optimization algorithm from the candidate-freshness comparison in Table 4. For a controlled comparison, they also share the same value model for scoring candidates and con-structing preference signals. Let 𝐺 denote the candidate group size; in our default setting, 𝐺 equals the number of rollout candi-dates per request ( 𝐺 = 20) unless otherwise stated. We compare DPO with one positive and one negative, Softmax-DPO with one 
+
+Table 6: Model architecture and key training and serving hyperparameters.                                                                
+
+> Hyperparameter Symbol Value
+> Lazy Decoder Architecture
+> Transformer decoder layers –6Hidden dimension –512 Attention heads –4Feed-forward dimension –2048 Activation –ReLU Dropout rate –0.1
+> General Training
+> Optimizer –Adam Learning rate 𝜂 1×10 −5
+> Batch size –512 per GPU Primary entry sequence length 𝐿 300
+> LSID – Alignment Model
+> InfoNCE temperature 𝜏 0.07 Streamer ID hash bucket size –256 Scene–Product fusion weights [𝛼, 𝛽 ][0.8,0.2]
+> LSID refresh cadence –1–5 min
+> MF-NTP
+> Hierarchical decay factors [𝛾 1, 𝛾 2, 𝛾 3][1.0,0.8,0.6]
+> Sample weight clip threshold 𝑤 max 5.0
+> IOPO – BA-GRPO
+> Advantage clip range [𝑐 low , 𝑐 high ][− 2.5,2.5]
+> Number of rollout candidates (group size) 𝐺 20 BA-GRPO loss weight 𝜆 ba 0.1
+> IOPO – VA-GRPO
+> Advantage clip range [𝑐 low , 𝑐 high ][− 2.5,2.5]
+> eCPM reward weight 𝛽 va 0.2 VA-GRPO loss weight 𝜆 va 1.0
+> IOPO Schedule
+> Intermittent update interval 𝑇 200 Warmup steps –20K
+> Serving
+> Beam search width 𝐾 serve 256
+
+positive and the remaining 𝐺 − 1 negatives, and GRPO with group-relative advantages over all 𝐺 candidates. Table 7 shows that using more current-policy candidates consistently improves performance, while GRPO achieves the highest reward and retrieval accuracy. We therefore use GRPO as the optimization backbone for both BA-GRPO and VA-GRPO within IOPO. 
+
+## B.2 Retrieval Recall Distribution 
+
+To further investigate how different retrievers allocate their re-call capacity across the advertiser spend spectrum, Fig. 7 reports the recall distribution over streamer-level cost-consumption tiers. Specifically, we rank streamers by their cumulative advertising cost and partition them into buckets in descending order (Bucket 1: TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising 
+
+Table 7: Algorithm comparison: preference optimization backbones.                    
+
+> Algorithm Candidate Strategy Reward ↑LRE HR@128 ↑
+> DPO 1 pos / 1 neg (rank-𝐺 )0.834 0.7486 S-DPO 1 pos / (𝐺 −1)neg 0.871 0.7594 GRPO group of 𝐺 0.913 0.7723
+
+Figure 7: Comparison of recall distribution across cost tiers. 
+
+highest-spend streamers). For each request, we collect the Top-
+
+𝐾 serve recalled live ads from a given retrieval channel and map each recalled live ad to its streamer’s bucket; we then aggregate over all requests and normalize the counts to obtain the proportion con-tributed by each bucket (y-axis). We compare two strong discrimi-native retrieval channels from the production system: Retrieval-40 
+
+(ID 40, optimized towards live-room entry rate) and Retrieval-45 
+
+(ID 45, optimized towards fine-ranking eCPM), against TAGR-249 
+
+(our deployed TAGR channel, ID 249). As illustrated, traditional discriminative models exhibit a pro-nounced top-tier concentration bias , disproportionately allocating recall capacity to high-spend head buckets while underserving the broader waist region (Buckets 4–10). In contrast, TAGR-249 allo-cates substantially more recall to the waist region. This pattern is consistent with temporally refreshed LSID targets and intent-aware autoregressive generation, which enable the retriever to cover evolving inventory beyond the head ads favored by fixed-ID retrieval. The resulting shift toward broader mid-tier coverage is directionally consistent with TAGR’s online gains reported in Section 4.3.

@@ -1,0 +1,336 @@
+Title: TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation
+
+URL Source: https://arxiv.org/pdf/2608.25528v1
+
+Published Time: Thu, 27 Aug 2026 00:52:25 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation 
+
+# Zhifei Zheng ∗† 
+
+zhifei.zheng@ruc.edu.cn Gaoling School of Artificial Intelligence, Renmin University of China Beijing, China 
+
+# Yunfei Liu ∗
+
+# Bin Liu ∗
+
+lyf327482@alibaba-inc.com zhuoli.lb@alibaba-inc.com Taobao & Tmall Group of Alibaba Beijing, China 
+
+# Qiren Zhu †
+
+# Hanbing Liu †
+
+qiren_zhu@163.com liuhanbing@ruc.edu.cn Gaoling School of Artificial Intelligence, Renmin University of China Beijing, China 
+
+# Ziru Xu Han Zhu Jian Xu 
+
+ziru.xzr@alibaba-inc.com zhuhan.zh@alibaba-inc.com xiyu.xj@alibaba-inc.com Taobao & Tmall Group of Alibaba Beijing, China 
+
+# Qi Qi ‡§
+
+qi.qi@ruc.edu.cn Gaoling School of Artificial Intelligence, Renmin University of China Beijing, China 
+
+# Bo Zheng ‡
+
+bozheng@alibaba-inc.com Taobao & Tmall Group of Alibaba Beijing, China 
+
+## Abstract 
+
+Applying scaling laws to recommendation retrieval is hindered by feature heterogeneity: naively stacking Transformer layers yields diminishing returns because heterogeneous fields produce severe token-norm divergence. We present TransRetrieval , a Transformer-based retrieval framework that scales with both computational budget and cross-domain data. The key enabler is (1) weighted average aggregation, which restores the homogeneous-token assumption Transformers rely on. Building on this, we introduce (2) target token compression that cuts per-candidate FLOPs by 85% while preserving cross-attention expressiveness, and (3) position-style domain embeddings that unify multiple domains at negligible additional cost, turning cross-domain data into a scaling asset. On a 40-billion-interaction industrial dataset and the public KuaiRand benchmark, scaling compute from 0.1 to 2 MFLOPs per target yields +19.3 / +22.2 pt Recall@2000, confirming robust log-linear scaling. In online A/B tests, TransRetrieval lifts platform revenue by 2.53% under the same end-to-end latency constraint as the production baseline. 
+
+> ∗Contributed equally to this research.
+> †Work done during internships at Alibaba Group.
+> ‡Corresponding author.
+> §Also with Beijing Key Laboratory of Research on Large Models and Intelligent Gov-ernance; Engineering Research Center of Next-Generation Intelligent Search and Recommendation, MOE.
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840118
+
+## CCS Concepts 
+
+• Information systems → Search engine architectures and scalability ; Recommender systems ; • Computing methodolo-gies → Learning paradigms .
+
+## Keywords 
+
+Large-scale Retrieval, Transformer, Scaling Law, Embedding Nor-malization, Multi-domain Modeling, Recommendation System 
+
+ACM Reference Format: 
+
+Zhifei Zheng, Yunfei Liu, Bin Liu, Qiren Zhu, Hanbing Liu, Ziru Xu, Han Zhu, Jian Xu, Qi Qi, and Bo Zheng. 2026. TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation. In Proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ’26), November 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 9 pages. https://doi.org/10.1145/3799682.3840118 
+
+## 1 Introduction 
+
+Scaling laws have been the driving force behind the rapid progress of large language models, where performance improves predictably with model size, data, and compute [8]. Recommendation systems, despite their massive datasets and growing computational budgets, have largely failed to exhibit analogous scaling behavior. Recent studies confirm this gap: traditional deep recommendation models yield diminishing or even negative returns when simply scaled up [22, 24]. Transformers, whose power-law scaling properties are well established in NLP and vision, are natural candidates for closing this gap. Nevertheless, scaling Transformers in large-scale retrieval, where candidate pools reach up to 10 8 items and latency budgets are measured in tens of milliseconds, faces several challenges: (1) Heterogeneous feature scale misalignment. Standard Trans-formers process homogeneous input tokens: in NLP every word arXiv:2608.25528v1 [cs.IR] 26 Aug 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Zheng, Liu, Liu et al. 
+
+embedding is drawn from the same lookup table [20]; in vision every patch passes through an identical projection [5]. Recom-mendation features, however, are inherently heterogeneous (user profiles, behavioral sequences, and item attributes), and mapping them into Transformer tokens produces severe scale misalign-ment [27]. This misalignment silently degrades representation quality by structurally distorting the embedding space. (2) Tight computation budget versus latency constraints. Retrieval must serve corpora of up to 10 8 items under strict queries per second (QPS) expectation [4, 9], where the constraint is orders of magnitude more stringent than in ranking [2]. (3) Scaling cost multiplication across domains. Industrial systems routinely serve multiple business domains (e.g., homepage, search, detail page) with distinct behavioral distributions [10]. Maintaining a separate deep model per domain multiplies both training and serving cost, and sparse domains lack the data to benefit from scaling alone. Naively merging domains, however, fails because their distributions conflict. Several recent efforts advance scaling in recommendation, in-cluding HSTU [23], RankMixer [27], MARM [14], Climber [22] and MTGR [7]. Each of them either flattens or pre-groups the hetero-geneous feature set, and all of them target ranking, which scores only the candidates retrieval has already shortlisted. How to scale Transformers for retrieval over corpora of up to 10 8 items while preserving heterogeneous features under strict latency budgets thus remains largely unexplored. We present TransRetrieval , a Transformer-based retrieval framework deployed in the Alibaba display advertising platform, serving users across 4 business domains. Three design choices, each addressing one of the challenges above, jointly enable scaling: (1) Weighted average aggregation resolves scale misalignment at the source by decoupling embedding norms from feature cardinality, restoring the homogeneous-token assumption that Transformers rely on. (2) Target token compression projects all target-side features into a single 𝐷 -dimensional token via a lightweight mul-tilayer perceptron (MLP), reducing per-candidate FLOPs by 85% and enabling Hierarchical Navigable Small World (HNSW) based sub-linear retrieval. Inference cost is cut further by sharing one KV cache across targets: since all candidates in a request are scored against the same user, the user-side keys and values are computed once per request and reused by every candidate. (3) Position-style domain embedding injects domain information via element-wise addition, analogous to positional encoding. It unifies 4 domains into a single model at negligible additional FLOPs and turns multi-domain data into a scaling asset, with sparse domains benefiting from cross-domain transfer. All three designs use only standard operators and no extra infras-tructure, offering a transferable recipe for deploying Transformers in retrieval. Deployed in the Alibaba display advertising platform, TransRetrieval achieves a 2.53% platform revenue lift in online A/B tests; scaling compute from 0.1 to 2 MFLOPs per target yields +19.3 pt Recall@2000 on the industrial dataset and +22.2 pt on the public KuaiRand benchmark, confirming robust log-linear scaling. To our knowledge, this is among the first systematic validations of scaling laws in the retrieval stage of the recommendation architec-ture, complementing recent ranking-stage results demonstrated by Climber [22]. 
+
+## 2 Related Work 
+
+Scaling in recommendation and the heterogeneous feature barrier. Wukong [24] provides the first systematic diagnosis of scaling inefficiency in deep recommendation models, attributing it to upscaling mechanisms that expand embedding tables with-out enhancing feature interaction. Subsequent efforts bypass the heterogeneity barrier rather than resolve it: HSTU [23] flattens all features into a single behavioral sequence, sacrificing structural dis-tinction between feature types; RankMixer [27] pre-groups features into fixed semantic channels processed by parameter-free token mixing, while MARM [14] reaches comparable gains only with 60 TB of cache infrastructure; Climber [22] focuses on multi-scale sequence extraction where inputs are behavioral tokens from the same embedding table, and MTGR [7] retains rich features under the generative paradigm. All of these validate scaling at the rank-ing stage only; how to enable stable deep Transformer scaling in retrieval while retaining the full heterogeneous feature set remains unresolved. 
+
+Model-based retrieval and Transformer efficiency. NANN [3] establishes the model-based retrieval paradigm: a deep neural net-work (DNN) scoring function drives beam search over an HNSW graph [16], so that only a small fraction of the corpus is ever scored: the model itself determines which candidates are evaluated. BAR [12], which serves as our production baseline, extends this paradigm with bidding-awareness for multi-stage consistency, but keeps the scoring network small. On the user side, the evolution from two-tower architectures [4] to sequential Transformers (SAS-Rec [11], BERT4Rec [18]) has enriched user representations, and KuaiFormer [13] reformulates retrieval as next-action prediction under a generative paradigm. Under the model-based paradigm, however, each candidate still requires a forward pass through the target network, making per-candidate FLOPs the dominant bottleneck, which is why the scoring network has stayed small. TransRetrieval stays within this paradigm but relieves that bot-tleneck: compressing each candidate to a single token makes the per-candidate pass cheap enough to scale the scoring network itself. 
+
+Multi-domain recommendation and cross-domain data scaling. Expert-based methods (MMoE [15], PLE [19]) share ex-pert parameters across domains, but gate-based soft routing means sparse domains, whose gates are undertrained due to limited data, cannot fully leverage the shared capacity for effective data scal-ing. STAR [17] unifies serving through shared and domain-specific components, but its star topology has not been shown to enable cross-domain transfer that benefits data-scarce domains. 
+
+## 3 TransRetrieval: Methodology 
+
+We first formalize the retrieval paradigm and overview the archi-tecture in Section 3.1, then detail our three core designs in Sec-tions 3.2–3.4. 
+
+## 3.1 Preliminaries 
+
+Model-based Retrieval. TransRetrieval operates under the model-based retrieval paradigm established by NANN [3]: a DNN scor-ing function 𝑠 (𝑢, 𝑖 ) = 𝐹 𝜃 (𝑢, 𝑖 ) drives beam search over an HNSW graph [16], which visits only a small fraction 𝜌 of the corpus per TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy Domain Context                       
+
+> d1d2
+> ⋯
+> d3
+> Domain Embedding Retrieval Score Prediction Head (MLP) Pre-LN Transformer × N User KV cache sharing
+> ⋯⋯
+> 3
+> Position-style Domain Embedding
+> sdsdsdsdsdsdsd
+> +
+> ⋯
+> 1Weighted Average Aggregation User Profile
+> ⋯
+> Sequential Behaviors
+> ⋯
+> HNSW Index
+> Neural Approximate Nearest Neighbor Search Compressed Target Token
+> 2
+> Target Compressor (MLP)
+> 1Weighted Average Aggregation Target Information
+> ⋯
+> ++++++
+> 𝑓 !"𝑓 #"
+> 𝑓 !$𝑓 %$𝑓 !&𝑓 #&𝑓 %&𝑓 '&
+
+𝑒 !"#$ = ∑%&' (( 𝑣 % ⋅ ℎ(𝑘 %)∑%&' (( 𝑣 % + 𝜖  
+
+> 𝑓 #$𝑓 %"
+
+Figure 1: The overall architecture of TransRetrieval. All three pillars are lightweight designs: (i) Heterogeneous features are first aggregated via weighted average. (ii) Target features are compressed into a single token by an MLP. (iii) Domain context is injected via position-style embeddings (added to all tokens). A shared Transformer then scores every candidate of a request against one user-side KV cache, computed once and reused across all targets. 
+
+request. We express the scoring budget as this fraction rather than as an absolute count, because it is 𝜌 , not the corpus size, that de-termines the per-request cost: for a corpus of 𝑁 items, the model performs 𝜌𝑁 forward passes instead of 𝑁 . Practical settings put 𝜌 
+
+at roughly 0 .1%–1%; our deployment scores ∼4 × 10 4 candidates over a corpus of 52 M items ( 𝜌 ≈ 0.08%), and the same pipeline serves corpora up to the 10 8 scale. Unlike two-tower models where 
+
+𝑠 (𝑢, 𝑖 ) = ⟨𝑓 (𝑢 ), 𝑔 (𝑖 )⟩ restricts interaction to inner product, model-based retrieval permits arbitrary cross-feature interaction at the cost of a per-candidate forward pass, which makes per-candidate FLOPs the dominant bottleneck. 
+
+Feature Representation. Each feature field 𝑓 is represented as a set of (key, weight) pairs {( 𝑘 𝑖 , 𝑣 𝑖 )} 𝑛 𝑓 
+
+> 𝑖 =1
+
+, where 𝑘 𝑖 indexes to an embedding table ℎ : K → R𝐷 and 𝑣 𝑖 ∈ R is its weight. 
+
+Architecture Overview. As illustrated in Figure 1, TransRe-trieval processes features through four stages: (1) each feature field is aggregated via weighted average (Sec. 3.2), producing Transformer-friendly tokens; (2) target-side tokens are compressed into a single 𝐷 -dimensional token via a lightweight MLP (Sec. 3.3), while each user-side feature forms 1 token; (3) a learnable domain embedding is added element-wise to all tokens (Sec. 3.4); (4) the resulting tokens enter an 𝑁 layer -layer Pre-LN Transformer with ReLU feed-forward network (FFN), where the user-side key–value (KV) pairs of a request are cached once and reused across all of its target candidates. 
+
+## 3.2 Bridging Heterogeneous Features via Weighted Average Aggregation 
+
+Profiling our model under conventional weighted-sum aggregation reveals severe scale misalignment: user-side token norms reach up to 10 × the target-side norms. This imbalance causes attention weights to be dominated by high-norm tokens. The root cause is that 
+
+weighted sum aggregation produces output norms growing with feature cardinality 𝑛 𝑓 : user-side fields with multi-value features inherently accumulate much larger norms than target-side fields. We resolve this with weighted average aggregation :
+
+e𝑓 =
+
+Í𝑛 𝑓  
+
+> 𝑖 =1
+
+𝑣 𝑖 · ℎ(𝑘 𝑖 )
+
+Í𝑛 𝑓  
+
+> 𝑖 =1
+
+𝑣 𝑖 + 𝜖 (1) Division by Í𝑖 𝑣 𝑖 simultaneously cancels both the 𝑛 𝑓 -dependent accumulation and the heterogeneous weight magnitudes, bound-ing the output norm solely by the embedding table’s distribution regardless of field cardinality. 
+
+Why not alternative aggregators? Max pooling introduces an extreme-value bias that grows as 𝑂 (√︁ ln 𝑛 𝑓 ) and discards the major-ity of feature information. LayerNorm [1] applied post-aggregation underperforms empirically (Sec. 4.4.1): its centering and rescaling CIKM ’26, November 07–11, 2026, Rome, Italy Zheng, Liu, Liu et al. 
+
+erase the per-field magnitude signal that distinguishes heteroge-neous fields. Weighted average is an operator that simultaneously (a) bounds output scale independently of 𝑛 𝑓 and (b) requires no learned or estimated statistics: it is a closed-form linear combination that remains stable regardless of 𝐷 .
+
+## 3.3 Efficient Retrieval via Target Token Compression 
+
+Because all candidates of a request share one user, the user-side K/V are computed once per request and reused by every target; each target candidate then only requires its own Q/K/V/output projections plus FFN (16 𝐿 𝑡 𝐷 2 per layer) plus cross-attending to the full user sequence of length 𝐿 𝑢 (4 𝐿 𝑡 𝐿 𝑢 𝐷 per layer). Summing across 
+
+𝑁 layer layers and 𝑁 target candidates: FLOPs total ≈ 4𝐷 · 𝑁 target · 𝐿 𝑡 · ( 4𝐷 + 𝐿 𝑢 ) · 𝑁 layer (2) where 𝐿 𝑡 is the number of target tokens and 𝐿 𝑢 the user sequence length. Among these factors, 𝐷 and 𝑁 layer are scaling parameters we wish to maximize; 𝑁 target = 𝜌𝑁 is already reduced by HNSW to a small fraction of the corpus; and 𝐿 𝑢 is dominated by the 4 𝐷 
+
+term. This leaves 𝐿 𝑡 as the only factor with meaningful room for reduction. In the uncompressed model, 𝐿 𝑡 scales with the number of target feature fields, making it a natural target for compression. We introduce a target compressor : a 3-layer MLP with hid-den sizes [8𝐷, 4𝐷, 𝐷 ], Parametric ReLU activations and LayerNorm between layers (final layer is a plain linear projection), that maps the concatenation of all target-side aggregated embeddings into a single token: 
+
+t = MLP    e𝑓 1 , e𝑓 2 , . . . , e𝑓 𝑀 
+
+  ∈ R𝐷 (3) Crucially, this compression is not a compromise but a strategic reallocation: the freed FLOPs are reinvested into scaling 𝐷 and 
+
+𝑁 layer , enabling deeper and wider architectures within the same latency envelope, trading redundant per-candidate tokens for richer cross-feature interactions. The single compressed token also naturally serves as a fixed-dimensional vector for HNSW indexing without further processing. 
+
+## 3.4 Cross-Domain Data Scaling via Position-Style Domain Embedding 
+
+As motivated in Sec. 1, a unified multi-domain model is required to avoid per-domain cost multiplication. The remaining design question is how to inject domain identity. A straightforward strategy is appending 𝑁 𝑡 extra tokens encoding the domain to the input sequence, but this inflates attention cost from 𝑂 (𝐿 2) to 𝑂 (( 𝐿 +𝑁 𝑡 )2).We instead introduce a position-style domain embedding : a learned vector s𝑑 ∈ R𝐷 indexed by domain 𝑑 , added element-wise to every token: ˜e𝑓 = e𝑓 + s𝑑 (4) Analogous to positional encoding [20], domain identity is injected without increasing sequence length or attention complexity. The key insight is that this design enables cross-domain data scaling : because domain information enters only through element-wise addition, all Transformer parameters, including every atten-tion head and FFN layer, are unconditionally shared across domains. Every training sample from every domain contributes gradients to the same parameters, so sparse domains are no longer data-starved. This contrasts with MMoE/PLE where gate routing implicitly parti-tions gradient flow. 
+
+## 3.5 System Implementation 
+
+Deploying TransRetrieval in production requires co-designing the inference system with the model architecture to meet strict latency constraints. 
+
+Hardware-aware inference optimization. A request’s user-side KV pairs are computed once and shared across the scoring passes of all its candidates. Standard LLM inference frameworks would replicate that cache once per candidate sequence; we instead replace the cache manager with an expand operator that broadcasts the single user cache to every candidate without copying, reducing per-pass latency by 30%. After target compression, each candidate is a single query token attending to the full user context. This ex-treme aspect ratio severely underutilizes modern GPU hardware, which is optimized for large matrix operations rather than single-row queries. We pack multiple candidates into a single batched computation with masking to preserve per-candidate isolation, sig-nificantly improving hardware utilization. Combined with operator fusion across LayerNorm, residual, and activation layers, the model forward latency drops by 11 × vs. naive implementation. 
+
+GPU retrieval. Model-based retrieval interleaves scoring with graph search across beam-search iterations. When the index re-sides on CPU, each iteration incurs multiple round-trip host-device transfers that fragment the GPU computation graph. We migrate all retrieval operators (neighbor lookup, distance computation, and candidate selection) onto GPU, unifying scoring and search into a single device-resident pipeline and reducing retrieval latency by 89% vs. CPU retrieval. However, co-locating the full index on GPU introduces memory pressure. We reduce GPU memory through in-ference engine sharing across requests and quantizing static index data, increasing serving concurrency by 3 ×.
+
+Near-line update. The target compressor (Sec. 3.3) is archi-tecturally decoupled from the Transformer and deployed as an independent sub-graph. During full deployment, this sub-graph computes representations for all targets to build the retrieval index. To maintain freshness, an event-driven near-line service monitors target feature mutations and invokes the same sub-graph to recom-pute only the affected representations, propagating updates to the live index asynchronously. 
+
+## 4 Experiments 
+
+We focus on the following research questions: 
+
+• RQ1 : How does TransRetrieval compare to state-of-the-art baselines under similar computational budgets? (Sec. 4.2) 
+
+• RQ2 : Does TransRetrieval exhibit predictable scaling behav-ior as model capacity increases? (Sec. 4.3) 
+
+• RQ3 : How does each of the three design pillars contribute to performance? (Sec. 4.4 ) 
+
+• RQ4 : Does TransRetrieval deliver significant improvements in real-world deployment? (Sec. 4.5) 
+
+## 4.1 Experimental Protocol TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Table 1: Statistics of the two datasets. #f_user and #f_target denote the number of user-side and target-side features; Len_seq denotes the length of user behavior sequences.                                  
+
+> Dataset #Domains #Users #Targets #Interactions #f_user #f_target Len_seq Domain Distribution (%) Dom A/0 Dom B/1 Dom C/2 Dom D/3 Industrial 4250M 52M 40B 75 87 100 32% 20% 26% 22% KuaiRand 424,943 536,491 152M 37 63 100 11.7% 84.8% 3.32% 0.13%
+
+4.1.1 Datasets. We conduct experiments on two multi-domain datasets from two different recommender system cases: display advertisement and short video recommendation. 
+
+• Industrial . A large-scale industrial dataset sampled from the production environment of the Alibaba display advertising platform, containing 40 billion interactions over a corpus of 52 M advertised items. The dataset covers 4 distinct business domains (anonymized as domains A, B, C, and D), capturing diverse user–item interaction patterns. It includes rich user behavioral histories, detailed item attributes, and real-time contextual signals. 
+
+• KuaiRand [6]. A publicly available sequential recommenda-tion dataset from Kuaishou App, featuring 12 types of user feedback signals and comprehensive interaction histories. Following previous retrieval works [21, 25], we filter the dataset with a frequency threshold of 1000 click records for users and 100 exposure records for items. We use the first 4 domains (tab=0, 1, 2, 3) in our experiments. Table 1 presents dataset statistics. Both datasets cover four do-mains with diverse user behaviors. In Industrial, Domain C ag-gregates multiple smaller sub-domains with heterogeneous user behavior patterns, resulting in significant internal distributional variance. KuaiRand includes an extremely sparse domain (Tab 3), which provides a challenging testbed for generalization under data scarcity. Additionally, the two datasets differ in numbers of at-tributes, which contributes to the different computational costs observed in subsequent experiments. For both datasets, we adopt a temporal split strategy to ensure no data leakage occurs, simu-lating realistic deployment domains where models are trained on historical data and evaluated on future interactions. 
+
+4.1.2 Evaluation Metrics. We focus on Recall@2000 (abbreviated as R@2000 when space is limited), the proportion of ground-truth positive items appearing in the top-2000 retrieved candidates. 
+
+4.1.3 Baselines. We include the following baselines: 
+
+• Production Baseline [12]. The bidding-aware model-based retrieval system serving the Alibaba display advertising plat-form before this work: a highly optimized industrial standard, and the system TransRetrieval replaces in our online A/B test. 
+
+• KuaiFormer [13]. A simple two-tower retrieval baseline that encodes the user side with a Transformer and scores candidates via inner-product search. 
+
+• HSTU [23]. Flattens all features into a single behavioral se-quence to achieve token homogeneity, discarding structural feature distinctions. 
+
+• RankMixer [27]. A scalable ranking architecture adapted for retrieval; replaces attention with parameter-free token mixing and concentrates computation in per-token FFNs. For fair comparison, we implement all baselines within our frame-work, sharing the same preprocessing pipeline. Each baseline re-tains its original feature processing design. 
+
+4.1.4 Implementation Details. All experiments are conducted on NVIDIA H20 GPU clusters using PyTorch and RecIS [28]. All models and both datasets share one tuned hyperparameter set: AdamW, learning rate 1e-3, weight decay 3e-5, and the pairwise learning-to-rank (LTR) loss of the production baseline [12, 26]. Negative sampling ratios are dataset-specific: 5 negatives per positive for Industrial and 200 for KuaiRand, reflecting training data scale: the much larger Industrial volume (40 B vs. 152 M) yields sufficient negative signal at a low ratio, while KuaiRand requires a higher ratio to compensate for limited positives. All runs train to convergence, and the final checkpoint is evaluated. 
+
+## 4.2 Overall Performance (RQ1) 
+
+We compare the overall retrieval performance under similar back-bone configurations across both datasets and all domains. For model configurations, we use the notation 𝑥𝐷 -𝑦𝐿 where 𝑥 denotes the embedding dimension and 𝑦 the number of Transformer layers. Table 2 presents results comparing TransRetrieval (128D-5L, 64D-3L) against the production baseline, HSTU (128D-5L), KuaiFormer (128D-5L), and RankMixer (128D-8T, where T denotes the num-ber of token mixing blocks). MFLOPs ′
+
+measures the per-candidate compute on the target side (Millions of FLOPs per target). Under a comparable per-candidate budget, TransRetrieval-64D3L (0.45 MFLOPs ′
+
+) already surpasses the highly optimized Production Baseline (0.69 MFLOPs ′
+
+) across all domains, achieving 0.603 vs. 0.576 Overall Recall@2000 with 35% fewer FLOPs. Scaling up to TransRetrieval-128D5L (1.91 MFLOPs ′
+
+) further lifts performance to 0.657, a gain of +5.4 pt over the smaller configuration, demonstrat-ing that additional compute translates reliably into retrieval quality. Against the scalable baselines HSTU and RankMixer at similar per-candidate budgets (~1.7–2.1 MFLOPs ′
+
+), TransRetrieval-128D5L sets a new state-of-the-art, and even TransRetrieval-64D3L surpasses both at approximately one quarter of their cost. KuaiFormer trades expressiveness for amortized cost; its scaling behavior is examined in Sec. 4.3. 
+
+## 4.3 Scaling Behavior (RQ2) 
+
+TransRetrieval unlocks predictable scaling for retrieval models. We sweep embedding dimensions (32D, 64D, 128D) and layer counts (1L, 3L, 5L), and plot Recall@2000 against per-target FLOPs in CIKM ’26, November 07–11, 2026, Rome, Italy Zheng, Liu, Liu et al. 
+
+Table 2: Overall retrieval performance (Recall@2000) across datasets and domains. Overall is the per-domain Recall weighted by each domain’s share of evaluation interactions. Among baselines and TransRetrieval-128D5L, best results are in bold, second-best underlined. 
+
+Method Industrial (Recall@2000) KuaiRand (Recall@2000) 
+
+Domain A Domain B Domain C Domain D Overall MFLOPs ′ Tab 0 Tab 1 Tab 2 Tab 3 Overall MFLOPs ′
+
+KuaiFormer-128D5L 1 0.496 0.466 0.470 0.548 0.495 0.011 0.371 0.415 0.379 0.463 0.409 0.012 Production Baseline 0.572 0.586 0.548 0.608 0.576 0.69 0.401 0.378 0.299 0.500 0.378 0.64 HSTU-128D5L 0.518 0.490 0.474 0.636 0.527 1.72 0.315 0.394 0.312 0.611 0.382 1.72 RankMixer-128D8T 0.445 0.419 0.437 0.512 0.452 2.10 0.406 0.357 0.384 0.518 0.364 2.10 TransRetrieval-64D3L 0.593 0.590 0.575 0.663 0.603 0.45 0.460 0.413 0.413 0.481 0.419 0.42 TransRetrieval-128D5L 0.644 0.641 0.634 0.719 0.657 1.91 0.526 0.465 0.479 0.537 0.473 1.81 
+
+Figure 2: Scaling curves of TransRetrieval. Each point is one 
+
+(𝐷, 𝑁 layer ) configuration; shaded regions are 95% confidence intervals of the log-linear fits. 
+
+Figure 2. Both datasets exhibit clean log-linear scaling: Recall@2000 improves from 0.464 to 0.657 on Industrial (+19.3 pt) and from 0.251 to 0.473 on KuaiRand (+22.2 pt) as the backbone grows from 32D-1L to 128D-5L, with high 𝑅 2 (0 .82/0 .88) confirming the trend is consistent and predictable. Table 3 reports detailed results across model sizes. Most strik-ingly, our 128D-5L (1.91 MFLOPs ′
+
+) outperforms RankMixer-768D-16T by 12.6 pt on Industrial while using nearly two orders of mag-nitude less compute (1.91 vs. 150.99 MFLOPs ′
+
+). KuaiFormer shows near-flat scaling (0.485 →0.495 when dou-bling dimension), confirming that the two-tower inner-product bottleneck cannot be overcome by enlarging the encoder alone. 
+
+## 4.4 Ablation Study (RQ3) 
+
+4.4.1 Effect of Weighted Average Aggregation. We compare our weighted average aggregation against alternative feature fusion strategies in Table 4, all using the same 64D-5L configuration. As shown in Table 4, the weighted average consistently outperforms all    
+
+> 1KuaiFormer is a two-tower model, here we report its MFLOPs ′as the per-user encod-ing cost amortized over the ∼40k (Industrial) / ∼28k (KuaiRand) candidates actually scored during HNSW graph traversal.
+
+Table 3: Scaling performance of all methods across different configurations on both datasets (R@2000). MFLOPs ′
+
+denotes per-candidate scoring cost for each dataset. 
+
+Industrial KuaiRand Model Config R@2000 MFLOPs ′ R@2000 MFLOPs ′
+
+KuaiFormer 1 64D5L 0.485 0.003 0.357 0.004 128D5L 0.495 0.011 0.409 0.012 HSTU 32D1L 0.380 0.13 0.269 0.13 64D2L 0.437 0.30 0.298 0.30 128D3L 0.509 1.09 0.328 1.09 128D5L 0.527 1.72 0.382 1.72 RankMixer 128D8T 0.452 2.10 0.364 2.10 768D8T 0.468 75.50 0.420 75.50 768D16T 0.531 150.99 0.453 150.99 TransRetrieval 32D1L 0.464 0.14 0.251 0.13 64D3L 0.603 0.45 0.419 0.42 128D5L 0.657 1.91 0.473 1.81 
+
+Table 4: Recall@2000 of different feature aggregation strate-gies. Weighted Average achieves the best performance. 
+
+Method Dom A Dom B Dom C Dom D Overall 
+
+Weighted Average (ours) 0.610 0.598 0.589 0.681 0.618 
+
+Weighted Sum 0.600 0.594 0.572 0.674 0.608 LN + Weighted Sum 0.582 0.575 0.568 0.656 0.593 Max Pooling 0.563 0.554 0.533 0.644 0.571 
+
+alternatives across every domain. Plain Weighted Sum lags behind (0.608 vs. 0.618) due to unbounded norm growth as the number of features increases. Adding LayerNorm after weighted summation (LN + Weighted Sum) also hurts substantially (0.593 vs. 0.618), because its centering and rescaling erase the per-field magnitude signal that the Transformer relies on to distinguish heterogeneous fields. Max Pooling suffers the largest degradation (0.571 vs. 0.618), because its extreme-value selection discards the majority of feature information. TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Table 5: Impact of target token compression on retrieval performance and computational cost.                
+
+> Config # Tokens R@2000 MFLOPs ′
+> 64D-3L 8 tokens 0.624 3.04 64D-3L 4 tokens 0.615 1.55 64D-3L 1 token 0.603 0.45 128D-5L 1 token 0.657 1.91
+
+Table 6: Ablation on multi-domain modeling strategies (In-dustrial, R@2000 per domain). FLOPs are user-side only, since target-side processing is identical across variants.                                     
+
+> Method ABCDOverall MFLOPs
+> Per-domain training (domain-specific data only)
+> Single Domain Data 0.591 0.539 0.537 0.647 0.579 41.3
+> Unified training (all domains’ data merged)
+> 0 Domain Tokens 0.254 0.276 0.251 0.289 0.265 41.3 1 Domain Token 0.321 0.349 0.339 0.345 0.337 41.8 20 Domain Tokens 0.431 0.451 0.460 0.473 0.452 49.8 TransRetrieval (ours) 0.593 0.590 0.575 0.663 0.603 41.3
+
+4.4.2 Effect of Target Token Compression. Table 5 presents results under the 64D-3L and 128D-5L configurations. Within 64D-3L, com-pressing 8 tokens to 1 cuts MFLOPs ′
+
+by ∼85% (3.04 → 0.45) at only a 2.1 pt Recall drop (0.624 → 0.603), a favorable trade when ev-ery retrieved candidate must be scored by the model. Reinvesting the freed budget into a 128D-5L backbone with 1-token compres-sion yields strictly better operating points: lower cost than 64D-3L at 8 tokens (1.91 vs. 3.04 MFLOPs ′
+
+) and higher Recall (0.657 vs. 0.624), confirming that compression-then-scale-up dominates more-tokens-with-smaller-backbone. 
+
+4.4.3 Effect of Multi-Domain Modeling. Effective multi-domain modeling necessitates capturing domain context under latency con-straints. Table 6 evaluates different strategies using the 64D-3L configuration, reporting user-side FLOPs to explicitly quantify the overhead introduced by sequence expansion. The results show that simply mixing multi-domain data without any domain signal (0 Domain Tokens) leads to severe performance degradation. Adding a single domain token (1 Domain Token) provides limited improve-ment but incurs extra computation. Repeating the domain token 20 times (20 Domain Tokens) further amplifies the domain signal and improves performance, but at a significantly higher computational cost (49.8 MFLOPs), which is prohibitive for large-scale deploy-ment. Our proposed method, injecting domain information as a position-style embedding, achieves the best overall performance (0.603 Recall@2000), while maintaining the exact same inference cost as the 0 Domain Tokens baseline. Additionally, the Single Do-main Data row further validates our multi-domain strategy: training on a single domain’s data alone yields noticeably lower Recall than our unified model, confirming that cross-domain data sharing is a net positive. 
+
+Table 7: Online A/B Test Results of TransRetrieval.               
+
+> Per-Domain Lift Overall
+> ABCDLift 95% Conf. Interval p-value Revenue 1.72% 2.51% 5.39% 0.87% 2.53% [2.22%, 2.70%] <0.0001 RPM 1.22% 2.18% 3.69% 0.43% 1.28% [1.14%, 1.56%] <0.0001
+
+## 4.5 Online A/B Test Results (RQ4) 
+
+A month-long online A/B test was conducted within the Alibaba display advertising system on 5% of production traffic, where the retrieval model is the only variable changed. TransRetrieval-128D5L serves at 230 QPS with P99 latency under 40 ms, identical to the production baseline, so the gains come at no end-to-end latency cost. The lower per-engine QPS (230 vs. 300) reflects the higher per-target computational cost (1.91 vs. 0.69 MFLOPs ′
+
+) and is absorbed by horizontal scaling. As shown in Table 7, TransRetrieval achieved a significant 2 .53% increase in Platform Revenue and a 1 .28% lift in Revenue Per Mille over the highly optimized Production Baseline. The daily gains remain consistent with no systematic decay over the month. These financial gains were achieved while maintaining a healthy ecosys-tem: user experience metrics remained stable, and the advertisers’ Return on Investment (ROI) stayed comparable ( +0.06%). 
+
+## 5 Discussion and Conclusion 
+
+Lessons learned. (i) Input conditioning before architecture redesign :the scaling breakthrough came not from architectural novelty but from a parameter-free one-line fix (weighted average) that restored homogeneous token norms. (ii) Compression as reallocation, not sac-rifice : compressing 8 target tokens to 1 frees 85% FLOPs, and rein-vesting them into depth/width (64D-3L →128D-5L) yields +3.3 pt Recall at lower total cost. (iii) Domain unification as a scaling as-set : beyond avoiding per-domain cost multiplication, position-style domain embeddings let sparse domains benefit from cross-domain transfer rather than starving in isolation. 
+
+Conclusion. Together, these three designs unlock scaling laws for the retrieval stage: on a 40-billion-interaction industrial dataset and on the public KuaiRand benchmark, TransRetrieval delivers log-linear scaling ( 𝑅 2 =0.82/0 .88), state-of-the-art recall, and a 2.53% platform revenue lift in month-long online A/B tests. 
+
+## Acknowledgments 
+
+This work was supported by National Natural Science Foundation of China (No.62472428), Public Computing Cloud, Renmin University of China, the fund for building world-class universities (disciplines) of Renmin University of China, Alibaba Group through the Alibaba Innovative Research Program, and the Qiushi Academic Project of Renmin University of China (RUC25QSDL123). We sincerely appre-ciate Cheng Chen, Fei Wang, Houyuan Xiang, Huimin Yi, Jianan Chen, Jiawen Liao, Junchen Dong, Mingjie Liu, Rui Wang, Wei He, Wenchao Wang, Xingyu Wen, Yan Jiang, Yan Zhang, Yunlong Xu, Zhengxiong Zhou, Zhengyu Liu, Zhensong Yan, and Zhenyuan Lai for implementing the key components of the data, training, and inference infrastructure. CIKM ’26, November 07–11, 2026, Rome, Italy Zheng, Liu, Liu et al. 
+
+## GenAI Usage Disclosure 
+
+During the preparation of this manuscript, the authors used gener-ative AI tools for text polishing and language editing. The authors reviewed and edited all AI-generated suggestions and take full responsibility for the content of this publication. 
+
+## References 
+
+[1] Lei Jimmy Ba, Jamie Ryan Kiros, and Geoffrey E. Hinton. 2016. Layer Normaliza-tion. CoRR abs/1607.06450 (2016). arXiv:1607.06450 http://arxiv.org/abs/1607. 06450 [2] Fedor Borisyuk, Qingquan Song, Mingzhou Zhou, Ganesh Parameswaran, Madhu Arun, Siva Popuri, Tugrul Bingol, Zhuotao Pei, Kuang-Hsuan Lee, Lu Zheng, Qizhan Shao, Ali Naqvi, Sen Zhou, and Aman Gupta. 2024. LiNR: Model Based Neural Retrieval on GPUs at LinkedIn. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management, CIKM 2024, Boise, ID, USA, October 21-25, 2024 , Edoardo Serra and Francesca Spezzano (Eds.). ACM, 4366–4373. doi:10.1145/3627673.3680091 [3] Rihan Chen, Bin Liu, Han Zhu, Yaoxuan Wang, Qi Li, Buting Ma, Qingbo Hua, Jun Jiang, Yunlong Xu, Hongbo Deng, and Bo Zheng. 2022. Approximate Nearest Neighbor Search under Neural Similarity Metric for Large-Scale Recommenda-tion. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management, Atlanta, GA, USA, October 17-21, 2022 , Mohammad Al Hasan and Li Xiong (Eds.). ACM, 3013–3022. doi:10.1145/3511808.3557098 [4] Paul Covington, Jay Adams, and Emre Sargin. 2016. Deep Neural Networks for YouTube Recommendations. In Proceedings of the 10th ACM Conference on Recommender Systems, Boston, MA, USA, September 15-19, 2016 , Shilad Sen, Werner Geyer, Jill Freyne, and Pablo Castells (Eds.). ACM, 191–198. doi:10.1145/2959100. 2959190 [5] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xi-aohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszkoreit, and Neil Houlsby. 2020. An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale. CoRR 
+
+abs/2010.11929 (2020). arXiv:2010.11929 https://arxiv.org/abs/2010.11929 [6] Chongming Gao, Shijun Li, Yuan Zhang, Jiawei Chen, Biao Li, Wenqiang Lei, Peng Jiang, and Xiangnan He. 2022. KuaiRand: An Unbiased Sequential Recom-mendation Dataset with Randomly Exposed Videos. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management, Atlanta, GA, USA, October 17-21, 2022 , Mohammad Al Hasan and Li Xiong (Eds.). ACM, 3953–3957. doi:10.1145/3511808.3557624 [7] Ruidong Han, Bin Yin, Shangyu Chen, He Jiang, Fei Jiang, Xiang Li, Chi Ma, Mincong Huang, Xiaoguang Li, Chunzhen Jing, Yueming Han, MengLei Zhou, Lei Yu, Chuan Liu, and Wei Lin. 2025. MTGR: Industrial-Scale Generative Recom-mendation Framework in Meituan. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management, CIKM 2025, Seoul, Repub-lic of Korea, November 10-14, 2025 , Meeyoung Cha, Chanyoung Park, Noseong Park, Carl Yang, Senjuti Basu Roy, Jessie Li, Jaap Kamps, Kijung Shin, Bryan Hooi, and Lifang He (Eds.). ACM, 5731–5738. doi:10.1145/3746252.3761565 [8] Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch, Elena Buchatskaya, Trevor Cai, Eliza Rutherford, Diego de Las Casas, Lisa Anne Hendricks, Johannes Welbl, Aidan Clark, Tom Hennigan, Eric Noland, Katie Millican, George van den Driessche, Bogdan Damoc, Aurelia Guy, Simon Osindero, Karen Simonyan, Erich Elsen, Jack W. Rae, Oriol Vinyals, and Laurent Sifre. 2022. Training Compute-Optimal Large Language Models. CoRR abs/2203.15556 (2022). arXiv:2203.15556 doi:10.48550/ARXIV.2203.15556 [9] Junjie Huang, Jizheng Chen, Jianghao Lin, Jiarui Qin, Ziming Feng, Weinan Zhang, and Yong Yu. 2024. A Comprehensive Survey on Retrieval Methods in Recommender Systems. CoRR abs/2407.21022 (2024). arXiv:2407.21022 doi:10. 48550/ARXIV.2407.21022 [10] Yuchen Jiang, Qi Li, Han Zhu, Jinbei Yu, Jin Li, Ziru Xu, Huihui Dong, and Bo Zheng. 2022. Adaptive Domain Interest Network for Multi-domain Recommen-dation. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management, Atlanta, GA, USA, October 17-21, 2022 , Mohammad Al Hasan and Li Xiong (Eds.). ACM, 3212–3221. doi:10.1145/3511808.3557137 [11] Wang-Cheng Kang and Julian J. McAuley. 2018. Self-Attentive Sequential Rec-ommendation. In IEEE International Conference on Data Mining, ICDM 2018, Singapore, November 17-20, 2018 . IEEE Computer Society, 197–206. doi:10.1109/ ICDM.2018.00035 [12] Bin Liu, Yunfei Liu, Ziru Xu, Zhi Kou, Yeqiu Yang, Han Zhu, and Jian Xu. 2026. Bidding-Aware Retrieval for Multi-Stage Consistency in Online Advertising. In Proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ’26) . ACM, New York, NY, USA. doi:10.1145/ 3799682.3840091 [13] Chi Liu, Jiangxia Cao, Rui Huang, Kai Zheng, Qiang Luo, Kun Gai, and Guorui Zhou. 2024. KuaiFormer: Transformer-Based Retrieval at Kuaishou. CoRR 
+
+abs/2411.10057 (2024). arXiv:2411.10057 doi:10.48550/ARXIV.2411.10057 [14] Xiao Lv, Jiangxia Cao, Shijie Guan, Xiaoyou Zhou, Zhiguang Qi, Yaqiang Zang, Ben Wang, and Guorui Zhou. 2025. MARM: Unlocking the Recommendation Cache Scaling-Law through Memory Augmentation and Scalable Complexity. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management, CIKM 2025, Seoul, Republic of Korea, November 10-14, 2025 , Meeyoung Cha, Chanyoung Park, Noseong Park, Carl Yang, Senjuti Basu Roy, Jessie Li, Jaap Kamps, Kijung Shin, Bryan Hooi, and Lifang He (Eds.). ACM, 2022–2031. doi:10.1145/3746252.3761015 [15] Jiaqi Ma, Zhe Zhao, Xinyang Yi, Jilin Chen, Lichan Hong, and Ed H. Chi. 2018. Modeling Task Relationships in Multi-task Learning with Multi-gate Mixture-of-Experts. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining, KDD 2018, London, UK, August 19-23, 2018 ,Yike Guo and Faisal Farooq (Eds.). ACM, 1930–1939. doi:10.1145/3219819.3220007 [16] Yury A. Malkov and Dmitry A. Yashunin. 2020. Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs. IEEE Trans. Pattern Anal. Mach. Intell. 42, 4 (2020), 824–836. doi:10.1109/TPAMI.2018. 2889473 [17] Xiang-Rong Sheng, Liqin Zhao, Guorui Zhou, Xinyao Ding, Binding Dai, Qiang Luo, Siran Yang, Jingshan Lv, Chi Zhang, Hongbo Deng, and Xiaoqiang Zhu. 2021. One Model to Serve All: Star Topology Adaptive Recommender for Multi-Domain CTR Prediction. In CIKM ’21: The 30th ACM International Conference on Information and Knowledge Management, Virtual Event, Queensland, Australia, November 1 - 5, 2021 , Gianluca Demartini, Guido Zuccon, J. Shane Culpepper, Zi Huang, and Hanghang Tong (Eds.). ACM, 4104–4113. doi:10.1145/3459637. 3481941 [18] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential Recommendation with Bidirectional Encoder Repre-sentations from Transformer. In Proceedings of the 28th ACM International Con-ference on Information and Knowledge Management, CIKM 2019, Beijing, China, November 3-7, 2019 , Wenwu Zhu, Dacheng Tao, Xueqi Cheng, Peng Cui, Elke A. Rundensteiner, David Carmel, Qi He, and Jeffrey Xu Yu (Eds.). ACM, 1441–1450. doi:10.1145/3357384.3357895 [19] Hongyan Tang, Junning Liu, Ming Zhao, and Xudong Gong. 2020. Progressive Layered Extraction (PLE): A Novel Multi-Task Learning (MTL) Model for Person-alized Recommendations. In RecSys 2020: Fourteenth ACM Conference on Recom-mender Systems, Virtual Event, Brazil, September 22-26, 2020 , Rodrygo L. T. Santos, Leandro Balby Marinho, Elizabeth M. Daly, Li Chen, Kim Falk, Noam Koenigstein, and Edleno Silva de Moura (Eds.). ACM, 269–278. doi:10.1145/3383313.3412236 [20] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is All you Need. In Advances in Neural Information Processing Systems 30: An-nual Conference on Neural Information Processing Systems 2017, December 4-9, 2017, Long Beach, CA, USA , Isabelle Guyon, Ulrike von Luxburg, Samy Bengio, Hanna M. Wallach, Rob Fergus, S. V. N. Vishwanathan, and Roman Garnett (Eds.). 5998–6008. https://proceedings.neurips.cc/paper/2017/hash/ 3f5ee243547dee91fbd053c1c4a845aa-Abstract.html [21] Yihan Wang, Fei Xiong, Zhexin Han, Qi Song, Kaiqiao Zhan, and Ben Wang. 2025. Unleashing the Potential of Two-Tower Models: Diffusion-Based Cross-Interaction for Large-Scale Matching. In Proceedings of the ACM on Web Con-ference 2025, WWW 2025, Sydney, NSW, Australia, 28 April 2025- 2 May 2025 ,Guodong Long, Michale Blumestein, Yi Chang, Liane Lewin-Eytan, Zi Helen Huang, and Elad Yom-Tov (Eds.). ACM, 304–312. doi:10.1145/3696410.3714829 [22] Songpei Xu, Shijia Wang, Da Guo, Xianwen Guo, Qiang Xiao, Bin Huang, Guanlin Wu, and Chuanjiang Luo. 2025. Climber: Toward Efficient Scaling Laws for Large Recommendation Models. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management, CIKM 2025, Seoul, Republic of Korea, November 10-14, 2025 , Meeyoung Cha, Chanyoung Park, Noseong Park, Carl Yang, Senjuti Basu Roy, Jessie Li, Jaap Kamps, Kijung Shin, Bryan Hooi, and Lifang He (Eds.). ACM, 6193–6200. doi:10.1145/3746252.3761561 [23] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhaojie Gong, Fangda Gu, Jiayuan He, Yinghai Lu, and Yu Shi. 2024. Actions Speak Louder than Words: Trillion-Parameter Sequential Transducers for Generative Recommendations. In Forty-first International Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024 . OpenReview.net. https://openreview. net/forum?id=xye7iNsgXn [24] Buyun Zhang, Liang Luo, Yuxin Chen, Jade Nie, Xi Liu, Shen Li, Yanli Zhao, Yuchen Hao, Yantao Yao, Ellie Dingqiao Wen, Jongsoo Park, Maxim Naumov, and Wenlin Chen. 2024. Wukong: Towards a Scaling Law for Large-Scale Rec-ommendation. In Forty-first International Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024 . OpenReview.net. https://openreview.net/ forum?id=8iUgr2nuwo [25] Yuan Zhang, Xue Dong, Weijie Ding, Biao Li, Peng Jiang, and Kun Gai. 2023. Di-vide and Conquer: Towards Better Embedding-based Retrieval for Recommender Systems from a Multi-task Perspective. In Companion Proceedings of the ACM Web Conference 2023, WWW 2023, Austin, TX, USA, 30 April 2023 - 4 May 2023 ,Ying Ding, Jie Tang, Juan F. Sequeda, Lora Aroyo, Carlos Castillo, and Geert-Jan Houben (Eds.). ACM, 366–370. doi:10.1145/3543873.3584629 TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+[26] Zhishan Zhao, Jingyue Gao, Yu Zhang, Shuguang Han, Siyuan Lou, Xiang-Rong Sheng, Zhe Wang, Han Zhu, Yuning Jiang, Jian Xu, and Bo Zheng. 2023. COPR: Consistency-Oriented Pre-Ranking for Online Advertising. Proceedings of the 32nd ACM International Conference on Information and Knowledge Management 
+
+(Oct. 2023), 4974–4980. doi:10.1145/3583780.3615465 [27] Jie Zhu, Zhifang Fan, Xiaoxie Zhu, Yuchen Jiang, Hangyu Wang, Xintian Han, Haoran Ding, Xinmin Wang, Wenlin Zhao, Zhen Gong, Huizhi Yang, Zheng Chai, Zhe Chen, Yuchao Zheng, Qiwei Chen, Feng Zhang, Xun Zhou, Peng Xu, Xiao Yang, Di Wu, and Zuotao Liu. 2025. RankMixer: Scaling Up Ranking Models in Industrial Recommenders. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management, CIKM 2025, Seoul, Republic of Korea, November 10-14, 2025 , Meeyoung Cha, Chanyoung Park, Noseong Park, Carl Yang, Senjuti Basu Roy, Jessie Li, Jaap Kamps, Kijung Shin, Bryan Hooi, and Lifang He (Eds.). ACM, 6309–6316. doi:10.1145/3746252.3761507 [28] Hua Zong, Qingtao Zeng, Zhengxiong Zhou, Zhihua Han, Zhensong Yan, Mingjie Liu, Hechen Sun, Jiawei Liu, Yiwen Hu, Qi Wang, et al. 2025. RecIS: Sparse to Dense, A Unified Training Framework for Recommendation Models. arXiv preprint arXiv:2509.20883 (2025).

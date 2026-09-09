@@ -1,0 +1,545 @@
+Title: Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords
+
+URL Source: https://arxiv.org/pdf/2608.22734v1
+
+Published Time: Tue, 25 Aug 2026 01:30:59 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords 
+
+# Xinrui Miao 
+
+University of Science and Technology of China Hefei, China miaoxinrui@mail.ustc.edu.cn 
+
+# Mingjia Yin 
+
+University of Science and Technology of China Hefei, China mingjia-yin@mail.ustc.edu.cn 
+
+# Jiaqing Zhang 
+
+University of Science and Technology of China Hefei, China jiaqing.zhang@mail.ustc.edu.cn 
+
+# Wei Guo 
+
+Huawei Technologies Shanghai, China guowei67@huawei.com 
+
+# Yong Liu 
+
+Huawei Technologies Shanghai, China liu.yong6@huawei.com 
+
+# Yuyang Ye 
+
+University of Science and Technology of China Hefei, China yeyuyang@mail.ustc.edu.cn 
+
+# Hao Wang ✉
+
+University of Science and Technology of China Hefei, China wanghao3@ustc.edu.cn 
+
+# Enhong Chen 
+
+University of Science and Technology of China Hefei, China cheneh@ustc.edu.cn 
+
+## Abstract 
+
+In generative recommender systems, items are typically tokenized into fixed-length semantic ID sequences for autoregressive next-item prediction. However, for user-context modeling, this fine-grained representation triggers Intra-item Attention Overload :excessive attention is spent on low-level intra-item dependencies rather than high-level inter-item behavioral transitions. To address this, we propose Semantic Subword Tokenization (SST) , which represents historical items as variable-length semantic subwords while preserving fixed-length target decoding. SST first applies Item-level Subword Tokenization (IST) to merge stable adjacent atom tokens into compact semantic subword tokens ,thereby reducing intra-item reassembly in the encoder. It then intro-duces Behavior-induced Co-occurrence Augmentation (BCA) 
+
+to inject coarse-grained semantic prefix transition signals, guiding the freed modeling capacity toward inter-item behavioral regu-larities. Extensive experiments on three public datasets and three generative recommender backbones show empirical improvements of SST over fixed-length and transferable variable-length SID base-lines. Code is available at https://github.com/mxrcandy/Semantic-Subword-Tokenization. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems .
+
+## Keywords 
+
+Generative recommendation, Semantic ID, Tokenization 
+
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy.
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840979
+
+ACM Reference Format: 
+
+Xinrui Miao, Mingjia Yin, Jiaqing Zhang, Wei Guo, Yong Liu, Yuyang Ye, Hao Wang, and Enhong Chen. 2026. Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords. In Proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ’26), November 7–11, 2026, Rome, Italy. ACM, New York, NY, USA, 13 pages. https://doi.org/10.1145/3799682.3840979 
+
+## 1 Introduction 
+
+Generative recommendation has emerged as a prominent paradigm for next-item recommendation, with Semantic ID (SID)-based meth-ods forming a widely adopted stream [14, 35, 53, 83]. This paradigm is driven by advances in large language models (LLMs) [1, 5, 82] and generative retrieval [39, 42, 55]. Instead of ranking items by nearest-neighbor retrieval over single item IDs [12, 19, 38, 41], these methods represent each item as a compact sequence of discrete se-mantic tokens and train a generative model to produce the SID of the next item. In particular, residual-quantization-based tokenizers map item representations into fixed-length codebook sequences, such as ⟨𝑎 ⟩⟨ 𝑏 ⟩⟨ 𝑐 ⟩⟨ 𝑑 ⟩. We refer to each individual codebook token as an atom token . Fixed-length SIDs have become a common design choice because they provide every item with a uniform decoding grammar, making autoregressive generation and constrained beam search straightforward. However, a decoding-oriented identifier is not necessarily an effective representation for modeling user context. In standard SID-based generative recommenders, the same fixed-length atom sequence used to identify the target item is also reused to represent each historical item in the user context. After user histories are flattened into token sequences, every historical item is decomposed into multiple atom tokens. This exposes short-range, intra-item dependencies directly to the sequence encoder: before the model can reason about transitions between items, it must repeatedly com-pose atom tokens that belong to the same item into an item-level arXiv:2608.22734v1 [cs.IR] 24 Aug 2026 CIKM ’26, November 7–11, 2026, Rome, Italy. Miao et al. Budget Released: Zero Internal Burden    
+
+> Clear High-level Inter-item Intent Transfer
+> Sport
+> <a_7>
+> Nike
+> <c_5>
+> Electronic
+> <a_4>
+> Wearable
+> <b_8>
+> Apple
+> <c_6>
+> Footwear
+> <b_4>
+> Item 1 Item 2
+> Budget Wasted: Intra-item Attention Overload
+> Inter-item Transfer Blocked
+> Nike
+> <c_5>
+> Electronic-Wearable
+> <p_a_4_b_8>
+> Apple
+> <c_6>
+> Sport-Footwear
+> <p_a_7_b_4>
+> Item 1 Item 2
+> (a) Existing Fixed-Length SIDs (b) Our Semantic Subword tokenization
+
+Figure 1: Motivation of our work. Fixed-length SIDs are use-ful target-side decoding grammars, but when reused to rep-resent user context they expose low-level atom-token de-pendencies to the encoder. SST decouples these two roles by retokenizing historical items into semantic subwords while preserving fixed-length target decoding. 
+
+semantic signal. We call this user-context tokenization bottleneck 
+
+Intra-item Attention Overload : fixed-length SIDs impose an item-reassembly workload on the encoder, causing a nontrivial portion of its attention and modeling capacity to be spent on low-level intra-item token relations rather than higher-level behavioral transitions. Figure 1 illustrates this mismatch between fixed-length SIDs as target identifiers and fixed-length SIDs as representations for modeling user context. This bottleneck is especially problematic because user prefer-ence modeling is fundamentally about inter-item dynamics. For example, a coarse transition from sports equipment to wearable electronics should be represented as a high-level behavioral rela-tion, but under fixed-length SIDs it is observed by the model as several atom-level token transitions. The resulting sequence mixes item-internal reconstruction signals with inter-item intent signals. In Section 3.3, we empirically examine this phenomenon through a token-level attention workload analysis, showing that fixed-length SIDs allocate substantial intra-item attention mass to atom-level item reassembly within user sequences. Existing efforts improve generative recommenders from adja-cent but distinct perspectives. Text-based identifiers replace dis-crete item codes with natural-language tokens [2, 8, 40], but of-ten lead to long input sequences and less stable target grounding. SID optimization methods improve codebook utilization, semantic alignment, collision handling, or tokenizer–recommender consis-tency [15, 28, 53, 84]; however, they still represent historical items using the same fine-grained atom sequences designed for target gen-eration. Consequently, the attention workload caused by atom-level item reassembly remains largely unaddressed. To address this problem, we propose Semantic Subword Tok-enization (SST) , which retokenizes historical items into variable-length semantic subwords for modeling user context. SST first applies Item-level Subword Tokenization (IST) , which learns merge rules over stable adjacent spans of atom tokens and rewrites historical item SIDs into compact semantic subword tokens . By encoding frequent intra-item token couplings directly into the in-put tokenization, IST reduces the need for the encoder to repeatedly perform atom-level item reassembly and shortens the user-context token sequence. The target item is still generated with the original fixed-length SID. IST removes part of the low-level item-reassembly burden, but compression alone does not tell the model which inter-item regularities are important for recommendation. This motivates 
+
+Behavior-induced Co-occurrence Augmentation (BCA) , a behavior-guided stage that mines coarse-grained semantic pre-fix transitions from user behavior sequences and injects the cor-responding replay samples into training. These prefix-level co-occurrences expose recurring intent transitions in user behavior, complementing the intra-item compression introduced by IST. A design principle of SST is asymmetric tokenization. Since the user context is consumed by the encoder as conditioning informa-tion, semantic subword retokenization reduces the item-reassembly workload in context modeling. The target side instead defines the autoregressive decoding grammar for item identification, so we retain the fixed-length SID for stable target generation. In summary, our main contributions are as follows: 
+
+• We identify a user-context tokenization bottleneck in fixed-length SID-based generative recommendation: decoding-oriented atom sequences are reused to represent historical items, causing intra-item attention overload and distracting the encoder from inter-item behavioral transitions. 
+
+• We propose Semantic Subword Tokenization (SST), which retokenizes historical items into semantic subword tokens via IST while preserving fixed-length target decoding. BCA further supplies behavior-level semantic prefix transition signals that complement the intra-item compression intro-duced by IST. Through these two components, SST reduces item-reassembly workload and redirects modeling capacity toward higher-order user intent. 
+
+• We evaluate SST on three public datasets and three main-stream backbones, showing consistent recommendation gains, reduced intra-item attention workload, and the effec-tiveness of the asymmetric history-side tokenization design in the evaluated settings. 
+
+## 2 Methodology 
+
+This section first formulates the generative recommendation task and reviews fixed-length SIDs from the perspective of user-context tokenization, then presents our Semantic Subword Tokenization (SST) method, including Item-level Subword Tokenization (IST) and Behavior-induced Co-occurrence Augmentation (BCA). Figure 2 provides an overview of the proposed framework. 
+
+## 2.1 Problem Formulation 
+
+Let the item universe be V = {𝑣 1, 𝑣 2, . . . , 𝑣 | V | }. For each user 𝑢 ,their interaction history sorted by timestamp forms a sequence 
+
+𝑆 𝑢 = [𝑣 (𝑢 ) 
+
+> 1
+
+, 𝑣 (𝑢 ) 
+
+> 2
+
+, . . . , 𝑣 (𝑢 ) 
+
+> 𝑛 𝑢
+
+]. Each item is represented by a discrete token sequence. The goal of generative recommendation is to model the conditional probability distribution 𝑃 (𝑣 (𝑢 )  
+
+> 𝑛 𝑢 +1
+
+| 𝑆 𝑢 ) and autore-gressively generate the semantic ID sequence of the next item for future interactions token by token [14]. Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords CIKM ’26, November 7–11, 2026, Rome, Italy. ID-21  ID-41   
+
+> ID-34 ID-15
+> ID-6 ID-12
+> …
+> …
+> …
+> …
+> …
+> …
+> …
+> …
+> …
+
+Item Sequence 
+
+> RQVAE
+
+Semantic Subword Tokenization 
+
+Quantization  Training 
+
+> …
+> GR Model
+
+Original SID Sequence  Re-encoding SID Sequence                                         
+
+> a7 …b4 c5 d0 a4 b8 c6 d1
+> a7 b4 c2 d1 a4 b8 c8 d1 …
+> a5 b9 c4 d0 a5 b8 c8 d0 …
+> …c5 d0 c6 d1
+> c2 d1 d1 …
+> a5 b9 c4 d0 a5 d0 …
+> a7_b4
+> a7_b4
+> a4_b8
+> a4_b8_c8
+> b8_c8
+> …c5 d0 c6 d1 a7_b4 a4_b8
+> Merge Rules:
+> <a7>+<b4>
+> <a4>+<b8>
+> <b8>+<c8>
+> …
+> Prefix Co-occurrence:
+> <a7> <b4> <a4><b8>
+> …IST BCA
+> …
+
+Figure 2: Overview of the proposed Semantic Subword Tokenization (SST) framework. IST learns item-level semantic subword tokens by merging stable adjacent SID tokens, while BCA injects coarse-grained behavior co-occurrence signals to guide the attention capacity released by IST. 
+
+## 2.2 Preliminaries: Fixed-Length SIDs and User-Context Tokenization 
+
+We review the fixed-length SID pipeline used by mainstream gener-ative recommenders, focusing on how item identifiers are produced and how they are reused to represent user histories. 
+
+2.2.1 Fixed-Length SID Tokenization. The item tokenizer quan-tizes item semantic features (typically dense embeddings produced by a pre-trained large language model) into discrete semantic ID sequences [26]. Mainstream methods adopt the Residual Quanti-zation (RQ) framework [24, 43, 72], which uses 𝐿 codebook layers to iteratively approximate an item embedding e𝑖 [18]. At layer 𝑗 ,the tokenizer selects the nearest codeword to the current residual: 
+
+r0 = e𝑖 , 𝑘 𝑗 = arg min  
+
+> 𝑘 ∈ C 𝑗
+
+∥r𝑗 −1 − c𝑘 𝑗 ∥22, r𝑗 = r𝑗 −1 − c𝑘 𝑗  
+
+> 𝑗
+
+. (1) The final item identifier is t𝑖 = [𝑡 1 
+
+> 𝑖
+
+, 𝑡 2 
+
+> 𝑖
+
+, . . . , 𝑡 𝐿 𝑖 ], where each 𝑡 𝑗 𝑖 is an atom token from the 𝑗 -th codebook. These atom tokens jointly identify the item in a coarse-to-fine manner: earlier tokens capture broader semantic regions, while later tokens refine residual details needed to distinguish individual items. In practice, the codebooks can be learned by RQ-VAE or RQ-KMeans; SST is agnostic to this tokenizer choice by design. 
+
+2.2.2 Flattened User-Context Tokenization. In SID-based genera-tive recommenders, the same fixed-length SID serves two roles. On the target side, it defines a stable 𝐿 -slot decoding grammar: the de-coder autoregressively generates 𝐿 atom tokens, which are mapped back to an item through constrained decoding, typically with beam search [29]. On the history side, each interacted item is also repre-sented by its full atom-token sequence. Thus a user history 𝑆 𝑢 =
+
+[𝑣 (𝑢 ) 
+
+> 1
+
+, . . . , 𝑣 (𝑢 ) 
+
+> 𝑛 𝑢
+
+] is flattened into 𝑇 𝑢 = [𝑡 11 , . . . , 𝑡 𝐿  
+
+> 1
+
+, . . . , 𝑡 1 
+
+> 𝑛 𝑢
+
+, . . . , 𝑡 𝐿 𝑛 𝑢 ].Let t𝑛 𝑢 +1 = [𝑡 1 
+
+> 𝑛 𝑢 +1
+
+, . . . , 𝑡 𝐿 𝑛 𝑢 +1] denote the fixed-length SID of the next item. Conditioned on the encoded history 𝑇 𝑢 , an encoder– decoder Transformer autoregressively predicts this target SID using the target-side next-token cross-entropy loss [14]: 
+
+LGR = −
+
+> 𝐿
+
+∑︁ 
+
+> 𝑗 =1
+
+log 𝑃 𝜃 
+
+
+
+𝑡 𝑗 𝑛 𝑢 +1 | 𝑇 𝑢 , 𝑡 < 𝑗 𝑛 𝑢 +1
+
+
+
+(2) This flattening increases the context length from 𝑛 𝑢 items to 𝑛 𝑢 𝐿 
+
+tokens and exposes intra-item atom dependencies to the encoder. Before modeling inter-item behavioral transitions, the model must repeatedly spend attention reassembling atom tokens belonging to the same item into an item-level semantic signal. This creates the user-context tokenization bottleneck studied in this paper: fixed-length SIDs are convenient target identifiers, but inefficient history-side representations for modeling user behavior. 
+
+## 2.3 Item-level Subword Tokenization (IST) 
+
+To alleviate the user-context tokenization bottleneck, IST augments fixed-length SIDs with a post-hoc variable-length encoding stage. Inspired by subword tokenization in large language models [4, 9, 34], IST packs frequently co-occurring contiguous atom-token spans into semantic subword tokens , so that low-level compositional regularities are encoded directly in the token structure rather than repeatedly relearned by the backbone. Given the fixed-length SID of each item, IST learns merge rules and constructs a variable-length token vocabulary in three stages. 
+
+Step 1: Candidate pair collection. For each item, we collect adjacent token pairs such as (⟨ 𝑎 _7 ⟩, ⟨𝑏 _4 ⟩) ; pairs crossing item boundaries are never considered. We then record two corpus-level CIKM ’26, November 7–11, 2026, Rome, Italy. Miao et al. 
+
+statistics for each pair: its occurrence frequency and its item support, namely the number of distinct items containing it. 
+
+Step 2: Merge rule learning. IST iteratively learns merge rules according to the chosen tokenization criterion. At each iteration, it selects the highest-scoring adjacent candidate whose frequency and item support satisfy the thresholds 𝑓 and 𝑠 , respectively, merges it in all item SIDs, and updates the pair statistics. The procedure stops when the configured merge budget is reached or no eligible candi-date remains. In practice, we consider three criteria: two adapted from LLM subword tokenization, BPE [36] and WordPiece [3], and one criterion designed for generative recommendation, namely the proposed CondEntropy. 
+
+• BPE : Following the subword tokenization paradigm used in NLP/LLMs, BPE repeatedly selects the most frequent adja-cent token pair. After each selected pair is merged in all item SIDs, the pair statistics are updated before the next merge rule is learned. For a candidate pair (𝑡 𝑎 , 𝑡 𝑏 ):
+
+𝑠 BPE (𝑡 𝑎 , 𝑡 𝑏 ) = freq (𝑡 𝑎 , 𝑡 𝑏 ) (3) where freq (𝑡 𝑎 , 𝑡 𝑏 ) is the co-occurrence count of the adja-cent pair in the item corpus. BPE is the simplest and most data-driven criterion, but it tends to favor token pairs in-volving already high-frequency tokens, which may dilute the semantic specificity of the resulting subwords. 
+
+• WordPiece : WordPiece follows the same iterative merge pro-cess, but scores candidate pairs by PMI-weighted frequency. This penalizes generic high-frequency tokens and prioritizes pairs with stronger semantic coupling: 
+
+𝑠 WP (𝑡 𝑎 , 𝑡 𝑏 ) = freq (𝑡 𝑎 , 𝑡 𝑏 ) · max  PMI (𝑡 𝑎 , 𝑡 𝑏 ), 0,
+
+PMI (𝑡 𝑎 , 𝑡 𝑏 ) = log (freq (𝑡 𝑎 , 𝑡 𝑏 ) + 1)𝑁 
+
+(freq (𝑡 𝑎 ) + 1)( freq (𝑡 𝑏 ) + 1) . (4) where 𝑁 is the total number of adjacent token pairs. By com-bining frequency with positive PMI, WordPiece suppresses generic high-frequency pairs and favors discriminative asso-ciations among tokens. 
+
+• CondEntropy : CondEntropy is designed for generative rec-ommendation, where a useful subword should be both fre-quent and stable under autoregressive generation. Given the pair frequency freq (𝑡 𝑎 , 𝑡 𝑏 ) defined above, we com-pute its next-side and previous-side marginal frequen-cies as freq next (𝑡 𝑎 ) = Í𝑧 ∈ V 𝑡 freq (𝑡 𝑎 , 𝑧 ) and freq prev (𝑡 𝑏 ) =
+
+Í𝑧 ∈ V 𝑡 freq (𝑧, 𝑡 𝑏 ), where V𝑡 denotes the current token vo-cabulary. The bidirectional empirical probabilities are 
+
+𝑃 (𝑡 𝑏 | 𝑡 𝑎 ) = freq (𝑡 𝑎 , 𝑡 𝑏 )
+
+freq next (𝑡 𝑎 ) , 𝑃 (𝑡 𝑎 | 𝑡 𝑏 ) = freq (𝑡 𝑎 , 𝑡 𝑏 )
+
+freq prev (𝑡 𝑏 ) . (5) We use 𝜋 next (𝑡 𝑎 ) and 𝜋 prev (𝑡 𝑏 ) to denote the purity of the next-token distribution of 𝑡 𝑎 and the previous-token distri-bution of 𝑡 𝑏 , respectively. Each purity term is computed as one minus the normalized conditional entropy over observed neighbors; a token with only one observed neighbor receives purity one. CondEntropy then scores each pair as 
+
+𝑠 CE (𝑡 𝑎 , 𝑡 𝑏 ) = freq (𝑡 𝑎 , 𝑡 𝑏 ) · √︁ 𝑃 (𝑡 𝑏 | 𝑡 𝑎 ) 𝑃 (𝑡 𝑎 | 𝑡 𝑏 )·√︃ 𝜋 next (𝑡 𝑎 ) 𝜋 prev (𝑡 𝑏 ).
+
+(6) Compared with frequency-only or PMI-based scoring, Con-dEntropy imposes a stricter quality bar: a pair scores high only when it is frequent, mutually predictive, and located in low-entropy local contexts, making the selected semantic subword more reliable. 
+
+Step 3: Re-encoding. Finally, each item SID is rewritten by re-playing the learned merge rules in order. Whenever a selected adjacent pair is merged, the resulting segment is assigned a unique 
+
+semantic subword token (e.g., ⟨𝑝 _𝑎 7_ 𝑏 4⟩), which is added to the token vocabulary and trained together with atom tokens in the recommender. Tokens that are not covered by any merge rule re-main unchanged. After re-encoding, the item sequence length is no longer fixed at 𝐿 but becomes variable, denoted by ˜ 𝐿 𝑖 ≤ 𝐿 .
+
+Remark. By consolidating short-range token co-occurrence reg-ularities into semantic subword tokens, IST reduces the need for the Transformer to repeatedly fit low-level atom couplings in the attention layers. The resulting history context is more compact and semantically organized, yielding a concise representation for modeling inter-item transitions and higher-order user intent. 
+
+## 2.4 Behavior-induced Co-occurrence Augmentation (BCA) 
+
+IST reduces the low-level attention burden by compacting stable intra-item token co-occurrences into semantic subwords, but it does not specify which inter-item behavioral regularities should be emphasized. Therefore, BCA builds upon this cognitive offloading effect by injecting coarse-grained semantic prefix co-occurrence signals into the training process, providing structured high-order navigation signals for the model. The procedure consists of the following steps. 
+
+Step 1: Semantic prefix extraction. For each item in a user se-quence, the first 𝑃 tokens of its SID are extracted as the semantic prefix, representing the item’s coarse-grained semantic category. For example, given an item SID ⟨𝑎 _7 ⟩⟨ 𝑏 _4 ⟩⟨ 𝑐 _5 ⟩⟨ 𝑑 _0 ⟩, extracting 
+
+𝑃 = 2 yields the prefix ⟨𝑎 _7 ⟩⟨ 𝑏 _4 ⟩, which denotes its high-level semantic class. 
+
+Step 2: Prefix pair co-occurrence mining. On each user’s prefix sequence, a sliding window of size 𝑊 counts co-occurring prefix pairs (𝑝 left , 𝑝 right ). For each pair, we record its raw count, Pointwise Mutual Information (PMI), and lift, where PMI measures log associa-tion relative to the two prefix marginals and lift is its exponentiated ratio. The top-𝑘 prefix pairs are selected by a specified scoring function (e.g., count, PMI-weighted, or lift). We adopt pairwise pre-fix co-occurrence as a simple and efficient behavioral signal: it is computationally lightweight and statistically reliable under sparse interaction data. 
+
+Step 3: Sequence replay augmentation. For each selected high-frequency prefix pair (𝑝 left , 𝑝 right ), we trace back the context in which this transition occurred in the original user sequences—i.e., we extract the subsequence of historical items between the occur-rence of 𝑝 left and 𝑝 right . These subsequences are injected into the original training set as additional training samples. Each augmented sample uses the replayed historical subsequence as input and the right-side item as the prediction target. 
+
+Remark. IST and BCA follow a clear progression: IST offloads low-level intra-item regularities, making room for the model to Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords CIKM ’26, November 7–11, 2026, Rome, Italy. 
+
+better absorb the coarse-grained co-occurrence signals injected by BCA; conversely, BCA additionally exposes the model to inter-item behavioral regularities. Together they form a complete “remove low-order—inject high-order” representation reinforcement loop for user modeling. 
+
+## 2.5 Asymmetric Tokenization 
+
+It is worth emphasizing that IST and BCA only modify the token representations on the encoder (history) side; the decoder (target) side consistently retains the fixed-length SID format. This asym-metric tokenization design is motivated by the following observa-tion: while the history side benefits from context compression and structured representation, converting the target side to variable-length subword representations would disrupt the stable L-slot decoding grammar and force the decoder into a low-frequency competition between atom tokens and semantic subword tokens, ultimately harming generation stability. The necessity of retaining fixed-length SIDs on the target side is empirically validated and analyzed in Section 3.7. 
+
+## 3 Experiments 
+
+We evaluate SST through extensive benchmarks on three public datasets. Following the setup and main results, we conduct a series of mechanistic analyses that dissect SST from multiple angles: atten-tion workload verification, hyperparameter sensitivity, efficiency, coverage validation, and asymmetric design justification. 
+
+## 3.1 Experimental Setup 
+
+3.1.1 Datasets. We conduct extensive experiments on three di-verse benchmark datasets: Beauty and Instruments from the Amazon product collection 1, and Yelp from the business review platform 2. Following common practice [19], we apply 5-core filter-ing to remove users and items with fewer than five interactions. The remaining interactions are grouped by user and organized into chronological sequences, with the maximum sequence length truncated to 20. Table 2 summarizes the detailed statistics of the datasets after preprocessing. 
+
+3.1.2 Baseline models. We evaluate SST across three representative generative recommender backbones: 
+
+• TIGER RQVAE [35] (denoted TIGER-VAE ): A pioneering generative recommendation framework that employs RQ-VAE to encode item textual content into hierarchical, fixed-length semantic IDs for autoregressive retrieval. 
+
+• TIGER RQ-KMeans (denoted TIGER-KM ): An industri-ally aligned variant of TIGER that replaces the RQ-VAE mod-ule with Residual K-Means (RQ-KMeans) [84]. As a widely adopted mainstream practice in industry, it quantizes item representations into semantic IDs via sequential clustering, serving as a highly robust encoding baseline. 
+
+• LETTER [53]: A widely adopted improvement over TIGER that incorporates an explicit item-level alignment loss to bet-ter synchronize the generated semantic IDs with underlying collaborative signals. 
+
+> 1https://nijianmo.github.io/amazon/index.html
+> 2https://www.yelp.com/dataset
+
+Each backbone is evaluated under the following settings: 
+
+• Fixed : The original backbone with standard fixed-length SIDs, serving as the baseline. 
+
+• SARQ [48]: Truncates each item’s SID at the earliest depth where the prefix bucket becomes sufficiently discriminative, using normalized entropy and dominance thresholds to de-termine the cut point adaptively. 
+
+• VSID [20]: Selects the optimal prefix length per item by minimizing a cost function that jointly balances entropy, collision penalty, and length regularization. For a controlled comparison, we adapt SARQ and VSID to only modify the history-side representations while retaining fixed-length SIDs on the target side. This isolates the effect of history-side variable-length tokenization from changes in the decoding grammar, yielding controlled history-side baselines under the same target-side decoding setting as SST. Detailed descriptions and com-parisons are provided in Section 4.2. 
+
+• +BCA : Fixed-length SIDs augmented with behavior-induced co-occurrence augmentation; 
+
+• +IST : Item-level subword tokenization; 
+
+• +IST+BCA (SST) : The full Semantic Subword Tokenization framework combining IST and BCA. 
+
+3.1.3 Evaluation settings. To evaluate the performance of sequen-tial recommendation, we adopt two standard metrics: top-𝐾 Recall and Normalized Discounted Cumulative Gain (NDCG@ 𝐾 ), where 
+
+𝐾 ∈ { 5, 10 }. In alignment with existing literature [19, 35], we parti-tion the datasets using the widely adopted leave-one-out strategy. Specifically, for each user sequence, the last interacted item is held out for testing, the second-to-last for validation, and the remaining items serve as training data. To ensure a rigorous and unbiased comparison, we conduct a full-ranking evaluation across the entire item set rather than relying on sampled negatives. Furthermore, the beam size during autoregressive decoding is consistently set to 20 for all generative models. 
+
+3.1.4 Implementation details. We describe the key implementation choices for the item tokenizer and the generative recommender in detail below. 
+
+Item tokenizer. Following TIGER [35], we utilize Sentence-T5 [31] to extract semantic embeddings from the textual features of each item. All three backbones adopt the Residual Quantization (RQ) framework with 4 codebook layers of size 256 codewords. For IST, we select the tokenization criterion from {BPE, WordPiece, Con-dEntropy} for each backbone–dataset combination solely according to validation loss. Table 1 reports the test performance of the re-sulting fixed configuration, while Table 6 reports the test results of all criterion-specific configurations. The subword count 𝑘 is tuned from {64 , 128 , 192 , 256 , 320 , 384 , 512 }, minimum subword frequency 
+
+𝑓 from {20 , 30 }, and item support 𝑠 from {10 , 15 }. For BCA, the se-mantic prefix length is fixed at 𝑃 = 2 and the replay history length at 𝐻 = 5. The sliding window size 𝑊 is tuned from {3, 5}, mini-mum co-occurrence count 𝑐 from {3, 5}, top-𝑘 prefix pairs 𝑘 from 
+
+{64 , 128 , 256 , 384 , 512 }, and the maximum number of augmented samples per sequence from {10 , 30 , 50 , 100 }.
+
+Generative recommender. All backbones share a T5-style [33] encoder–decoder Transformer architecture with 4 encoder layers, CIKM ’26, November 7–11, 2026, Rome, Italy. Miao et al. 
+
+Table 1: Main experimental results. N@5/N@10 abbreviate NDCG@5/NDCG@10. The “Improve.” row denotes the relative improvement of SST (+IST+BCA) over the strongest non-SST baseline in each column. 
+
+Beauty Instruments Yelp Method HR@5 HR@10 N@5 N@10 HR@5 HR@10 N@5 N@10 HR@5 HR@10 N@5 N@10 TIGER-KM Fixed 0.0372 0.0582 0.0238 0.0305 0.0849 0.1065 0.0718 0.0787 0.0244 0.0385 0.0159 0.0205 SARQ 0.0368 0.0579 0.0234 0.0302 0.0850 0.1048 0.0630 0.0694 0.0245 0.0390 0.0159 0.0206 VSID 0.0383 0.0608 0.0248 0.0320 0.0861 0.1056 0.0733 0.0795 0.0239 0.0384 0.0155 0.0201 +BCA 0.0409 0.0630 0.0266 0.0337 0.0887 0.1081 0.0759 0.0821 0.0257 0.0405 0.0172 0.0219 +IST 0.0393 0.0607 0.0260 0.0329 0.0871 0.1094 0.0739 0.0810 0.0259 0.0412 0.0169 0.0219 +IST+BCA 0.0423 0.0643 0.0281 0.0352 0.0909 0.1107 0.0773 0.0837 0.0257 0.0416 0.0172 0.0223 Improve. +10.4% +5.8% +13.3% +10.0% +5.6% +3.9% +5.5% +5.3% +4.9% +6.7% +8.2% +8.3% 
+
+TIGER-VAE Fixed 0.0357 0.0532 0.0230 0.0286 0.0836 0.1018 0.0711 0.0769 0.0198 0.0330 0.0127 0.0169 SARQ 0.0330 0.0537 0.0213 0.0280 0.0837 0.1034 0.0710 0.0773 0.0221 0.0352 0.0145 0.0187 VSID 0.0353 0.0553 0.0227 0.0291 0.0843 0.1033 0.0718 0.0780 0.0217 0.0354 0.0144 0.0188 +BCA 0.0379 0.0577 0.0243 0.0307 0.0863 0.1041 0.0744 0.0801 0.0245 0.0368 0.0170 0.0209 
+
++IST 0.0353 0.0564 0.0227 0.0295 0.0875 0.1067 0.0748 0.0810 0.0234 0.0384 0.0150 0.0198 +IST+BCA 0.0384 0.0589 0.0253 0.0319 0.0903 0.1091 0.0777 0.0837 0.0247 0.0378 0.0165 0.0207 
+
+Improve. +7.6% +6.5% +10.0% +9.6% +7.1% +5.5% +8.2% +7.3% +11.8% +6.8% +13.8% +10.1% 
+
+LETTER Fixed 0.0400 0.0635 0.0264 0.0340 0.0865 0.1070 0.0738 0.0804 0.0266 0.0413 0.0175 0.0222 SARQ 0.0409 0.0644 0.0266 0.0341 0.0845 0.1060 0.0641 0.0711 0.0260 0.0432 0.0171 0.0226 VSID 0.0410 0.0660 0.0268 0.0348 0.0863 0.1071 0.0739 0.0806 0.0257 0.0411 0.0171 0.0220 +BCA 0.0428 0.0651 0.0286 0.0357 0.0873 0.1081 0.0752 0.0819 0.0263 0.0430 0.0173 0.0227 +IST 0.0444 0.0673 0.0292 0.0366 0.0868 0.1075 0.0748 0.0815 0.0279 0.0438 0.0182 0.0233 +IST+BCA 0.0431 0.0669 0.0292 0.0369 0.0888 0.1085 0.0767 0.0830 0.0287 0.0452 0.0186 0.0239 Improve. +5.1% +1.4% +9.0% +6.0% +2.7% +1.3% +3.8% +3.0% +7.9% +4.6% +6.3% +5.8% 
+
+Table 2: Dataset statistics. 
+
+Dataset #Users #Items #Interactions Beauty 22,363 12,101 198,502 Instruments 24,772 9,922 206,153 Yelp 30,431 20,033 316,354 4 decoder layers, hidden size 128, FFN intermediate size 1024, and 6 attention heads. The model is optimized with AdamW at learning rate 5 × 10 −4, per-device batch size 256 with gradient accumulation steps 2. Training runs for up to 200 epochs with early stopping pa-tience of 20, selecting the best checkpoint by validation loss. Both checkpoint selection and all SST configuration-selection decisions use validation loss only; the test set is evaluated only after the con-figuration and checkpoint are fixed. During inference, beam search with beam size 20 and full-trie constrained decoding is applied. 
+
+## 3.2 Overall Performance 
+
+Table 1 reports the main results. We highlight three observations. 
+
+Backbone comparison. LETTER consistently achieves the strongest absolute performance across all datasets, benefiting from its explicit item-level alignment loss. Between the two TIGER vari-ants, TIGER-KM generally outperforms TIGER-VAE due to more stable semantic partitions. Despite these capability differences, SST yields consistent relative gains across all three backbones, demon-strating its generality. 
+
+Comparison with baselines. As transferable variable-length SID baselines, SARQ and VSID provide a useful test of whether shortening history-side token sequences alone is sufficient. They sometimes improve over Fixed, but the gains are dataset- and backbone-dependent, and SARQ can even underperform Fixed (e.g., on Beauty). In comparison, IST delivers more stable gains across backbone–dataset combinations, suggesting that SST benefits from semantic-subword-aware history compression rather than merely shorter sequences. Additional comparisons with length-matched random segmentation and InputPool are provided in Appendix B. 
+
+Ablation of method components. IST and BCA each usually improve over Fixed, and SST (+IST+BCA) achieves the best or near-best performance in most cases. Although the two components are not strictly additive in every metric, the overall trend supports our core claim: cognitive offloading via tokenization and attention focusing via behavioral guidance are complementary—the former frees attention capacity from low-level reassembly, and the latter directs it toward high-order transitions. 
+
+## 3.3 Attention Overload Analysis 
+
+While the recall gains in Table 1 confirm that SST improves rec-ommendation quality, they do not directly verify our core claim that SST alleviates intra-item attention overload through IST. To Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords CIKM ’26, November 7–11, 2026, Rome, Italy. 
+
+Figure 3: Token-level attention workload analysis on TIGER-VAE. The two x-axis groups represent the Intra-Item Atten-tion Budget (left axis) and Atom Reassembly Load (right axis). Dashed connectors between bar pairs indicate the relative change Δ (%) from Fixed to SST. 
+
+further examine this mechanism, we conduct a token-level atten-tion workload analysis. We instrument the encoder self-attention layers and measure, for every query token, how its attention mass is distributed across same-item versus cross-item key tokens. Two metrics are of central interest: 
+
+• Intra-Item Attention Budget : the total attention mass allocated to other tokens from the same item across the entire input sequence. This metric directly quantifies how much of the Transformer’s limited attention budget is consumed by within-item token reassembly. 
+
+• Atom Reassembly Load : the average attention mass that atom tokens assign to other atom tokens within the same item. It directly quantifies how heavily the model relies on low-level token-to-token reassembly to represent an item— the very burden SST is designed to offload through IST. Figure 3 reports the comparison between Fixed and SST across all three datasets under the TIGER-VAE backbone. Under Fixed SID, both metrics register substantial values, re-flecting the considerable attention budget consumed by intra-item token reassembly—the intra-item attention overload we hypoth-esized. After applying SST, both metrics drop consistently. The decline in Intra-Item Attention Budget means that the total atten-tion mass locked up by intra-item token interactions is reduced: the model no longer needs to spend as much of its constrained bud-get on reassembling tokens that belong to the same item, freeing capacity for learning inter-item transition regularities—precisely the signals that BCA explicitly reinforces. The decline in Atom Re-assembly Load further shows that atom queries place less attention on other atom tokens within the same item, suggesting that IST reduces the need to model atom-level co-occurrence regularities explicitly. To verify that this offloaded attention is not simply dis-carded, we decompose the same-item attention into sub-channels: atom →subword (atom queries attending to semantic subword to-kens within the same item) and subword →atom (semantic subword queries attending to atom tokens). Both channels remain non-zero when SST is active, confirming that within-item representation is absorbed by semantic subword tokens as compact semantic carriers rather than eliminated. In summary, the token-level analysis shows consistently that SST, through its IST component, reduces the attention budget allocated to low-level intra-item token reassembly, while BCA redirects the 
+
+Figure 4: Sensitivity of IST to the subword count 𝑘 on TIGER-KM. NDCG@10 shown as lines (left axis); HR@10 shown as bars (right axis). 
+
+Figure 5: Sensitivity of BCA to the prefix pair count 𝑘 on TIGER-KM. NDCG@10 shown as lines (left axis); HR@10 shown as bars (right axis). 
+
+freed capacity toward inter-item co-occurrence modeling more effectively overall. 
+
+## 3.4 Hyperparameter Sensitivity 
+
+We investigate the sensitivity of the two core components to their primary hyperparameter. For IST, 𝑘 is the number of semantic subword merges retained in the vocabulary; for BCA, 𝑘 is the num-ber of behavior prefix pairs selected for augmentation. All exper-iments in this section use TIGER-KM as the backbone with the best-performing tokenization criterion per dataset. 
+
+IST Subword Count. Figure 4 reports the effect of varying the subword count 𝑘 . On both datasets, performance follows a concave trend: moderate 𝑘 works best, while overly large 𝑘 introduces noisy or low-confidence subwords with limited utility. 
+
+BCA Prefix Pair Count. Figure 5 shows the sensitivity to the prefix pair count. On both datasets, performance improves as 𝑘 
+
+increases and saturates at moderate values, confirming that high-quality co-occurrence transitions bring meaningful gains while further increasing 𝑘 introduces little additional benefit. 
+
+## 3.5 Efficiency Analysis 
+
+IST reduces the average history token length by packing multi-token spans into single semantic subword tokens, and BCA injects additional behavioral replay samples. Table 3 quantifies these effects alongside the end-to-end wall time (covering training, best-model loading, and test evaluation). Two opposing factors affect the overall wall time. IST reduces the average history token length by packing multi-token spans into single semantic subword tokens, which directly lowers the quadratic cost of self-attention. BCA injects additional behavior CIKM ’26, November 7–11, 2026, Rome, Italy. Miao et al. 
+
+Table 3: End-to-end efficiency comparison on TIGER-KM. Time covers the full pipeline. History length is the average token count per test sequence. “+Samples” denotes the num-ber of behavior replay samples added to the training set.                                 
+
+> Dataset Setting Time Epoch Avg Hist Len +Samples Beauty Fixed 0.718 h 60 28.61 —SST 0.659 h 49 26.73 11,150 Instruments Fixed 0.729 h 56 27.92 —SST 0.691 h 55 23.41 7,308 Yelp Fixed 1.689 h 98 32.53 —SST 1.709 h 92 29.34 5,753
+
+Figure 6: Coverage bucket analysis on TIGER-KM. Bars show NDCG@10 for Fixed and IST per bucket; the diamond line shows the relative improvement ΔNDCG@10 (%) on the right axis. 
+
+replay samples into the training set, which increases the per-epoch training cost. In all cases the two factors roughly cancel out, and the number of training epochs to convergence is consistently reduced. Overall, SST incurs no systematic slowdown despite the added IST and BCA components. 
+
+## 3.6 Coverage Bucket Analysis 
+
+To verify that the performance gains of IST are genuinely driven by subword-aware history tokenization rather than incidental fac-tors, we partition test samples by the fraction of semantic subword tokens ( ⟨𝑝 _∗⟩ ) in their history and compare Fixed and IST within each bucket. Figure 6 reports the results for TIGER-KM under a fine-grained bucketing scheme. The diamond line shows the relative improvement ( Δ%) of IST over Fixed. On Instruments, the relative gain is near zero in the 0% coverage bucket and grows steadily with semantic subword coverage, peak-ing at moderate-to-high coverage before a natural saturation. This trend aligns with the mechanistic expectation of history-side tok-enization: the more semantic subword tokens present in the history, the greater the benefit of structured subword representation. On Yelp, all coverage buckets exhibit positive relative gains, with the strongest improvement concentrated in the highest coverage tier. The 0% coverage bucket is also positive on Yelp, whereas it is near zero on Instruments. We therefore do not interpret zero-coverage performance as direct evidence of a subword-token benefit; the more consistent pattern is that the gain increases with subword coverage across different settings. 
+
+Table 4: Fixed target vs. VarLen target on Yelp (TIGER-KM, BPE).                     
+
+> History Target HR@5 HR@10 NDCG@5 NDCG@10 Fixed Fixed 0.0244 0.0385 0.0159 0.0205 VarLen Fixed 0.0259 0.0412 0.0169 0.0219
+> VarLen VarLen 0.0216 0.0329 0.0142 0.0178
+
+Table 5: Merged vs. Unmerged target bucket analysis on Yelp (TIGER-KM, BPE).                             
+
+> History Target Bucket HR@10 NDCG@10 Fixed Fixed merged 0.0405 0.0210 Fixed Fixed unmerged 0.0381 0.0202 VarLen Fixed merged 0.0446 0.0230 VarLen Fixed unmerged 0.0391 0.0212 VarLen VarLen merged 0.0002 0.0001 VarLen VarLen unmerged 0.0530 0.0288
+
+## 3.7 Asymmetric Tokenization Design 
+
+A key design choice in SST is that IST and BCA only transform the encoder (history) side, while the decoder target consistently remains a fixed-length SID throughout. To validate this asymmetric design empirically, we conduct a controlled experiment on Yelp with TIGER-KM, comparing a variable-length history with a fixed-length target (our default) against variable-length histories and targets. Table 4 reports the results. Switching to a variable target causes a substantial drop, even though the same variable-length representation improves perfor-mance when used only on the history side. This contrast suggests that the difficulty is not the semantic subwords themselves, but their role as autoregressive target symbols. To diagnose the cause, we partition test items by whether their SID would contain at least one semantic subword token. Table 5 shows the per-bucket results. With a variable-length history and fixed-length target, both merged and unmerged items improve, confirming that merged items are not inherently harder to predict. Once the target side is also converted to a variable-length representation, however, the merged bucket collapses to near-zero performance, while the unmerged bucket remains functional. This is because unmerged items still follow the familiar 4-slot <a><b><c><d> grammar, whereas merged items require the decoder to generate semantic subword tokens or shorter SIDs during autoregressive decoding. Further diagnostics show that semantic subword target cate-gories uniformly degrade under a variable target. At early genera-tion positions, semantic subword tokens rarely enter the top beams and are crowded out by dominant atom tokens. The underlying cause is training-data imbalance: semantic subword tokens form a small fraction of position-level targets, making them long-tail decoder symbols that the model reliably avoids. Overall, variable-length histories with fixed-length targets pre-serve structured context and a stable 4-slot decoding grammar. Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords CIKM ’26, November 7–11, 2026, Rome, Italy. 
+
+## 4 Related Work 4.1 Generative Recommendation 
+
+Generative recommendation reformulates the next-item prediction task into an autoregressive sequence generation problem, where items are represented as discrete token sequences [44, 59]. Exist-ing methodologies for constructing these item identifiers can be categorized into text-based methods and SID-based methods. Specifically, text-based methods [2, 8, 40] use item descriptions, such as titles and categories, as inputs to standard language models. While leveraging LLMs’ linguistic priors, they often suffer from long sequences and ambiguous item grounding during decoding. To circumvent the limitations of raw text tokens, another domi-nant stream pivots toward SID-based paradigms. The most widely adopted approach is residual-based quantization, which constructs a coarse-to-fine representation by quantizing the residual between the latent embedding and the cluster centroid. Specifically, Residual Quantization VAE (RQ-VAE) serves as the foundational architec-ture for frameworks like TIGER [35], LC-Rec [83], and COBRA [65]. To prevent codebook collapse during training, subsequent variants such as OneRec [84, 85], OneLoc [58], CAR [54] and GPR [73] adopt Residual K-Means (RQ-KMeans) to enforce strict cluster constraints. Beyond basic SID construction, recent work has explored several related directions, including collision-aware codebook learning and item-level disambiguation [7, 15, 81], collaborative [13, 53, 57, 60] or multimodal [21, 56, 64] semantic alignment, and end-to-end op-timization that reduces the mismatch between SID construction and generative recommendation training [6, 25, 28]. The broader generative-recommendation literature has also stud-ied scalable architectures [32, 66–68], empirical scaling behav-ior [11, 37], and unified generative retrieval and ranking [77]. Com-plementary efforts improve sequential recommendation through data regeneration or distillation [70, 74], diffusion-based sequence modeling [62], and efficient lifelong or multi-behavior model-ing [45, 86]; recent work also extends recommenders toward rea-soning, self-improvement, and agentic interaction [71, 75, 76, 78]. However, existing SID paradigms rely on fixed-length tokeniza-tion, which forces the recommendation backbone to spend excessive attention on low-level intra-item token dependencies. This atten-tion overload limits its ability to model high-level user preference transitions. 
+
+## 4.2 Variable-Length Semantic IDs 
+
+Recent studies have explored variable-length Semantic IDs as an alternative to fixed-length item codes, allowing different items to be represented with different code lengths. 
+
+SARQ [48] dynamically assigns code lengths based on item-level path entropy. It traverses the RQ codebook hierarchy and truncates each SID once the current prefix becomes sufficiently discrimina-tive, as measured by normalized entropy and dominance ratio. Its key design principle is to assign longer, more discriminative IDs to head items that require fine-grained differentiation, and shorter, generalizable IDs to tail items where many-way distinction is rarely required in practice. 
+
+VSID [20] approaches variable-length ID construction from the perspective of emergent communication. It formulates SID learn-ing as a discrete variational autoencoding problem with Gumbel-Softmax reparameterization, where the tokenizer learns to emit variable-length codes under reconstruction, collision, and length regularization. This framework naturally assigns compact codes to popular items and longer codes to rare items , mirroring the abbrevia-tion principle observed in natural language. These variable-length SID methods address a different problem from SST. Their focus is item-side identifier allocation: SARQ and VSID adapt code length according to item-level discriminativeness or popularity. In contrast, SST studies history-side attention over-load, where flattened fixed-length SIDs force the model to repeat-edly reassemble atom tokens into item-level signals. We therefore treat SARQ and VSID as transferable variable-length SID baselines: their encoding rules can be adapted to the history side to test whether merely shortening history-side token sequences is suffi-cient, but they are not designed to solve the same attention-overload problem we study here. 
+
+## 4.3 Tokenization in Large Language Models 
+
+Tokenization is a fundamental component in LLMs that defines the basic units of representation. Modern NLP commonly adopts subword tokenizers such as BPE [36], WordPiece [3], and Senten-cePiece/Unigram [22, 23], which balance vocabulary size and se-quence length while alleviating the out-of-vocabulary problem [30]. Recent studies further show that tokenization affects not only com-pression efficiency but also downstream model behavior and learn-ing dynamics [4, 9, 34]. Inspired by these insights, SST adapts subword tokenization to generative recommendation. Unlike fixed-length SIDs, which re-semble character-level spelling, SST merges stable co-occurrences into compact semantic subword tokens, reducing intra-item redun-dancy and freeing the backbone to model higher-level regularities. 
+
+## 5 Conclusion 
+
+This paper identifies a user-context tokenization bottleneck in SID-based generative recommendation: fixed-length SIDs are stable tar-get identifiers, but when flattened to represent user histories, they consume attention on low-level intra-item atom reassembly. We pro-pose Semantic Subword Tokenization (SST), which addresses this bottleneck through two complementary components. IST merges stable adjacent atom co-occurrences into reusable semantic sub-word tokens, offloading low-level intra-item regularities from the Transformer. BCA injects coarse-grained behavioral co-occurrence signals, redirecting the freed capacity toward higher-order inter-item transitions. SST further adopts asymmetric tokenization by retaining fixed-length SIDs on the target side to preserve decoding stability. Experiments across three datasets and three generative recommender backbones show that SST improves over fixed-length and transferable variable-length SID baselines. 
+
+## A Tokenization Criterion Comparison 
+
+IST is compatible with multiple tokenization criteria. Table 6 com-pares BPE, WordPiece, and CondEntropy across all backbone– dataset combinations. CIKM ’26, November 7–11, 2026, Rome, Italy. Miao et al. 
+
+Table 6: Comparison of tokenization criteria. N@5/N@10 abbreviate NDCG@5/NDCG@10. 
+
+Beauty Instruments Yelp Backbone Setting HR@5 HR@10 N@5 N@10 HR@5 HR@10 N@5 N@10 HR@5 HR@10 N@5 N@10 TIGER-KM Fixed 0.0372 0.0582 0.0238 0.0305 0.0849 0.1065 0.0718 0.0787 0.0244 0.0385 0.0159 0.0205 BPE 0.0393 0.0607 0.0260 0.0329 0.0874 0.1070 0.0738 0.0801 0.0259 0.0412 0.0169 0.0219 
+
+WordPiece 0.0389 0.0609 0.0252 0.0323 0.0867 0.1089 0.0736 0.0808 0.0248 0.0395 0.0161 0.0209 CondEntropy 0.0386 0.0621 0.0247 0.0322 0.0871 0.1094 0.0739 0.0810 0.0247 0.0394 0.0162 0.0209 TIGER-VAE Fixed 0.0357 0.0532 0.0230 0.0286 0.0836 0.1018 0.0711 0.0769 0.0198 0.0330 0.0127 0.0169 BPE 0.0353 0.0564 0.0227 0.0295 0.0875 0.1067 0.0748 0.0810 0.0226 0.0355 0.0144 0.0185 WordPiece 0.0355 0.0553 0.0230 0.0294 0.0861 0.1054 0.0731 0.0793 0.0226 0.0366 0.0145 0.0190 CondEntropy 0.0354 0.0565 0.0224 0.0292 0.0852 0.1049 0.0727 0.0790 0.0234 0.0384 0.0150 0.0198 
+
+LETTER Fixed 0.0400 0.0635 0.0264 0.0340 0.0865 0.1070 0.0738 0.0804 0.0266 0.0413 0.0175 0.0222 BPE 0.0423 0.0642 0.0288 0.0358 0.0868 0.1083 0.0744 0.0813 0.0272 0.0432 0.0177 0.0228 WordPiece 0.0444 0.0673 0.0292 0.0366 0.0872 0.1085 0.0742 0.0811 0.0272 0.0429 0.0177 0.0227 CondEntropy 0.0405 0.0657 0.0270 0.0351 0.0868 0.1075 0.0748 0.0815 0.0279 0.0438 0.0182 0.0233 
+
+Table 7: History-side representation baseline comparison on TIGER-KM.                            
+
+> Beauty Instruments Yelp Setting HR@10 NDCG@10 HR@10 NDCG@10 HR@10 NDCG@10 Fixed 0.0582 0.0305 0.1065 0.0787 0.0385 0.0205 IST 0.0607 0.0329 0.1094 0.0810 0.0412 0.0219
+> InputPool 0.0185 0.0092 0.0473 0.0230 0.0105 0.0055 Random 0.0593 0.0311 0.1051 0.0787 0.0352 0.0182
+
+On Beauty, WordPiece achieves the best results across most backbone–metric combinations, sweeping all metrics for LETTER. On Yelp, CondEntropy dominates across the majority of settings, and the relative gains over Fixed are substantially larger than on the other two datasets. On Instruments, no single criterion dom-inates: the best choice varies across backbones and metrics, and the margins over Fixed are generally smaller. This pattern suggests that both the benefit of SST and the preferred criterion depend on dataset-specific item co-occurrence structure. PMI-based scor-ing is effective for regular relations, whereas stricter bidirectional conditional-entropy filtering is more robust for diverse or noisy interactions. When co-occurrence structure is less pronounced, all criteria still yield net-positive gains in most settings, but both the overall margin and criterion-wise differences shrink. BPE remains competitive across settings but is not uniformly preferred, confirm-ing that the benefit comes from history-side subword tokenization rather than a single scoring rule. These results motivate selecting the criterion separately for each backbone–dataset combination. 
+
+## B History-Side Representation Baselines 
+
+Table 7 compares IST with InputPool and length-matched Random on TIGER-KM, both retaining the fixed target SID and decoding trie. The two alternatives isolate different simplifications of the history representation. InputPool replaces the ordered atom sequence of each item with its mean embedding, removing atom-level sequen-tial composition altogether. Random uses contiguous atom spans 
+
+Table 8: Popularity analysis on Yelp (TIGER-KM).               
+
+> Setting Head top-1 Tail top-1 Head N@10 Mid N@10 Tail N@10 Fixed 95.08% 0.85% 0.0364 0.0065 0.0045 +IST 95.56% 1.00% 0.0388 0.0065 0.0051 +IST+BCA 92.24% 1.67% 0.0365 0.0104 0.0074
+
+with lengths matched to the IST reference tokenization, preserving comparable compression while discarding data-derived merge struc-ture. IST consistently outperforms Fixed and both alternatives. Its advantage over Random indicates that shortening histories alone is insufficient, while its advantage over InputPool shows that compact learned token units retain useful structure that is lost under simple item-level pooling. Since all settings share the same target SID and decoding trie, these differences arise solely from their history-side representations. 
+
+## C Popularity Analysis 
+
+To assess whether BCA exacerbates popularity bias, we define head, mid, and tail items as the top 20%, next 30%, and bottom 50% ranked by unaugmented training frequency. Table 8 reports top-1 recommendation exposure and target-bucket NDCG@10 for Yelp with TIGER-KM. Relative to Fixed, IST maintains comparable head exposure while increasing tail exposure and improving head- and tail-target NDCG@10. Thus, IST does not make recommendation exposure more concentrated on head items in this evaluated setting. Adding BCA further lowers head exposure, increases tail exposure, and improves mid- and tail-target NDCG@10, indicating that BCA partially improves long-tail exposure and recommendation quality. 
+
+## Acknowledgments 
+
+This work was supported by the National Natural Science Founda-tion of China (Nos. 62472394, U23A20319, 62441239, and 62441227), as well as the Anhui Province Science and Technology Innovation Project (Nos. 202423k09020010 and 202423k09020011). Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords CIKM ’26, November 7–11, 2026, Rome, Italy. 
+
+## GenAI Usage Disclosure 
+
+During the preparation of this work, we used GPT-5.5 to improve the readability and language of the manuscript, as well as to assist in drafting specific code snippets for experimental implementation. After using this tool, we tested and verified all generated code, reviewed and edited the manuscript content, and took full respon-sibility for the accuracy and originality of the final publication. 
+
+## References 
+
+[1] Josh Achiam, Steven Adler, Sandhini Agarwal, Lama Ahmad, Ilge Akkaya, Floren-cia Leoni Aleman, Diogo Almeida, Janko Altenschmidt, Sam Altman, Shyamal Anadkat, et al. 2023. Gpt-4 technical report. arXiv preprint arXiv:2303.08774 
+
+(2023). [2] Zeyu Cui, Jianxin Ma, Chang Zhou, Jingren Zhou, and Hongxia Yang. 2022. M6-rec: Generative pretrained language models are open-ended recommender systems. arXiv preprint arXiv:2205.08084 (2022). [3] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. Bert: Pre-training of deep bidirectional transformers for language understanding. In 
+
+Proceedings of the 2019 conference of the North American chapter of the association for computational linguistics: human language technologies, volume 1 (long and short papers) . Association for Computational Linguistics, Minneapolis, MN, USA, 4171–4186. [4] Mete Erdogan, Abhiram Gorle, Shubham Chandak, Mert Pilanci, and Tsachy Weissman. 2026. An Information-Theoretic Perspective on LLM Tokenizers. 
+
+arXiv preprint arXiv:2601.09039 (2026). [5] Luciano Floridi and Massimo Chiriatti. 2020. GPT-3: Its nature, scope, limits, and consequences. Minds and machines 30, 4 (2020), 681–694. [6] Junchen Fu, Xuri Ge, Alexandros Karatzoglou, Ioannis Arapakis, Suzan Ver-berne, Joemon M Jose, and Zhaochun Ren. 2026. Differentiable Semantic ID for Generative Recommendation. arXiv preprint arXiv:2601.19711 (2026). [7] Kairui Fu, Tao Zhang, Shuwen Xiao, Ziyang Wang, Xinming Zhang, Chenchi Zhang, Yuliang Yan, Junjun Zheng, Yu Li, Zhihong Chen, et al. 2025. Forge: Forming semantic identifiers for generative retrieval in industrial datasets. arXiv preprint arXiv:2509.20904 (2025). [8] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. 2022. Recommendation as language processing (rlp): A unified pretrain, personalized prompt & predict paradigm (p5). In Proceedings of the 16th ACM conference on recommender systems . Association for Computing Machinery, New York, NY, USA, 299–315. [9] Omer Goldman, Avi Caciularu, Matan Eyal, Kris Cao, Idan Szpektor, and Reut Tsarfaty. 2024. Unpacking tokenization: Evaluating text compression and its correlation with model performance. In Findings of the Association for Computa-tional Linguistics: ACL 2024 . Association for Computational Linguistics, Bangkok, Thailand, 2274–2286. [10] Hongchao Gu, Dexun Li, Kuicai Dong, Hao Zhang, Hang Lv, Hao Wang, Defu Lian, Yong Liu, and Enhong Chen. 2025. RAPID: Efficient Retrieval-Augmented Long Text Generation with Writing Planning and Information Discovery. In 
+
+Findings of the Association for Computational Linguistics: ACL 2025 . 16742–16763. doi:10.18653/v1/2025.findings-acl.859 [11] Wei Guo, Hao Wang, Luankang Zhang, Jin Yao Chin, Zhongzhou Liu, Kai Cheng, Qiushi Pan, Yi Quan Lee, Wanqi Xue, Tingjia Shen, et al. 2024. Scal-ing New Frontiers: Insights into Large Recommendation Models. arXiv preprint arXiv:2412.00714 (2024). [12] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2015. Session-based recommendations with recurrent neural networks. arXiv preprint arXiv:1511.06939 (2015). [13] Minjie Hong, Yan Xia, Zehan Wang, Jieming Zhu, Ye Wang, Sihang Cai, Xi-aoda Yang, Quanyu Dai, Zhenhua Dong, Zhimeng Zhang, et al. 2025. Eager-llm: Enhancing large language models as recommenders through exogenous behavior-semantic integration. In Proceedings of the ACM on Web Conference 2025 .Association for Computing Machinery, New York, NY, USA, 2754–2762. [14] Min Hou, Le Wu, Yuxin Liao, Yonghui Yang, Zhen Zhang, Changlong Zheng, Han Wu, and Richang Hong. 2025. A survey on generative recommendation: Data, model, and tasks. arXiv preprint arXiv:2510.27157 (2025). [15] Zheng Hu, Yuxin Chen, Yongsen Pan, Xu Yuan, Yuting Yin, Daoyuan Wang, Boyang Xia, Zefei Luo, Hongyang Wang, Songhao Ni, et al. 2026. Stop Treating Collisions Equally: Qualification-Aware Semantic ID Learning for Recommenda-tion at Industrial Scale. arXiv preprint arXiv:2603.00632 (2026). [16] Yuqing Huang, Rongyang Zhang, Xuesong He, Xuyang Zhi, Hao Wang, Xin Li, Feiyang Xu, Deguang Liu, Huadong Liang, Yi Li, et al. 2025. ChemEval: A Comprehensive Multi-Level Chemical Evaluation for Large Language Models. In The Thirteenth International Conference on Learning Representations . https: //openreview.net/forum?id=JrqjSkEPrX [17] Yuqing Huang, Rongyang Zhang, Qimeng Wang, Chengqiang Lu, Yan Gao, Yi Wu, Yao Hu, Xuyang Zhi, Guiquan Liu, Xin Li, et al. 2025. SelfAug: Mitigating Catastrophic Forgetting in Retrieval-Augmented Generation via Distribution Self-Alignment. In Findings of the Association for Computational Linguistics: EMNLP 2025 . 14175–14190. doi:10.18653/v1/2025.findings-emnlp.763 [18] Clark Mingxuan Ju, Liam Collins, Leonardo Neves, Bhuvesh Kumar, Louis Yufeng Wang, Tong Zhao, and Neil Shah. 2025. Generative Recommendation with Semantic IDs: A Practitioner’s Handbook. In Proceedings of the 34th ACM Inter-national Conference on Information and Knowledge Management . Association for Computing Machinery, New York, NY, USA, 6420–6425. [19] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-mendation. In 2018 IEEE international conference on data mining (ICDM) . IEEE, IEEE, Piscataway, NJ, USA, 197–206. [20] Kirill Khrylchenko. 2026. Variable-Length Semantic IDs for Recommender Sys-tems. arXiv preprint arXiv:2602.16375 (2026). [21] Kibum Kim, Sein Kim, HongSeok Kang, Jiwan Kim, Heewoong Noh, Yeonjun In, Kanghoon Yoon, Jinoh Oh, Julian McAuley, and Chanyoung Park. 2026. Token-Efficient Item Representation via Images for LLM Recommender Systems. In The Fourteenth International Conference on Learning Representations . International Conference on Learning Representations, Rio de Janeiro, Brazil. [22] Taku Kudo. 2018. Subword regularization: Improving neural network translation models with multiple subword candidates. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) .Association for Computational Linguistics, Melbourne, Australia, 66–75. [23] Taku Kudo and John Richardson. 2018. SentencePiece: A simple and language independent subword tokenizer and detokenizer for neural text processing. In 
+
+Proceedings of the 2018 conference on empirical methods in natural language process-ing: System demonstrations . Association for Computational Linguistics, Brussels, Belgium, 66–71. [24] Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho, and Wook-Shin Han. 2022. Autoregressive image generation using residual quantization. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition . IEEE/CVF, New Orleans, LA, USA, 11523–11532. [25] Jialei Li, Yang Zhang, Yimeng Bai, Shuai Zhu, Ziqi Xue, Xiaoyan Zhao, Dingxian Wang, Frank Yang, Andrew Rabinovich, and Xiangnan He. 2026. UniGRec: Unified Generative Recommendation with Soft Identifiers for End-to-End Optimization. 
+
+arXiv preprint arXiv:2601.17438 (2026). [26] Xiaopeng Li, Bo Chen, Junda She, Shiteng Cao, You Wang, Qinlin Jia, Haiying He, Zheli Zhou, Zhao Liu, Ji Liu, et al. 2025. A survey of generative recommendation from a tri-decoupled perspective: Tokenization, architecture, and optimization. (2025). doi:10.20944/preprints202512.0203.v1 [27] Sheng Liang, Hang Lv, Zhihao Wen, Yaxiong Wu, Yongyue Zhang, Hao Wang, and Yong Li. 2025. Adaptive Schema-Aware Event Extraction with Retrieval-Augmented Generation. In Findings of the Association for Computational Linguis-tics: EMNLP 2025 . 7927–7946. doi:10.18653/v1/2025.findings-emnlp.419 [28] Enze Liu, Bowen Zheng, Cheng Ling, Lantao Hu, Han Li, and Wayne Xin Zhao. 2025. Generative recommender with end-to-end learnable item tokenization. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . Association for Computing Machinery, New York, NY, USA, 729–739. [29] Bruce T Lowerre. 1976. The harpy speech recognition system. Carnegie Mellon University, Pittsburgh, PA, USA. [30] Sabrina J Mielke, Zaid Alyafeai, Elizabeth Salesky, Colin Raffel, Manan Dey, Matthias Gallé, Arun Raja, Chenglei Si, Wilson Y Lee, Benoît Sagot, et al. 2021. Between words and characters: A brief history of open-vocabulary modeling and tokenization in NLP. arXiv preprint arXiv:2112.10508 (2021). [31] Jianmo Ni, Gustavo Hernandez Abrego, Noah Constant, Ji Ma, Keith Hall, Daniel Cer, and Yinfei Yang. 2022. Sentence-t5: Scalable sentence encoders from pre-trained text-to-text models. In Findings of the association for computational lin-guistics: ACL 2022 . Association for Computational Linguistics, Dublin, Ireland, 1864–1874. [32] Qiushi Pan, Hao Wang, Guoyuan An, Luankang Zhang, Wei Guo, and Yong Liu. 2025. Revisiting Scalable Sequential Recommendation with Multi-Embedding Approach and Mixture-of-Experts. arXiv preprint arXiv:2510.25285 (2025). [33] Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, and Peter J Liu. 2020. Exploring the limits of transfer learning with a unified text-to-text transformer. Journal of machine learning research 21, 140 (2020), 1–67. [34] Nived Rajaraman, Jiantao Jiao, and Kannan Ramchandran. 2024. Toward a theory of tokenization in llms. arXiv preprint arXiv:2404.08335 (2024). [35] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, et al. 2023. Recommender systems with generative retrieval. Advances in Neural Information Processing Systems 36 (2023), 10299–10315. [36] Rico Sennrich, Barry Haddow, and Alexandra Birch. 2016. Neural machine translation of rare words with subword units. In Proceedings of the 54th annual meeting of the association for computational linguistics (volume 1: long papers) .Association for Computational Linguistics, Berlin, Germany, 1715–1725. CIKM ’26, November 7–11, 2026, Rome, Italy. Miao et al. 
+
+[37] Tingjia Shen, Hao Wang, Chuhan Wu, Jin Yao Chin, Wei Guo, Yong Liu, Huifeng Guo, Defu Lian, Ruiming Tang, and Enhong Chen. 2025. P-Law: Predicting Quantitative Scaling Law with Entropy Guidance in Large Recommendation Models. In Advances in Neural Information Processing Systems , Vol. 38. 14510– 14539. doi:10.52202/085713-0436 [38] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential recommendation with bidirectional encoder repre-sentations from transformer. In Proceedings of the 28th ACM international con-ference on information and knowledge management . Association for Computing Machinery, New York, NY, USA, 1441–1450. [39] Weiwei Sun, Lingyong Yan, Zheng Chen, Shuaiqiang Wang, Haichao Zhu, Pengjie Ren, Zhumin Chen, Dawei Yin, Maarten Rijke, and Zhaochun Ren. 2023. Learning to tokenize for generative retrieval. Advances in Neural Information Processing Systems 36 (2023), 46345–46361. [40] Juntao Tan, Shuyuan Xu, Wenyue Hua, Yingqiang Ge, Zelong Li, and Yongfeng Zhang. 2024. Idgenrec: Llm-recsys alignment with textual id learning. In Proceed-ings of the 47th international ACM SIGIR conference on research and development in information retrieval . Association for Computing Machinery, New York, NY, USA, 355–364. [41] Jiaxi Tang and Ke Wang. 2018. Personalized top-n sequential recommendation via convolutional sequence embedding. In Proceedings of the eleventh ACM inter-national conference on web search and data mining . Association for Computing Machinery, New York, NY, USA, 565–573. [42] Yi Tay, Vinh Tran, Mostafa Dehghani, Jianmo Ni, Dara Bahri, Harsh Mehta, Zhen Qin, Kai Hui, Zhe Zhao, Jai Gupta, et al. 2022. Transformer memory as a differentiable search index. Advances in neural information processing systems 35 (2022), 21831–21843. [43] Aaron Van Den Oord, Oriol Vinyals, et al. 2017. Neural discrete representation learning. Advances in neural information processing systems 30 (2017), 6306–6315. [44] Hao Wang, Wei Guo, Luankang Zhang, Jin Yao Chin, Yufei Ye, Huifeng Guo, Yong Liu, Defu Lian, Ruiming Tang, and Enhong Chen. 2025. Generative Large Recommendation Models: Emerging Trends in LLMs for Recommendation. In 
+
+Companion Proceedings of the ACM on Web Conference 2025 . 49–52. doi:10.1145/ 3701716.3715865 [45] Hao Wang, Yongqiang Han, Kefan Wang, Kai Cheng, Zhen Wang, Wei Guo, Yong Liu, Defu Lian, and Enhong Chen. 2024. Denoising Pre-Training and Customized Prompt Learning for Efficient Multi-Behavior Sequential Recommendation. arXiv preprint arXiv:2408.11372 (2024). [46] Hao Wang, Defu Lian, Hanghang Tong, Qi Liu, Zhenya Huang, and Enhong Chen. 2021. HyperSoRec: Exploiting Hyperbolic User and Item Representations with Multiple Aspects for Social-Aware Recommendation. ACM Transactions on Information Systems 40, 2 (2021), 1–28. doi:10.1145/3463913 [47] Hao Wang, Tong Xu, Qi Liu, Defu Lian, Enhong Chen, Dongfang Du, Han Wu, and Wen Su. 2019. MCNE: An End-to-End Framework for Learning Multiple Conditional Network Representations of Social Network. In Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining . 1064–1072. doi:10.1145/3292500.3330931 [48] Huimu Wang, Xingzhi Yao, Yiming Qiu, Qinghong Zhang, Haotian Wang, Yufan Cui, Songlin Wang, Sulong Xu, and Mingming Li. 2026. Towards Efficient and Generalizable Retrieval: Adaptive Semantic Quantization and Residual Knowl-edge Transfer. arXiv preprint arXiv:2602.23978 (2026). [49] Hao Wang, Mingjia Yin, Luankang Zhang, Sirui Zhao, and Enhong Chen. 2025. MF-GSLAE: A Multi-Factor User Representation Pre-Training Framework for Dual-Target Cross-Domain Recommendation. ACM Transactions on Information Systems 43, 2 (2025), 1–28. doi:10.1145/3690382 [50] Jiancheng Wang, Mingjia Yin, Hao Wang, and Enhong Chen. 2025. Enhanc-ing CTR Prediction with De-Correlated Expert Networks. arXiv preprint arXiv:2505.17925 (2025). [51] Kefan Wang, Hao Wang, Wei Guo, Yong Liu, Jianghao Lin, Defu Lian, and Enhong Chen. 2025. DLF: Enhancing Explicit-Implicit Interaction via Dynamic Low-Order-Aware Fusion for CTR Prediction. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval .2213–2223. doi:10.1145/3726302.3729956 [52] Kefan Wang, Hao Wang, Kenan Song, Wei Guo, Kai Cheng, Zhi Li, Yong Liu, Defu Lian, and Enhong Chen. 2026. A Universal Framework for Compressing Embeddings in CTR Prediction. In International Conference on Database Systems for Advanced Applications . Springer, 84–100. doi:10.1007/978-981-95-3830-0_6 [53] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable item tokenization for generative recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . Association for Computing Machinery, New York, NY, USA, 2400–2409. [54] Yifan Wang, Weinan Gan, Longtao Xiao, Jieming Zhu, Heng Chang, Haozhao Wang, Rui Zhang, Zhenhua Dong, Ruiming Tang, and Ruixuan Li. 2025. Act-With-Think: Chunk Auto-Regressive Modeling for Generative Recommendation. 
+
+arXiv preprint arXiv:2506.23643 (2025). [55] Yujing Wang, Yingyan Hou, Haonan Wang, Ziming Miao, Shibin Wu, Qi Chen, Yuqing Xia, Chengmin Chi, Guoshuai Zhao, Zheng Liu, et al. 2022. A neural corpus indexer for document retrieval. Advances in Neural Information Processing Systems 35 (2022), 25600–25614. [56] Yuhao Wang, Junwei Pan, Xinhang Li, Maolin Wang, Yuan Wang, Yue Liu, Dapeng Liu, Jie Jiang, and Xiangyu Zhao. 2025. Empowering large language model for sequential recommendation via multimodal embeddings and semantic ids. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management . Association for Computing Machinery, New York, NY, USA, 3209–3219. [57] Ye Wang, Jiahao Xun, Minjie Hong, Jieming Zhu, Tao Jin, Wang Lin, Haoyuan Li, Linjun Li, Yan Xia, Zhou Zhao, et al. 2024. Eager: Two-stream generative recommender with behavior-semantic collaboration. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . Association for Computing Machinery, New York, NY, USA, 3245–3254. [58] Zhipeng Wei, Kuo Cai, Junda She, Jie Chen, Minghao Chen, Yang Zeng, Qiang Luo, Wencong Zeng, Ruiming Tang, Kun Gai, et al. 2026. Oneloc: Geo-aware generative recommender systems for local life service. In Proceedings of the Nineteenth ACM International Conference on Web Search and Data Mining . Association for Computing Machinery, New York, NY, USA, 735–744. [59] Likang Wu, Zhi Zheng, Zhaopeng Qiu, Hao Wang, Hongchao Gu, Tingjia Shen, Chuan Qin, Chen Zhu, Hengshu Zhu, Qi Liu, et al. 2024. A Survey on Large Language Models for Recommendation. World Wide Web 27, 5 (2024), 60. doi:10. 1007/s11280-024-01291-2 [60] Longtao Xiao, Haozhao Wang, Cheng Wang, Linfei Ji, Yifan Wang, Jieming Zhu, Zhenhua Dong, Rui Zhang, and Ruixuan Li. 2025. Unger: Generative recommendation with a unified code via semantic and collaborative integration. 
+
+ACM Transactions on Information Systems 44, 2 (2025), 1–31. [61] Wenjia Xie, Hao Wang, Minghao Fang, Ruize Yu, Wei Guo, Yong Liu, Defu Lian, and Enhong Chen. 2025. Breaking the Bottleneck: User-Specific Optimization and Real-Time Inference Integration for Sequential Recommendation. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining .3333–3343. doi:10.1145/3711896.3736865 [62] Wenjia Xie, Hao Wang, Luankang Zhang, Rui Zhou, Defu Lian, and Enhong Chen. 2024. Breaking Determinism: Fuzzy Modeling of Sequential Recommendation Using Discrete State Space Diffusion Model. In Advances in Neural Information Processing Systems , Vol. 37. 22720–22744. doi:10.52202/079017-0715 [63] Xiang Xu, Hao Wang, Wei Guo, Luankang Zhang, Wanshan Yang, Runlong Yu, Yong Liu, Defu Lian, and Enhong Chen. 2025. Multi-Granularity Interest Retrieval and Refinement Network for Long-Term User Behavior Modeling in CTR Prediction. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 2745–2755. doi:10.1145/3690624.3709438 [64] Yi Xu, Moyu Zhang, Chenxuan Li, Zhihao Liao, Haibo Xing, Hao Deng, Jinxin Hu, Yu Zhang, Xiaoyi Zeng, and Jing Zhang. 2026. Mmq: Multimodal mixture-of-quantization tokenization for semantic id generation and user behavioral adaptation. In Proceedings of the Nineteenth ACM International Conference on Web Search and Data Mining . Association for Computing Machinery, New York, NY, USA, 788–797. [65] Yuhao Yang, Zhi Ji, Zhaopeng Li, Yi Li, Zhonglin Mo, Yue Ding, Kai Chen, Zijian Zhang, Jie Li, LIU LIN, et al. 2026. Sparse meets dense: Unified generative recommendations with cascaded sparse-dense representations. Advances in Neural Information Processing Systems 38 (2026), 93746–93770. [66] Yufei Ye, Wei Guo, Jin Yao Chin, Hao Wang, Hong Zhu, Xi Lin, Yuyang Ye, Yong Liu, Ruiming Tang, Defu Lian, et al. 2025. FuXi-
+
+𝑎𝑙𝑝ℎ𝑎 : Scaling Recommendation Model with Feature Interaction Enhanced Transformer. In Companion Proceedings of the ACM on Web Conference 2025 .557–566. doi:10.1145/3701716.3715448 [67] Yufei Ye, Wei Guo, Hao Wang, Luankang Zhang, Heng Chang, Hong Zhu, Yuyang Ye, Yong Liu, Defu Lian, and Enhong Chen. 2026. Fuxi-linear: Unleashing the Power of Linear Attention in Long-Term Time-Aware Sequential Recommenda-tion. In Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 6200–6210. doi:10.1145/3770855.3818139 [68] Yufei Ye, Wei Guo, Hao Wang, Hong Zhu, Yuyang Ye, Yong Liu, Huifeng Guo, Ruiming Tang, Defu Lian, and Enhong Chen. 2025. FuXi-
+
+𝑏𝑒𝑡𝑎 : Towards a Lightweight and Fast Large-Scale Generative Recommendation Model. arXiv preprint arXiv:2508.10615 (2025). [69] Mingjia Yin, Junwei Pan, Hao Wang, Ximei Wang, Shangyu Zhang, Jie Jiang, Defu Lian, and Enhong Chen. 2025. From Feature Interaction to Feature Generation: A Generative Paradigm of CTR Prediction Models. In Proceedings of the 42nd International Conference on Machine Learning (Proceedings of Machine Learning Research, Vol. 267) . PMLR, 72393–72413. https://proceedings.mlr.press/v267/ yin25c.html [70] Mingjia Yin, Hao Wang, Wei Guo, Yong Liu, Suojuan Zhang, Sirui Zhao, Defu Lian, and Enhong Chen. 2024. Dataset Regeneration for Sequential Recommendation. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 3954–3965. doi:10.1145/3637528.3671841 [71] Haocheng Yu, Yaxiong Wu, Hao Wang, Wei Guo, Yong Liu, Yawen Li, Yuyang Ye, Junping Du, and Enhong Chen. 2026. Thought-Augmented Planning for LLM-Powered Interactive Recommender Agent. In Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 1821–1832. doi:10. Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords CIKM ’26, November 7–11, 2026, Rome, Italy. 
+
+1145/3770854.3780286 [72] Neil Zeghidour, Alejandro Luebs, Ahmed Omran, Jan Skoglund, and Marco Tagliasacchi. 2021. Soundstream: An end-to-end neural audio codec. IEEE/ACM Transactions on Audio, Speech, and Language Processing 30 (2021), 495–507. [73] Jun Zhang, Yi Li, Yue Liu, Changping Wang, Yuan Wang, Yuling Xiong, Xun Liu, Haiyang Wu, Qian Li, Enming Zhang, et al. 2025. GPR: Towards a Generative Pre-trained One-Model Paradigm for Large-Scale Advertising Recommendation. 
+
+arXiv preprint arXiv:2511.10138 (2025). [74] Jiaqing Zhang, Mingjia Yin, Hao Wang, Yawen Li, Yuyang Ye, Xingyu Lou, Jun-ping Du, and Enhong Chen. 2025. TD3: Tucker Decomposition Based Dataset Distillation Method for Sequential Recommendation. In Companion Proceedings of the ACM on Web Conference 2025 . 3994–4003. doi:10.1145/3696410.3714613 [75] Luankang Zhang, Yonghao Huang, Hang Lv, Xuyang Zhi, Mingjia Yin, Yuyang Ye, Wei Guo, Hao Wang, and Enhong Chen. 2026. Why Thinking Hurts: Diagnosing and Rectifying Linguistic Inertia in Large Language Models for Recommendation. 
+
+arXiv preprint arXiv:2602.16587 (2026). [76] Luankang Zhang, Hang Lv, Qiushi Pan, Kefen Wang, Yonghao Huang, Xinrui Miao, Yin Xu, Wei Guo, Yong Liu, Hao Wang, et al. 2026. The Next Paradigm Is User-Centric Agent, Not Platform-Centric Service. arXiv preprint arXiv:2602.15682 
+
+(2026). [77] Luankang Zhang, Kenan Song, Yi Quan Lee, Wei Guo, Hao Wang, Yawen Li, Huifeng Guo, Yong Liu, Defu Lian, and Enhong Chen. 2025. Killing Two Birds with One Stone: Unifying Retrieval and Ranking with a Single Generative Recommendation Model. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 2224–2234. doi:10.1145/3726302.3730017 [78] Luankang Zhang, Hao Wang, Zhongzhou Liu, Mingjia Yin, Yonghao Huang, Jiaqi Li, Wei Guo, Yong Liu, Huifeng Guo, Defu Lian, et al. 2026. Can Recommender Systems Teach Themselves? A Recursive Self-Improving Framework with Fidelity Control. arXiv preprint arXiv:2602.15659 (2026). Accepted to ICML 2026. https: //arxiv.org/abs/2602.15659 [79] Luankang Zhang, Hao Wang, Suojuan Zhang, Mingjia Yin, Yongqiang Han, Jiaqing Zhang, Defu Lian, and Enhong Chen. 2025. A Unified Framework for Adaptive Representation Enhancement and Inversed Learning in Cross-Domain Recommendation. In International Conference on Database Systems for Advanced Applications . Springer, 115–130. doi:10.1007/978-981-97-5555-4_8 [80] Rongyang Zhang, Yuqing Huang, Chengqiang Lu, Qimeng Wang, Yan Gao, Yao Hu, Yin Xu, Wei Wang, Hao Wang, and Enhong Chen. 2025. RAG-IGBench: Inno-vative Evaluation for RAG-Based Interleaved Generation in Open-Domain Ques-tion Answering. In Advances in Neural Information Processing Systems , Vol. 38. 135329–135355. doi:10.52202/085713-4071 [81] Ruohan Zhang, Jiacheng Li, Julian McAuley, and Yupeng Hou. 2025. Purely Semantic Indexing for LLM-based Generative Recommendation and Retrieval. 
+
+arXiv preprint arXiv:2509.16446 (2025). [82] Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, et al. 2023. A survey of large language models. arXiv preprint arXiv:2303.18223 1, 2 (2023), 1–124. [83] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. 2024. Adapting large language models by integrating collaborative semantics for recommendation. In 2024 IEEE 40th International Conference on Data Engineering (ICDE) . IEEE, IEEE, Piscataway, NJ, USA, 1435– 1448. [84] Guorui Zhou, Jiaxin Deng, Jinghao Zhang, Kuo Cai, Lejian Ren, Qiang Luo, Qianqian Wang, Qigen Hu, Rui Huang, Shiyao Wang, et al. 2025. Onerec technical report. arXiv preprint arXiv:2506.13695 (2025). [85] Guorui Zhou, Hengrui Hu, Hongtao Cheng, Huanjie Wang, Jiaxin Deng, Jinghao Zhang, Kuo Cai, Lejian Ren, Lu Ren, Liao Yu, et al. 2025. Onerec-v2 technical report. arXiv preprint arXiv:2508.20900 (2025). [86] Rui Zhou, Qinglin Jia, Bo Chen, Peng Xu, Yijia Sun, Siyuan Lou, Chaoxin Fu, Mengyuan Fu, Guoming Shen, Zheli Zhou, et al. 2026. A Survey of User Lifelong Behavior Modeling: Perspectives on Efficiency and Effectiveness. Preprints.org 
+
+(jan 2026). doi:10.20944/preprints202601.1559.v1 [87] Rui Zhou, Hao Wang, Wei Guo, Qinglin Jia, Wenjia Xie, Xiang Xu, Yong Liu, Defu Lian, and Enhong Chen. 2025. MIT: A Multi-Tower Information Transfer Framework Based on Hierarchical Task Relationship Modeling. In Companion Proceedings of the ACM on Web Conference 2025 . 651–660. doi:10.1145/3701716. 3715249

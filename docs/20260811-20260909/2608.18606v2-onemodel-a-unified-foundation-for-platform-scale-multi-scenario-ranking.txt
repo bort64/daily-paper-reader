@@ -1,0 +1,586 @@
+Title: OneModel: A Unified Foundation for Platform-Scale Multi-Scenario Ranking
+
+URL Source: https://arxiv.org/pdf/2608.18606v2
+
+Published Time: Fri, 21 Aug 2026 00:26:20 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# OneModel: A Unified Foundation for Platform-Scale Multi-Scenario Ranking 
+
+# Yinqi Zhang 
+
+Algorithm, Xiaohongshu Shanghai, China 
+
+# Peiyu Hu ∗
+
+Algorithm, Xiaohongshu Shanghai, China 
+
+# Yuntian Tang ∗
+
+Algorithm, Xiaohongshu Shanghai, China 
+
+# Siying Gu ∗
+
+Algorithm, Xiaohongshu Shanghai, China 
+
+# Jiahao Liang ∗
+
+Algorithm, Xiaohongshu Shanghai, China 
+
+# Longxin Kou ∗
+
+Algorithm, Xiaohongshu Shanghai, China 
+
+# Haiqing Hu ∗
+
+Algorithm, Xiaohongshu Shanghai, China 
+
+# Shuman Zhuang 
+
+Inference Infra, Xiaohongshu Beijing, China 
+
+# Yubin Xu 
+
+Inference Infra, Xiaohongshu Beijing, China 
+
+# Chenggen Sun 
+
+Inference Infra, Xiaohongshu Beijing, China 
+
+# Bin Ye 
+
+Training Infra, Xiaohongshu Shanghai, China 
+
+# Donghui Xu 
+
+Training Infra, Xiaohongshu Shanghai, China 
+
+# Zhaoyu Liu 
+
+Training Infra, Xiaohongshu Shanghai, China 
+
+# Jiang Rong 
+
+Algorithm, Xiaohongshu Beijing, China 
+
+# Yuting Jia 
+
+Training Infra, Xiaohongshu Shanghai, China 
+
+# Zhaokai Luo 
+
+Inference Infra, Xiaohongshu Beijing, China 
+
+# Leilei Ma 
+
+Inference Infra, Xiaohongshu Beijing, China 
+
+# Yiying Xie †
+
+yiyingxie@xiaohongshu.com Algorithm, Xiaohongshu Shanghai, China 
+
+# Yao Hu ‡
+
+Xiaohongshu Beijing, China 
+
+## Abstract 
+
+Platform-scale recommender systems often span multiple busi-ness streams such as organic recommendation, advertising, and merchant services, where user behaviors form a continuous cross-stream trajectory. Maintaining separate ranking systems fragments user representations and increases engineering cost. We propose 
+
+OneModel , a unified framework for multi-stream final ranking. 
+
+> ∗Work as an intern at Xiaohongshu.
+> †Corresponding Author.
+> ‡Team Leader. Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+> Conference acronym ’XX, Woodstock, NY
+> © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM ISBN 978-1-4503-XXXX-X/2018/06 https://doi.org/XXXXXXX.XXXXXXX
+
+OneModel maps heterogeneous behaviors into shared event se-quences, learns long-context user representations with an action-oriented backbone, and introduces Scenario-aware Information Mod-ulation to balance cross-stream transfer and stream-specific special-ization. For production deployment, OneModel further adopts strat-ified user representation, multi-objective training, and optimized online serving with feature decomposition, user feature prefetching, shared user-tower computation, and graph-level inference optimiza-tion. We deploy OneModel in production at Xiaohongshu , where it delivers consistent offline gains over strong baselines and scales favorably with context length and model capacity. Online A/B tests improve Time Spent by +0.33% and Engagement by +1.25% in Ex-plore Feed, lift advertising value by +3.43% and CTR by +8.18% 
+
+in Feed Advertising, and raise DGMV by +1.1867% and GPM by 
+
++2.1585% in Merchant Recommendation, validating unified multi-stream ranking as an effective production foundation. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems ; Online ad-vertising ; Electronic commerce .arXiv:2608.18606v2 [cs.IR] 20 Aug 2026 Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Zhang et al. 
+
+## Keywords 
+
+Multi-scenario Recommendation, Cross-scenario Ranking, Long-context User Modeling, Industrial Recommender Systems   
+
+> ACM Reference Format:
+> Yinqi Zhang, Peiyu Hu, Yuntian Tang, Siying Gu, Jiahao Liang, Longxin Kou, Haiqing Hu, Shuman Zhuang, Yubin Xu, Chenggen Sun, Bin Ye, Donghui Xu, Zhaoyu Liu, Jiang Rong, Yuting Jia, Zhaokai Luo, Leilei Ma, Yiying Xie, and Yao Hu. 2018. OneModel: A Unified Foundation for Platform-Scale Multi-Scenario Ranking. In Proceedings of Make sure to enter the correct conference title from your rights confirmation email (Conference acronym ’XX). ACM, New York, NY, USA, 9 pages. https://doi.org/XXXXXXX.XXXXXXX
+
+## 1 Introduction 
+
+Recommender systems form the core infrastructure of modern In-ternet platforms and directly affect content distribution, commercial conversion, and user experience [4, 5, 7–9, 12, 22, 46]. Traditional industrial ranking followed a discriminative paradigm with increas-ingly sophisticated feature interactions [4, 9, 19, 26, 35, 39]. More recent generative recommendation and large-scale sequence rank-ing systems such as HSTU and GenRank [10, 14, 23, 25, 27, 28, 43] shift the focus to long action-aware behavior sequences and reveal a clearer scaling path that benefits from larger data, longer contexts, and higher-capacity models. This scaling path relies on a set of heavy capabilities, includ-ing long-history memory, stronger content understanding, large embeddings, and multi-modal modeling [7, 18, 21, 25], which are increasingly necessary for pushing the performance ceiling beyond shallow feature crossing. These capabilities, however, are also ex-pensive to train, serve, and iterate, since they consume substantial compute, storage, and engineering resources. It is therefore increasingly important to reuse these heavy ca-pabilities across businesses rather than rebuild them separately. In compound platforms such as Xiaohongshu, users naturally interact with three business streams, namely organic recommendation, ad-vertising, and merchant services, within one continuous journey (Figure 1); we refer to these collectively as multi-stream behaviors. These streams share users, contents, and intent signals: content consumption often reveals purchase intent, ad responses reflect commercial preference, and merchant behaviors provide high-value supervision for general interest modeling. A unified multi-stream model can both reuse such cross-stream information for better performance and replace multiple isolated long-sequence models, embedding systems, and content-understanding pipelines with a single shared foundation. Unifying multiple business streams, however, is non-trivial. The streams use different feature schemas and value signals such as interest matching for recommendation, ROI for advertising, and conversion and GMV for merchant; naive parameter sharing risks cross-business interference among correlated but conflicting ob-jectives; the unified model still needs to support business-specific specialization without degenerating into fully separated towers; and the shared foundation must satisfy strict industrial serving con-straints under which long-context modeling cannot be recomputed for every request. To address these challenges, we propose OneModel , a unified generative ranking framework for platform-scale multi-stream Rec. Ads. Merc. Time Seq. 
+
+Figure 1: A typical user’s sequential behavior log across mul-tiple scenarios in Xiaohongshu. 
+
+ranking. To handle heterogeneous inputs, OneModel maps multi-stream behaviors into a shared event sequence through scenario-aware feature projection and structural context encoding. To reuse scalable heavy capabilities, OneModel builds an action-oriented long-context sequence backbone that learns shared user preference and content semantics from mixed histories. To mitigate cross-stream interference, OneModel introduces Scenario-aware Informa-tion Modulation (SAIM) and modular multi-objective optimization, so that shared representations adapt to different business goals. To support production deployment, OneModel further adopts stratified user representation, incremental user-state caching, and vectorized candidate scoring to cut online cost. We deploy OneModel in the pro-duction system of Xiaohongshu, where it delivers consistent online gains across the three business streams, including improvements in engagement, advertising value, and merchant-side conversion efficiency. The main contributions of this paper are summarized as follows: 
+
+• We propose OneModel , a unified platform-scale multi-stream ranking framework that consolidates reusable user and con-tent understanding into a shared foundation across organic recommendation, advertising, and merchant services, and thereby improves information reuse and resource utilization. 
+
+• We design unified cross-stream representation, an action-oriented long-context backbone, Scenario-aware Information Modulation (SAIM) , stratified user modeling, modular multi-objective optimization, and decoupled online serving, which together balance sharing, specialization, and deployment cost. 
+
+• We deploy OneModel in real-world production systems and run extensive offline and online A/B tests, which confirm its gains in recommendation engagement, advertising value, and merchant-side conversion under serving constraints. 
+
+## 2 Related Work 
+
+Long-context and generative ranking. Industrial ranking evolved from discriminative utility estimation with feature interaction learn-ing and CTR prediction [4, 9, 13, 19, 26, 35, 39, 46] to sequential rec-ommendation that models ordered user histories [16, 18, 20, 27, 37]. Earlier work used user behavior sequence modeling for target-aware interest modeling, interest evolution, and long-term prefer-ence learning [33, 34, 45 ? ]. More recent Transformer-based and generative ranking systems, such as HSTU, GenRank, MTGR, and related industrial frameworks, further scaled this direction with action-aware or event-based long-context modeling [10, 11, 14, 28, OneModel Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+30, 43], while other large ranking models combined feature inter-action, sequence modeling, and model scaling in stronger back-bones [17, 44, 48]. Most of these models, however, still targeted a single scenario or homogeneous objectives. 
+
+Multi-task and cross-scenario recommendation. Multi-task and cross-scenario learning methods shared knowledge across re-lated tasks or business scenarios through shared-bottom structures, expert routing, scenario-specific towers, or adaptive sharing mecha-nisms [3, 29, 36, 38, 40–42]. To mitigate the negative transfer caused by heterogeneous objectives and distributions, recent studies also investigated how to control shared and private information [1, 47] and how to exploit shared user interests across service contexts [41]. These methods, however, often relied on shallow shared representa-tions, separated scenario-specific modules, or offline user modeling, which makes them less suited for modeling long mixed multi-stream histories as one continuous trajectory for production final ranking. 
+
+Industrial unified ranking systems. Recent industrial gen-erative recommendation frameworks explored scalable sequence modeling, multi-objective ranking, and multi-business prediction [2, 24, 31, 32], reflecting a broader trend toward large-scale sequence-based and unified recommendation systems [6, 15, 44]. Most of them, however, focused on semantic-ID generation, list-level re-ranking, multi-objective sorting, or single advertising scenarios. In contrast, OneModel targets platform-scale final ranking over long mixed multi-stream histories, and uses a shared long-context backbone with scenario-aware modulation to balance transfer and specialization under serving constraints. 
+
+## 3 Preliminary 
+
+We formulate platform-scale multi-stream ranking over users U,items I, and business streams S = {recommendation , advertising ,
+
+merchant }. Each item 𝑖 ∈ I carries a stream origin 𝑠 𝑖 ∈ S and heterogeneous features x𝑖 . For user 𝑢 , we represent the cross-stream behavior history as a time-ordered sequence H𝑢 = {𝑒 1, 𝑒 2, . . . , 𝑒 𝐿 },where each event 𝑒 𝑗 = (𝑖 𝑗 , 𝑠 𝑗 , 𝑎 𝑗 , 𝑡 𝑗 ) records the interacted item, stream, action type, and timestamp, with 𝑡 1 < 𝑡 2 < · · · < 𝑡 𝐿 .OneModel learns a unified function 𝑓 𝜃 that maps H𝑢 to a user representation u for downstream prediction, and supports two cor-related objectives. The first objective is generative retrieval, which predicts the next interacted item from the unified item pool by mod-eling 𝑃 (𝑖 𝐿 +1 | H 𝑢 ). The second objective is stream-specific ranking, which estimates the target action probability for a candidate item 𝑖 
+
+under stream 𝑠 as ˆ 𝑦 = 𝑔 (u, x𝑖 , 𝑠 ). Such a setting requires the unified model to handle heterogeneous feature spaces, reduce cross-stream negative transfer, and satisfy real-time serving constraints. 
+
+## 4 Methodology 4.1 Unified Cross-scenario Representation Learning 
+
+To unify heterogeneous inputs, OneModel maps scenario-specific item features and behavioral contexts into a shared event-token space. As shown in Figure 2, this module contains two steps: scenario-aware feature projection and structural context integration. 
+
+4.1.1 Scenario-aware Feature Projection. Given an item 𝑖 from busi-ness stream 𝑠 ∈ S , we concatenate its heterogeneous raw features, ID Emb Category Tokens Dense Features        
+
+> Projector
+> (Linear + GELU)
+> Item Feature Context Feature
+> 𝑒 !
+> scenario indicator 𝑠 !
+> action type 𝑎 !
+> positional encoding 𝑝𝑜𝑠 !
+> Temporal Interval ∆t_j 𝑐 !
+> 𝑧 !
+> Scenario
+> 𝑠 ∈ {𝑟𝑒𝑐, 𝑎𝑑𝑠, 𝑚𝑒𝑟𝑐}
+> Rec. Ads. Merc. User Interact
+
+Figure 2: Unified cross-scenario representation learning via scenario-aware projection and structural context integration. 
+
+including ID embeddings, category tokens, and normalized dense features, into x(𝑠 ) 
+
+> 𝑖
+
+. To preserve stream-specific feature structures while mapping them into a unified space, we apply a lightweight scenario-specific projection: 
+
+e𝑖 = 𝜙 
+
+
+
+W(𝑠 ) x(𝑠 ) 
+
+> 𝑖
+
++ b(𝑠 ) 
+
+, (1) where W(𝑠 ) and b(𝑠 ) are scenario-specific parameters, and 𝜙 (·) is the activation function. The resulting e𝑖 provides a comparable item representation across scenarios. 
+
+4.1.2 Structural Context Integration. To encode each user interac-tion as a structured event token, we inject scenario, action, temporal, and positional context into the item representation: 
+
+z𝑗 = e𝑖 𝑗 + Embed (𝑠 𝑗 , 𝑎 𝑗 , Δ𝑡 𝑗 , 𝑝𝑜𝑠 𝑗 )
+
+| {z } 
+
+> Context Embedding c𝑗
+
+, (2) where 𝑠 𝑗 is the scenario indicator, 𝑎 𝑗 is the action type, 𝑝𝑜𝑠 𝑗 is the position, and Δ𝑡 𝑗 = 𝑡 𝑗 − 𝑡 𝑗 −1 is the time interval. We encode 
+
+Δ𝑡 𝑗 with multi-frequency sinusoidal embeddings and use learnable embeddings for discrete attributes such as scenario and action type. These structured tokens provide the long-sequence backbone with comparable cross-scenario inputs while preserving behavioral semantics such as recency, action intent, and scenario identity. 
+
+## 4.2 Hierarchical Cross-scenario Sequence Modeling 
+
+To model long multi-stream histories efficiently, OneModel builds a unified sequence module on a GenRank-style action-oriented backbone, as shown in Figure 3. The module contains four de-signs: action-oriented tokenization for reducing effective sequence length, explicit item-context interaction before sequence encoding, a unified causal decoder with candidate masking, scenario-aware information modulation, and stratified user representation. 
+
+Action-oriented organization. Following GenRank, OneModel treats actions as prediction targets and items as contextual sig-nals, avoiding the doubled length caused by explicitly interleaving item and action tokens. Compared with HSTU-style tokenization, which preserves separate item and action tokens and can retain fine-grained interaction semantics, this organization substantially Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Zhang et al. Candidate items R A M R A M R ACross-Scenario User Sequence 
+
+GenRank-Style Transformer Multi-Layer Projection Final User Representation 𝑢 
+
+Attention Pooling Last State Extraction  
+
+> 𝑢 !"#$%" 𝑢 "#&%"
+
+Rec Head Ads Head Mer Head Predict Head   
+
+> 𝐿 '(& 𝐿 )*+ 𝐿 ,(-𝐿 .(/
+> 𝑊𝑒𝑖𝑔ℎ𝑡 𝛼
+> (decays)
+
+Total Loss 𝐿 !"!#$ 
+
+Figure 3: Overall architecture of hierarchical cross-scenario sequence modeling. OneModel uses explicit item-context interaction and an action-oriented decoder with scenario-aware modulation and stratified user representation, fol-lowed by multi-task heads for the three business streams. 
+
+shortens the effective sequence length and improves serving effi-ciency. Different from directly compressing item-context features into sequence tokens, OneModel first performs explicit item-context interaction before sequence encoding, which strengthens candidate-side feature crossing while keeping the sequence backbone compact. Given historical interactions {( 𝑥 𝑖 , 𝑎 𝑖 , 𝑡 𝑖 )} 𝑁 𝑖 =1, we model 
+
+𝑝 (𝑎 𝑘 | 𝑥 1, 𝑎 1, . . . , 𝑥 𝑘 ). (3) Each historical token is represented as 
+
+e𝑖 = 𝜙 (𝑥 𝑖 ) + 𝜑 (𝑎 𝑖 ) + c𝑖 , (4) where 𝜙 (·) is the unified item representation, 𝜑 (·) is the action embedding, and c𝑖 contains structural context. For candidate items 
+
+{𝑥 𝑗 }, we use a masked action embedding m to prevent target-action leakage: 
+
+ecand  
+
+> 𝑗
+
+= 𝜙 (𝑥 𝑗 ) + m + ccand  
+
+> 𝑗
+
+. (5) 
+
+Unified cross-scenario decoder. We feed the token sequence 
+
+E = [e1, . . . , e𝑁 , ecand 1 , . . . , ecand  
+
+> 𝑀
+
+] into a shared causal Transformer decoder, and apply both causal masking and candidate masking, where the former preserves temporal order and the latter blocks attention among candidates in the same request: 
+
+X(𝑙 ) = H(𝑙 −1) + Attn 
+
+
+
+Norm (H(𝑙 −1) ); Mcausal , Mcand 
+
+
+
+, (6) 
+
+H(𝑙 ) = X(𝑙 ) + FFN 
+
+
+
+Norm (X(𝑙 ) )
+
+
+
+. (7) For efficient position and time encoding, we define the structural context as 
+
+c𝑖 = E𝑝𝑒 𝑖 + E𝑟𝑖 𝑖 + E𝑟𝑡 𝑖 + Embed (𝑠 𝑖 ), (8) where E𝑝𝑒 𝑖 , E𝑟𝑖 𝑖 , and E𝑟𝑡 𝑖 encode interaction position, request index, and bucketed pre-request time gap. We additionally use an ALiBi-style linear bias to provide relative temporal inductive bias without quadratic bias-table overhead. Embedding   
+
+> Element-wise Multiplication
+> Linear
+> Scenario ID 𝑠 !
+> Gate  𝜎  SILU Linear Linear
+> SAIM-Gated FFN
+> Norm Add Add
+> Transformer Layer
+> Layer Norm Multi-Head Attention
+> Input 𝐻
+
+Figure 4: Scenario-aware Information Modulation (SAIM). Scenario-aware information modulation. To reduce interfer-ence among mixed-stream tokens, we insert a lightweight scenario-conditioned gate into the FFN, as shown in Figure 4. For token 𝑡 
+
+with scenario 𝑠 𝑡 , the gate is 
+
+g𝑡 = 𝜎 (W𝑔 e𝑠 𝑡 + b𝑔 ), g𝑡 ∈ ( 0, 1)𝑑 𝑓 , (9) and the FFN output becomes FFN (𝑠 𝑡 ) (h𝑡 ) = (SiLU (W1h𝑡 ) ⊙ g𝑡 ) W2 + b2. (10) This design keeps one shared computation graph while allowing stream-dependent channel modulation. 
+
+Stratified user representation. To capture both long-term preference and short-term intent, we combine global attention pooling with the final local state: 
+
+u𝑔𝑙𝑜𝑏𝑎𝑙 =
+
+> 𝐿
+
+∑︁  
+
+> 𝑡 =1
+
+𝛼 𝑡 h(𝐿 ) 
+
+> 𝑡
+
+, 𝛼 𝑡 = Softmax 
+
+
+
+v⊤ tanh (W𝑎 h(𝐿 ) 
+
+> 𝑡
+
+)
+
+
+
+, (11) 
+
+u = MLP  [u𝑔𝑙𝑜𝑏𝑎𝑙 ∥ u𝑙𝑜𝑐𝑎𝑙 ] , (12) where u𝑙𝑜𝑐𝑎𝑙 = h(𝐿 ) 
+
+> 𝐿
+
+. Downstream multi-task prediction heads then consume the fused representation u.
+
+## 4.3 End-to-End Multi-scenario Optimization 
+
+To jointly optimize shared user modeling and stream-specific rank-ing, OneModel trains all components end-to-end with a unified multi-objective loss that combines self-supervised next-item pre-diction, supervised stream-specific prediction, and parameter regu-larization: 
+
+L = 𝛼 · E𝑢 
+
+"
+
+−
+
+> 𝐿 −1
+
+∑︁ 
+
+> 𝑗 =1
+
+log 𝑃 (𝑖 𝑗 +1 |S ≤ 𝑗 )
+
+#
+
+(13) 
+
++ 𝛽 
+
+> 𝐾
+
+∑︁ 
+
+> 𝑘 =1
+
+𝜆 𝑘 · E(𝑢,𝑖 )∼D 𝑘 
+
+ℓ𝑘 ( ˆ𝑦 (𝑘 ) , 𝑦 (𝑘 ) )
+
++ 𝛾 ∥Θ∥22.
+
+The first term learns general sequential preference from mixed histories, the second term aligns the representation with 𝐾 stream-specific objectives, and the last term regularizes model parameters. To balance representation learning and task alignment, we decay 𝛼 
+
+and grow 𝛽 during training, and set 𝜆 𝑘 inversely proportional to the validation AUC of stream 𝑘 so that the model focuses more on harder streams. OneModel Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+To stabilize optimization under heterogeneous objectives, we use cross-stream batch sampling and early-stage gradient isola-tion. Cross-stream sampling prevents high-frequency streams from dominating the shared backbone, and gradient isolation temporar-ily detaches backbone gradients from stream-specific towers dur-ing warm-up to reduce noisy updates to the shared representa-tions. To further cut ultra-long sequence training cost, we apply selective backpropagation that computes gradients mainly on high-perplexity steps and skips easy positions. 
+
+## 4.4 Online Serving Strategy 
+
+To support real-time ranking, OneModel separates long-context user encoding from request-time candidate scoring. The user state 
+
+z𝑢 = 𝑓 𝜃 (H 𝑢 ) is incrementally updated after new interactions and cached in a low-latency key-value store, avoiding repeated Trans-former inference for every request. During ranking, candidate fea-tures are stacked as V ∈ R𝑁 ×𝑑 𝑣 and scored through vectorized computation: 
+
+s = 𝐺 Φ (z𝑢 , V), (14) where 𝐺 Φ denotes the task-specific scoring function. We further apply feature decomposition, user feature prefetching, shared user-tower computation, and graph-level inference optimization to re-duce online latency. 
+
+## 5 Experiments 
+
+We conduct offline and online experiments to answer the following research questions: 
+
+RQ1 : Does OneModel outperform strong single-stream and multi-stream baselines? 
+
+RQ2 : Which training, input, and module designs contribute most? 
+
+RQ3 : How does OneModel scale? 
+
+RQ4 : Is OneModel stable under multi-stream optimization? 
+
+RQ5 : Does OneModel bring online gains in production? 
+
+RQ6 : Can OneModel improve serving efficiency while scaling up? 
+
+## 5.1 Experimental Setup 
+
+Datasets. We evaluate OneModel on an anonymized 10% traffic slice from the production platform of Xiaohongshu , covering three business streams: organic recommendation, advertising, and mer-chant services, with a relative traffic ratio of approximately recom-mendation : advertising : merchant = 1 : 0 .2 : 0 .15. We organize user, item, context, and interaction features into timestamp-ordered multi-stream behavior sequences. Due to data confidentiality, we report relative traffic ratios and aggregated evaluation results rather than absolute user, item, or interaction counts. 
+
+Metrics. For offline evaluation, we report AUC and LogLoss on a timestamp-split test set. The main results cover multi-target AUC on Click, Collect, Comment, PageTime, Follow, Hide, and Like. For ab-lation and scaling analyses, we report AUC or relative AUC changes per experiment. For online evaluation, we report production busi-ness metrics and serving efficiency, including user engagement, advertising value, merchant conversion, latency, throughput, and normalized GPU cost. Rec Ads Merchant 0.77 0.78 0.79   
+
+> AUC
+> (a) Training-level Ablation
+> 0.7906 0.7682 0.7789 0.7905 0.7712 0.7819
+> Isolated Unified
+> Mask Ads sequence Mask Rec sequence 0.0 0.2 0.4 0.6 0.8
+> AUC Drop (pp)
+> 0.01
+> 0.55 0.72 0.36
+> (b) Input-level Ablation
+> Rec AUC Drop Ads AUC Drop
+
+Figure 5: Training- and input-level ablations. (a) Per-stream isolated training vs. unified multi-stream training on Rec, Ads, and Merchant Click AUC. (b) Sub-sequence masking under unified training, reported as AUC drop on Rec and Ads targets. Implementation. We implement OneModel in PyTorch and train it with distributed NCCL on TFRecord data. The default config-uration uses sequence length 500, 768-dimensional item embed-dings, 3 Transformer blocks, 8 attention heads, FFN width 768, and dropout 0 .2. We use bf16 mixed precision, flash-attention, gradient checkpointing, and sampled softmax with in-batch negatives. More details are provided in Appendix A. 
+
+## 5.2 Main Results (RQ1) 
+
+To answer RQ1 , we evaluate OneModel under two settings. In the 
+
+single-stream setting, we compare OneModel with HSTU and Gen-Rank on the advertising stream. HSTU uses a long item-action se-quence design, while GenRank adopts action-oriented organization as a compact and efficiency-oriented baseline. In the multi-stream 
+
+setting, OneModel is trained on the unified behavior stream and evaluated on per-stream targets. Table 1 reports AUC across seven prediction targets. On the advertising stream, GenRank slightly outperforms HSTU across all targets, suggesting that action-oriented organization pro-vides a better accuracy–efficiency trade-off under the advertising-only setting. OneModel further surpasses both baselines by com-bining compact sequence encoding with stronger item-context in-teraction. On Ads Click AUC, single-stream OneModel improves over GenRank by 3.4‰, while unified OneModel enlarges the gap to 6.4‰. Under unified training, OneModel also maintains strong performance across Recommendation, Advertising, and Merchant streams, showing that one shared model can support heterogeneous business targets. 
+
+## 5.3 Ablation Study (RQ2) 
+
+To answer RQ2 , we ablate OneModel from three levels: training strategy, input sequence, and model components, all reported on Click AUC for clarity. 
+
+Training-level ablation. Figure 5(a) compares per-stream iso-lated training with unified multi-stream training. Unified training improves Ads Click AUC from 0.7682 to 0.7712 and Merchant from 0.7789 to 0.7819, both by +3.0‰, while Rec remains nearly un-changed at 0.7905 compared with the isolated 0.7906. This indicates that the two lower-resource streams benefit from the shared back-bone, while the dominant Rec stream does not suffer meaningful negative transfer. Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Zhang et al. 
+
+Table 1: Main results under single-stream and multi-stream settings. Rows indicate the business stream, training setting, and model. Columns report AUC for different prediction targets. “PageTime” denotes page-time prediction.                                                     
+
+> Business Stream Setting Model Click Collect Comment PageTime Follow Hide Like
+> Single-stream setting: advertising-only training and evaluation
+> Advertising Single HSTU 0.7644 0.8991 0.9006 0.6736 0.9156 0.8782 0.8814 GenRank 0.7648 0.8995 0.9010 0.6740 0.9160 0.8786 0.8818 OneModel 0.7682 0.9032 0.9047 0.6786 0.9193 0.8822 0.8858
+> Multi-stream setting: unified training over all business streams
+> Advertising Unified OneModel 0.7712 0.9072 0.9082 0.6836 0.9221 0.8864 0.8908 Recommendation 0.7905 0.9754 0.9609 0.7939 0.9769 0.9353 0.9616 Merchant 0.7819 0.9433 0.9323 0.7261 0.9298 0.8702 0.9358
+
+Table 2: Module-level ablation study of OneModel on the Ads stream under unified multi-stream training. Δ denotes the absolute Click AUC decrease in per-mille (‰) relative to the full OneModel.            
+
+> Variant Click AUC Δ(‰)
+> Full OneModel 0.7712 –w/o Unified Rep. 0.7698 1.4 w/o SAIM 0.7701 1.1 w/o Stratified Rep. 0.7704 0.8
+
+Input-level ablation. Figure 5(b) masks different sub-sequences at inference time to test whether cross-scenario histories provide useful evidence. For Ads prediction, masking its own Ads history causes the largest drop, while masking the Rec sub-sequence also reduces Ads AUC, showing that Rec behaviors provide auxiliary intent signals for Ads ranking. In contrast, Rec prediction is only slightly affected by removing Ads history, which is consistent with Rec being the highest-resource stream. 
+
+Module-level ablation. Table 2 ablates three core modules un-der unified training on Ads Click AUC. Removing unified represen-tation, SAIM, and stratified user representation leads to consistent drops of 1.4‰, 1.1‰, and 0.8‰, respectively. These results show that representation alignment, scenario-aware modulation, and multi-timescale user modeling each contribute to the final performance. 
+
+## 5.4 Scaling Analysis (RQ3) 
+
+To answer RQ3 , we analyze how OneModel scales with input se-quence length and architectural capacity. Figure 6 summarizes the results: subfigure (a) reports sequence-length scaling with length 500 as the base configuration, while subfigures (b)–(e) vary one architectural component at a time, with the others fixed to the base configuration of 3 layers, 8 heads, 𝑑 𝑣 =256, and FFN width 768. 
+
+Sequence length. Figure 6(a) shows that shorter histories hurt performance: reducing the sequence length to 100 and 200 decreases AUC by 2.5‰ and 1.5‰ , respectively. Extending the length from 500 to 1000 brings only a small +0.5‰ gain. We therefore use length 500 as the deployed configuration to balance accuracy and serving cost. 
+
+Model depth. Figure 6(b) shows that depth is the most sensitive dimension. Reducing the model from 3 to 1 layer drops Click AUC by -2.0‰ , while extending it to 5 layers brings a +0.7‰ gain. 
+
+Attention heads. Figure 6(c) shows that head count has the weakest effect. Reducing from 8 to 4 heads barely changes Click AUC, and growing to 16 heads gives only a small +0.3‰ gain. 
+
+Attention dimension. Figure 6(d) shows that enlarging 𝑑 𝑣 
+
+brings moderate improvement. Reducing 𝑑 𝑣 to 128 drops AUC by 
+
+-0.5‰ , while enlarging it to 512 improves AUC by +0.38‰ .
+
+FFN width. Figure 6(e) shows a similar but weaker trend for FFN width. Reducing the width to 512 drops AUC by -0.7‰ , while enlarging it to 1024 brings a +0.24‰ gain. 
+
+## 5.5 Training Stability Analysis (RQ4) 
+
+To answer RQ4 , we examine whether OneModel can be stably op-timized under heterogeneous multi-stream objectives. We focus on two aspects: whether gradient isolation stabilizes shared-backbone training, and whether SAIM learns stream-dependent modulation rather than collapsing to a uniform transformation. 
+
+Effect of gradient isolation. Figure 7(a) shows that removing gradient isolation decreases Ads Click AUC from 0.7712 to 0.7696. This confirms that optimization stabilization is useful when multiple stream-specific losses update a shared backbone, since early-stage task towers may produce noisy or conflicting gradients. Gradient isolation allows task towers to warm up before fully affecting the shared representation. 
+
+Analysis of SAIM gate behavior. Figure 7(b) reports the aver-age SAIM gate activation across business streams. The activations differ across Rec, Ads, and Merchant at 0.61, 0.54, and 0.58, respec-tively. This shows that SAIM does not apply the same transforma-tion to all streams, but learns stream-dependent channel modulation for balancing shared modeling and stream-specific specialization. 
+
+## 5.6 Online Effectiveness Evaluation (RQ5) 
+
+To answer RQ5 , we conduct online A/B tests against the current production ranking system across Explore Feed, Feed Advertising, and Merchant Recommendation, with users randomly assigned to control and treatment groups. As an offline sanity check, OneModel improves AUC over the production ranker by +0.3% on Click and 
+
++0.04% on Like, which is consistent with the online results. As summarized in Table 3, OneModel improves user engagement in OneModel Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 100 200 500 1000          
+
+> Length
+> −3 −2 −1 01
+> Δ AUC (‰)
+> (a) Sequence Length
+> -2.5 -1.5 0+0.5
+> 135
+> Layers
+> −2 −1 01
+> Δ AUC (‰)
+> (b) Layers
+> -2 0+0.7
+> 4816
+> Heads
+> −0.2 0.0 0.2 0.4
+> Δ AUC (‰)
+> (c) Heads
+> 00+0.3
+> 128 256 512
+> dv
+> −0.50 −0.25 0.00 0.25 0.50
+> Δ AUC (‰)
+> (d) Attn Dim
+> -0.5 0+0.38
+> 512 768 1024
+> FFN
+> −0.75 −0.50 −0.25 0.00 0.25
+> Δ AUC (‰)
+> (e) FFN Width
+> -0.7 0+0.24
+
+Figure 6: Scaling analysis of OneModel. (a) Effect of input sequence length on offline AUC, reported relative to the base length 500. The diamond marker denotes the deployed configuration. (b)–(e) Architectural sensitivity on the advertising stream, where one component is varied at a time while the others are fixed to the base configuration. The 𝑦 -axis reports the relative Click AUC change in per-mille (‰). w/o Isolation w/ Isolation   
+
+> 0.769 0.770 0.771 0.772
+> Ads Click AUC
+> 0.7696 0.7712
+> +1.6‰
+> (a) Gradient Isolation
+> Rec Ads Merchant
+> 0.50 0.55 0.60 0.65
+> Gate Activation  0.61 0.54 0.58
+> (b) SAIM Gate Activation
+
+Figure 7: Training stability analysis of OneModel. (a) Gradi-ent isolation improves Ads Click AUC under heterogeneous multi-stream objectives. (b) SAIM learns different average gate activations across Rec, Ads, and Merchant streams. Table 3: Online A/B test results. Metrics are relative changes over the control group. 
+
+Metric Description Rel. Change 
+
+Explore Feed 
+
+Time Spent User consumption time +0.33% 
+
+Reads Content reading behavior +0.63% 
+
+Engagement User interaction +1.25% 
+
+LT7 Long-term user value +0.15% 
+
+Feed Advertising 
+
+ADVV Advertising value +3.43% 
+
+CTR Click-through rate +8.18% 
+
+Impressions Exposure volume −1.07% 
+
+CPM Cost per mille impressions +0.90% 
+
+Merchant Recommendation 
+
+PV Exposure volume −0.9513% 
+
+DGMV Direct GMV +1.1867% 
+
+DAB Exposure-to-purchase rate +1.8009% 
+
+GPM GMV per mille impressions +2.1585% 
+
+OPM Purchases per mille impressions +2.8118% 
+
+Explore Feed, advertising value and CTR in Feed Advertising, and merchant-side conversion efficiency in Merchant Recommenda-tion. In Merchant Recommendation, exposure PV slightly decreases by −0.9513%, while DGMV, DAB, GPM, and OPM improve by 
+
++1.1867% , +1.8009% , +2.1585% , and +2.8118% , respectively, in-dicating higher business efficiency under fewer exposures. 
+
+Table 4: Online cost-effectiveness comparison between the production baseline and OneModel. 
+
+Metric Baseline OneModel Rel. Change 
+
+Dense Params 173M 230M +32.9% Latency 270ms 90ms -66.7% 
+
+## 5.7 Online Cost-effectiveness Evaluation (RQ6) 
+
+To answer RQ6 , we evaluate whether OneModel can scale model capacity while remaining practical for online serving. As shown in Table 4, OneModel increases dense parameters from 173M to 230M, but the optimized serving path reduces online latency from 270ms to 90ms. This improvement mainly comes from four system-level optimizations: feature decomposition, user feature prefetching, shared user-tower computation, and graph-level inference optimiza-tion. Feature decomposition separates reusable user-side computa-tion from request-time candidate scoring; user feature prefetching moves part of the feature retrieval cost before the ranking request; shared user-tower computation avoids repeatedly encoding the same user state for different candidates; and graph optimization re-duces redundant operators in online inference. These results show that OneModel improves model capacity while maintaining efficient production serving. 
+
+## 6 Conclusion 
+
+We presented OneModel , a unified generative framework for multi-stream ranking that modeled interleaved user behaviors across or-ganic recommendation, advertising, and merchant services with a shared backbone. OneModel integrated cross-stream representa-tion learning, an action-oriented long-context encoder with SAIM, stratified user representations, and a hybrid training and decoupled serving design for efficient deployment. Offline and online A/B tests at Xiaohongshu showed consistent gains over strong baselines and favorable scaling with model size and context length, which validated unified modeling as a practical foundation for industrial multi-stream recommendation. Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Zhang et al. 
+
+## Generative AI Use Disclosure 
+
+We used generative AI tools only for language polishing and gram-mar refinement. 
+
+## References 
+
+[1] Ting Bai, Yudong Xiao, Bin Wu, Guojun Yang, Hongyong Yu, and Jian-Yun Nie. 2022. A contrastive sharing model for multi-task recommendation. In Proceedings of the ACM web conference 2022 . 3239–3247. [2] Jiangxia Cao, Pengbo Xu, Yin Cheng, Kaiwei Guo, Jian Tang, Shijun Wang, Dewei Leng, Shuang Yang, Zhaojie Liu, Yanan Niu, et al. 2025. Pantheon: Personalized multi-objective ensemble sort via iterative pareto policy optimization. In Pro-ceedings of the 34th ACM International Conference on Information and Knowledge Management . 5575–5582. [3] Rich Caruana. 1997. Multitask learning. Machine learning 28, 1 (1997), 41–75. [4] Heng-Tze Cheng, Levent Koc, Jeremiah Harmsen, Tal Shaked, Tushar Chandra, Hrishi Aradhye, Glen Anderson, Greg Corrado, Wei Chai, Mustafa Ispir, et al. 2016. Wide & deep learning for recommender systems. In Proceedings of the 1st workshop on deep learning for recommender systems . 7–10. [5] Paul Covington, Jay Adams, and Emre Sargin. 2016. Deep neural networks for youtube recommendations. In Proceedings of the 10th ACM conference on recommender systems . 191–198. [6] Sunhao Dai, Jiakai Tang, Jiahua Wu, Kun Wang, Yuxuan Zhu, Bingjun Chen, Bangyang Hong, Yu Zhao, Cong Fu, Kangle Wu, et al. 2025. Onepiece: Bringing context engineering and reasoning to industrial cascade ranking system. arXiv preprint arXiv:2509.18091 (2025). [7] Aminu Da’u and Naomie Salim. 2020. Recommendation system based on deep learning methods: a systematic review and new directions. Artificial Intelligence Review 53, 4 (2020), 2709–2748. [8] Yashar Deldjoo, Zhankui He, Julian McAuley, Anton Korikov, Scott Sanner, Arnau Ramisa, René Vidal, Maheswaran Sathiamoorthy, Atoosa Kasirzadeh, and Silvia Milano. 2024. A review of modern recommender systems using generative models (gen-recsys). In Proceedings of the 30th ACM SIGKDD conference on Knowledge Discovery and Data Mining . 6448–6458. [9] Huifeng Guo, Ruiming Tang, Yunming Ye, Zhenguo Li, and Xiuqiang He. 2017. DeepFM: a factorization-machine based neural network for CTR prediction. arXiv preprint arXiv:1703.04247 (2017). [10] Ruidong Han, Bin Yin, Shangyu Chen, He Jiang, Fei Jiang, Xiang Li, Chi Ma, Mincong Huang, Xiaoguang Li, Chunzhen Jing, et al. 2025. Mtgr: Industrial-scale generative recommendation framework in meituan. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management .5731–5738. [11] Peiyu Hu, Siying Gu, Weihai Lu, Zhuodong Liu, Yuntian Tang, Jiahao Liang, Yiying Xie, Jiang Rong, Zhaokai Luo, Zhiyong Wang, et al. 2026. Hierarchical La-tent Reasoning for LLM-based Recommendation. arXiv preprint arXiv:2607.27760 
+
+(2026). [12] Peiyu Hu, Weihai Lu, Siying Gu, Elliott Wen, Changyu Zeng, Senzhang Wang, and Jia Wang. 2026. A Modular Survey for Semantic ID-Based Generative Rec-ommendation. (2026). [13] Po-Sen Huang, Xiaodong He, Jianfeng Gao, Li Deng, Alex Acero, and Larry Heck. 2013. Learning deep structured semantic models for web search using clickthrough data. In Proceedings of the 22nd ACM international conference on Information & Knowledge Management . 2333–2338. [14] Yanhua Huang, Yuqi Chen, Xiong Cao, Rui Yang, Mingliang Qi, Yinghao Zhu, Qingchang Han, Yaowei Liu, Zhaoyu Liu, Xuefeng Yao, et al. 2025. Towards Large-scale Generative Ranking. arXiv preprint arXiv:2505.04180 (2025). [15] Yunwen Huang, Shiyong Hong, Xijun Xiao, Jinqiu Jin, Xuanyuan Luo, Zhe Wang, Zheng Chai, Shikang Wu, Yuchao Zheng, and Jingjian Lin. 2026. HyFormer: Revis-iting the Roles of Sequence Modeling and Feature Interaction in CTR Prediction. 
+
+arXiv preprint arXiv:2601.12681 (2026). [16] Dietmar Jannach and Malte Ludewig. 2017. When recurrent neural networks meet the neighborhood for session-based recommendation. In Proceedings of the eleventh ACM conference on recommender systems . 306–310. [17] Yuchen Jiang, Jie Zhu, Xintian Han, Hui Lu, Kunmin Bai, Mingyu Yang, Shikang Wu, Ruihao Zhang, Wenlin Zhao, Shipeng Bai, et al. 2026. TokenMixer-Large: Scaling Up Large Ranking Models in Industrial Recommenders. arXiv preprint arXiv:2602.06563 (2026). [18] Clark Mingxuan Ju, Liam Collins, Leonardo Neves, Bhuvesh Kumar, Louis Yufeng Wang, Tong Zhao, and Neil Shah. 2025. Generative Recommendation with Seman-tic IDs: A Practitioner’s Handbook. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management . 6420–6425. [19] Yuchin Juan, Yong Zhuang, Wei-Sheng Chin, and Chih-Jen Lin. 2016. Field-aware factorization machines for CTR prediction. In Proceedings of the 10th ACM conference on recommender systems . 43–50. [20] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-mendation. In 2018 IEEE international conference on data mining (ICDM) . IEEE, 197–206. [21] Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei. 2020. Scaling laws for neural language models. arXiv preprint arXiv:2001.08361 (2020). [22] Hyeyoung Ko, Suyeon Lee, Yoonseo Park, and Anna Choi. 2022. A survey of recommendation systems: recommendation models, techniques, and application fields. Electronics 11, 1 (2022), 141. [23] Tzu-Lin Kuo, Tzu-Wei Chiu, Tzung-Sheng Lin, Sheng-Yang Wu, Chao-Wei Huang, and Yun-Nung Chen. 2024. A survey of generative information retrieval. arXiv preprint arXiv:2406.01197 (2024). [24] Changhao Li, Junwei Yin, Zhilin Zeng, Senjie Kou, Shuli Wang, Wenshuai Chen, Yinhua Zhu, Haitao Wang, and Xingxing Wang. 2026. MBGR: Multi-Business Prediction for Generative Recommendation at Meituan. arXiv preprint arXiv:2604.02684 (2026). [25] Lei Li, Yongfeng Zhang, Dugang Liu, and Li Chen. 2024. Large language models for generative recommendation: A survey and visionary discussions. In Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024) . 10146–10159. [26] Jianxun Lian, Xiaohuan Zhou, Fuzheng Zhang, Zhongxia Chen, Xing Xie, and Guangzhong Sun. 2018. xdeepfm: Combining explicit and implicit feature in-teractions for recommender systems. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining . 1754–1763. [27] Siqi Liang and Yudi Zhang. 2025. Generative Recommendation: A Survey of Models, Systems, and Industrial Advances. (2025). [28] Chi Liu, Jiangxia Cao, Rui Huang, Kai Zheng, Qiang Luo, Kun Gai, and Guorui Zhou. 2024. KuaiFormer: Transformer-Based Retrieval at Kuaishou. arXiv preprint arXiv:2411.10057 (2024). [29] Zihan Liu, Yupeng Hou, and Julian McAuley. 2024. Multi-behavior generative recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 1575–1585. [30] Zhuodong Liu, Hugen Lv, Xiangyu Li, Bohan Guo, and Peiyu Hu. 2026. Fed-CGR: Federated Cross-Domain Generative Recommendation. arXiv preprint arXiv:2608.10929 (2026). [31] Yue Meng, Cheng Guo, Yi Cao, Tong Liu, and Bo Zheng. 2025. A generative re-ranking model for list-level multi-objective optimization at taobao. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 4213–4218. [32] Junwei Pan, Wei Xue, Chao Zhou, Xing Zhou, Lunan Fan, Yanbo Wang, Haoran Xin, Zhiyu Hu, Yaozheng Wang, Fengye Xu, et al. 2026. Tencent Advertising Algorithm Challenge 2025: All-Modality Generative Recommendation. arXiv preprint arXiv:2604.04976 (2026). [33] Qi Pi, Weijie Bian, Guorui Zhou, Xiaoqiang Zhu, and Kun Gai. 2019. Practice on long sequential user behavior modeling for click-through rate prediction. In Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining . 2671–2679. [34] Qi Pi, Guorui Zhou, Yujing Zhang, Zhe Wang, Lejian Ren, Ying Fan, Xiaoqiang Zhu, and Kun Gai. 2020. Search-based user interest modeling with lifelong sequential behavior data for click-through rate prediction. In Proceedings of the 29th ACM International Conference on Information & Knowledge Management .2685–2692. [35] Steffen Rendle. 2010. Factorization machines. In 2010 IEEE International conference on data mining . IEEE, 995–1000. [36] Derun Song, Enneng Yang, Guibing Guo, Li Shen, Linying Jiang, and Xingwei Wang. 2024. Multi-scenario and multi-task aware feature interaction for recom-mendation system. ACM Transactions on Knowledge Discovery from Data 18, 6 (2024), 1–20. [37] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential recommendation with bidirectional encoder rep-resentations from transformer. In Proceedings of the 28th ACM international conference on information and knowledge management . 1441–1450. [38] Hongyan Tang, Junning Liu, Ming Zhao, and Xudong Gong. 2020. Progressive layered extraction (ple): A novel multi-task learning (mtl) model for personalized recommendations. In Proceedings of the 14th ACM conference on recommender systems . 269–278. [39] Ruoxi Wang, Bin Fu, Gang Fu, and Mingliang Wang. 2017. Deep & cross network for ad click predictions. In Proceedings of the ADKDD’17 . 1–7. [40] Yichao Wang, Huifeng Guo, Bo Chen, Weiwen Liu, Zhirong Liu, Qi Zhang, Zhicheng He, Hongkun Zheng, Weiwei Yao, Muyu Zhang, et al. 2022. Causalint: Causal inspired intervention for multi-scenario recommendation. In Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining .4090–4099. [41] Manjie Xu, Cheng Chen, Xin Jia, Jingyi Zhou, Yongji Wu, Zejian Wang, Chi Zhang, Kai Zuo, Yibo Chen, Xu Tang, et al. 2025. Cross-Scenario Unified Modeling of User Interests at Billion Scale. arXiv preprint arXiv:2510.14788 (2025). [42] Qingqing Yi, Jingjing Tang, Xiangyu Zhao, Yujian Zeng, Zengchun Song, and Jia Wu. 2025. An adaptive entire-space multi-scenario multi-task transfer learn-ing model for recommendations. IEEE Transactions on Knowledge and Data Engineering (2025). OneModel Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+[43] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhao-jie Gong, Fangda Gu, Michael He, et al. 2024. Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations. arXiv preprint arXiv:2402.17152 (2024). [44] Zhaoqi Zhang, Haolei Pei, Jun Guo, Tianyu Wang, Yufei Feng, Hui Sun, Shaowei Liu, and Aixin Sun. 2026. Onetrans: Unified feature interaction and sequence modeling with one transformer in industrial recommender. In Proceedings of the ACM Web Conference 2026 . 8162–8170. [45] Guorui Zhou, Na Mou, Ying Fan, Qi Pi, Weijie Bian, Chang Zhou, Xiaoqiang Zhu, and Kun Gai. 2019. Deep interest evolution network for click-through rate prediction. In Proceedings of the AAAI conference on artificial intelligence , Vol. 33. 5941–5948. [46] Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. 2018. Deep interest network for click-through rate prediction. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining . 1059–1068. [47] Jie Zhou, Qian Yu, Chuan Luo, and Jing Zhang. 2023. Feature decomposition for reducing negative transfer: a novel multi-task learning method for recommender system (student abstract). In Proceedings of the AAAI conference on artificial intelligence , Vol. 37. 16390–16391. [48] Jie Zhu, Zhifang Fan, Xiaoxie Zhu, Yuchen Jiang, Hangyu Wang, Xintian Han, Haoran Ding, Xinmin Wang, Wenlin Zhao, Zhen Gong, et al. 2025. Rankmixer: Scaling up ranking models in industrial recommenders. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management .6309–6316. 
+
+## A Additional Implementation Details 
+
+For each business stream, we use user-side features such as demo-graphics, long-term interest profiles, and activity statistics; item-side features such as content metadata and multi-modal representa-tions where available; context features such as time, device, entry point, and page context; and interaction features such as clicks, likes, views, dwell time, and conversions. We adopt a timestamp-based split to avoid future information leakage, training on earlier interactions and validating and testing on later ones. We optimize the model with sampled softmax loss using in-batch negatives, tem-perature 0 .05, learning rate 1e −4, and zero weight decay. Under unified training, batches from Rec, Ads, and Merchant share the same backbone while retaining stream-specific prediction targets. For online inference, feature decomposition separates reusable user-side computation from request-time candidate scoring; user feature prefetching moves part of the feature retrieval cost before rank-ing; shared user-tower computation avoids repeated user encoding across candidates; and graph-level optimization removes redundant inference operators. 
+
+## B Baseline 
+
+We compare OneModel with representative long-sequence ranking backbones, including HSTU and GenRank [14, 43]. All baselines are evaluated under both single-scenario and cross-scenario settings for fair comparison. 
+
+Received 20 February 2007; revised 12 March 2009; accepted 5 June 2009

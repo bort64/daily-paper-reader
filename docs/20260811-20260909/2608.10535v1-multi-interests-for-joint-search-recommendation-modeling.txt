@@ -1,0 +1,485 @@
+Title: Multi Interests for Joint Search-Recommendation Modeling
+
+URL Source: https://arxiv.org/pdf/2608.10535v1
+
+Published Time: Wed, 12 Aug 2026 00:49:10 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Multi Interests for Joint Search-Recommendation Modeling 
+
+# Xiangchen Pan 
+
+Huazhong University of Science and Technology Wuhan, China pxcstart666@gmail.com 
+
+# WeiWei ∗
+
+Huazhong University of Science and Technology Wuhan, China weiw@hust.edu.cn 
+
+# HuaKang Niu 
+
+Huazhong University of Science and Technology Wuhan, China niuhuakang@163.com 
+
+# ZhiCong Cheng 
+
+Huazhong University of Science and Technology Wuhan, China zccheng0321@gmail.com 
+
+## Abstract 
+
+Search and recommendation are crucial for understanding user preferences. More and more studies are attempting to jointly model search behavior and recommendation behavior, by integrating user active search and passive recommendation behavior data to better mine user preferences. However, although existing cross-domain unified modeling frameworks can effectively compensate for the differences in behavior between domains, they overlook the expres-sion of interests in different scenarios under mixed sequences. In this study, we propose a multi-interest-based mixed sequential mod-eling framework MIJSR, which performs multi-interest mining and adaptive integration on search recommendation mixed sequences from both structural and semantic perspectives. Specifically, our model can be roughly divided into three modules: cross-domain behavior fusion, multi-interest mining, and multi-task prediction. Firstly, we align the representations of query and item through contrastive learning training. Then, we extract the multi interests of the mixed behavior sequence from both structural and semantic perspectives. Structurally, we extract search interests, recommenda-tion interests, and cross interests through subsequence partitioning and mask settings; In terms of semantics, we use the semantic information of queries for clustering and perform semantic seg-mentation on mixed sequences to construct semantic multi inter-ests. Finally, the adaptive fusion of multiple interests is combined with other side information to use a progressive layered extrac-tion model for multi-task prediction. Extensive experiments on two open-source datasets have shown that our model can further enhance its accuracy in search and recommendation by extracting users’ multi interests at a fine-grained level. Codes are available at https://github.com/pxcstart/MIJSR. 
+
+> ∗Corresponding author. Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+> Conference XX, Woodstock, NY
+> © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM ISBN 978-1-4503-XXXX-X/2018/06 https://doi.org/XXXXXXX.XXXXXXX
+
+## Keywords 
+
+Personalized Search, Sequential Recommendation, Joint Search and Recommendation Model 
+
+ACM Reference Format: 
+
+Xiangchen Pan, WeiWei, HuaKang Niu, and ZhiCong Cheng. 2018. Multi Interests for Joint Search-Recommendation Modeling. In Proceedings of Make sure to enter the correct conference title from your rights confirmation email (Conference XX). ACM, New York, NY, USA, 11 pages. https://doi.org/ XXXXXXX.XXXXXXX 
+
+## 1 Introduction 
+
+Search engines and recommendation systems (S&R) have become important tools for users to obtain information [4, 6, 10, 11, 20, 32]. Users can initiate a search in the search box or interact with the displayed items on the recommendation interface. Traditionally, search and recommendation have been regarded as two indepen-dent research scenarios. In recent years, many social or e-commerce platforms have tended to jointly model users’ search behavior and recommendation behavior [24, 25, 34, 36], which can reduce data sparsity in a single scenario and provide a more comprehensive understanding of user intentions. Early joint modeling of search and recommendation predomi-nantly followed a representation-first, fusion-later paradigm: sepa-rate encoders were used to extract user interests from search and recommendation behaviors, respectively (e.g., NRHUB [33], SES-Rec [27]). However, this design struggles to capture the intrinsic correlations between search and recommendation. USER [35] in-troduced a unified paradigm based on hybrid sequential modeling, which chronologically interleaves active search and passive rec-ommendation behaviors to better exploit their similarities, and performs long- and short-term interest modeling over the hybrid sequence to uncover user preferences. UniSAR [24] further empha-sizes fine-grained transitions between search and recommendation behaviors, and strengthens cross-domain interactions via cross-attention. Although these methods can largely bridge behavioral differ-ences across domains, they overlook multi-interest expression un-der a hybrid-sequence view. As illustrated in Fig. 1a, a user with long-term preferences for digital devices and designer toys, due to an upcoming trip to Japan, begins frequently searching for travel-related queries such as “Tokyo hotels” and “Japan visa" while click-ing items in the recommendation stream such as suitcases, cameras, and noise-canceling headphones. If search and recommendation behaviors are directly modeled as a unified mixed sequence, the arXiv:2608.10535v1 [cs.IR] 11 Aug 2026 Conference XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, WeiWei, HuaKang Niu, and ZhiCong Cheng  
+
+> (a) structural multi-interest modeling for search&recommendation (b) semantic multi-interest modeling for search&recommendation
+
+Figure 1: The necessity and rationality analysis of extracting users’ multiple interests. a) illustrates the necessity of dividing user multi interests based on behavior types from sequence structure, as opposed to directly modeling mixed sequences; b) shows the rationality of using query information for semantic clustering and sequence partitioning by interest, compared to previous ID sequence modeling. 
+
+model tends to naively entangle interests such as travel, digital, and designer toys, causing short-term travel intent to be overshadowed by long-term historical interests. By contrast, extracting multi-interest representations from multiple perspectives, such as search interests, recommendation interests, and search–recommendation cross-interests, can model users’ current travel intentions, long-term digital preferences, and "technology consumption needs in travel scenarios" separately. This helps mitigate interest coupling caused by heterogeneous behavior mixing, and enables a more accurate characterization of dynamic needs and personalized pref-erences. In addition, in previous work, mixed sequence modeling was primarily based on ID features for feature interaction and interest expression. The utilization of query features only stays at the level of mean pooling for word embeddings [24, 34], and search behavior often directly integrates query embeddings with corresponding click item embeddings, which weakens the original semantic ex-pression of the query. In fact, the semantic information of user search queries can most directly reflect user preferences. As shown in Fig. 1b, based on the user’s search history, "mechanical key-board" and "wireless mouse" correspond to computer peripheral interests, while "running shoes" and "sports watch" correspond to sports interests. Compared to item IDs, queries naturally provide clearer interest boundaries, so multi-interest extraction based on query semantic clustering can more effectively characterize users’ multiple preferences. To this end, we perform semantic clustering on all queries in the dataset in advance. After aligning the features of the queries and items, we perform semantic partitioning on the mixed sequence, dividing it into multiple interests from a semantic perspective. In summary, in order to better decouple the interests of S&R mixed sequences, we propose a multi-interest-based joint model-ing framework for search and recommendation, MIJSR. The model mainly consists of three parts: cross-domain behavior fusion, multi-interest mining, and multi-task prediction. Considering that search scenarios provide additional explicit search queries compared to recommendation scenarios, we designed a contrastive learning task of query and item for feature alignment. Next, we extract multi interests from mixed sequences from both structural and semantic perspectives. On the structural side, we extract search interests, recommendation interests, and cross interests by divid-ing subsequences and setting masks; On the semantic side, we use the semantic information of queries for clustering and extract se-mantic subsequences for each category from the mixed sequence to construct semantic multi interests; Finally, we adaptively inte-grate interests and input them along with other side information into a progressive layered extraction (PLE) model for multi-task prediction. The main contributions of the paper are as follows: 
+
+• We propose a multi-interest-based search-recommendation joint modeling framework MIJSR, and we construct users’ multi-interests from both structural and semantic perspectives, comprehensively characterizing users’ personalized preferences. 
+
+• On the structural side, we focus on search interests, recommen-dation interests, and cross interests; on the semantic side, we use the semantic information of queries for semantic clustering, per-form semantic segmentation on mixed sequences, and construct semantic multi-interest. 
+
+• We conducted experiments on two publicly available datasets, and MIJSR achieved even better performance than state-of-the-art models in both search and recommendation tasks. 
+
+## 2 Related Work 2.1 Sequential Recommendation 
+
+Sequential recommendation is based on user history sequences generated in chronological order, modeling the dynamic changes in user interests and predicting the user’s next interaction. Early Multi Interests for Joint Search-Recommendation Modeling Conference XX, June 03–05, 2018, Woodstock, NY 
+
+sequential modeling used Markov chains [23], but with the ad-vancement of deep learning, GRU4Rec [14] and Caser [31] applied RNN [17] and CNN [16] for sequence modeling. Later, with the widespread application of Transformer [8] in fields such as NLP, SASRec [15] and Bert4Rec [28] validated its enormous potential in sequential recommendation. In the industrial sector, the intentions of users with long sequences may be diverse. DIN [37] introduces an attention mechanism to weight and aggregate historical behavior based on candidate items, in order to model multiple user inter-ests; KA-MemNN [39] uses item categories as intent proxies with memory networks; DSIN [9] divides the sequence into sessions to characterize the changes in users’ interests in different sessions; The SDM [21] model has been further extended on the basis of DSIN, dividing user history sequences into long-term and short-term sessions for extracting long-term and short-term interests respectively. In this work, we perform cross-domain sequence mod-eling on search-recommendation mixed sequences. We not only explore users’ multiple interests in sequence structure, but also con-sider dividing semantic multi interests based on query semantics. 
+
+## 2.2 Personalized Search 
+
+Personalized search aims to retrieve items that are not only rel-evant to the current query but also consistent with users’ indi-vidual preferences. Early studies mainly focused on query-item relevance matching, such as QEM [1] and DREM [3], which esti-mate user interests solely based on semantic similarity between queries and items. To better capture personalized intent, subsequent works incorporated user profiles and historical search behaviors into the retrieval process. HEM [2] introduced user embeddings to model long-term preferences through review information, while AEM employed an attention mechanism to aggregate historical interactions according to the current query. Building upon AEM, ZAM [1] introduced a zero-attention vector to adaptively control the degree of personalization. More recently, TEM [5] replaced the attention layer with a Transformer encoder to capture sequential dependencies in users’ search histories. In addition, several studies have explored multi-interest modeling in personalized search. For example, CAMI [18] leverages knowledge graph embeddings to dis-entangle users’ multiple interests, while GraphSRRL [19] exploits structural patterns in user-query-item graphs to enhance interest representation. Although these methods have achieved promis-ing results, they primarily rely on search behaviors and overlook valuable preference signals contained in recommendation interac-tions. Consequently, their ability to model user interests is limited in sparse-search scenarios. Different from existing personalized search methods, our work incorporates recommendation behaviors into the search process and performs unified multi-interest model-ing over search and recommendation interactions, enabling a more comprehensive understanding of user preferences. 
+
+## 2.3 Joint Search and Recommendation 
+
+In recent years, joint modeling of search and recommendation sce-narios has gradually become a major trend for many commercial platforms. Early work mainly adopted a strategy of representation before fusion, that is, modeling the query sequence and item se-quence separately, and then using search data as supplementary information to improve recommendation performance. For example, NRHUB [33] proposed an attention multi-view learning framework that uses a hierarchical attention masker to learn a unified user representation from heterogeneous behaviors; Query-SeqRec [13] builds heterogeneous sequences based on queries to predict the next interaction; IV4Rec [26] uses causal learning to treat search queries as instrumental variables for decomposing embeddings and mitigating bias; SESRec [27] utilizes contrastive learning to distinguish between similar and different representations between search and recommendation. However, these methods overlook the intrinsic connection between search and recommendation tasks, mainly focusing on utilizing search data to improve recommenda-tion performance, and the search performance of the model has not significantly improved. Recently, more and more work has shifted towards unified mod-eling of search and recommendation data, aiming to promote joint enhancement between search and recommendation. USER [35] in-tegrates the user’s behavior during the search and recommendation process into a heterogeneous behavior sequence, which is then encoded using a hierarchical encoder; UniSAR [24] models user transition behavior between search and recommendation through three steps of extraction, alignment, and fusion, utilizing cross at-tention to extract transitions between different behaviors. In this work, we integrate search and recommendation behaviors based on previous work experience, construct a mixed sequence for joint modeling, and extract users’ multiple interests in cross-domain scenarios to achieve personalized search and recommendation. 
+
+## 3 Preliminaries 
+
+𝑈 , 𝐼 , and 𝑄 represent the sets of users, items, and queries, respec-tively. Each user 𝑢 ∈ 𝑈 has an interaction history 𝑆 𝑢 arranged in chronological order, which records all their past search and recom-mendation behaviors. We denote all search behaviors as 𝑆 𝑠 𝑢 and all recommendation behaviors as 𝑆 𝑟 𝑢 . 𝑆 𝑢 = {( 𝑥 1, 𝑏 1), (𝑥 2, 𝑏 2), ..., (𝑥 𝑁 , 𝑏 𝑁 )} .Among them, 𝑁 represents the length of the sequence, and 𝑏 𝑡 rep-resents the type ( 𝑏 𝑡 = 1 represents recommendation behavior, and 
+
+𝑏 𝑡 = 0 represents search behavior). The following is the definition of the behavioral expression for 𝑥 𝑡 :
+
+𝑥 𝑡 =
+
+(
+
+𝑖 𝑡 , if 𝑏 𝑡 = 1 (recommendation) ,
+
+⟨𝑞 𝑡 , 𝑐 𝑞 𝑡 ⟩, if 𝑏 𝑡 = 0 (search) ,
+
+Where 𝑖 𝑡 is the item corresponding to the recommended behav-ior, 𝑞 𝑡 is the query corresponding to the search behavior, 𝑐 𝑞 𝑡 =
+
+{𝑖 1, 𝑖 2, ..., 𝑖 𝑁 𝑞𝑡 } represents the list of items clicked by the user after searching 𝑞 𝑡 .The interactive data used in the joint modeling of search and recommendation consists of two parts: search and recommenda-tion, 𝐷 = 𝐷 𝑅 ∪ 𝐷 𝑆 , where 𝐷 𝑅 = {𝑢, 𝑖 𝑁 +1, 𝑆 𝑢 , 𝑦 𝑅 𝑁 +1 } represents the recommendation dataset, and 𝐷 𝑆 = {𝑢, 𝑖 𝑁 +1, 𝑞, 𝑆 𝑢 , 𝑦 𝑆 𝑁 +1 } represents the search dataset. 𝑖 𝑁 +1 represents candidate items, and 𝑦 𝑁 +1 repre-sents the label of 𝑖 𝑁 +1 (0 represents negative samples, 1 represents positive samples). Compared to recommendation scenarios, search scenarios have an additional current search query 𝑞 when predicting the next item. The training goal is to find an optimization function 
+
+𝑓 Θ that predicts ˆ 𝑦 𝑅 𝑢,𝑖 𝑁 +1 and ˆ 𝑦 𝑆 𝑢,𝑖 𝑁 +1,𝑞 based on the interaction history 
+
+𝑆 𝑢 . The formal definition of 𝑓 Θ is as follows: Conference XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, WeiWei, HuaKang Niu, and ZhiCong Cheng 
+
+h
+
+ˆ𝑦 𝑅 𝑢,𝑖 𝑁 +1 , ˆ𝑦 𝑆 𝑢,𝑖 𝑁 +1,𝑞 
+
+i
+
+= 𝑓 Θ (𝑢, 𝑖 𝑁 +1, 𝑞, 𝑆 𝑢 ),
+
+## 4 Methodology 
+
+Fig. 2 shows the workflow of the MIJSR framework. The framework consists of three parts: cross-domain behavior fusion, multi-interest mining, and multi-task prediction. Firstly, perform contrastive learn-ing on queries and items to enhance behavioral representation; Next, extract users’ multiple interests from both structural and se-mantic aspects of the search and recommendation mixed sequence; Finally, after adaptive fusion of multiple interests, we use a progres-sive layered extraction model for multi-task prediction. We will give a detailed introduction about each module in the following subsections. 
+
+## 4.1 Cross-Domain Behavior Fusion 
+
+In terms of embedding representation, users, items, and queries each correspond to a learnable embedding table 𝐸 𝑢 ∈ 𝑅 |𝑈 | × 𝑑 , 𝐸 𝑖 ∈ 𝑅 |𝐼 | × 𝑑 ,
+
+𝐸 𝑞 ∈ 𝑅 |𝑄 | × 𝑑 . Each query 𝑞 = [𝑤 1, 𝑤 2, ..., 𝑤 |𝑞 | ] is composed of mul-tiple words, and we also maintain an additional word embedding table 𝐸 𝑤 ∈ 𝑅 |𝑊 | × 𝑑 . The query representation 𝑒 𝑞 is mainly obtained by average pooling the word list [𝑤 1, 𝑤 2, ..., 𝑤 |𝑞 | ]. The formal defi-nition is: 𝑒 𝑞 = 𝑀𝑒𝑎𝑛 (𝑒 𝑤 1 , 𝑒 𝑤 2 , ..., 𝑒 𝑤 |𝑞 | ).For the user interaction history 𝑆 𝑢 , each recommendation be-havior is represented as a corresponding item embedding. When constructing representations for search behaviors, the clicked-item embeddings are first mean-pooled, and the pooled vector is then added to the query embedding. The following provides a formal definition for constructing behavioral representations: 
+
+𝑒 𝑥 𝑡 =
+
+ 𝑒 𝑖 𝑡 , if 𝑏 𝑡 = 1(𝑅𝑒𝑐𝑜𝑚𝑚𝑒𝑛𝑑 )
+
+𝑒 𝑞 𝑡 + 𝑀𝑒𝑎𝑛 (𝑐 𝑞 𝑡 ), if 𝑏 𝑡 = 0(𝑆𝑒𝑎𝑟𝑐ℎ ) (1) Where 𝑀𝑒𝑎𝑛 (𝑐 𝑞 𝑡 ) = 𝑀𝑒𝑎𝑛 (𝑒 𝑖 1 , 𝑒 𝑖 2 , ..., 𝑒 𝑖 𝑁𝑞𝑡 ), used to represent the average embedding of the clicked items corresponding to the search behavior. Considering that search behavior, compared to recommendation behavior, also has search queries, and queries and items do not share embedding tables when constructing features, in order to better utilize search queries in unified modeling, it is first necessary to align the features of queries and items. Here, we align the feature distributions of query and item through contrastive learning. For the query, we will take the corresponding clicked item 𝑐 𝑞 as the positive sample, and randomly sample the remaining items to construct the negative sample; the same operation applies to the item. The following is the calculation formula for contrastive learning: 
+
+L𝑐𝑙 = −[ ∑︁  
+
+> 𝑖 ∈𝑐 𝑞
+
+𝑙𝑜𝑔 𝑒𝑥𝑝 (𝑠𝑖𝑚 (𝑒 𝑞 , 𝑒 𝑖 )/ 𝜏 )
+
+Í𝑖 − ∈𝐼 𝑛𝑒𝑔 𝑒𝑥𝑝 (𝑠𝑖𝑚 (𝑒 𝑞 , 𝑒 𝑖 − )/ 𝜏 )+∑︁  
+
+> 𝑖 ∈𝑐 𝑞
+
+𝑙𝑜𝑔 𝑒𝑥𝑝 (𝑠𝑖𝑚 (𝑒 𝑞 , 𝑒 𝑖 )/ 𝜏 )
+
+Í𝑞 − ∈𝑄 𝑛𝑒𝑔 𝑒𝑥𝑝 (𝑠𝑖𝑚 (𝑒 𝑞 − , 𝑒 𝑖 )/ 𝜏 ) ]
+
+(2) Where 𝜏 is the learnable temperature coefficient, and 𝑠𝑖𝑚 (𝑎, 𝑏 ) =
+
+𝑎𝑊 𝑇 𝑏 is used to calculate the similarity between 𝑎 and 𝑏 .
+
+## 4.2 Multi-Interest Mining 
+
+We conduct multi-interest mining on the mixed sequence obtained by combining search behavior and recommendation behavior from both structural and semantic perspectives. Structurally, we mainly focus on user interests within and between domains by dividing subsequences and setting masks based on behavior types; In terms of semantics, we use the semantic information of search queries for semantic clustering, dividing the mixed sequence into multiple semantic subsequences and constructing semantic multi-interests. 
+
+4.2.1 Multi Interests in Structure. Considering that search is an active behavior and recommendation is a passive behavior, the former reflects more of the user’s immediate interests when en-tering search terms, while recommendation is generally a push mechanism summarized by the system based on the user’s inter-action history, which often hits the user’s long-term interests. In addition, cross-domain behavior transformation can also reflect users’ cross interests, often seen as the evolution of users from clear needs to potential preferences. We will extract recommendation interests and search interests based on recommendation sequences and search sequences, respectively, and extract cross interests by setting attention masks on the mixed sequences. Below, we will provide a detailed introduction to the extraction methods for each interest. Firstly, we capture the search interest 𝐼 𝑠 and recommendation interest 𝐼 𝑟 based on the search sequence 𝑆 𝑠 𝑢 and recommendation se-quence 𝑆 𝑟 𝑢 of user 𝑢 , respectively, to capture the connections within the sequence. Where 𝑆 𝑠 𝑢 = [𝑥 1, 𝑥 2, ..., 𝑥 𝑁 𝑠 ], 𝑆 𝑟 𝑢 = [𝑥 1, 𝑥 2, ..., 𝑥 𝑁 𝑟 ].The original features of the sequence are 𝐸 𝑠 𝑢 = [𝑒 1, 𝑒 2, ..., 𝑒 𝑁 𝑠 ],
+
+𝐸 𝑟 𝑢 = [𝑒 1, 𝑒 2, ..., 𝑒 𝑁 𝑟 ]. To capture the sequential relationship, we introduced positional encoding 𝑃 𝑟 𝑢 and 𝑃 𝑠 𝑢 , and the final sequence input is: ˆ𝐸 𝑠 𝑢 = 𝐸 𝑠 𝑢 + 𝑃 𝑠 𝑢 , ˆ𝐸 𝑟 𝑢 = 𝐸 𝑟 𝑢 + 𝑃 𝑟 𝑢 (3) Next, we will enhance the connection between behaviors within the domain of the two sequences through a multi-head self-attention mechanism. Taking the search sequence as an example, we will use ˆ 𝐸 𝑠 𝑢 as input, the expression ability of the sequence is enhanced through Multi-Head Self-Attention (MHA) and Feed Forward Layer (FFN), respectively. Where 𝑄 = 𝐾 = 𝑉 = ˆ𝐸 𝑠 𝑢 . The formal definition is given below: 
+
+𝐻 𝑠 𝑢 = 𝐹 𝐹 𝑁 𝑠 (𝑀𝐻𝐴 𝑠 ( ˆ𝐸 𝑠 𝑢 , ˆ𝐸 𝑠 𝑢 , ˆ𝐸 𝑠 𝑢 )) , 𝐻 𝑟 𝑢 = 𝐹 𝐹 𝑁 𝑟 (𝑀𝐻𝐴 𝑟 ( ˆ𝐸 𝑟 𝑢 , ˆ𝐸 𝑟 𝑢 , ˆ𝐸 𝑟 𝑢 )) 
+
+(4) Afterwards, we embed the features of the candidate item 𝑖 𝑁 +1
+
+into 𝑒 𝑖 𝑁 +1 and capture the search interest 𝐼 𝑠 and recommendation interest 𝐼 𝑟 through target attention. The formal definition is: 
+
+𝑤 𝑠 = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝐻 𝑠 𝑢 𝑊 𝑠 𝑒 𝑖 𝑁 +1 ), 𝐼 𝑠 = 𝑤 𝑠 𝐻 𝑠 𝑢 
+
+𝑤 𝑟 = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝐻 𝑟 𝑢 𝑊 𝑟 𝑒 𝑖 𝑁 +1 ), 𝐼 𝑟 = 𝑤 𝑟 𝐻 𝑟 𝑢 
+
+(5) Where 𝑊 𝑠 ∈ 𝑅 𝑑 ×𝑑 and 𝑊 𝑟 ∈ 𝑅 𝑑 ×𝑑 are learnable parameters. 𝑤 𝑠 
+
+and 𝑤 𝑟 are attention weights, which reflect the similarity between each item in the sequence and the candidate item 𝑖 𝑁 +1. The more similar, the greater the weight. Multi Interests for Joint Search-Recommendation Modeling Conference XX, June 03–05, 2018, Woodstock, NY Feature Embedding ......        
+
+> Rec Item Src Query Src Item ...... .......
+> Src Seq Rec Seq
+> ......
+> Mix Seq
+> Search Interest Generation Recommend Interest Generation Cross Interest Generation Semantic Multi-Interest Generation
+> Candidate User History User
+> Prediction Layer
+> Query Mask Pooling Seq Emb Recommend Prediction Search Prediction
+> Search&Recommend Interest Generation Self-Attention Target Attention Self-Attention Target Attention Cross Interest Generation MASK Self-Attention Target Attention
+> ... ...
+> Cluster 1 Cluster 2 Cluster 3
+> Semantic Multi-Interest Generation ...... ...... ......
+> Sim: high low
+> Interest 1 Interest 2 Interest 3 ...... Target-Attn Self-Attn ...
+> MASK Matrix
+
+(a) Cross-Domain Behavior Fusion (b) Multi-Interest Mining (c) Multi-task Prediction 
+
+> "Tokyo Travel"
+> Clicked Items Pos Sample
+> Neg Sample
+> Target-Attn Concat Search Experts Recommend Experts Share Experts Gating Network Gating Network
+
+Figure 2: The overview framework of MIJSR. It mainly consists of three modules. Firstly, align the query and item represen-tations through contrastive learning to enhance the behavior representation; Then, for the mixed sequence of search and recommendation, we extract search interests, recommendation interests, and cross interests in structure, and semantically, we divide the mixed sequence into semantic subsequences based on query semantic clustering for extracting semantic multi interests; Finally, we use a multi-expert network to perform multi-task prediction based on user interests and other side information. 
+
+Next, we extract cross interests from mixed sequences by setting masks. We first add positional encoding to the user’s complete interaction history 𝑆 𝑢 to obtain an enhanced sequence input ˆ 𝐸 𝑢 :ˆ𝐸 𝑢 = 𝐸 𝑢 + 𝑃 𝑢 (6) In order to capture the inter-domain behavioral connections be-tween search and recommendation, we set up an attention mask matrix 𝑀 ∈ { 0, 1}𝑁 ×𝑁 , which shields attention operations for intra-domain behaviors and only focuses on the mutual conversion be-tween search and recommendation behaviors. The value of 𝑀 is as follows: 
+
+𝑀 𝑖 𝑗 =
+
+ 0, if 𝑏 𝑖 = 𝑏 𝑗 
+
+1, if 𝑏 𝑖 ≠ 𝑏 𝑗 
+
+(7) We use the constructed attention mask matrix 𝑀 for hetero-geneous mixed sequence ˆ 𝐸 𝑢 and perform masked self-attention operations to enhance interaction between domains: 
+
+𝐻 𝑟𝑠 𝑢 = 𝐹 𝐹 𝑁 𝑟𝑠 (𝑀𝐻𝐴 𝑟𝑠 ( ˆ𝐸 𝑢 , ˆ𝐸 𝑢 , ˆ𝐸 𝑢 , 𝑀 )) 
+
+𝑀𝐻𝐴 𝑟𝑠 ( ˆ𝐸 𝑢 , ˆ𝐸 𝑢 , ˆ𝐸 𝑢 , 𝑀 ) = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 ( ˆ𝐸 𝑢 ˆ𝐸 𝑇 𝑢 √︁ 
+
+𝑑 /ℎ ⊙ 𝑀 ) ˆ𝐸 𝑢 
+
+(8) Similarly, we perform target attention calculation between 𝐻 𝑟𝑠 𝑢 
+
+and 𝑒 𝑖 𝑁 +1 for obtaining the cross interest 𝐼 𝑐𝑟𝑜𝑠𝑠 .
+
+𝑤 𝑟𝑠 = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝐻 𝑟𝑠 𝑢 𝑊 𝑟𝑠 𝑒 𝑖 𝑁 +1 ), 𝐼 𝑐𝑟𝑜𝑠𝑠 = 𝑤 𝑟𝑠 𝐻 𝑟𝑠 𝑢 (9) Where 𝑊 𝑟𝑠 is the learnable parameter, and 𝑤 𝑟𝑠 is the attention score. Conference XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, WeiWei, HuaKang Niu, and ZhiCong Cheng 
+
+4.2.2 Multi Interests in Semantic. Since queries are the most direct reflection of user preferences, we first perform semantic clustering on all search queries. We use K-Means as the clustering method, with a total of 𝑘 cluster centers, and the feature representation of each cluster center is 𝐶𝑄 = [ ˆ𝑐 𝑞 1 , ˆ𝑐 𝑞 2 , ..., ˆ𝑐 𝑞 𝑘 ]. Next, we will divide the mixed sequence into semantic subsequences. Due to the lack of textual information on the item side of the dataset and the fact that the id feature embedding and the query word embedding are not in the same feature space, we have designed a multi-layer perceptron 
+
+𝑔 𝜃 to map the item features to the semantic space of the query. In order to train 𝑔 𝜃 for semantic alignment, we designed a sequen-tial level alignment task. We extracted the corresponding query sequences 𝑆 𝑞 𝑢 = [𝑞 1, 𝑞 2, ..., 𝑞 𝑛 ] and item sequences 𝑆 𝑐 𝑢 = [𝑐 𝑞 1 , ..., 𝑐 𝑞 𝑛 ]
+
+from the user’s search history 𝑆 𝑠 𝑢 = [( 𝑞 1, 𝑐 𝑞 1 ), ..., (𝑞 𝑛 , 𝑐 𝑞 𝑛 )] . Where the semantic representation of the query sequence 𝑆 𝑞 𝑢 is 𝐸 𝑞 𝑢 =
+
+[𝑒 𝑞 1 , 𝑒 𝑞 2 , ..., 𝑒 𝑞 𝑛 ]; the semantic representation of the item sequence 
+
+𝑆 𝑐 𝑢 is 𝐸 𝑐 𝑢 = 𝑔 𝜃 ([ 𝑒 𝑐 𝑞 1 , 𝑒 𝑐 𝑞 2 , ..., 𝑒 𝑐 𝑞𝑛 ]) . Consider 𝑆 𝑞 𝑢 and 𝑆 𝑐 𝑢 under the same user as positive samples, and the search history of other users as negative samples. The definition of alignment loss is as follows: 
+
+L𝑎𝑙𝑖𝑔𝑛 = −[ 𝑙𝑜𝑔 𝑒𝑥𝑝 (𝐸 𝑞 𝑢 , 𝐸 𝑐 𝑢 )/ 𝜏 
+
+Í𝑢 ′ ∈𝑈 𝑒𝑥𝑝 (𝐸 𝑞 𝑢 , 𝐸 𝑐 𝑢 ′ )/ 𝜏 + 𝑙𝑜𝑔 𝑒𝑥𝑝 (𝐸 𝑐 𝑢 , 𝐸 𝑞 𝑢 )/ 𝜏 
+
+Í𝑢 ′ ∈𝑈 𝑒𝑥𝑝 (𝐸 𝑐 𝑢 , 𝐸 𝑞 𝑢 ′ )/ 𝜏 ]
+
+(10) Next, we will perform semantic mapping on each behavioral representation in the mixed sequence 𝑆 𝑢 to obtain a semantically sequential representation ˜ 𝐸 𝑢 , it should be noted that considering the large amount of side info in search behavior, in order to alle-viate the problem of domain information asymmetry in semantic partitioning, the search behavior here only uses the average pooled embedding representation of clicked item sequences. The formal definition of ˜ 𝐸 𝑢 is as follows: ˜𝑒 𝑥 𝑡 =
+
+ 𝑔 𝜃 (𝑒 𝑖 𝑡 ), if 𝑏 𝑡 = 1
+
+𝑔 𝜃 (𝑀𝑒𝑎𝑛 (𝑐 𝑞 𝑡 )) , if 𝑏 𝑡 = 0 (11) Afterwards, we will divide the subsequences based on the global semantic cluster 𝐶𝑄 . Specifically, we will calculate the similarity between each behavior’s semantic representation of ˜ 𝐸 𝑢 and each cluster center to obtain a similarity matrix 𝑇 𝑢 ∈ 𝑅 𝐿 ×𝑘 , where 𝐿 is the sequence length. The semantic label 𝑙 𝑖 for each position 𝑖 is the index of the cluster center with the highest similarity. Finally, we divide the subsequence 𝑆 𝑢 based on each position’s label. This process can be formally defined as: 
+
+𝑇 𝑖 𝑗 = ˜𝑒 𝑖 ˆ𝑐 𝑇 𝑞 𝑗 , 𝑖 ≤ | 𝑆 𝑢 |, 𝑗 ≤ | 𝐶𝑄 |
+
+𝑙 𝑖 = 𝑎𝑟𝑔𝑚𝑎𝑥 𝑗 𝑇 𝑖 𝑗 
+
+𝑆 𝑗 𝑢 = {𝑥 𝑖 |𝑙 𝑖 = 𝑗 }
+
+(12) Then, based on the candidate item 𝑒 𝑖 𝑁 +1 , we extract semantic multi interests {𝑆 𝑗 𝑢 }𝑘 𝑗 =1 for each semantic subsequence {𝐼 𝑗 𝑠𝑒𝑚 }𝑘 𝑗 =1
+
+through target attention. 
+
+𝑤 𝑗 = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝐻 𝑗 𝑢 𝑊 𝑗 𝑒 𝑖 𝑁 +1 ), 𝐼 𝑗 𝑠𝑒𝑚 = 𝑤 𝑗 𝐻 𝑗 𝑢 
+
+𝐻 𝑗 𝑢 = [𝑒 𝑖 1 , 𝑒 𝑖 2 , ..., 𝑒 𝑖 𝑁 ], 𝑖 𝑗 ∈ 𝑆 𝑗 𝑢 
+
+(13) Where 𝑊 𝑗 is the learnable parameter, and 𝑤 𝑗 is the attention score. After extracting the corresponding semantic interests for each subsequence, we perform interest fusion. Here we use target attention to weight and aggregate multiple semantic interests based on the candidate item 𝑖 𝑁 +1, resulting in the final semantic interest 
+
+𝐼 𝑠𝑒𝑚 .
+
+𝑤 𝑗 𝑠𝑒𝑚 = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝐼 𝑗 𝑠𝑒𝑚 𝑊 𝑠𝑒𝑚 𝑒 𝑖 𝑁 +1 ), 𝐼 𝑠𝑒𝑚 =
+
+> 𝑘
+
+∑︁ 
+
+> 𝑗 =1
+
+𝑤 𝑗 𝑠𝑒𝑚 𝐼 𝑗 𝑠𝑒𝑚 (14) Due to the fact that semantic multi-interest is based on semantic clusters, in order to make semantic clustering more reasonable, we have designed orthogonal loss for semantic multi-interest to reduce redundancy. 
+
+L𝑜𝑟𝑡ℎ = 1
+
+𝑘 (𝑘 − 1)∑︁ 𝑖 ≠𝑗 
+
+𝑐𝑜𝑠 2 (𝐼 𝑖 𝑠𝑒𝑚 , 𝐼 𝑗 𝑠𝑒𝑚 ) (15) Then, we adaptively fuse the search interest 𝐼 𝑠 , recommendation interest 𝐼 𝑟 , cross interest 𝐼 𝑐𝑟𝑜𝑠𝑠 , and semantic interest 𝐼 𝑠𝑒𝑚 on the structural side. Here, we still use target attention to weight and aggregate the embedding representations of candidate items 𝑖 𝑁 +1
+
+to obtain the final user interest 𝐼 𝑢 .
+
+𝑤 𝑖𝑛𝑡𝑒𝑟 = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝐼 𝑖𝑛𝑡𝑒𝑟 𝑊 𝑖𝑛𝑡𝑒𝑟 𝑒 𝑖 𝑁 +1 ), 𝐼 𝑢 = 𝑤 𝑖𝑛𝑡𝑒𝑟 𝐼 𝑖𝑛𝑡𝑒𝑟 
+
+𝐼 𝑖𝑛𝑡𝑒𝑟 = 𝐶𝑜𝑛𝑐𝑎𝑡 ([ 𝐼 𝑠 , 𝐼 𝑟 , 𝐼 𝑐𝑟𝑜𝑠𝑠 , 𝐼 𝑠𝑒𝑚 ]) (16) Where 𝑊 𝑖𝑛𝑡𝑒𝑟 ∈ 𝑅 4𝑑 ×𝑑 is a learnable parameter. 
+
+## 4.3 Multi-Task Prediction 
+
+Considering the difference in data distribution between search and recommendation tasks, we adopt a multi-task prediction ap-proach to separately predict search and recommendation tasks. Specifically, we introduce a progressive layered extraction (PLE) model [30] to achieve S&R task prediction by setting up shared ex-perts and task experts. We have designed a learnable query 𝑞 𝜙 ∈ 𝑅 𝑑 
+
+for recommendation tasks. In addition, we extract mixed sequence representation 𝑒 𝑠𝑒𝑞 through mask pooling as side info. The input 
+
+𝑋 𝑏 = 𝑐𝑜𝑛𝑐𝑎𝑡 ([ 𝑒 𝑢 , 𝑒 𝑖 𝑁 +1 , 𝑒 𝑞 , 𝐼 𝑢 , 𝑒 𝑠𝑒𝑞 ]) of the multi-task prediction model is mainly composed of user representation 𝑒 𝑢 , candidate item representation 𝑒 𝑖 𝑁 +1 , query representation 𝑒 𝑞 (using 𝑞 𝜙 instead for recommendation tasks), user interest 𝐼 𝑢 , and mixed sequence representation 𝑒 𝑠𝑒𝑞 .We set the number of search experts 𝑂 𝑠 , recommendation ex-perts 𝑂 𝑟 , and shared experts 𝑂 𝑐 as 𝑁 𝑠 , 𝑁 𝑟 , and 𝑁 𝑐 , respectively. The output of the prediction layer contains two scores, one is the predicted score for the search task, and the other is the predicted score for the recommendation task. The calculation method is as follows: ˆ𝑦 𝑠 𝑢,𝑖,𝑞 =∑︁  
+
+> 𝑜 ∈𝑂 𝑠
+
+𝑔 𝑠 𝑜 (𝑋 𝑏 )𝑜 (𝑋 𝑏 ) + ∑︁  
+
+> 𝑜 ∈𝑂 𝑐
+
+𝑔 𝑠 𝑜 (𝑋 𝑏 )𝑜 (𝑋 𝑏 )
+
+ˆ𝑦 𝑟 𝑢,𝑖 =∑︁  
+
+> 𝑜 ∈𝑂 𝑟
+
+𝑔 𝑟 𝑜 (𝑋 𝑏 )𝑜 (𝑋 𝑏 ) + ∑︁  
+
+> 𝑜 ∈𝑂 𝑐
+
+𝑔 𝑟 𝑜 (𝑋 𝑏 )𝑜 (𝑋 𝑏 ) (17) The gate networks for two tasks are 𝑔 𝑠 (𝑋 𝑏 ) = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝑊 𝑠 𝑋 𝑏 )
+
+and 𝑔 𝑟 (𝑋 𝑏 ) = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 (𝑊 𝑟 𝑋 𝑏 ), respectively. 𝑊 𝑠 ∈ 𝑅 (𝑁 𝑠 +𝑁 𝑐 ) × 𝑑 and 
+
+𝑊 𝑟 ∈ 𝑅 (𝑁 𝑟 +𝑁 𝑐 ) × 𝑑 are learnable linear layers, where 𝑜 (·) represents the expert network, which we implement through a multi-layer perceptron (MLP). Multi Interests for Joint Search-Recommendation Modeling Conference XX, June 03–05, 2018, Woodstock, NY 
+
+Table 1: Statistics of the datasets 
+
+Dataset #Users #Items #Queries #Action-S #Action-R KuaiSAR 25,877 6,890,707 453,667 5,059,169 14,605,716 Amazon 68,223 61,934 4,298 934,664 989,618 
+
+## 4.4 Training 
+
+We use binary cross-entropy loss as the main task of optimizing the model. 
+
+L𝑠 𝑏𝑐𝑒 = − 1
+
+|𝐷 𝑠 |∑︁ (𝑢,𝑖,𝑞 ) ∈ 𝐷 𝑠 
+
+𝑦 𝑠 𝑢,𝑖,𝑞 𝑙𝑜𝑔 ( ˆ𝑦 𝑠 𝑢,𝑖,𝑞 ) + ( 1 − 𝑦 𝑠 𝑢,𝑖,𝑞 )𝑙𝑜𝑔 (1 − ˆ𝑦 𝑠 𝑢,𝑖,𝑞 )L𝑟 𝑏𝑐𝑒 = − 1
+
+|𝐷 𝑟 |∑︁ (𝑢,𝑖 ) ∈ 𝐷 𝑟 
+
+𝑦 𝑟 𝑢,𝑖 𝑙𝑜𝑔 ( ˆ𝑦 𝑟 𝑢,𝑖 ) + ( 1 − 𝑦 𝑟 𝑢,𝑖 )𝑙𝑜𝑔 (1 − ˆ𝑦 𝑟 𝑢,𝑖 )
+
+(18) Where L𝑠 𝑏𝑐𝑒 and L𝑟 𝑏𝑐𝑒 represent the BCE loss for search and recommendation tasks, respectively. The total loss of the model is as follows: 
+
+L𝑠 = L𝑠 𝑏𝑐𝑒 + 𝛼 L𝑐𝑙 + 𝛽 L𝑜𝑟𝑡ℎ + 𝛾 L𝑎𝑙𝑖𝑔𝑛 
+
+L𝑟 = L𝑟 𝑏𝑐𝑒 + 𝛼 L𝑐𝑙 + 𝛽 L𝑜𝑟𝑡ℎ + 𝛾 L𝑎𝑙𝑖𝑔𝑛 
+
+L = L𝑟 + 𝜇 L𝑠 + 𝜂 || Θ|| 2
+
+(19) Where 𝜇 is used to balance two tasks, and 𝜂 is L2 regularization. 
+
+## 5 Experiment 
+
+We conducted a series of experiments on two open source datasets to evaluate our model. And answered the following questions: 
+
+• RQ1 : How effective is our method compared to other baseline models; 
+
+• RQ2 : The impact of the main modules of our model on overall performance; 
+
+• RQ3 : The impact of different values of key hyperparameters on model performance. 
+
+## 5.1 Experiment Setting 
+
+5.1.1 Datasets. We conducted experiments using two open-source datasets, Amazon and KuaiSAR, and the statistical data of the datasets are shown in Table 1. 
+
+KuaiSAR [29]: 1 A real-world dataset collected from Kuaishou, a popular short-video platform in China. It contains authentic user S&R behaviors, including explicit search queries and implicit recom-mendation clicks. We follow the preprocessing protocol in [24, 27]: filter users/items with fewer than 5 interactions, and split the data into training (first 7 days), validation (1 day), and test (last 2 days) sets. 
+
+Amazon Kindle Store [12, 22]: 2 A widely used semi-synthetic cross-scenario dataset derived from the Amazon review dataset. The search behaviors are generated by extracting keywords from product metadata and user reviews and splitting the data using a leave-one-out strategy: the most recent interaction for testing, the second most recent for validation, and the rest for training. 
+
+> 1https://kuaisar.github.io/
+> 2http://jmcauley.ucsd.edu/data/amazon/
+
+5.1.2 Baselines. We compared MIJSR with 15 representative base-line methods and divided them into three categories to highlight its advantages in joint S&R modeling: 
+
+Sequential Recommendation Models: These methods only leverage recommendation behavior data and do not utilize search signals: (1) DIN: Uses a local activation unit to adaptively model user interests [37]. (2) GRU4Rec: Applies Gated Recurrent Units (GRUs) to model session-based sequential dependencies [14]. (3) SASRec: Adopts Transformer for sequential recommendation [15]. (4) BERT4Rec: Uses a bidirectional Transformer with a cloze ob-jective for sequential modeling [28]. (5) FMLP-Rec: An all-MLP architecture with frequency-domain filters for sequential recom-mendation [38]. 
+
+Personalized Search Models: These methods focus on search task optimization and do not incorporate recommendation data: (1) QEM: A query-item matching model that only considers semantic relevance [1]. (2) HEM: A hierarchical embedding model for person-alized product search [2]. (3) AEM: Uses attention to aggregate user historical behaviors for search [1]. (4) ZAM: Enhances AEM with a zero vector to control personalization degree [1]. (5) TEM: Re-places the attention layer in AEM with a Transformer encoder [5]. (6) CoPPS: Applies contrastive learning to optimize user sequence representation for search [7]. 
+
+Joint S&R Models: These methods jointly model S&R behaviors to enhance both tasks: (1) JSR: Optimizes search and recommen-dation models with a joint loss function [36]. (2) USER: Integrates S&R behaviors into a single sequence and encodes it with a Trans-former [35]. (3) UnifiedSSR: Proposes a dual-branch network for cross-scenario and cross-view modeling [34]. (4) UniSAR: Effec-tively models the different types of fine-grained behavior transi-tions for providing users a unified search and recommendation service. [24]. 
+
+5.1.3 Evaluation Metrics. We use Hit Ratio (HR) and Normalized Discounted Cumulative Gain (NDCG) as evaluation metrics. We report HR@1, HR@5, HR@10 and NDCG@5, NDCG@10. In the candidate settings of the test set, we pair the ground-truth item with 99 randomly sampled negative items that the user has not interacted with. 
+
+5.1.4 Implementation Details. We set the embedding dimensions for both KuaiSAR and Amazon datasets to 64, the maximum length for recommendation and search sequences to 30, and the maximum length for query segmentation to 50. The numbers of shared and specific experts, 𝑁 𝑐 , 𝑁 𝑠 , and 𝑁 𝑟 , are set to 4. Select the number of semantic center clusters 𝑘 from {5, 10, 15, 20}. Regarding the loss weights 𝛼 , 𝛽 , and 𝛾 in section 4.4, they are all selected from {1e-1, 1e-2, 1e-3, 1e-4, 1e-5}. The weight 𝜇 of the search task is selected from {0.01, 0.05, 0.1, 0.5, 1.0}. Set the batch size to 1024, we train all models with 100 epochs and use an early stopping mechanism to avoid overfitting. Adam is used for optimization. 
+
+## 5.2 Model Performance (RQ1) 
+
+To demonstrate the superiority of our model in search and rec-ommendation tasks, we compared it with many baseline models. As shown in Table 2 and Table 3, our model MIJSR demonstrated excellent performance in both scenarios. In terms of search tasks, Conference XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, WeiWei, HuaKang Niu, and ZhiCong Cheng 
+
+Table 2: Comparisons of the overall recommendation performance of different methods on both datasets. The best and the second-best methods are highlighted in bold and underlined fonts, respectively. UniSAR(paper) refers to the metrics reported in the original paper; UniSAR(our) refers to the results reproduced by our team. ( t-test, p-value< 0.01) 
+
+Datasets Metric Sequential Recommendation Joint Search & Recommendation 
+
+DIN GRU4Rec SASRec BERT4Rec FMLP-Rec JSR USER UnifiedSSR UniSAR (paper) UniSAR (our) MIJSR KuaiSAR 
+
+HR@1 0.1629 0.1097 0.1249 0.1061 0.1370 0.1754 0.1489 0.1225 0.1990 0.1853 0.1972 HR@5 0.4509 0.3764 0.4065 0.3699 0.4292 0.4791 0.4086 0.3981 0.5169 0.4887 0.5115 HR@10 0.6179 0.5788 0.6007 0.5885 0.6159 0.6453 0.5627 0.5939 0.6792 0.6547 0.6746 NDCG@5 0.3104 0.2435 0.2671 0.2381 0.2851 0.3315 0.2820 0.2617 0.3632 0.3418 0.3593 NDCG@10 0.3643 0.3087 0.3298 0.3083 0.3453 0.3853 0.3318 0.3249 0.4158 0.3955 0.4122 
+
+Amazon 
+
+HR@1 0.2159 0.1725 0.2059 0.2481 0.1991 0.2346 0.2361 0.2013 0.3010 0.3066 0.3172 
+
+HR@5 0.5170 0.4949 0.5295 0.5311 0.5356 0.5467 0.5441 0.5196 0.5874 0.5971 0.6132 
+
+HR@10 0.6525 0.6548 0.6772 0.6658 0.6879 0.6779 0.6854 0.6707 0.7020 0.7162 0.7338 
+
+NDCG@5 0.3726 0.3388 0.3747 0.3954 0.3739 0.3970 0.3964 0.3662 0.4513 0.4592 0.4732 
+
+NDCG@10 0.4165 0.3907 0.4225 0.4390 0.4232 0.4396 0.4422 0.4151 0.4885 0.4978 0.5123 
+
+Table 3: Comparisons of the overall search performance of different methods on both datasets. The best and the second-best methods are highlighted in bold and underlined fonts, respectively. UniSAR(paper) refers to the metrics reported in the original paper; UniSAR(our) refers to the results reproduced by our team. ( t-test, p-value< 0.01) Personalized Search Joint Search & Recommendation Datasets Metric QEM HEM AEM ZAM TEM CoPPS JSR USER UnifiedSSR UniSAR(paper) UniSAR(our) MIJSR KuaiSAR                                                                                                                         
+
+> HR@1 0.2944 0.3337 0.2703 0.2815 0.3045 0.3117 0.4543 0.4628 0.4389 0.5282 0.4535 0.5248 HR@5 0.6020 0.6505 0.5956 0.6117 0.6502 0.6616 0.7162 0.7304 0.7377 0.7476 0.7412 0.7811
+> HR@10 0.7182 0.7653 0.7182 0.7344 0.7632 0.7707 0.7961 0.8149 0.8320 0.8369 0.8405 0.8632
+> NDCG@5 0.4575 0.5029 0.4415 0.4560 0.4887 0.4977 0.5962 0.6069 0.5991 0.6417 0.6073 0.6635
+> NDCG@10 0.4953 0.5400 0.4812 0.4959 0.5254 0.5331 0.6221 0.6342 0.6297 0.6708 0.6397 0.6902 Amazon
+> HR@1 0.2772 0.2497 0.2916 0.2954 0.4090 0.4052 0.3176 0.4123 0.3663 0.5343 0.5329 0.5953
+> HR@5 0.7100 0.6778 0.7095 0.7109 0.8185 0.8169 0.7038 0.7631 0.7744 0.8190 0.8149 0.8265
+> HR@10 0.8186 0.8267 0.8443 0.8468 0.9051 0.9051 0.8225 0.8697 0.8812 0.8977 0.8946 0.9042 NDCG@5 0.5066 0.4736 0.5114 0.5147 0.6303 0.6281 0.5173 0.6000 0.5847 0.6875 0.6841 0.7160
+> NDCG@10 0.5422 0.5221 0.5554 0.5590 0.6587 0.6570 0.5563 0.6348 0.6196 0.7132 0.7101 0.7413
+
+MIJSR showed significant improvements in performance compared to the SOTA model UniSAR on both datasets. On the KuaiSAR dataset, HR@5 increased by 4.48%, NDCG@5 improved by 3.40%; on the Amazon dataset, HR@5 and NDCG@5 increased by 0.92% and 4.14%, respectively. In terms of recommendation tasks, there is a significant performance gain on the Amazon dataset, HR@5 and NDCG@5 improved by 4.39% and 4.85%, respectively, while on the KuaiSAR dataset, MIJSR’s various indicators were basically the same as the results reported in the UniSAR paper, which is probably due to the multitasking seesaw. However, from the overall effect of the two tasks, MIJSR is better than UniSAR. The comparison with the baseline model fully demonstrates the effectiveness of MIJSR in multi-interest mining from both structural and semantic perspectives. It is worth noting that the state-of-the-art model UniSAR we compared has a certain deviation from the conclusions of the origi-nal paper in terms of local validation of its performance. We believe this is due to the problem of the multitasking seesaw, and the model will make an early stop judgment based on the average value of rec-ommendation tasks’ and search tasks’ NDCG@5, so it’s difficult to fully reproduce the reported results of the original paper. One of the major discrepancies is the evaluation results of the KuaiSAR dataset in recommendation tasks. We investigated the citation status of this paper and found that the DHIM [40] work recorded similar results for UniSAR to our own work. Therefore, we believe that this reproduction bias should be reasonable, and we will also provide relevant logs in the open source code to prove the validity of this result. 
+
+## 5.3 Ablation Study (RQ2) 
+
+In order to comprehensively explore the impact of each module of MIJSR on the overall performance of the model, we conducted the following ablation experiments: 
+
+• w/o L𝑐𝑙 : Delete the contrastive learning task between query and item, explore the impact of the cross-domain behavior fusion module on model performance. 
+
+• w/o L𝑎𝑙𝑖𝑔𝑛 : Remove the sequence-level query-item alignment loss and explore the effectiveness of the semantic mapper 𝑔 𝜃 in the absence of guidance. 
+
+• w/o L𝑜𝑟𝑡ℎ : Remove the orthogonal loss of semantic multi-interest and explore the effectiveness of semantic clustering in unsuper-vised situations. Multi Interests for Joint Search-Recommendation Modeling Conference XX, June 03–05, 2018, Woodstock, NY   
+
+> (a) MIJSR (b) w/o L𝑜𝑟𝑡ℎ
+
+Figure 3: t-SNE visualizations of query embeddings with and without L𝑜𝑟𝑡ℎ 
+
+• w/o structural interests : Remove all structural interests (search interests, recommendation interests, and cross-interests). 
+
+• w/o semantic interests : Remove multi semantic interests and explore the impact of semantic interests on model performance. 
+
+• w/o cross interest : Removing cross interests and exploring the importance of interest mining between cross-domain behaviors. 
+
+• w/o PLE : Change PLE network to a simple MLP to explore the importance of multi-expert networks for multi-task prediction. The experimental results are shown in Table 4, from which we can observe the following conclusions: 
+
+• The performance of the model has decreased after deleting L𝑐𝑙 ,and the trend of decline is very significant on the Amazon dataset, indicating the necessity of aligning queries and items to enhance behavior representation before conducting mixed sequence mod-eling. 
+
+• The performance of the model also decreased after deleting 
+
+L𝑎𝑙𝑖𝑔𝑛 , but it was not significant in the search task. This is be-cause the alignment task is mainly used to map the ID represen-tation of the item to the query semantic space, while the item representation and query representation on the search side are represented through L𝑐𝑙 which can already align well, but it will have a significant impact on the items on the recommendation side. 
+
+• Delete L𝑜𝑟𝑡ℎ , the performance of the model slightly decreased. This task promotes more reasonable semantic clustering by mak-ing semantic multi interests as orthogonal as possible. Here, we also performed query embedding sampling on the KuaiSAR dataset, randomly extracting 10000 queries from all queries. Based on the checkpoint of the model, we extracted the clustering cen-ter and query embedding and then visualized the clustering effect through t-SNE. As shown in Fig. 3, after removing L𝑜𝑟𝑡ℎ , there is severe center aliasing and most clusters are loose. 
+
+• Removing multi-interest modeling on the structural side signifi-cantly reduces model performance, indicating that relying solely on semantics to divide multi interests is not enough. It is also necessary to explore users’ potential preferences from the per-spective of behavior types themselves. 
+
+• Removing semantic multi interests significantly reduces model performance, which further illustrates the importance of query in understanding user preferences and the necessity of semantic segmentation of user multi-interests. 
+
+• Removing cross interests results in a slight decrease in model performance. This indicates that the transformation of domain behavior can indirectly reflect user interests. 
+
+• Replacing the PLE layer for multi-task prediction with a sim-ple MLP network will significantly reduce model performance, as PLE can alleviate multi-task negative transfer during joint training while retaining cross-task knowledge. 
+
+## 5.4 Hyperparameter Study (RQ3) 
+
+In this section, we explore the sensitivity of MIJSR to some key hy-perparameters on the KuaiSAR dataset. The relevant experimental results are shown in Fig. 4. 
+
+5.4.1 Effects of the number of semantic clusters 𝑘 . As shown in Fig. 4(a), when 𝑘 increases from 5 to 10, the recommendation per-formance improves significantly, while the search performance exhibits a slight decline. However, as 𝑘 further increases to 15 and 20, the performance of both tasks deteriorates. These results in-dicate that the granularity of semantic interest partitioning plays a crucial role in model performance. When 𝑘 is relatively small, distinct semantic interests are likely to be grouped into the same cluster, resulting in overly coarse semantic interest representations. In contrast, when 𝑘 becomes too large, some interest clusters con-tain only a few behaviors, leading to sparse and unstable semantic interest representations. Moreover, the increased number of clus-ters introduces additional noise during the interest fusion stage, which negatively affects both search and recommendation perfor-mance. Overall, the model achieves the best trade-off between the two tasks when 𝑘 = 10. 
+
+5.4.2 Effects of L𝑐𝑙 loss weight 𝛼 . As shown in Fig. 4(b), as 𝛼 in-creases from 1e-5 to 1e-3, the recommendation performance con-sistently improves, while the search performance also exhibits an overall upward trend. However, when 𝛼 is further increased, the per-formance of both tasks begins to decline. This observation demon-strates that query-item contrastive learning plays a positive role in unifying the representations of search and recommendation behaviors. A moderate increase in 𝛼 enhances the semantic con-sistency between queries and clicked items, enabling search and recommendation behaviors to be mapped into a more unified repre-sentation space, which benefits mixed-sequence modeling. Never-theless, when 𝛼 becomes excessively large, the contrastive learning objective dominates the optimization process, causing the model to focus excessively on representation alignment while neglecting the primary prediction objectives. As a result, both recommendation and search performance deteriorate. 
+
+5.4.3 Effects of L𝑜𝑟𝑡ℎ loss weight 𝛽 . As shown in Fig. 4(c), when 
+
+𝛽 increases from 1e-5 to 1e-4, the search performance improves substantially, whereas further increases in 𝛽 lead to performance degradation. In contrast, the recommendation performance remains relatively stable across different settings. The objective of L𝑜𝑟𝑡ℎ is to reduce redundancy among different semantic interests, encourag-ing each interest cluster to learn a more independent representation. When 𝛽 is too small, the overlap among interests cannot be effec-tively constrained, causing multiple interest clusters to capture similar patterns. Conversely, an excessively large 𝛽 overemphasizes Conference XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, WeiWei, HuaKang Niu, and ZhiCong Cheng 
+
+Table 4: Ablation study on KuaiSAR and Amazon datasets. “w/o” indicates that the corresponding module in MIJSR is removed. KuaiSAR Amazon Model Recommendation Search Recommendation Search HR@5 NDCG@5 HR@5 NDCG@5 HR@5 NDCG@5 HR@5 NDCG@5 
+
+MIJSR 0.5115 0.3593 0.7811 0.6635 0.6132 0.4732 0.8265 0.7160 
+
+w/o L𝑐𝑙 0.4970 0.3442 0.7703 0.6474 0.5591 0.4179 0.6301 0.4792 w/o L𝑎𝑙𝑖𝑔𝑛 0.4618 0.3346 0.7537 0.6180 0.5959 0.4585 0.8235 0.6867 w/o L𝑜𝑟𝑡ℎ 0.5135 0.3596 0.7774 0.6539 0.5979 0.4574 0.8200 0.6868 w/o structural interests 0.4700 0.3267 0.7542 0.6586 0.5904 0.4559 0.8071 0.6760 w/o semantic interests 0.4013 0.3506 0.7593 0.6428 0.5758 0.4486 0.8093 0.6892 w/o cross interest 0.5090 0.3588 0.7712 0.6594 0.5999 0.4612 0.8203 0.6877 w/o PLE 0.4937 0.3474 0.7744 0.6463 0.5882 0.4491 0.8137 0.6811 
+
+Figure 4: Performance comparison of different hyperparameters under various values. 
+
+the distinction between interests and disrupts the inherent correla-tions that should exist among them, resulting in overly fragmented interest representations and degraded performance. 
+
+5.4.4 Effects of L𝑎𝑙𝑖𝑔𝑛 loss weight 𝛾 . As shown in Fig. 4(d), as 𝛾 
+
+increases from 1e-5 to 1e-2, the performance of both tasks improves significantly. However, further increasing 𝛾 to 1e-1 leads to a de-cline in performance. These results suggest that an appropriate alignment constraint helps the semantic mapping network 𝑔 𝜃 effec-tively project item representations into the query semantic space, thereby improving the accuracy of semantic clustering and seman-tic interest partitioning. However, when 𝛾 becomes excessively large, the model over-optimizes the semantic alignment objective at the expense of the discriminative capability required for recom-mendation and search tasks, ultimately resulting in inferior overall performance. 
+
+5.4.5 Effects of search task loss weight 𝜇 . As shown in Fig. 4(e), as 
+
+𝜇 increases from 0.01 to 0.5, the search performance consistently improves, while the recommendation performance first improves and then declines. When 𝜇 is further increased to 1.0, the search per-formance drops slightly, whereas the recommendation performance recovers significantly. This phenomenon reflects the trade-off in-herent in multi-task learning between search and recommendation objectives. When 𝜇 is small, model optimization is dominated by the recommendation task, preventing the search task from receiving sufficient training signals and resulting in relatively poor search performance. As 𝜇 increases, the search task receives more gradi-ent information, leading to gradual performance improvements. Meanwhile, the explicit interest signals provided by search behav-iors can also benefit recommendation performance through shared representation learning. However, when 𝜇 becomes excessively large, the model focuses disproportionately on the search objective, suppressing the recommendation task and causing performance degradation. Therefore, the experimental results indicate that a moderate search task weight can better balance the two objectives and maximize the benefits of joint modeling. 
+
+## 6 Conclusion 
+
+Existing joint search and recommendation models often overlook the diverse user interests hidden in mixed behavior sequences. To address this issue, we propose MIJSR, a multi-interest framework that models and adaptively integrates user interests from both struc-tural and semantic perspectives. On the structural side, MIJSR cap-tures search interests, recommendation interests, and cross-domain interests to effectively model both intra-domain and inter-domain behavioral transitions. On the semantic side, we leverage search queries as explicit indicators of user preferences, perform semantic clustering over the query space, partition mixed sequences into semantic subsequences, and extract corresponding semantic inter-ests. Extensive experiments on two public datasets demonstrate that MIJSR consistently achieves superior performance on both search and recommendation tasks, validating the effectiveness of the proposed approach. 
+
+## 7 GenAI Usage Disclosure 
+
+During the preparation of this manuscript, the authors used gen-erative AI tools (e.g., ChatGPT) to assist with language polishing, grammar correction, and improving the clarity of presentation. The AI tools were not used for research design, methodology develop-ment, data collection, data analysis, experiment implementation, Multi Interests for Joint Search-Recommendation Modeling Conference XX, June 03–05, 2018, Woodstock, NY 
+
+result interpretation, or scientific decision-making. All technical contributions, experimental results, and conclusions presented in this paper were developed and verified by the authors. 
+
+## References 
+
+[1] Qingyao Ai, Daniel N Hill, SVN Vishwanathan, and W Bruce Croft. 2019. A zero attention model for personalized product search. In Proceedings of the 28th ACM International Conference on Information and Knowledge Management . 379–388. [2] Qingyao Ai, Yongfeng Zhang, Keping Bi, Xu Chen, and W Bruce Croft. 2017. Learning a hierarchical embedding model for personalized product search. In 
+
+Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval . 645–654. [3] Qingyao Ai, Yongfeng Zhang, Keping Bi, and W Bruce Croft. 2019. Explainable product search with a dynamic relation embedding model. ACM Transactions on Information Systems (TOIS) 38, 1 (2019), 1–29. [4] Paul N Bennett, Ryen W White, Wei Chu, Susan T Dumais, Peter Bailey, Fedor Borisyuk, and Xiaoyuan Cui. 2012. Modeling the impact of short-and long-term behavior on search personalization. In Proceedings of the 35th international ACM SIGIR conference on Research and development in information retrieval . 185–194. [5] Keping Bi, Qingyao Ai, and W Bruce Croft. 2020. A transformer-based embedding model for personalized product search. In Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval .1521–1524. [6] Heng-Tze Cheng, Levent Koc, Jeremiah Harmsen, Tal Shaked, Tushar Chandra, Hrishi Aradhye, Glen Anderson, Greg Corrado, Wei Chai, Mustafa Ispir, et al. 2016. Wide & deep learning for recommender systems. In Proceedings of the 1st workshop on deep learning for recommender systems . 7–10. [7] Shitong Dai, Jiongnan Liu, Zhicheng Dou, Haonan Wang, Lin Liu, Bo Long, and Ji-Rong Wen. 2023. Contrastive learning for user sequence representation in personalized product search. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 380–389. [8] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. Bert: Pre-training of deep bidirectional transformers for language understanding. In 
+
+Proceedings of the 2019 conference of the North American chapter of the association for computational linguistics: human language technologies, volume 1 (long and short papers) . 4171–4186. [9] Yufei Feng, Fuyu Lv, Weichen Shen, Menghan Wang, Fei Sun, Yu Zhu, and Keping Yang. 2019. Deep session interest network for click-through rate prediction. 
+
+arXiv preprint arXiv:1905.06482 (2019). [10] Songwei Ge, Zhicheng Dou, Zhengbao Jiang, Jian-Yun Nie, and Ji-Rong Wen. 2018. Personalizing search results using hierarchical RNN with query-aware attention. In Proceedings of the 27th ACM international conference on information and knowledge management . 347–356. [11] Suyu Ge, Chuhan Wu, Fangzhao Wu, Tao Qi, and Yongfeng Huang. 2020. Graph enhanced representation learning for news recommendation. In Proceedings of the web conference 2020 . 2863–2869. [12] Ruining He and Julian McAuley. 2016. Ups and downs: Modeling the visual evolution of fashion trends with one-class collaborative filtering. In proceedings of the 25th international conference on world wide web . 507–517. [13] Zhankui He, Handong Zhao, Zhaowen Wang, Zhe Lin, Ajinkya Kale, and Julian Mcauley. 2022. Query-aware sequential recommendation. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management .4019–4023. [14] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2015. Session-based recommendations with recurrent neural networks. arXiv preprint arXiv:1511.06939 (2015). [15] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-mendation. In 2018 IEEE international conference on data mining (ICDM) . IEEE, 197–206. [16] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner. 1998. Gradient-based learning applied to document recognition. Proc. IEEE 86, 11 (1998), 2278– 2324. [17] Jing Li, Pengjie Ren, Zhumin Chen, Zhaochun Ren, Tao Lian, and Jun Ma. 2017. Neural attentive session-based recommendation. In Proceedings of the 2017 ACM on Conference on Information and Knowledge Management . 1419–1428. [18] Jiongnan Liu, Zhicheng Dou, Qiannan Zhu, and Ji-Rong Wen. 2022. A category-aware multi-interest model for personalized product search. In Proceedings of the acm web conference 2022 . 360–368. [19] Shang Liu, Wanli Gu, Gao Cong, and Fuzheng Zhang. 2020. Structural relationship representation learning with graph embedding for personalized product search. In 
+
+Proceedings of the 29th ACM International Conference on Information & Knowledge Management . 915–924. [20] Shuqi Lu, Zhicheng Dou, Xu Jun, Jian-Yun Nie, and Ji-Rong Wen. 2019. Psgan: A minimax game for personalized search with limited and noisy click data. In Proceedings of the 42nd international ACM SIGIR conference on research and development in information retrieval . 555–564. [21] Fuyu Lv, Taiwei Jin, Changlong Yu, Fei Sun, Quan Lin, Keping Yang, and Wil-fred Ng. 2019. SDM: Sequential deep matching model for online large-scale recommender system. In Proceedings of the 28th ACM international conference on information and knowledge management . 2635–2643. [22] Julian McAuley, Christopher Targett, Qinfeng Shi, and Anton Van Den Hengel. 2015. Image-based recommendations on styles and substitutes. In Proceedings of the 38th international ACM SIGIR conference on research and development in information retrieval . 43–52. [23] Steffen Rendle, Christoph Freudenthaler, and Lars Schmidt-Thieme. 2010. Factor-izing personalized markov chains for next-basket recommendation. In Proceedings of the 19th international conference on World wide web . 811–820. [24] Teng Shi, Zihua Si, Jun Xu, Xiao Zhang, Xiaoxue Zang, Kai Zheng, Dewei Leng, Yanan Niu, and Yang Song. 2024. UniSAR: Modeling User Transition Behaviors between Search and Recommendation. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval .1029–1039. [25] Teng Shi, Jun Xu, Xiao Zhang, Xiaoxue Zang, Kai Zheng, Yang Song, and Enyun Yu. 2025. GenSAR: Unifying Balanced Search and Recommendation with Genera-tive Retrieval. In Proceedings of the Nineteenth ACM Conference on Recommender Systems . 124–134. [26] Zihua Si, Xueran Han, Xiao Zhang, Jun Xu, Yue Yin, Yang Song, and Ji-Rong Wen. 2022. A model-agnostic causal learning framework for recommendation using search data. In Proceedings of the ACM web conference 2022 . 224–233. [27] Zihua Si, Zhongxiang Sun, Xiao Zhang, Jun Xu, Xiaoxue Zang, Yang Song, Kun Gai, and Ji-Rong Wen. 2023. When search meets recommendation: Learning disentangled search representation for recommendation. In Proceedings of the 46th international ACM SIGIR conference on research and development in information retrieval . 1313–1323. [28] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential recommendation with bidirectional encoder rep-resentations from transformer. In Proceedings of the 28th ACM international conference on information and knowledge management . 1441–1450. [29] Zhongxiang Sun, Zihua Si, Xiaoxue Zang, Dewei Leng, Yanan Niu, Yang Song, Xiao Zhang, and Jun Xu. 2023. KuaiSar: A unified search and recommendation dataset. In Proceedings of the 32nd ACM international conference on information and knowledge management . 5407–5411. [30] Hongyan Tang, Junning Liu, Ming Zhao, and Xudong Gong. 2020. Progressive layered extraction (ple): A novel multi-task learning (mtl) model for personalized recommendations. In Proceedings of the 14th ACM conference on recommender systems . 269–278. [31] Jiaxi Tang and Ke Wang. 2018. Personalized top-n sequential recommenda-tion via convolutional sequence embedding. In Proceedings of the eleventh ACM international conference on web search and data mining . 565–573. [32] Chuhan Wu, Fangzhao Wu, Mingxiao An, Jianqiang Huang, Yongfeng Huang, and Xing Xie. 2019. NPA: neural news recommendation with personalized attention. In Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining . 2576–2584. [33] Chuhan Wu, Fangzhao Wu, Mingxiao An, Tao Qi, Jianqiang Huang, Yongfeng Huang, and Xing Xie. 2019. Neural news recommendation with heterogeneous user behavior. In Proceedings of the 2019 conference on empirical methods in natural language processing and the 9th international joint conference on natural language processing (EMNLP-IJCNLP) . 4874–4883. [34] Jiayi Xie, Shang Liu, Gao Cong, and Zhenzhong Chen. 2024. Unifiedssr: A unified framework of sequential search and recommendation. In Proceedings of the ACM Web Conference 2024 . 3410–3419. [35] Jing Yao, Zhicheng Dou, Ruobing Xie, Yanxiong Lu, Zhiping Wang, and Ji-Rong Wen. 2021. USER: A unified information search and recommendation model based on integrated behavior sequence. In Proceedings of the 30th ACM International Conference on Information & Knowledge Management . 2373–2382. [36] Hamed Zamani and W Bruce Croft. 2020. Learning a joint search and recommen-dation model from user-item interactions. In Proceedings of the 13th international conference on web search and data mining . 717–725. [37] Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. 2018. Deep interest network for click-through rate prediction. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining . 1059–1068. [38] Kun Zhou, Hui Yu, Wayne Xin Zhao, and Ji-Rong Wen. 2022. Filter-enhanced MLP is all you need for sequential recommendation. In Proceedings of the ACM web conference 2022 . 2388–2399. [39] Nengjun Zhu, Jian Cao, Yanchi Liu, Yang Yang, Haochao Ying, and Hui Xiong. 2020. Sequential modeling of hierarchical user intention and preference for next-item recommendation. In Proceedings of the 13th international conference on web search and data mining . 807–815. [40] Wenhao Zhu, Yuxin Li, Shuo Wang, and Hao Wang. 2026. Dual-Horizon Interest Model for Unified Search and Recommendation. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 40. 29159–29167.

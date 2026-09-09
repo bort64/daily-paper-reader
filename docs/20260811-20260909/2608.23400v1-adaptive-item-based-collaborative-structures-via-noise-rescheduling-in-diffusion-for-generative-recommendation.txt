@@ -1,0 +1,865 @@
+Title: Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation
+
+URL Source: https://arxiv.org/pdf/2608.23400v1
+
+Published Time: Tue, 25 Aug 2026 02:17:24 GMT
+
+Number of Pages: 23
+
+Markdown Content:
+# Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation 
+
+## JIAQI WANG ∗, Tongji University, China 
+
+## TIANYING LIU ∗ and HENG CHANG †, Huawei Technologies Co., Ltd., China 
+
+## JIHONG GUAN † and WENGEN LI, Tongji University, China 
+
+## SHUIGENG ZHOU, Fudan University, China 
+
+Discrete Diffusion Models (DDMs) have recently been introduced to recommendation systems, modeling user history as a token generation process via iterative denoising. However, while effective at capturing user-level sequential patterns, these methods often fail to explicitly integrate item-based collaborative filtering information, a critical component for accurate recommendation. This deficiency manifests in two key aspects: (1) the item representation is often semantic-focused, lacking collaborative priors for diffusion training; and (2) the denoising process employs a uniform noise schedule, treating all tokens indiscriminately and ignoring item-level adaptive structural dependencies. To bridge this gap, we propose ANR-DiffRec, a unified framework designed to encode item-based collaborative structures into discrete diffusion for generative recommendation. First, we explicitly incorporate an item co-occurrence matrix to guide semantic ID generation, providing a structured collaborative prior for discrete diffusion training. Second, we introduce an item-based adaptive noise rescheduling mechanism that dynamically adjusts denoising weights according to both local contextual recoverability and behavior-aware item dependencies. Specifically, the proposed strategy jointly models intra-item structural context and inter-item collaborative signals, enabling structure-aware denoising during diffusion training. Extensive experiments on multiple benchmarks demonstrate that our method consistently outperforms state-of-the-art generative recommendation models. Code: https://github.com/CalmaQi/ANR-DiffRec. CCS Concepts: • Information systems → Recommender systems .Additional Key Words and Phrases: Generative Recommendation, Discrete Diffusion Model 
+
+ACM Reference Format: 
+
+Jiaqi Wang, Tianying Liu, Heng Chang, Jihong Guan, Wengen Li, and Shuigeng Zhou. 2026. Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation. In Proceedings of (Conference acronym ’XX). ACM, New York, NY, USA, 23 pages. https://doi.org/XXXXXXX.XXXXXXX 
+
+1 Introduction 
+
+The recent surge in Large Language Models (LLMs) has revolutionized natural language processing [1, 25, 44, 52], inspiring a paradigm shift in recommender systems towards generative recommendation [18, 24, 26, 27, 38]. Unlike 
+
+> ∗
+
+Both authors contributed equally to this research. 
+
+> †
+
+Corresponding authors. Authors’ Contact Information: Jiaqi Wang, wangjq@tongji.edu.cn, Tongji University, Shanghai, China; Tianying Liu, tianying_liu@outlook.com; Heng Chang, changh.heng@gmail.com, Huawei Technologies Co., Ltd., Shanghai, China; Jihong Guan, jhguan@tongji.edu.cn; Wengen Li, lwengen@tongji.edu. cn, Tongji University, Shanghai, China; Shuigeng Zhou, sgzhou@fudan.edu.cn, Fudan University, Shanghai, China. Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org. © 2026 Copyright held by the owner/author(s). Publication rights licensed to ACM. Manuscript submitted to ACM Manuscript submitted to ACM 1arXiv:2608.23400v1 [cs.IR] 24 Aug 2026 2 Wang et al. Item 1                    
+
+> (b) Item-based Adaptive Noise Rescheduling
+> (a) Uniform Noise Schedule
+> Item 1
+> ……Item 3 Item 4 Item 5 Item 1 Item 2 Item 3 Item 2
+> (2) Behavior-aware Dependency Modeling (1) Local Recoverability Estimation
+> 𝑤𝑤1 Denoising weight Masked token Unmasked token
+> User History
+> Inter-Item Intra-Item
+> Denoising Weight
+> Item 2
+> 𝑤𝑤1
+> Item 3
+> 𝑤𝑤2
+> Item 4
+> 𝑤𝑤3 𝑤𝑤4
+> Item 5
+> 𝑤𝑤9 …
+> Noise Level
+> Item 2
+> 𝑤𝑤1
+> Item 3
+> 𝑤𝑤2
+> Item 4
+> 𝑤𝑤3 𝑤𝑤4
+> Item 5
+> …𝑤𝑤9
+> Strong attention Weak attention
+> Higher weight Lower weight
+> Σ
+> 𝑤𝑤2
+> Noise level
+> User History
+> Denoising Weight
+> Noise Level
+> 𝑤𝑤𝑠𝑠 𝑤𝑤𝑎𝑎 𝑤𝑤𝑆𝑆 +α 𝑤𝑤𝑎𝑎
+> 11230
+> Relative distance
+
+Fig. 1. Illustration of the proposed item-based adaptive noise rescheduling strategy. (a) Existing diffusion-based recommendation models employ a uniform noise schedule, assigning identical denoising weights to masked tokens regardless of their contextual dependencies. (b) Our method dynamically adjusts the denoising weight for each token by jointly considering two complementary signals: (1) local recoverability estimation, and (2) behavior-aware dependency modeling. The final denoising weight is obtained by combining these two signals, enabling structure-aware diffusion training. 
+
+traditional discriminative approaches that predict scores for a candidate set via point-wise ranking [4, 40], the generative paradigm reconceptualizes it as a sequence-to-sequence generation task, which is analogous to next-token prediction in autoregressive language modeling paradigms. The paradigm of generative recommendation generally hinges on two fundamental pillars: item tokenization [19] and generation [53]. The first component, item tokenization, maps each item to a sequence of Semantic IDs (SIDs). This is typically achieved through methods such as hierarchical clustering or residual quantization (e.g., RQ-VAE), which capture semantic relationships within the ID structure. After the SIDs are generated, a generative model is applied to predict the target item tokens based on the user history SID sequence. Discrete diffusion provides a natural generation paradigm for SID-based recommendation [28, 35]. Compared with autoregressive models that generate SID tokens in a fixed left-to-right order, discrete diffusion reconstructs masked tokens from partially corrupted sequences, enabling bidirectional context modeling and adaptive-order generation. This property is particularly suitable for recommendation, where the tokens in an SID jointly specify an item and may exhibit different semantic granularity and predictability. While the adaptation of discrete diffusion models to generative recommendation has yielded promising results, we argue that a fundamental bottleneck remains: the failure to explicitly encode the item-based collaborative filtering information within the generative framework. Current DDM-based approaches primarily focus on modeling user-based 
+
+sequential patterns via iterative token denoising. However, they largely overlook the intrinsic item-based structural relationships, the core signal in classic collaborative filtering. This issue creates a disconnect between the generic 
+
+Manuscript submitted to ACM Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation 3 generation paradigm and the specific requirements of recommendation, manifesting in two critical limitations where item-level structures are neglected in both item representation and the training objective. The first limitation stems from the lack of collaborative signals in item tokenization. Existing discrete diffusion-based approaches predominantly rely on semantic embeddings (e.g., derived from textual descriptions) to construct SIDs. While effective at capturing content similarity, these representations are oblivious to the collaborative item relationships that are pivotal for SID-based recommendation [42, 53]. For instance, two semantically distinct items may frequently co-occur in user histories, a pattern that standard SIDs fail to encode. Consequently, the generative model lacks a structured collaborative prior, forcing it to infer these item associations solely from sparse sequence contexts without support from the item representation. Nevertheless, such a collaborative prior is insufficient, since different masked tokens may receive different amounts of contextual support under different corruption patterns. The second limitation stems from the uniform discrete diffusion training process, which cannot explicitly model item-based collaborative signals. As illustrated in Figure 1, existing DDM-based recommendation models generally adopt a uniform noise schedule, assigning the same noise level and denoising weight (e.g., 𝑤 1 = 𝑤 2 = · · · = 𝑤 9) to all masked tokens regardless of their context. However, recommendation sequences naturally exhibit uneven information density. The recoverability of a masked token largely depends on the availability of related collaborative contexts, including both neighboring items in the sequence and informative tokens within the same semantic ID. Under a uniform schedule, structurally supported tokens and context-isolated tokens are treated equally during training, making it difficult for the model to effectively exploit item-level collaborative structures and behavioral dependencies. To bridge the gap, we propose ANR-DiffRec, a unified framework designed to systematically integrate item-based collaborative structures into generative recommendation. To address the first challenge and provide a structural prior for the adaptive noise scheduler, we enhance Semantic ID construction by explicitly incorporating collaborative structural signals. Specifically, we construct an item-item co-occurrence matrix from historical interaction sequences and apply matrix factorization to derive structural item representations. These collaborative embeddings are then fused with pre-trained textual semantic features and discretized into hierarchical token sequences. By mapping items into this structurally-aware semantic token space, the resulting SIDs capture both semantic similarity and implicit transition patterns, thereby providing more informative conditions for the discrete diffusion denoising process. To address the second challenge, we propose an item-based adaptive noise rescheduling mechanism for diffusion-based recommendation. As illustrated in Figure 1, instead of applying identical denoising weights to all masked positions, our method dynamically adjusts the denoising weight of each token according to two complementary signals: (1) 
+
+Local Recoverability Estimation , which estimates how easily a masked token can be recovered based on geometric dependencies from surrounding intra-item and inter-item contexts; and (2) Behavior-aware Dependency Modeling , which leverages attention-based interaction modeling to adaptively capture collaborative dependencies in the user behavior sequence. By jointly integrating these two signals, our method assigns larger denoising weights to tokens supported by more informative structural and behavioral contexts, thereby providing fine-grained guidance for the diffusion denoising process. For clarity, the denoising weight shown in Figure 1(b) is computed for the masked token in Item 3. The figure demonstrates how surrounding unmasked contexts and behavior-aware item dependencies jointly influence the adaptive denoising weight assignment for the token. The denoising weight can be interpreted as an inverse effective noise level. Tokens receiving larger denoising weights are considered easier to recover, corresponding to lower noise levels. In contrast, tokens with sparse contextual information are assigned smaller weights, indicating higher noise levels. In summary, our main contributions are formulated as follows: 
+
+> Manuscript submitted to ACM
+
+4 Wang et al. 
+
+• We propose an item-based adaptive noise rescheduling strategy in discrete diffusion that enables dynamic learning of item-to-item collaborative structures for generative recommendation. 
+
+• We introduce an explicit item co-occurrence–guided semantic ID generation mechanism, which serves as a lightweight collaborative prior to stabilize diffusion training. 
+
+• Extensive experiments across five diverse, real-world benchmark datasets demonstrate that ANR-DiffRec consis-tently and significantly outperforms state-of-the-art autoregressive and diffusion-based generative recommenda-tion models. 
+
+2 Related Works 2.1 Generative Recommendation 
+
+Unlike traditional discriminative approaches that formulate recommendations as a ranking task over a predefined candidate set [12, 13, 20, 23, 37, 47, 50, 54], generative recommendation reframes the problem as a sequence-to-sequence generation task [5, 7, 26, 36, 51]. In this paradigm, predicting the next item is isomorphic to next-token prediction in language modeling, unlocking the potential to leverage Large Language Models (LLMs) for recommendation. Recent research has predominantly shifted towards generative recommendation with semantic IDs [18, 22, 41] to bypass the inefficiency of generating lengthy natural language text. These works typically employ residual quantization (e.g., RQ-VAE [21]) or hierarchical clustering to convert atomic item IDs into highly compressed, discrete token sequences. TIGER [33] establishes this paradigm by generating tuple-based SIDs, enabling Transformers to predict items autoregressively. VQ-Rec [15] parallelly enriches this approach by deriving discrete codes from item text to bridge content semantics. Building on these foundations, subsequent works such as LC-Rec [53] and LETTER [39] refine the tokenization mechanism through learnable codebooks and hierarchical regularization. Most recently, advanced frameworks like OneRec [6] and RPG [17] unify multi-modal signals and optimize retrieval strategies for efficient generation. Despite these advancements, the dominant autoregressive (AR) models rely heavily on a strict left-to-right generation order. This AR nature introduces two critical bottlenecks: (1) Unidirectional Bias, which restricts the model’s ability to leverage bidirectional contextual semantics crucial for user intent understanding; and (2) Error Propagation, where a misprediction at an early hierarchical token (e.g., the coarse-grained cluster center) may propagate errors to subsequent token generations, leading to completely irrelevant item retrievals. To circumvent the limitations of autoregressive decoding, LLaDA-Rec [35] and DiffGRM [28] introduce the discrete diffusion model to recommendation, enabling a non-autoregressive, bidirectional generation process. However, these DDM-based methods inherently rely on a uniform noise strategy, where tokens are masked stochastically without accounting for the density of surrounding contextual information. This denoising process fails to distinguish between easy-to-recover tokens and hard ones, severely limiting its ability to capture collaborative filtering signals through structure-aware guidance. Furthermore, relying solely on semantic-based tokenization lacks structured collaborative priors, further hindering the robust modeling of inter-item dependencies under noisy contexts. 
+
+2.2 Discrete Diffusion Models 
+
+Denoising Diffusion Probabilistic Models (DDPMs) [14, 46] have achieved state-of-the-art performance in continuous state-space generation tasks like image synthesis. To address the discrete and categorical nature of language and recommendation data, Discrete Diffusion Models [34, 43, 45, 48, 55] operate directly on categorical variables [8]. 
+
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation 5 D3PM [3] explicitly generalizes the diffusion framework to discrete state spaces using transition matrices, introducing absorbing states (e.g., [MASK] ) to model the controlled corruption and progressive denoising processes. Building on these foundations, recent works have significantly scaled up this paradigm to the LLM era. LLaDA [31] demonstrates that masked diffusion models trained from scratch can achieve performance highly competitive with strong autoregressive methods. Parallelly, frameworks like bd3lm [2] and Dream [49] further improve generation efficiency and quality through block-wise token updates and refined loss reweighting objectives. In the context of recommendation systems, the discrete diffusion model offers a compelling alternative to AR models [28, 35]. By training a bidirectional Transformer to reconstruct masked tokens from a partially corrupted sequence, it inherently learns to utilize global user history. However, SIDs in recommendation possess both intra-item and inter-item structures, making them fundamentally different from natural language text. Our work builds upon the discrete diffusion foundation but fundamentally diverges by introducing an item-based adaptive noise rescheduling mechanism. By integrating dynamic attention and structural priors, our approach is specifically tailored for collaborative SIDs, distinguishing it from general text diffusion models. 
+
+3 Preliminaries and Background 3.1 Problem Formulation 
+
+Consider a standard recommendation scenario involving a user set U and an item set I. For each user 𝑢 ∈ U , we denote their interaction sequence as H𝑢 = {𝑣 1, 𝑣 2, . . . , 𝑣 | H 𝑢 | }, ordered chronologically, where 𝑣 𝑘 ∈ I . The primary objective is to estimate the probability distribution of the subsequent item 𝑣 𝑛𝑒𝑥𝑡 given the historical context H𝑢 .Within the generative recommendation paradigm, items are not treated as atomic ID embeddings but are represented as sequences of discrete tokens. Specifically, each item 𝑣 is tokenized into a semantic ID, denoted as a vector of length 𝐿 : x𝑣 = [𝑥 𝑣, 1, 𝑥 𝑣, 2, . . . , 𝑥 𝑣,𝐿 ], where each 𝑥 𝑣,𝑙 represents a discrete token derived from a quantization codebook. Consequently, a user’s interaction history can be flattened into a unified token sequence 𝑆 𝑢 , formed by concatenating the SIDs of interacted items: 
+
+𝑆 𝑢 = [x𝑣 1 ⊕ x𝑣 2 ⊕ · · · ⊕ x𝑣 |H 𝑢 | ], (1) where ⊕ denotes sequence concatenation. The next-item prediction task is thus reframed as maximizing the conditional likelihood of the target item’s token sequence x𝑛 given the context 𝑆 𝑢 :
+
+Θ = arg max 
+
+> 𝜃
+
+𝑃 𝜃 (x𝑛 | 𝑆 𝑢 ), (2) where 𝜃 represents the learnable parameters of the model. 
+
+3.2 Discrete Diffusion Modeling 
+
+Diverging from the conventional Autoregressive approach that generates tokens from left to right, Discrete Diffusion operates as a non-autoregressive refinement process. It models generation as a reverse denoising trajectory, initiating from a completely corrupted state and progressively recovering the clean data. Let x𝑇 𝑛 be the fully corrupted state of the next item SID consisting entirely of [MASK] tokens. Inference is discretized into 𝑇 steps. Starting from x𝑇 𝑛 , the Transformer encoder denoising network iteratively predicts the clean tokens. At each step 𝑡 (from 𝑇 down to 1), the denoising network takes the current state x𝑡 𝑛 of the next item and the unmasked user interaction history 𝑆 𝐻 as input to predict the clean tokens for all masked positions. In each iteration, the model predicts the probability distribution 
+
+𝑃 𝜃 (x0 
+
+> 𝑛
+
+|x𝑡 𝑛 , 𝑆 𝐻 ). Let 𝑛 𝑡 ∈ [ 1, 𝐿 ] denote the number of tokens to be kept at step 𝑡 . We select the top-𝑛 𝑡 tokens with the 
+
+> Manuscript submitted to ACM
+
+6 Wang et al. Sentence Embedding 
+
+Encoder 
+
+𝒆𝒆𝒔𝒔 
+
+SVD Decomposition 
+
+𝒆𝒆𝒄𝒄  
+
+> Item metadata Item Co-occurrence Matrix
+
+Feature Fusion 
+
+> Cluster Centers
+> RQ-Kmeans
+
+𝑡𝑡1  𝑡𝑡2  𝑡𝑡3  𝑡𝑡4  
+
+> Item SID
+> (a) Item Co-occurrence-Guided
+> SID Generation
+
+Transformer Encoder   
+
+> Item 1 Item 2 Item N
+> ……
+
+Transformer Encoder   
+
+> Item 1 Item 2 Item N-1
+> ……
+> Local Recoverability Estimation
+> Behavior-aware Dependency Modeling
+
+⊕ Item-based Noise Rescheduling         
+
+> 𝑳𝑳𝟏𝟏 :Reweighted User-History Denoising Loss
+> (b) Item-based Discrete Diffusion Training
+> 𝑳𝑳𝟐𝟐 :Next Item Prediction Loss
+> Total Loss 𝑳𝑳 =𝝀𝝀 ∗ 𝑳𝑳𝟏𝟏 +𝑳𝑳𝟐𝟐
+> (c) Constrained Discrete Diffusion Inference
+
+Transformer Encoder     
+
+> Item 1 Item 2 Item N+1
+> ……
+> SID-Validity Constrained Decoding
+> Invalid Token Filtering
+> Item 1 Item 2 Item N+1
+> ……
+
+Transformer Encoder 
+
+# ……  
+
+> Item 2 Item N+1
+> ……
+> Item 1
+> Iterative Denoising Process
+
+Final Recommended Item 
+
+Fig. 2. The architecture of ANR-DiffRec. (a) SID generation via fusion of semantic and collaborative signals. (b) Discrete diffusion training enhanced by item-based adaptive noise rescheduling, enabling structure-aware denoising to capture collaborative filtering signals. (c) Constrained discrete diffusion inference with validity filtering. 
+
+highest prediction confidence and re-mask the remaining 𝐿 − 𝑛 𝑡 positions to form the input for the next step x𝑡 −1
+
+𝑛 .Formally, the generation process can be viewed as maximizing the conditional likelihood over the refinement trajectory: 
+
+𝑃 𝜃 (x𝑛 | 𝑆 𝐻 ) =
+
+𝑇 Ö
+
+𝑡 =1
+
+𝐿 Ö
+
+𝑙 =1
+
+
+
+𝑃 𝜃 (𝑥 𝑛,𝑙 | x𝑡 𝑛 , 𝑆 𝐻 ), if 𝑥 𝑡 𝑛,𝑙 = [MASK] ,
+
+1, otherwise .
+
+(3) Here, 𝑥 𝑡 𝑛,𝑙 denotes the token at position 𝑙 in the state x𝑡 𝑛 .
+
+4 Methodology 
+
+In this section, we present our proposed framework. As illustrated in Figure 2, the framework consists of three components: (1) Item Co-occurrence-Guided Semantic ID Generation (Section 4.1): we construct SIDs by fusing item textual information with collaborative signals; (2) Item-based Discrete Diffusion Training (Section 4.2): we introduce an item-based adaptive noise rescheduling mechanism and employ a Transformer encoder to model the generation process; (3) Constrained Discrete Diffusion Inference (Section 4.3): we employ iterative denoising with beam search, augmented by an SID constraint module to ensure the validity of the generated token sequence. 
+
+4.1 Item Co-occurrence-Guided SID Generation 
+
+4.1.1 Item Representation Fusion. Let I denote the set of items. For each item 𝑖 ∈ I , we construct a continuous representation by jointly encoding semantic and collaborative information. We first obtain a semantic embedding 
+
+esem 
+
+𝑖 ∈ R𝑑 𝑠 using a pre-trained sentence embedding encoder. To fuse collaborative signals, we construct an item co-occurrence matrix C ∈ R| I | × | I | , where C𝑖 𝑗 denotes the number of times items 𝑖 and 𝑗 co-occur in user interaction 
+
+Manuscript submitted to ACM Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation 7 sequences. To extract low-dimensional collaborative features, we perform truncated singular value decomposition (SVD) on C:
+
+C ≈ U𝑘 Σ𝑘 V⊤ 
+
+> 𝑘
+
+, (4) where U𝑘 ∈ R| I | × 𝑘 contains the top-𝑘 left singular vectors. The collaborative embedding of item 𝑖 is given by: 
+
+ecoll  
+
+> 𝑖
+
+= U𝑘 (𝑖, :)Σ𝑘 . (5) The final fused item representation is obtained by concatenation: 
+
+e𝑖 = [ esem  
+
+> 𝑖
+
+; ecoll  
+
+> 𝑖
+
+] ∈ R𝑑 𝑠 +𝑑 𝑐 . (6) This fusion embedding preserves both semantic similarity and item collaborative proximity. 
+
+4.1.2 RQ-KMeans-based SID Generation. Given the fused item representations {e𝑣 }𝑣 ∈ I , we apply Residual Quantized K-Means (RQ-KMeans) to obtain SIDs. Each item is encoded as a sequence of 𝐿 discrete tokens. RQ-KMeans performs multi-stage vector quantization in a residual manner. At stage 𝑙 = 1, K-Means is applied to cluster e𝑣 into |𝐶 1 | centroids, producing the first token: 
+
+𝑥 𝑣, 1 = arg min 
+
+> c∈𝐶 1
+
+∥e𝑣 − c∥22. (7) The residual is then computed as: r𝑣, 1 = e𝑣 − c𝑥 𝑣, 1 . Subsequent stages recursively quantize the residual: 
+
+𝑥 𝑣,𝑙 = arg min 
+
+> c∈𝐶 𝑙
+
+∥r𝑣,𝑙 −1 − c∥22, r𝑣,𝑙 = r𝑣,𝑙 −1 − c𝑥 𝑣,𝑙 . (8) After 𝐿 stages, each item 𝑣 is represented as a SID: SID (𝑣 ) = (𝑥 𝑣, 1, 𝑥 𝑣, 2, . . . , 𝑥 𝑣,𝐿 ). (9) By incorporating collaborative signals into the input space of RQ-KMeans, the resulting SIDs preserve both semantic and co-occurrence structures, yielding more informative corrupted contexts and an effective collaborative prior for discrete diffusion training. 
+
+4.2 Item-based Discrete Diffusion Training 
+
+Given a user interaction history consisting of 𝑁 − 1 items, each represented by 𝐿 SID tokens, the user history token sequence is denoted by: 
+
+𝑆 𝐻 = (𝑥 1,1, . . . 𝑥 1,𝐿 , . . . , 𝑥 𝑁 −1,1 . . . 𝑥 𝑁 −1,𝐿 ), (10) The diffusion training process consists of two stages: forward masking and reverse reconstruction. In the forward process, tokens in the input sequence are independently replaced with a [MASK] token with probability 𝜏 ∈ ( 0, 1]. In the reverse process, the model learns to reconstruct the original sequence from the noisy state by predicting masked tokens. We adopt two masking learning strategies for discrete diffusion training: user-history level masking and next-item level masking. 
+
+4.2.1 User-History Level Masking. User-history level masking aims to capture contextual dependencies among all tokens in the user history. During training, for each batch, we sample a masking ratio 𝜏 ∼ U ( 0, 1]. Each token in 𝑆 𝐻 is independently masked with probability 𝜏 , producing a partially corrupted sequence 𝑆 𝜏 𝐻 . Let I[𝑆 𝜏 𝐻,𝑖 = [MASK] ] be an 
+
+> Manuscript submitted to ACM
+
+8 Wang et al. indicator function denoting whether the 𝑖 -th token in 𝑆 𝐻 is masked. The reconstruction loss is defined as:              
+
+> LUH =−E𝜏,𝑆 𝐻 ,𝑆 𝜏 𝐻
+> "
+> 1
+> 𝜏
+> (𝑁 −1) × 𝐿 ∑︁
+> 𝑖 =1
+> I[𝑆 𝜏 𝐻 ,𝑖 =[MASK] ]log 𝑝 𝜃 (𝑆 𝐻 ,𝑖 |𝑆 𝜏 𝐻 )
+> #
+> .(11)
+
+4.2.2 Item-based Adaptive Noise Rescheduling. To effectively capture item-based collaborative filtering signals during the generative process, we propose an item-based adaptive noise rescheduling strategy for user-history level masking. Unlike uniform denoising objectives, our mechanism quantifies the context of each token by jointly considering its structural hierarchy and dynamic user behavior. Specifically, the contextual dependency between token 𝑖 and token 𝑗 is modeled as the combination of a local recoverability estimation and a behavior-aware item dependency score. First, we define a static structural dependency matrix W𝑠𝑡𝑟𝑢𝑐𝑡 based on symmetric geometric decay: 
+
+𝑊 𝑠𝑡𝑟𝑢𝑐𝑡 𝑖 𝑗 = 𝜙 (| 𝐼 (𝑖 ) − 𝐼 ( 𝑗 )|) + I[𝐼 (𝑖 ) = 𝐼 ( 𝑗 )] · 𝜓 (| 𝑇 (𝑖 ) − 𝑇 ( 𝑗 )|) , (12) where 𝐼 (𝑖 ) denotes the item index associated with token 𝑖 , and 𝑇 (𝑖 ) denotes its intra-item token position. The functions 
+
+𝜙 (𝑑 ) and 𝜓 (𝑑 ) are geometric decay kernels defined as 
+
+𝑝 (1 − 𝑝 )𝑑 −1, 𝑑 ≥ 1,
+
+which model inter-item and intra-item contextual recoverability, respectively. Here, 𝑑 is the distance, and 𝑝 ∈ ( 0, 1]
+
+controls the decay sharpness: a larger 𝑝 emphasizes nearby contextual information, while a smaller 𝑝 captures broader contextual dependencies. We set 𝜙 (0) = 0 and 𝜓 (0) = 0 to avoid self-dependency. However, purely relying on static structural context cannot adaptively capture user-specific behavioral dependencies. To address this limitation, we further introduce behavior-aware item dependency modeling based on item-level attention. Specifically, let e𝑚 ∈ R𝑑 denote the representation of the 𝑚 -th item in the user sequence, obtained by mean pooling the hidden states of its corresponding tokens from the last Transformer layer. To avoid degenerate optimization, we detach e𝑚 from the computational graph when computing the reweighting coefficients. This design prevents the model from trivially reducing the objective by manipulating the adaptive weights. We compute the item-level attention score between item 𝑚 and item 𝑛 as: 
+
+𝐴 𝑖𝑡𝑒𝑚 𝑚𝑛 = exp (e⊤ 
+
+> 𝑚
+
+W⊤ 
+
+> 𝑄
+
+W𝐾 e𝑛 /√𝑑 )
+
+Í𝑘 exp (e⊤ 
+
+> 𝑚
+
+W⊤ 
+
+> 𝑄
+
+W𝐾 e𝑘 /√𝑑 ) , (13) where W𝑄 and W𝐾 are learnable projection matrices. The item-level dependency score is then projected back to token pairs according to their corresponding item indices: 
+
+𝐴 𝑖 𝑗 = 𝐴 𝑖𝑡𝑒𝑚 𝐼 (𝑖 ),𝐼 ( 𝑗 ) . (14) Finally, the adaptive contextual dependency weight is obtained by combining the structural context with the behavior-aware dependency score: 
+
+𝑊 𝑖 𝑗 = 𝑊 𝑠𝑡𝑟𝑢𝑐𝑡 𝑖 𝑗 + 𝛼𝐴 𝑖 𝑗 , (15) where 𝛼 ≥ 0 is a learnable scaling parameter. This formulation encourages stronger denoising guidance when two tokens are either structurally proximate or semantically correlated through user behavioral patterns. To estimate the denoising importance of each masked token, we aggregate contextual contributions from all unmasked tokens:         
+
+> W𝑖 =
+> (𝑁 −1) × 𝐿 ∑︁
+> 𝑗 =1
+> I[𝑆 𝜏 𝐻 ,𝑗 ≠[MASK] ] · 𝑊 𝑖 𝑗 .(16)
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation 9 The reweighted denoising objective is formulated as:                
+
+> L1=−E𝜏,𝑆 𝐻 ,𝑆 𝜏 𝐻
+> "
+> 1
+> 𝜏
+> (𝑁 −1) × 𝐿 ∑︁
+> 𝑖 =1
+> W𝑖 ·I[𝑆 𝜏 𝐻 ,𝑖 =[MASK] ]log 𝑝 𝜃 (𝑆 𝐻 ,𝑖 |𝑆 𝜏 𝐻 )
+> #
+> .(17)
+
+This adaptive noise rescheduling strategy redistributes denoising importance according to both local contextual recoverability and behavior-aware item dependencies. Tokens surrounded by richer unmasked contexts or strongly correlated items receive larger denoising weights, corresponding to lower effective noise levels during training. In contrast, tokens with sparse contextual support are assigned smaller weights. By explicitly aligning denoising supervision with item-level collaborative structures, the proposed strategy provides fine-grained and structure-aware guidance for discrete diffusion training. 
+
+4.2.3 Next-Item Level Masking. Next-item level masking focuses on predicting the target item, conditioned on the fully observed user history. We define x𝑛 = (𝑥 𝑛, 1, . . . , 𝑥 𝑛,𝐿 ) as the SIDs of the next item. Given mask ratio 𝜏 , each token in x𝑛 
+
+is independently masked with probability 𝜏 , yielding x𝜏 𝑛 . The partially masked target item tokens are concatenated with the unmasked user history 𝑆 𝐻 and fed into the model. The next-item prediction loss is defined as:                 
+
+> L2=−E𝜏, 𝑆 𝐻 ,x𝑛 ,x𝜏 𝑛
+> "
+> 1
+> 𝜏
+> 𝐿 ∑︁
+> 𝑖 =1
+> I[𝑥 𝜏 𝑛,𝑖 =[MASK] ]log 𝑝 𝜃 (𝑥 𝑛,𝑖 |𝑆 𝐻 ,x𝜏 𝑛 )
+> #
+> .(18)
+
+4.2.4 Overall Training Objective. The final training objective combines the two masking strategies: 
+
+L = 𝜆 L1 + L 2, (19) where 𝜆 balances user history modeling and target item generation. 
+
+4.3 Constrained Discrete Diffusion Inference 
+
+At inference time, our model generates the next item conditioned on the observed user history by progressively denoising a fully masked SID. 
+
+4.3.1 Initialization. Given a user history sequence 𝑆 𝐻 , we initialize the target item SID as a fully masked sequence 
+
+x𝑇 𝑛 = (𝑥 𝑇 𝑛, 1, . . . , 𝑥 𝑇 𝑛,𝐿 ), 𝑥 𝑇 𝑛,𝑚 = [MASK] , and concatenate it with 𝑆 𝐻 as the input to the denoising network, implemented as a Transformer encoder. 
+
+4.3.2 Iterative Denoising with Beam Search. Inference proceeds over 𝑇 diffusion steps. At each step 𝑡 , the model predicts token distributions for the masked positions: 
+
+𝑝 𝜃 (𝑥 𝑛,𝑚 | 𝑆 𝐻 , x𝑡 𝑛 ). (20) Following LLaDA-Rec [35], we adopt a beam search strategy to maintain multiple candidate partially denoised sequences. At each step, candidate sequences in the beam are expanded by unmasking a subset of positions and selecting high-probability tokens. The beam retains the top-𝐵 candidates according to their cumulative log-likelihoods. 
+
+4.3.3 SID-Validity Constrained Decoding. In discrete diffusion, SIDs may be revealed in an arbitrary order. Enforcing validity solely at the level of individual positions is insufficient, as independently valid token assignments may form an invalid combination. To guarantee that the final generated SID corresponds to a real item, we enforce an SID-validity constraint during decoding. During inference, we maintain a candidate item set C𝑡 ⊆ I at diffusion step 𝑡 , representing all items that remain consistent with the currently revealed tokens. Formally, let O𝑡 = {( 𝑚, 𝑥 𝑛,𝑚 ) | 𝑥 𝑛,𝑚 ≠ [MASK] } denote the set of observed 
+
+> Manuscript submitted to ACM
+
+10 Wang et al. (position, token) pairs at step 𝑡 . The candidate set is defined as: 
+
+C𝑡 = 𝑖 ∈ I ∀( 𝑚, 𝑥 𝑛,𝑚 ) ∈ O 𝑡 , SID (𝑖 ) [ 𝑚 ] = 𝑥 𝑛,𝑚 . (21) When unmasking a token at position 𝑚 , the valid candidate token set is restricted to: 
+
+X𝑡 𝑚 = 𝑥 ∃ 𝑖 ∈ C 𝑡 such that SID (𝑖 ) [ 𝑚 ] = 𝑥 . (22) The predictive distribution is renormalized over X𝑡 𝑚 before token selection. After assigning a value to position 𝑚 , the candidate set is updated accordingly. 
+
+4.3.4 Final Prediction. After all 𝐿 tokens are unmasked, each beam candidate corresponds to a valid SID. The candidate with the highest overall likelihood is selected, and its corresponding item is returned as the final recommendation. To consolidate the aforementioned components and provide a clear implementation overview, we summarize the overall workflow of ANR-DiffRec. The complete training pipeline is outlined in Algorithm 1. Correspondingly, the constrained iterative decoding process used during the inference phase is detailed in Algorithm 2. 
+
+Algorithm 1 Training Process of ANR-DiffRec 
+
+Require: User interaction sequences H , Items I, Diffusion steps 𝑇 , Masking ratio distribution U ( 0, 1], Hyperparameter 
+
+𝜆, 𝑝 .
+
+Ensure: Trained network parameters 𝜃 . 
+
+> 1:
+
+Offline Preparation:  
+
+> 2:
+
+Compute Item-Item co-occurrence matrix C. 
+
+> 3:
+
+Apply SVD to obtain collaborative embeddings and fuse with semantic embeddings.  
+
+> 4:
+
+Generate semantic IDs using RQ-KMeans.  
+
+> 5:
+
+Online Training:  
+
+> 6:
+
+while not converged do  
+
+> 7:
+
+Sample a batch of user interaction histories S𝐻 and target items x𝑛 . 
+
+> 8:
+
+Sample masking ratios 𝜏 1, 𝜏 2 ∼ U ( 0, 1]. 
+
+> 9:
+
+// User-History Level Masking  
+
+> 10:
+
+Mask tokens in S𝐻 with probability 𝜏 1. 
+
+> 11:
+
+Extract item-level hidden states e from the last Transformer layer.  
+
+> 12:
+
+Compute dynamic attention scores 𝐴 𝑖 𝑗 using e. 
+
+> 13:
+
+Compute structural recoverability weights 𝑊 𝑠𝑡𝑟𝑢𝑐𝑡 𝑖 𝑗 based on geometric decay 𝑝 (Eq. 12).  
+
+> 14:
+
+Calculate context-adaptive weights 𝑊 𝑖 𝑗 = 𝑊 𝑠𝑡𝑟𝑢𝑐𝑡 𝑖 𝑗 + 𝛼𝐴 𝑖 𝑗 . 
+
+> 15:
+
+Compute reweighted history loss L1 (Eq. 17).  
+
+> 16:
+
+// Next-Item Level Masking  
+
+> 17:
+
+Mask tokens in target item x𝑛 with probability 𝜏 2. 
+
+> 18:
+
+Compute target item prediction loss L2 given unmasked S𝐻 (Eq. 18).  
+
+> 19:
+
+// Parameter Update  
+
+> 20:
+
+Compute total loss L = 𝜆 L1 + L 2. 
+
+> 21:
+
+Update network parameters 𝜃 via gradient descent.  
+
+> 22:
+
+end while 
+
+5 Experiments 5.1 Experimental Setup 
+
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation11 
+
+Algorithm 2 Inference Process with Constrained Decoding 
+
+Require: User history SIDs S𝐻 , Trained model 𝑝 𝜃 , Beam size 𝐵 , Diffusion steps 𝑇 .
+
+Ensure: Recommended target item 𝑖 ∗. 
+
+> 1:
+
+Initialize candidate target item x𝑇 𝑛 as fully [MASK] tokens.  
+
+> 2:
+
+Initialize beam with sequence x𝑇 𝑛 and cumulative log-likelihood 0.  
+
+> 3:
+
+Initialize valid candidate item set C𝑇 . 
+
+> 4:
+
+for step 𝑡 = 𝑇 to 1 do  
+
+> 5:
+
+Predict: Pass [S 𝐻 ; x𝑡 𝑛 ] into 𝑝 𝜃 to get token distributions .  
+
+> 6:
+
+for each sequence in beam do  
+
+> 7:
+
+Identify the position 𝑚 to unmask.  
+
+> 8:
+
+Constrain: Filter invalid tokens by updating valid token set X𝑡 𝑚 based on C𝑡 . 
+
+> 9:
+
+Expand sequence with top probability valid tokens.  
+
+> 10:
+
+end for  
+
+> 11:
+
+Prune: Retain top-𝐵 sequences based on cumulative log-likelihood.  
+
+> 12:
+
+Update Valid Set: C𝑡 −1 ← items consistent with newly unmasked tokens.  
+
+> 13:
+
+end for  
+
+> 14:
+
+Return item 𝑖 ∗ corresponding to the top-1 generated valid SID sequence.                               
+
+> Table 1. Statistics of the used datasets. “Avg.Len” indicates the average number of interactions per user.
+> Dataset #Users #Items #Interactions Sparsity Avg.Len
+> Scientific 50,985 25,848 412,947 99.969% 8.10 Instrument 57,439 24,587 511,836 99.964% 8.91 Game 94,762 25,612 814,586 99.966% 8.60 Steam 39,795 9,265 2,949,605 99.200% 74.12 MovieLens 6,040 3,883 1,001,456 95.730% 165.57
+
+5.1.1 Datasets. We evaluate our method on five real-world datasets across different domains. From the Amazon collection [16], we select three subsets: Scientific, Musical Instruments, and Video Games. In addition to these product-based datasets, we include MovieLens [10], which contains user ratings alongside movie genres and titles, and Steam [32], a dataset comprising user-item interactions and textual reviews from the Steam gaming platform. These datasets vary in scale and domain, providing a comprehensive benchmark for recommendations. We follow the standard data split as in previous generative recommendation works [15, 33], where each user’s historical reviews are treated as interaction records and arranged in chronological order, with the earliest review appearing first. The detailed statistics of these datasets are summarized in Table 1. We evaluate our model using the widely adopted leave-one-out protocol [35]. Formally, for a sequence of 𝑛 interactions, we reserve the 𝑛 -th item for final performance evaluation and the (𝑛 − 1)-th item for validation. All prior interactions from 1 to 𝑛 − 2 are used to optimize the model. 
+
+5.1.2 Evaluation Metrics. To quantify the recommendation quality, we employ two standard ranking-based metrics consistently used in prior literature [35]: Recall@ 𝑘 and Normalized Discounted Cumulative Gain (NDCG@ 𝑘 ). In our experiments, we report the performance across 𝑘 ∈ { 1, 5, 10 }. Note that NDCG@1 yields the same numerical value as Recall@1. 
+
+5.1.3 Baselines. To comprehensively evaluate our proposed model, we compare it against 16 representative baselines. Based on their item representation strategies, we categorize these models into two main groups: traditional Item ID-based methods and recent Semantic ID-based generative methods. 
+
+> Manuscript submitted to ACM
+
+12 Wang et al. 
+
+Item ID-based Baselines. This group treats items as atomic IDs. The selected baselines encompass both classical sequential models and generative approaches: 
+
+• GRU4Rec [13] models chronological user action sequences using Gated Recurrent Units. 
+
+• SASRec [20] captures sequential dynamics through a unidirectional, left-to-right Transformer architecture with self-attention. 
+
+• BERT4Rec [37] utilizes a bidirectional Transformer trained via a Cloze objective to predict masked item IDs. 
+
+• FMLP-Rec [54] achieves efficient sequence encoding by replacing standard self-attention mechanisms with learnable filter-enhanced MLPs. 
+
+• LRURec [50] employs linear recurrent units to maintain linear-time training and inference complexity while overcoming the non-linearity limitations of traditional linear transitions. 
+
+• DreamRec [47] and DiffuRec [23] formulate recommendation as a continuous denoising generation process by representing item IDs as continuous embeddings. 
+
+• PreferGrow [18] is a discrete diffusion-based model that directly captures ranking dynamics by fading and growing user preference ratios over the discrete item corpus. 
+
+Semantic ID-based Baselines. This group represents items as Semantic IDs to enable generative recommendation. The evaluated models include: 
+
+• VQ-Rec [15] facilitates sequence-to-sequence recommendation by deriving discrete item codes from textual representations via Vector Quantization. 
+
+• TIGER [33] constructs tuple-based semantic IDs using RQ-VAE and predicts the next item autoregressively. 
+
+• TIGER-SAS [33] integrates the semantic IDs generated by TIGER into the standard SASRec architecture. 
+
+• LETTER [39] and LC-Rec [53] enhance generative recommendation through learnable tokenizers, allowing for the joint optimization of the codebook and the downstream recommendation objective. 
+
+• RPG [17] introduces a lightweight recommendation model to parallelly generate long, unordered semantic IDs. 
+
+• DiffGRM [28] is a diffusion-based model that replaces the traditional autoregressive decoder with a masked discrete diffusion framework. 
+
+• LLaDA-Rec [35] serves as a state-of-the-art discrete diffusion model, generating SIDs non-autoregressively through a mask-and-predict denoising framework. 
+
+5.1.4 Implementation Details. SID Generation. Each item is represented by concatenating textual and collaborative embeddings. Specifically, we leverage a pre-trained Sentence-T5 model [30] to extract semantic features from item metadata (e.g., titles and descriptions). Concurrently, to capture structural interaction patterns, we build an item co-occurrence matrix and apply SVD to derive a 64-dimensional collaborative embedding for each item. The combined embeddings are then discretized into SIDs using RQ-KMeans with 𝐿 = 4 levels and a codebook size of 𝐾 = 256 per level. 
+
+Discrete Diffusion Model. The discrete diffusion model is configured as a bidirectional Transformer encoder (8 attention heads, 256-dimensional hidden states). We deploy a 4-layer architecture for the Scientific , Instrument , Steam ,and MovieLens while extending it to 6 layers for the Game dataset to accommodate its larger scale. The scaling factor 𝜆 
+
+in Eq. 19 is determined through a grid search over {1, 2, 3, 4, 5}. 𝜆 is determined to be 3, 5, 2, 3, and 3 for the Scientific, Instrument, Game, MovieLens, and Steam datasets, respectively. The symmetric-geometric noise rescheduling sharpness 
+
+𝑝 is determined through a grid search over {0.1, 0.5, 0.9}. We train the Transformer encoder for 150 epochs with an 
+
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation13 
+
+Table 2. Performance comparison on three Amazon datasets. R@ 𝐾 and N@ 𝐾 denote Recall@ 𝐾 and NDCG@ 𝐾 , respectively. The best results are highlighted in bold , and the second-best results are underlined. The improvements of our model over the best baseline are statistically significant (paired t-test, 𝑝 < 0.05 ).                                                                                                                                                                                                                                                                    
+
+> Category Model Scientific Instrument Game R@1 R@5 R@10 N@5 N@10 R@1 R@5 R@10 N@5 N@10 R@1 R@5 R@10 N@5 N@10 Item ID based GRU4Rec [2015] 0.0071 0.0184 0.0272 0.0128 0.0156 0.0094 0.0297 0.0453 0.0196 0.0246 0.0149 0.0461 0.0712 0.0307 0.0387 SASRec [2018] 0.0063 0.0240 0.0379 0.0152 0.0197 0.0089 0.0331 0.0525 0.0211 0.0273 0.0128 0.0516 0.0823 0.0323 0.0421 BERT4Rec [2019] 0.0045 0.0157 0.0264 0.0100 0.0134 0.0065 0.0255 0.0412 0.0160 0.0211 0.0082 0.0315 0.0530 0.0199 0.0267 FMLP-Rec [2022] 0.0046 0.0181 0.0300 0.0113 0.0151 0.0086 0.0299 0.0496 0.0193 0.0257 0.0099 0.0395 0.0649 0.0246 0.0328 LRURec [2024] 0.0049 0.0169 0.0267 0.0110 0.0141 0.0071 0.0272 0.0431 0.0172 0.0223 0.0134 0.0480 0.0753 0.0308 0.0396 DreamRec [2023a] 0.0052 0.0184 0.0299 0.0118 0.0155 0.0069 0.0245 0.0423 0.0157 0.0214 0.0125 0.0381 0.0611 0.0253 0.0326 DiffuRec [2023] 0.0050 0.0190 0.0310 0.0119 0.0158 0.0077 0.0283 0.0465 0.0179 0.0237 0.0111 0.0425 0.0709 0.0268 0.0359 PreferGrow [2025] 0.0065 0.0172 0.0283 0.0101 0.0125 0.0094 0.0265 0.0397 0.0181 0.0224 0.0180 0.0521 0.0784 0.0351 0.0436 Semantic ID based VQ-Rec [2023] 0.0076 0.0248 0.0385 0.0162 0.0206 0.0099 0.0345 0.0532 0.0222 0.0282 0.0150 0.0497 0.0769 0.0325 0.0412 TIGER [2023] 0.0084 0.0282 0.0446 0.0183 0.0236 0.0105 0.0359 0.0566 0.0233 0.0300 0.0166 0.0529 0.0823 0.0348 0.0442 TIGER-SAS [2023] 0.0067 0.0221 0.0356 0.0144 0.0187 0.0102 0.0342 0.0521 0.0223 0.0280 0.0170 0.0548 0.0847 0.0360 0.0457 LETTER [2024a] 0.0082 0.0273 0.0423 0.0179 0.0227 0.0114 0.0362 0.0562 0.0239 0.0303 0.0169 0.0552 0.0863 0.0362 0.0462 LC-Rec [2024] 0.0091 0.0280 0.0434 0.0186 0.0235 0.0119 0.0379 0.0587 0.0251 0.0318 0.0165 0.0567 0.0891 0.0366 0.0471 RPG [2025] 0.0087 0.0257 0.0395 0.0174 0.0218 0.0118 0.0362 0.0545 0.0241 0.0300 0.0209 0.0579 0.0853 0.0397 0.0485 DiffGRM [2026b] 0.0092 0.0279 0.0441 0.0189 0.0232 0.0125 0.0382 0.0593 0.0255 0.0316 0.0205 0.0602 0.0925 0.0401 0.0483 LLaDA-Rec [2025] 0.0098 0.0310 0.0474 0.0203 0.0256 0.0128 0.0406 0.0623 0.0268 0.0337 0.0207 0.0623 0.0942 0.0415 0.0517
+> ANR-DiffRec 0.0122 0.0327 0.0494 0.0226 0.0279 0.0135 0.0410 0.0629 0.0273 0.0343 0.0214 0.0653 0.0987 0.0434 0.0542
+
+early stopping mechanism. The AdamW [29] optimizer is used with a batch size of 1024, where the learning rate and weight decay are fine-tuned within {0.005 , 0.003 , 0.001 } and {0.05 , 0.005 , 0.001 }, respectively. Our framework is implemented in PyTorch and executed on a workstation featuring the Intel Xeon Gold 6226R CPU and two NVIDIA RTX 4090 GPUs. 
+
+5.2 Main Results 
+
+5.2.1 Overall Performance. The experimental results on three Amazon datasets are summarized in Table 2. Additionally, to further validate the generalization of our method across different domains, we conduct experiments on the MovieLens and Steam datasets, as presented in Table 3. For these two datasets, we benchmark our method against a selective subset of the most competitive generative state-of-the-art models (i.e., RPG and LLaDA-Rec) alongside recently proposed strong baselines (PreferGrow and DiffGRM). By comparing our proposed model with various baselines, we can draw the following conclusions: 
+
+• Superiority of ANR-DiffRec: Our model consistently achieves the best performance across all datasets and evaluation metrics. Notably, ANR-DiffRec significantly outperforms the strongest generative baseline based on the discrete diffusion model, LLaDA-Rec, across most metrics. For example, on the Scientific dataset, ANR-DiffRec delivers a substantial improvement in Recall@1. This performance gain validates the effectiveness of our noise rescheduling strategy, which enables the model to capture item-based collaborative filtering signals more precisely. 
+
+• Semantic ID vs. Item ID: SID-based generative methods (e.g., VQ-Rec, TIGER, and RPG) consistently outperform traditional item ID-based models such as SASRec and BERT4Rec across multiple benchmarks. This suggests that Semantic IDs provide a more informative representation space than independent atomic item IDs. Furthermore, incorporating collaborative structural signals via our item co-occurrence modeling further improves the ability of SIDs to capture item relationships and sequential transition patterns. 
+
+Manuscript submitted to ACM 14 Wang et al.                                                  
+
+> Table 3. Performance comparison on MovieLens and Steam. The best results are highlighted in bold , and the second-best results are underlined. The improvements of our model over the best baseline are statistically significant (paired t-test, 𝑝 <0.05 ).
+> Dataset Model NDCG@5 NDCG@10 Recall@5 Recall@10 MovieLens PreferGrow [2025] 0.0910 0.1177 0.1409 0.2237 RPG [2025] 0.1197 0.1440 0.1750 0.2503 DiffGRM [2026b] 0.1038 0.1260 0.1541 0.2235 LLaDA-Rec [2025] 0.1359 0.1628 0.1980 0.2820
+> ANR-DiffRec 0.1468 0.1738 0.2141 0.2977
+> Steam PreferGrow [2025] 0.0406 0.0508 0.0615 0.0935 RPG [2025] 0.0388 0.0490 0.0579 0.0898 DiffGRM [2026b] 0.0378 0.0479 0.0565 0.0870 LLaDA-Rec [2025] 0.0391 0.0502 0.0607 0.0914
+> ANR-DiffRec 0.0411 0.0526 0.0627 0.0991
+
+• Effectiveness of Discrete Diffusion: Among SID-based approaches, DDM-based models (LLaDA-Rec, DiffGRM and ANR-DiffRec) demonstrate superior ranking capabilities compared to autoregressive-based generators. This suggests that the bidirectional attention is more robust for recommendation tasks. Our model further improves upon this by adaptively rescheduling the noise level based on the geometric properties of the context, improving item retrieval accuracy. 
+
+5.2.2 Performance on Sequence Length. To investigate the robustness of our model against varying amounts of user historical information, we categorize the users into four groups based on their interaction sequence lengths: short (< 5), medium (5 ∼ 10), long (10 ∼ 20), and extremely long ( > 20). We evaluate NDCG@5 and Recall@5 of ANR-DiffRec alongside two strong baselines: the autoregressive state-of-the-art RPG, and the diffusion-based LLaDA-Rec. As illustrated in Figure 3, ANR-DiffRec consistently outperforms the baselines across all length groups. Notably, RPG experiences a performance drop on extremely long sequences ( > 20). This degradation could be partially attributed to the unidirectional bias, where the AR model over-emphasizes recent items while forgetting early context. In contrast, diffusion-based models exhibit better resilience due to their bidirectional attention. Furthermore, ANR-DiffRec surpasses LLaDA-Rec on short sequences ( < 5). Interestingly, the short-sequence group tends to achieve relatively strong results across different models, suggesting that these users may have more concentrated and less noisy preferences rather than representing purely cold-start cases. This is reasonable for Amazon datasets, where the average sequence length is only around 8, making the < 5 group still close to the dominant interaction range. 
+
+5.2.3 Performance across Item Popularity. Popularity imbalance remains a fundamental challenge in recommendation systems, as user interactions are typically concentrated on a small subset of highly frequent items while many others suffer from limited exposure. To better understand how our method behaves under different popularity regimes, we conduct a fine-grained analysis on the Scientific and Instrument dataset by partitioning items according to their interaction frequency. Following standard practices, we sort all items based on their interaction frequencies in the training set and divide them into three disjoint groups: Head (the top 20% most popular items), Mid (the next 60% items), and Tail (the bottom 20% infrequent items). We then compute NDCG@5 and Recall@5 for interactions in the test set where the target item belongs to these respective groups. We compare ANR-DiffRec with the strongest autoregressive model RPG, and the discrete diffusion model LLaDA-Rec. As illustrated in Figure 4, ANR-DiffRec consistently outperforms LLaDA-Rec across head, mid, and tail item groups, with the clearest gains appearing on mid-frequency items. This suggests that our method is particularly effective at 
+
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation15 Short Medium Long Extremely Long 
+
+> 0.005 0.010 0.015 0.020 0.025
+
+(a) Scientific (NDCG@5) 
+
+Short Medium Long Extremely Long 
+
+> 0.005 0.010 0.015 0.020 0.025 0.030 0.035
+
+(b) Scientific (Recall@5) 
+
+Short Medium Long Extremely Long 
+
+> 0.005 0.010 0.015 0.020 0.025 0.030
+
+(c) Instrument (NDCG@5) 
+
+Short Medium Long Extremely Long     
+
+> 0.01 0.02 0.03 0.04 0.05
+
+(d) Instrument (Recall@5) 
+
+RPG LLaDA-Rec Ours 
+
+Fig. 3. Performance comparison across different user interaction sequence length groups on the Scientific and Instrument dataset. Head Mid Tail 0.00 0.01 0.02 0.03 0.04 
+
+> NDCG@5
+
+(a) Scientific 
+
+Head Mid Tail 0.00 0.01 0.02 0.03 0.04 0.05 0.06 
+
+> Recall@5
+
+(b) Scientific 
+
+Head Mid Tail 0.00 0.01 0.02 0.03 0.04 
+
+> NDCG@5
+
+(c) Instrument 
+
+Head Mid Tail 0.00 0.02 0.04 0.06 
+
+> Recall@5
+
+(d) Instrument 
+
+RPG LLaDA-Rec Ours 
+
+Fig. 4. Performance comparison across Head, Mid, and Tail item groups on the Scientific and Instrument dataset. 
+
+Manuscript submitted to ACM 16 Wang et al. modeling items with moderate interaction frequency, where both collaborative dependency and transition diversity are important. For tail items, the improvements are relatively smaller, since extremely sparse items still provide limited behavioral evidence for reliable generation. Nevertheless, on the Instruments dataset, ANR-DiffRec still achieves better tail performance than LLaDA-Rec, indicating that our item co-occurrence-guided SID construction may help alleviate the representation isolation issue of infrequent items. While RPG maintains a marginal lead in the extreme tail of Instruments, this is likely due to its longer semantic IDs over-specializing to rare patterns. In contrast, ANR-DiffRec prioritizes a more balanced representation, ensuring robust generalization across the entire popularity spectrum rather than over-fitting to the extreme tail. 
+
+5.3 Ablation Study 
+
+We conduct extensive ablation studies to analyze the contribution of each component in our framework, as summarized in Table 4. We compare our model against the following variants: (1) w/o Schedule , which replaces our item-based noise rescheduling strategy with a standard uniform noise schedule; (2) w/o II , which removes the SVD-based collaborative features, relying solely on text semantics in SID generation; (3) w/o Schedule and II , which simultaneously removes both the adaptive noise scheduling mechanism and the collaborative structural features used in SID construction; and (4) 
+
+RQ-VAE , which replaces our RQ-KMeans tokenizer with RQ-VAE. As shown in Table 4, we observe: 
+
+• Impact of item-based adaptive noise rescheduling: w/o Schedule leads to the most significant performance drop across all datasets (e.g., NDCG@1 drops by over 15% on Scientific). This confirms that our noise rescheduling is the core engine of ANR-DiffRec, enabling the model to adaptively learn item-based collaborative filtering signals that uniform noise scheduling cannot capture. 
+
+• Benefit of item co-occurrence-guided SID generation: The performance decline in w/o II highlights the necessity of fusing item co-occurrence information. While semantic features provide content understanding, the collaborative signals are crucial for capturing the structural behavior of users. 
+
+• Superiority of RQ-KMeans: Our RQ-KMeans tokenizer ( Full ) consistently outperforms the RQ-VAE variants. This may be partly because clustering-based discretization avoids the instability that can occur when training neural tokenizers from scratch. 
+
+• Synergy of two components: The performance drops to its lowest point when both modules are removed ( w/o Schedule and II ), indicating that the two contributions are mutually reinforcing rather than redundant. 
+
+5.3.1 Effect of Noise Rescheduling. To further investigate the effectiveness of the proposed adaptive noise rescheduling mechanism, we compare ANR-DiffRec with several variants in Figure 5. The evaluated variants include: (1) w/o LRS ,which removes the geometric contextual recoverability modeling and only retains behavior-aware dependency modeling; (2) w/o BDM , which removes the adaptive item-level dependency modeling and only preserves the local recoverability estimation; (3) w/o Inter-Item/Intra-Item , which separately removes inter-item or intra-item contextual dependencies from the local recoverability estimation module. From the results, removing local recoverability estimation causes the most significant performance degradation, indicating that contextual recoverability serves as the primary source of denoising guidance in our adaptive rescheduling framework. By explicitly modeling the availability of surrounding unmasked contexts, the model can better distinguish easy-to-recover tokens from highly uncertain ones, thereby allocating denoising supervision more effectively. Without this mechanism, the diffusion process degenerates toward a nearly uniform denoising strategy, substantially weakening the ability to exploit structural collaborative signals. 
+
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation17 
+
+Table 4. Ablation study results on three Amazon datasets. “II” denotes item co-occurrence information, and “Schedule” denotes the diffusion adaptive noise rescheduling strategy. 
+
+Dataset Method NDCG@1 NDCG@5 NDCG@10 Recall@5 Recall@10 Scientific RQ-VAE 0.0120 0.0221 0.0269 0.0320 0.0487 w/o II 0.0109 0.0217 0.0268 0.0314 0.0479 w/o Schedule 0.0099 0.0205 0.0259 0.0312 0.0477 w/o Schedule and II 0.0097 0.0203 0.0253 0.0310 0.0474 
+
+Full 0.0122 0.0226 0.0279 0.0327 0.0494 
+
+Instrument RQ-VAE 0.0128 0.0270 0.0341 0.0408 0.0626 w/o II 0.0130 0.0265 0.0339 0.0403 0.0627 w/o Schedule 0.0127 0.0259 0.0331 0.0401 0.0612 w/o Schedule and II 0.0127 0.0258 0.0329 0.0391 0.0610 
+
+Full 0.0135 0.0273 0.0343 0.0410 0.0629 
+
+Game RQ-VAE 0.0208 0.0426 0.0532 0.0641 0.0973 w/o II 0.0209 0.0423 0.0530 0.0633 0.0964 w/o Schedule 0.0206 0.0413 0.0523 0.0628 0.0957 w/o Schedule and II 0.0205 0.0409 0.0514 0.0610 0.0936 
+
+Full 0.0214 0.0434 0.0542 0.0653 0.0987 NDCG@1 NDCG@5 Recall@5 0.000 0.005 0.010 0.015 0.020 0.025 0.030 Score         
+
+> (a) Scientific
+> NDCG@1 NDCG@5 Recall@5 0.00 0.01 0.02 0.03 0.04 Score
+> (b) Instrument
+> NDCG@1 NDCG@5 Recall@5 0.00 0.01 0.02 0.03 0.04 0.05 0.06 Score
+> (c) Game
+> w/o LRS w/o BDM w/o Intra-Item w/o Inter-Item Ours
+
+Fig. 5. Ablation study on different noise rescheduling strategies. 
+
+Removing behavior-aware dependency modeling also leads to a noticeable performance drop, although the degradation is smaller than removing local recoverability estimation. This suggests that adaptive item-level dependency modeling provides important complementary information beyond static structural priors. In particular, the behavior-aware dependency module enables the model to dynamically capture user-specific collaborative patterns, helping the denoising process focus on semantically correlated items within different behavioral contexts. We further analyze the contributions of inter-item and intra-item dependencies within local recoverability estimation. Removing inter-item contextual modeling results in a significantly larger decline than removing intra-item dependencies, demonstrating that collaborative relationships across items constitute the dominant source of contextual recoverability in recommendation sequences. Since user behaviors are inherently driven by sequential item interactions, neighboring and correlated items provide strong structural cues for recovering masked tokens. In contrast, intra-item dependencies mainly refine the semantic consistency within each semantic ID, yielding a relatively smaller but still consistent contribution. 
+
+> Manuscript submitted to ACM
+
+18 Wang et al. w/o II SVD LightGCN Node2Vec    
+
+> 0.000 0.005 0.010 0.015 0.020 0.025 0.030 0.035
+> Score
+> (a) Scientific
+> Recall@5 NDCG@5
+> w/o II SVD LightGCN Node2Vec
+> 0.00 0.01 0.02 0.03 0.04
+> Score
+> (b) Instrument
+> Recall@5 NDCG@5
+
+Fig. 6. Ablation study on different forms of collaborative signal construction. 
+
+5.3.2 Effect of Collaborative Signals. To evaluate how different forms of collaborative signal construction affect RQ-KMeans quantization, we compare several representative strategies, including SVD-based matrix factorization, Node2Vec [9], and a graph-based LightGCN [11] encoder. In Figure 6, when introducing collaborative signals, both SVD-based and LightGCN-based approaches achieve clear improvements over the w/o II across datasets. However, their performance is largely comparable on both Scientific and Instrument, suggesting that first-order co-occurrence signals already provide a strong inductive bias for constructing SID representations, while higher-order propagation does not always translate into additional gains under our discrete diffusion framework. In contrast, Node2Vec performs noticeably worse than both SVD and LightGCN. We attribute this to its reliance on homogeneous random walks, which tend to dilute fine-grained user-item interaction structure and are less aligned with the bipartite nature of recommendation data. Overall, these results indicate that incorporating explicit collaborative structure is beneficial, while the specific choice between SVD and LightGCN has limited impact in our setting. This suggests that the effectiveness of SID construction is primarily driven by the presence of collaborative information itself rather than the complexity of the encoder used to extract it. 
+
+5.4 Hyper-parameter Analysis 
+
+We investigate the impact of two critical hyperparameters on model performance: the dimensionality of collaborative embeddings and the sharpness of the geometric distribution used in our noise rescheduling. 
+
+5.4.1 Impact of Collaborative Embedding Dimension. We first vary the dimension of the SVD-decomposed item co-occurrence features within {32 , 64 , 128 , 256 }. As illustrated in Figure 7, the recommendation performance initially improves as the dimension increases from 32 to 64. This indicates that a sufficient embedding size is necessary to encode the complex structural dependencies between items. However, further increasing the dimension to 128 or 256 yields negligible gains or even slight performance degradation. This suggests that 64 dimensions offer an optimal balance between representation capacity and noise suppression, effectively capturing collaborative signals without overfitting to sparse co-occurrence patterns. Consequently, we set the dimension to 64. 
+
+5.4.2 Impact of Sharpness in Noise Rescheduling. Additionally, we perform a sensitivity analysis on the sharpness parameter 𝑝 within the geometric distribution employed for our noise rescheduling, varying it across {0.1, 0.5, 0.9}. As shown in Figure 8, the model exhibits robust performance across different settings. Based on these observations, we set 
+
+𝑝 = 0.1 for all datasets. 
+
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation19 32 64 128 256 Dimension 0.00 0.01 0.02 0.03 0.04 Score    
+
+> (a) Scientific
+> Recall@5 NDCG@5
+> 32 64 128 256 Dimension 0.00 0.01 0.02 0.03 0.04 0.05 Score
+> (b) Instrument
+> Recall@5 NDCG@5
+
+Fig. 7. Hyper-parameter study with different dimensionalities for collaborative embedding. 0.1 0.5 0.9 Reschedule Sharpness 0.00 0.01 0.02 0.03 0.04 Score   
+
+> (a) Scientific
+> NDCG@5 Recall@5
+> 0.1 0.5 0.9 Reschedule Sharpness 0.00 0.01 0.02 0.03 0.04 0.05 Score
+> (b) Instrument
+> NDCG@5 Recall@5
+
+Fig. 8. Hyper-parameter study of the sharpness in the geometric distribution. 
+
+5.5 Efficiency Analysis 
+
+5.5.1 Complexity Analysis. We briefly analyze the computational complexity of the proposed ANR-DiffRec , focusing on our primary contribution: the item-based adaptive noise rescheduling mechanism. For a user history of length 𝑁 
+
+with SIDs of length 𝐿 , the total sequence length is 𝑀 = (𝑁 − 1) × 𝐿 .The standard bidirectional Transformer encoder incurs a self-attention complexity of O( 𝑀 2𝑑 ), where 𝑑 is the hidden state dimension. In our proposed rescheduling module, computing the structural geometric decay 𝑤 𝑠𝑡𝑟𝑢𝑐𝑡 𝑖 𝑗 requires 
+
+O( 𝑀 2) operations. Concurrently, extracting the attention scores 𝐴 𝑖 𝑗 directly reuses the final hidden states from the Transformer, incurring O( 𝑀 2𝑑 ) complexity. Therefore, the overall time complexity of ANR-DiffRec remains strictly bounded by O( 𝑀 2𝑑 ). It operates in the same asymptotic complexity class as standard Transformer-based baselines (e.g., BERT4Rec, LLaDA-Rec), guaranteeing that our fine-grained denoising guidance is achieved without compromising training scalability. 
+
+5.5.2 Training Efficiency. We analyze the training cost from two aspects: SID generation and discrete diffusion model optimization. As shown in Table 5, RQ-VAE-based SID generation requires expensive pretraining. In contrast, our item co-occurrence-guided SID generation incurs only a fraction of the computational cost, including the construction of the co-occurrence matrix, its SVD decomposition, and the RQ-KMeans clustering. For our model training, the proposed item-based adaptive noise rescheduling introduces marginal overhead (around 1%) compared to LLaDA-Rec [35]. 
+
+> Manuscript submitted to ACM
+
+20 Wang et al. 
+
+> Table 5. Training efficiency comparison in Scientific.
+
+Stage Method Time/Epoch (s) Total (h) Cost Item Tokenization RQ-VAE 0.648 1.799 1.000 ×
+
+Ours – 0.106 0.059 ×
+
+Generative Training LLaDA-Rec 87.402 3.641 1.000 ×
+
+ANR-DiffRec 88.351 3.681 1.011 ×
+
+5.5.3 Inference Efficiency. We further analyze the efficiency of the proposed constrained diffusion inference. Although the decoding process maintains a candidate item set to ensure valid SID generation, the effective token vocabulary shrinks rapidly at each diffusion step. As shown in Table 6, We scale the beam size from 1 to 50 to evaluate the total inference time on the Scientific test set. While the total overhead for both models scales linearly with the beam size, their execution times remain nearly identical across all configurations. Our method achieves a comparable per-user latency to LLaDA-Rec with Beam=50 (10.17 ms vs. 10.06 ms). This close match indicates that ANR-DiffRec mitigates potential computational burdens, introducing negligible inference overhead compared to LLaDA-Rec while achieving superior recommendation performance.                                  
+
+> Table 6. Inference efficiency comparison with different beam sizes in Scientific.
+> Method Metric Beam=1 Beam=10 Beam=20 Beam=30 Beam=40 Beam=50
+> LLaDA-Rec Total Time (s) 0m 13s 1m 46s 3m 22s 5m 04s 6m 46s 8m 33s Time / User (ms) 0.25 2.08 3.96 5.96 7.96 10.06 ANR-DiffRec Total Time (s) 0m 13s 1m 46s 3m 24s 5m 06s 6m 50s 8m 39s Time / User (ms) 0.25 2.08 4.00 6.00 8.04 10.18
+
+5.6 Case Studies 
+
+To rigorously evaluate the effectiveness of incorporating item co-occurrence features in the SID generation, we examine three randomly sampled items (#710, #6278, and #219) with distinct characteristics. For each item, we retrieve the Top-20 nearest neighbors based on continuous embedding similarity and discrete SIDs overlap, respectively. We then verify how many of these neighbors appear in the ground-truth global co-occurrence matrix. As detailed in Table 7, our 
+
+> Table 7. Case study on three sampled items. We compare the number of ground-truth co-occurring items found within the Top-20 nearest neighbors in both the embedding space and the SID space. “Pre” and “Post” denote before and after integrating the item co-occurrence features.
+
+Item Metric Space Co-occur Hits@20 Co-occurring Neighbors (Post-integration) Pre Post Gain ( ↑)Item #710 Embedding 3 5 +2 {757, 732, 9894, 750, 1104 }SIDs 1 8 +7 {732, 719, 750, 1104, 755, 758, 751 , 757} Item #6278 Embedding 5 9 +4 {9430, 3671, 23939, 2229, 3021, 17400, 24692, 21922 , 17350} SIDs 4 12 +8 {3671, 3717 , 879 , 2371, 2250, 2230, 1613, 2268, 1169 , 998, 2229, 1774 }Item #219 Embedding 4 8 +4 {975, 971 , 20665, 977 , 214, 13070, 9644, 6499 }SIDs 3 7 +4 {220, 214, 516, 6499, 13148 , 13070, 971 }
+
+> Manuscript submitted to ACM
+
+Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation21 method yields consistent improvements across all cases. Embedding space refinement: after integrating co-occurrence features, the embedding space becomes more collaborative. For instance, in Item #710, the number of co-occurring neighbors in the top-20 list increases from 3 to 5. Significant SID refinement: the most notable gains are observed in the SID space. For instance, in Item #6278, the number of co-occurring neighbors found by SID retrieval tripled (from 4 to 12) after feature integration. This confirms that our quantizer, when guided by the co-occurrence feature, successfully encodes collaborative information into the SIDs. Boldface indicates the gain in co-occurring hits. 
+
+6 Conclusion 
+
+This paper presents ANR-DiffRec, a novel generative recommendation framework that integrates item-based collabora-tive structures into discrete diffusion models. The core of our contribution is the item-based adaptive noise rescheduling strategy, which provides structure-aware denoising guidance by adaptively adjusting the noise level according to intra-item and inter-item contexts. Complementary to this, we introduce an item co-occurrence-guided SID generation mechanism that injects item co-occurrence priors for diffusion training. Empirical results on various benchmarks confirm the effectiveness of our approach, demonstrating that aligning the denoising process with the collaborative signals in recommendation data significantly improves generative performance. In future work, we aim to further advance generative recommendation models by integrating multimodal information. 
+
+References 
+
+[1] Josh Achiam, Steven Adler, Sandhini Agarwal, Lama Ahmad, Ilge Akkaya, Florencia Leoni Aleman, Diogo Almeida, Janko Altenschmidt, Sam Altman, Shyamal Anadkat, et al. 2023. Gpt-4 technical report. arXiv preprint arXiv:2303.08774 (2023). [2] Marianne Arriola, Aaron Gokaslan, Justin T Chiu, Zhihan Yang, Zhixuan Qi, Jiaqi Han, Subham Sekhar Sahoo, and Volodymyr Kuleshov. 2025. Block diffusion: Interpolating between autoregressive and diffusion language models. arXiv preprint arXiv:2503.09573 (2025). [3] Jacob Austin, Daniel D Johnson, Jonathan Ho, Daniel Tarlow, and Rianne Van Den Berg. 2021. Structured denoising diffusion models in discrete state-spaces. Advances in neural information processing systems 34 (2021), 17981–17993. [4] Jiawei Chen, Hande Dong, Xiang Wang, Fuli Feng, Meng Wang, and Xiangnan He. 2020. Bias and debias in recommender system: a survey and future directions (2020). arXiv preprint arXiv:2010.03240 (2020). [5] Zeyu Cui, Jianxin Ma, Chang Zhou, Jingren Zhou, and Hongxia Yang. 2022. M6-rec: Generative pretrained language models are open-ended recommender systems. arXiv preprint arXiv:2205.08084 (2022). [6] Jiaxin Deng, Shiyao Wang, Kuo Cai, Lejian Ren, Qigen Hu, Weifeng Ding, Qiang Luo, and Guorui Zhou. 2025. Onerec: Unifying retrieve and rank with generative recommender and iterative preference alignment. arXiv preprint arXiv:2502.18965 (2025). [7] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. 2022. Recommendation as language processing (rlp): A unified pretrain, personalized prompt & predict paradigm (p5). In Proceedings of the 16th ACM conference on recommender systems . 299–315. [8] Marjan Ghazvininejad, Omer Levy, Yinhan Liu, and Luke Zettlemoyer. 2019. Mask-predict: Parallel decoding of conditional masked language models. 
+
+arXiv preprint arXiv:1904.09324 (2019). [9] Aditya Grover and Jure Leskovec. 2016. node2vec: Scalable feature learning for networks. In Proceedings of the 22nd ACM SIGKDD international conference on Knowledge discovery and data mining . 855–864. [10] F Maxwell Harper and Joseph A Konstan. 2015. The movielens datasets: History and context. Acm transactions on interactive intelligent systems (tiis) 
+
+5, 4 (2015), 1–19. [11] Xiangnan He, Kuan Deng, Xiang Wang, Yan Li, Yongdong Zhang, and Meng Wang. 2020. Lightgcn: Simplifying and powering graph convolution network for recommendation. In Proceedings of the 43rd International ACM SIGIR conference on research and development in Information Retrieval .639–648. [12] Xiangnan He, Lizi Liao, Hanwang Zhang, Liqiang Nie, Xia Hu, and Tat-Seng Chua. 2017. Neural collaborative filtering. In Proceedings of the 26th international conference on world wide web . 173–182. [13] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2015. Session-based recommendations with recurrent neural networks. 
+
+arXiv preprint arXiv:1511.06939 (2015). [14] Jonathan Ho, Ajay Jain, and Pieter Abbeel. 2020. Denoising diffusion probabilistic models. Advances in neural information processing systems 33 (2020), 6840–6851. [15] Yupeng Hou, Zhankui He, Julian McAuley, and Wayne Xin Zhao. 2023. Learning vector-quantized item representation for transferable sequential recommenders. In Proceedings of the ACM Web Conference 2023 . 1162–1171. Manuscript submitted to ACM 22 Wang et al. 
+
+[16] Yupeng Hou, Jiacheng Li, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. 2024. Bridging language and items for retrieval and recommendation. 
+
+arXiv preprint arXiv:2403.03952 (2024). [17] Yupeng Hou, Jiacheng Li, Ashley Shin, Jinsung Jeon, Abhishek Santhanam, Wei Shao, Kaveh Hassani, Ning Yao, and Julian McAuley. 2025. Generating long semantic ids in parallel for recommendation. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 2 .956–966. [18] Guoqing Hu, An Zhang Liu, Wenyu Mao, Jiancan Wu, Xun Yang, Xiang Li, Lantao Hu, Han Li, Kun Gai, Xiang Wang, et al. 2025. Fading to Grow: Growing Preference Ratios via Preference Fading Discrete Diffusion for Recommendation. arXiv preprint arXiv:2509.26063 (2025). [19] Wenyue Hua, Shuyuan Xu, Yingqiang Ge, and Yongfeng Zhang. 2023. How to index item ids for recommendation foundation models. In Proceedings of the Annual International ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region . 195–204. [20] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recommendation. In 2018 IEEE international conference on data mining (ICDM) . IEEE, 197–206. [21] Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho, and Wook-Shin Han. 2022. Autoregressive image generation using residual quantization. In 
+
+Proceedings of the IEEE/CVF conference on computer vision and pattern recognition . 11523–11532. [22] Wuchao Li, Rui Huang, Haijun Zhao, Chi Liu, Kai Zheng, Qi Liu, Na Mou, Guorui Zhou, Defu Lian, Yang Song, et al. 2025. DimeRec: a unified framework for enhanced sequential recommendation via generative diffusion models. In Proceedings of the Eighteenth ACM International Conference on Web Search and Data Mining . 726–734. [23] Zihao Li, Aixin Sun, and Chenliang Li. 2023. Diffurec: A diffusion model for sequential recommendation. ACM Transactions on Information Systems 
+
+42, 3 (2023), 1–28. [24] Xinyu Lin, Haihan Shi, Wenjie Wang, Fuli Feng, Qifan Wang, See-Kiong Ng, and Tat-Seng Chua. 2025. Order-agnostic identifier for large language model-based generative recommendation. In Proceedings of the 48th international ACM SIGIR conference on research and development in information retrieval . 1923–1933. [25] Aixin Liu, Bei Feng, Bing Xue, Bingxuan Wang, Bochao Wu, Chengda Lu, Chenggang Zhao, Chengqi Deng, Chenyu Zhang, Chong Ruan, et al. 2024. Deepseek-v3 technical report. arXiv preprint arXiv:2412.19437 (2024). [26] Chengyi Liu, Xiao Chen, Shijie Wang, Wenqi Fan, and Qing Li. 2026. Continuous-time Discrete-space Diffusion Model for Recommendation. In 
+
+Proceedings of the Nineteenth ACM International Conference on Web Search and Data Mining . 406–415. [27] Enze Liu, Bowen Zheng, Cheng Ling, Lantao Hu, Han Li, and Wayne Xin Zhao. 2025. Generative recommender with end-to-end learnable item tokenization. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 729–739. [28] Zhao Liu, Yichen Zhu, Yiqing Yang, Xiao Lv, Guoping Tang, Rui Huang, Qiang Luo, Ruiming Tang, and Guorui Zhou. 2026. Diffgrm: Diffusion-based generative recommendation model. In Proceedings of the ACM Web Conference 2026 . 5853–5864. [29] Ilya Loshchilov and Frank Hutter. 2017. Decoupled weight decay regularization. arXiv preprint arXiv:1711.05101 (2017). [30] Jianmo Ni, Gustavo Hernandez Abrego, Noah Constant, Ji Ma, Keith Hall, Daniel Cer, and Yinfei Yang. 2022. Sentence-t5: Scalable sentence encoders from pre-trained text-to-text models. In Findings of the association for computational linguistics: ACL 2022 . 1864–1874. [31] Shen Nie, Fengqi Zhu, Zebin You, Xiaolu Zhang, Jingyang Ou, Jun Hu, Jun Zhou, Yankai Lin, Ji-Rong Wen, and Chongxuan Li. 2025. Large language diffusion models. arXiv preprint arXiv:2502.09992 (2025). [32] Apurva Pathak, Kshitiz Gupta, and Julian McAuley. 2017. Generating and personalizing bundle recommendations on steam. In Proceedings of the 40th international ACM SIGIR conference on research and development in information retrieval . 1073–1076. [33] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, et al. 2023. Recommender systems with generative retrieval. Advances in Neural Information Processing Systems 36 (2023), 10299–10315. [34] Jiaxin Shi, Kehang Han, Zhe Wang, Arnaud Doucet, and Michalis Titsias. 2024. Simplified and generalized masked diffusion for discrete data. 
+
+Advances in neural information processing systems 37 (2024), 103131–103167. [35] Teng Shi, Chenglei Shen, Weijie Yu, Shen Nie, Chongxuan Li, Xiao Zhang, Ming He, Yan Han, and Jun Xu. 2025. LLaDA-Rec: Discrete Diffusion for Parallel Semantic ID Generation in Generative Recommendation. arXiv preprint arXiv:2511.06254 (2025). [36] Zihua Si, Zhongxiang Sun, Jiale Chen, Guozhang Chen, Xiaoxue Zang, Kai Zheng, Yang Song, Xiao Zhang, Jun Xu, and Kun Gai. 2024. Generative retrieval with semantic tree-structured identifiers and contrastive learning. In Proceedings of the 2024 Annual International ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region . 154–163. [37] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential recommendation with bidirectional encoder representations from transformer. In Proceedings of the 28th ACM international conference on information and knowledge management .1441–1450. [38] Jiakai Tang, Sunhao Dai, Teng Shi, Jun Xu, Xu Chen, Wen Chen, Jian Wu, and Yuning Jiang. 2025. Think before recommend: Unleashing the latent reasoning power for sequential recommendation. arXiv preprint arXiv:2503.22675 (2025). [39] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable item tokenization for generative recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 2400–2409. [40] Wenjie Wang, Yiyan Xu, Fuli Feng, Xinyu Lin, Xiangnan He, and Tat-Seng Chua. 2023. Diffusion recommender model. In Proceedings of the 46th international ACM SIGIR conference on research and development in information retrieval . 832–841. [41] Ye Wang, Jiahao Xun, Minjie Hong, Jieming Zhu, Tao Jin, Wang Lin, Haoyuan Li, Linjun Li, Yan Xia, Zhou Zhao, et al. 2024. Eager: Two-stream generative recommender with behavior-semantic collaboration. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and 
+
+Manuscript submitted to ACM Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation23 
+
+Data Mining . 3245–3254. [42] Longtao Xiao, Haozhao Wang, Cheng Wang, Linfei Ji, Yifan Wang, Jieming Zhu, Zhenhua Dong, Rui Zhang, and Ruixuan Li. 2025. Unger: Generative recommendation with a unified code via semantic and collaborative integration. ACM Transactions on Information Systems 44, 2 (2025), 1–31. [43] Zhihui Xie, Jiacheng Ye, Lin Zheng, Jiahui Gao, Jingwei Dong, Zirui Wu, Xueliang Zhao, Shansan Gong, Xin Jiang, Zhenguo Li, et al. 2025. Dream-coder 7b: An open diffusion language model for code. arXiv preprint arXiv:2509.01142 (2025). [44] An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, et al. 2025. Qwen3 technical report. arXiv preprint arXiv:2505.09388 (2025). [45] Ling Yang, Ye Tian, Bowen Li, Xinchen Zhang, Ke Shen, Yunhai Tong, and Mengdi Wang. 2025. Mmada: Multimodal large diffusion language models. 
+
+arXiv preprint arXiv:2505.15809 (2025). [46] Ling Yang, Zhilong Zhang, Yang Song, Shenda Hong, Runsheng Xu, Yue Zhao, Wentao Zhang, Bin Cui, and Ming-Hsuan Yang. 2023. Diffusion models: A comprehensive survey of methods and applications. ACM computing surveys 56, 4 (2023), 1–39. [47] Zhengyi Yang, Jiancan Wu, Zhicai Wang, Xiang Wang, Yancheng Yuan, and Xiangnan He. 2023. Generate what you prefer: Reshaping sequential recommendation via guided diffusion. Advances in Neural Information Processing Systems 36 (2023), 24247–24261. [48] Jiacheng Ye, Shansan Gong, Jiahui Gao, Junming Fan, Shuang Wu, Wei Bi, Haoli Bai, Lifeng Shang, and Lingpeng Kong. 2025. Dream-VL & Dream-VLA: Open Vision-Language and Vision-Language-Action Models with Diffusion Language Model Backbone. arXiv preprint arXiv:2512.22615 
+
+(2025). [49] Jiacheng Ye, Zhihui Xie, Lin Zheng, Jiahui Gao, Zirui Wu, Xin Jiang, Zhenguo Li, and Lingpeng Kong. 2025. Dream 7b: Diffusion large language models. arXiv preprint arXiv:2508.15487 (2025). [50] Zhenrui Yue, Yueqi Wang, Zhankui He, Huimin Zeng, Julian McAuley, and Dong Wang. 2024. Linear recurrent units for sequential recommendation. In Proceedings of the 17th ACM international conference on web search and data mining . 930–938. [51] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhaojie Gong, Fangda Gu, Michael He, et al. 2024. Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations. arXiv preprint arXiv:2402.17152 (2024). [52] Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, et al. 2023. A survey of large language models. arXiv preprint arXiv:2303.18223 1, 2 (2023). [53] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. 2024. Adapting large language models by integrating collaborative semantics for recommendation. In 2024 IEEE 40th International Conference on Data Engineering (ICDE) . IEEE, 1435–1448. [54] Kun Zhou, Hui Yu, Wayne Xin Zhao, and Ji-Rong Wen. 2022. Filter-enhanced MLP is all you need for sequential recommendation. In Proceedings of the ACM web conference 2022 . 2388–2399. [55] Fengqi Zhu, Rongzhen Wang, Shen Nie, Xiaolu Zhang, Chunwei Wu, Jun Hu, Jun Zhou, Jianfei Chen, Yankai Lin, Ji-Rong Wen, et al. 2025. LLaDA 1.5: Variance-Reduced Preference Optimization for Large Language Diffusion Models. arXiv preprint arXiv:2505.19223 (2025). Manuscript submitted to ACM

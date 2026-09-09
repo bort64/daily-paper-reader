@@ -1,0 +1,1016 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-09T12:46:15.174341+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 24,
+    "deep_cap": 6,
+    "deep_selected": 13,
+    "quick_candidates": 19,
+    "quick_skim_target": 11,
+    "quick_selected": 11
+  },
+  "deep_dive": [
+    {
+      "id": "2608.17613v1",
+      "source": "arxiv",
+      "title": "Once Generated, Ranked: End-to-End Generative Slate Recommendation with Unified Semantic-Collaborative IDs",
+      "abstract": "Slate recommendation treats a slate rather than an individual item as the recommendation unit, requiring joint optimization of item interactions and slate utility. Existing approaches typically separate candidate generation from ranking and restrict optimization to retrieved candidates. Generative recommendation with Semantic IDs (SIDs) offers a path to end-to-end recommendation, but existing SID construction often lacks recommendation-aware semantics and effective local collaborative signals, while next-token prediction is misaligned with slate-level objectives. We propose OGR, an end-to-end framework that directly generates ordered slates-\"Once Generated, Ranked.\" OGR first introduces TUSID, which adaptively fuses item-specific semantic and local collaborative information into hierarchical SIDs. It then uses list-wise preference planning and pipelined position-wise SID decoding to model global preferences and inter-item dependencies while generating ordered slates. We further propose SPA, a reward-guided conservative policy optimization method that aligns generated slates with user preferences beyond likelihood imitation. Offline experiments show that OGR outperforms representative baselines, with 48.2% and 27.2% relative NDCG@5 gains on industrial and public datasets, respectively. Online A/B testing on Kuaishou further yields a 1.120% improvement in Effective Views.",
+      "authors": [
+        "Yang Hu",
+        "Jiayi Guo",
+        "Jingui Ma",
+        "Ning Li",
+        "Jiangling Qin",
+        "Yanming Li",
+        "Yang Deng",
+        "Xiaoshuang Chen",
+        "Kaiqiao Zhan"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.SI"
+      ],
+      "published": "2026-08-18T10:24:09+00:00",
+      "link": "https://arxiv.org/pdf/2608.17613v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 10.0,
+      "llm_evidence_en": "end-to-end generative slate recommendation directly generates ordered item lists",
+      "llm_evidence_cn": "端到端生成式Slate推荐，直接生成有序条目列表",
+      "llm_evidence": "端到端生成式Slate推荐，直接生成有序条目列表",
+      "canonical_evidence": "端到端生成式Slate推荐，直接生成有序条目列表",
+      "llm_tldr_en": "OGR directly generates ordered recommendation slates end-to-end. It builds TUSID to fuse recommendation-aware semantics with local collaborative signals and aligns generation with slate-level objectives, avoiding the candidate-restricted two-stage optimization.",
+      "llm_tldr_cn": "现有推荐系统常将候选生成与排序分离，且只优化已召回的子集，难以联合优化条目交互和列表效用。论文提出OGR端到端框架，直接生成有序推荐列表，并引入统一语义-协同ID TUSID来融合推荐感知的语义与局部协同信号，使自回归目标与列表级目标对齐。实验表明该方式能够一次性完成列表生成与排序，避免两阶段优化带来的信息损失。该工作将生成式推荐从单条目标推进到整张Slate的端到端优化。",
+      "llm_tldr": "现有推荐系统常将候选生成与排序分离，且只优化已召回的子集，难以联合优化条目交互和列表效用。论文提出OGR端到端框架，直接生成有序推荐列表，并引入统一语义-协同ID TUSID来融合推荐感知的语义与局部协同信号，使自回归目标与列表级目标对齐。实验表明该方式能够一次性完成列表生成与排序，避免两阶段优化带来的信息损失。该工作将生成式推荐从单条目标推进到整张Slate的端到端优化。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.10929v1",
+      "source": "arxiv",
+      "title": "FedCGR: Federated Cross-Domain Generative Recommendation",
+      "abstract": "Cross-domain recommendation (CDR) transfers preference knowledge across related domains, but federated deployment makes cross-domain alignment difficult because the behavioral anchors that align item spaces, such as overlapping users and shared interaction signals, are often sparse, unavailable, or privacy-sensitive across clients. To address this tension, we revisit federated CDR as generation over a stable semantic item language. By representing items as discrete semantic ID (SID) sequences derived from public item-side metadata, cross-domain item alignment is induced by a shared vocabulary rather than by exchanging private interactions or aligning domain-specific embeddings. Directly federating SID-based generators, however, introduces two design constraints: the SID tokenizer must remain fixed to preserve cross-client token consistency, which creates a semantic-only bottleneck because local collaborative filtering (CF) signals cannot be globally shared or aligned; meanwhile, standard federated averaging can cause negative transfer under domain heterogeneity. To overcome these constraints, we propose FedCGR, a federated generative CDR framework that keeps the item language stable and makes adaptation explicit. FedCGR injects local CF evidence through a reliability-aware semantic interface and trains a prototype-personalized generator that selectively aggregates shared parameters according to domain relatedness while keeping domain-specific quantities local. Experiments on six Amazon cross-domain scenarios show that FedCGR consistently outperforms federated generative baselines and achieves competitive performance against strong sequential and federated CDR methods under both full-ranking and sampled evaluation protocols.",
+      "authors": [
+        "Zhuodong Liu",
+        "Hugen Lv",
+        "Xiangyu Li",
+        "Bohan Guo",
+        "Peiyu Hu"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-08-11T13:58:55+00:00",
+      "link": "https://arxiv.org/pdf/2608.10929v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Federated cross-domain generative recommendation that autoregressively generates discrete semantic IDs derived from public item metadata",
+      "llm_evidence_cn": "联邦跨域生成式推荐，用共享语义ID语言实现物品跨域对齐并保护隐私",
+      "llm_evidence": "联邦跨域生成式推荐，用共享语义ID语言实现物品跨域对齐并保护隐私",
+      "canonical_evidence": "联邦跨域生成式推荐，用共享语义ID语言实现物品跨域对齐并保护隐私",
+      "llm_tldr_en": "FedCGR revisits federated cross-domain recommendation as generation over a stable semantic item language, using discrete semantic ID sequences from public item-side metadata to align item spaces through a shared vocabulary and federating SID-based generators without exchanging private interactions.",
+      "llm_tldr_cn": "跨域推荐常依赖重叠用户或共享交互来对齐物品空间，而联邦部署下这些行为锚点稀疏且隐私敏感。论文提出FedCGR，将联邦跨域推荐重新定义为在共享物品语义语言上的生成问题：基于公开物品元数据构造离散语义ID序列，使跨域物品通过共享词典自然对齐；同时处理联邦化SID生成器带来的两个设计约束。该方法避免交换隐私交互或对齐领域嵌入，在保护隐私的同时实现跨域生成式推荐。",
+      "llm_tldr": "跨域推荐常依赖重叠用户或共享交互来对齐物品空间，而联邦部署下这些行为锚点稀疏且隐私敏感。论文提出FedCGR，将联邦跨域推荐重新定义为在共享物品语义语言上的生成问题：基于公开物品元数据构造离散语义ID序列，使跨域物品通过共享词典自然对齐；同时处理联邦化SID生成器带来的两个设计约束。该方法避免交换隐私交互或对齐领域嵌入，在保护隐私的同时实现跨域生成式推荐。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.11980v2",
+      "source": "arxiv",
+      "title": "Learning from Unreachable Rewards: Hint-Conditioned Reinforcement Learning for Generative Recommendation",
+      "abstract": "Semantic-ID generative recommenders represent each item as a short sequence of discrete semantic tokens and predict the next item by autoregressively generating this token sequence. This paradigm enables a unified generation interface for item IDs, histories, and item text, but it also creates a structured optimization bottleneck during reward-based post-training: when an early semantic token enters the wrong branch of the item-token space, finite rollout groups rarely reach the ground-truth item, so group-relative optimization receives identical zero rewards and produces no useful advantage. We propose Hint-Conditioned Generative Recommendation (HCGRec), a semantic-ID generative recommendation framework that recovers learning signal for such hard training instances. HCGRec diagnoses each instance with checkpoint rollouts and supplies a minimal target-prefix hint only when the current generator cannot reach the correct item. The model then generates the unhinted suffix under the hinted semantic branch, turning zero-reward groups into informative comparisons over item-token completions. Hinting also changes token identity: hinted prefix tokens are oracle-provided item context, while unhinted suffix tokens are sampled generation actions. We therefore introduce hint-aware credit decomposition, using supervised learning to preserve item-semantic and prefix-structure alignment for hinted tokens and GRPO to optimize the sampled suffix. Experiments on sequential recommendation benchmarks show that HCGRec substantially improves over supervised fine-tuning and vanilla reward-based post-training, while reducing zero-advantage training samples from over 70% to below 20%. The code is accessible at https://github.com/WncFht/GRec.",
+      "authors": [
+        "Kangning Zhang",
+        "Haotian Fang",
+        "Xukun Luo",
+        "Hao Yin",
+        "Yang Gao",
+        "Peng Yan",
+        "Weiwen Liu",
+        "Weinan Zhang",
+        "Yong Yu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-12T12:13:08+00:00",
+      "link": "https://arxiv.org/pdf/2608.11980v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Semantic-ID generative recommender autoregressively generates next-item token sequences with hint-conditioned RL to solve the reward bottleneck",
+      "llm_evidence_cn": "语义ID生成式推荐自回归生成下一物品Token序列，并用提示条件强化学习解决奖励不可达瓶颈",
+      "llm_evidence": "语义ID生成式推荐自回归生成下一物品Token序列，并用提示条件强化学习解决奖励不可达瓶颈",
+      "canonical_evidence": "语义ID生成式推荐自回归生成下一物品Token序列，并用提示条件强化学习解决奖励不可达瓶颈",
+      "llm_tldr_en": "HCGRec tackles zero-reward failure in reward-based post-training of semantic-ID generative recommenders by supplying hints that recover useful learning signal under unreachable ground-truth item rollouts.",
+      "llm_tldr_cn": "语义ID生成式推荐将物品表示为离散Token并自回归生成下一个物品，但在奖励后训练中早期Token走错分支会导致有限的轨迹组难以达到真实物品，群体相对优化收到全零奖励而失效。论文提出提示条件生成式推荐HCGRec，利用提示信息恢复结构化优化信号，指导模型在不可达奖励下仍能进行有效强化学习。该方法缓解了语义ID生成式推荐在后期微调中的梯度贫瘠问题，提升生成式推荐的稳定性和精度。",
+      "llm_tldr": "语义ID生成式推荐将物品表示为离散Token并自回归生成下一个物品，但在奖励后训练中早期Token走错分支会导致有限的轨迹组难以达到真实物品，群体相对优化收到全零奖励而失效。论文提出提示条件生成式推荐HCGRec，利用提示信息恢复结构化优化信号，指导模型在不可达奖励下仍能进行有效强化学习。该方法缓解了语义ID生成式推荐在后期微调中的梯度贫瘠问题，提升生成式推荐的稳定性和精度。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.14011v1",
+      "source": "arxiv",
+      "title": "EchoRec: Multi-Item Prediction-Empowered Generative Recommendation via Cycle-Consistent Preference Alignment",
+      "abstract": "Generative recommendation autoregressively generates the semantic IDs of the target item, unifying preference modeling and index retrieval within the shared token space. Recent attempts have introduced Multi-Token Prediction (MTP) into this field, yet they primarily inherit its efficiency merit, leaving its potential as dense supervision unexplored. Unlocking this potential hinges on whether future behaviors qualify as informative supervision. Our analysis reveals that future behaviors carry a semantic echo of the current one far above that of random pairs, which nevertheless decays along horizons under intent transitions, making them informative yet order-dependent signals. Motivated by this, we propose EchoRec, which empowers MTP with cycle-consistent holistic preference alignment across multi-horizon for generative recommendation. It comprises two synergistic modules. Horizon-aware Preference Generation (HPG) sequentially chains lightweight auxiliary branches upon the base recommender, where each branch conditions on its predecessor to respect preference evolution. Verifiable Holistic-Preference Alignment (VHA) further consolidates them into the holistic preference and echoes it back through cycle-consistent projectors to suppress spurious alignment, with theoretical guarantees that exclude the rank-collapse form of spurious alignment under an invertible transport, enabling the holistic preference to be retained in the decoding representation. All auxiliary components serve as disposable scaffolding discarded at inference, introducing negligible online serving overhead. Extensive experiments on three datasets demonstrate the superiority of our EchoRec, together with its naturally acquired multi-item generation ability. Our code and datasets will be available upon acceptance.",
+      "authors": [
+        "Haokai Ma",
+        "Aoqi Hu",
+        "Yueao Xing",
+        "Ruobing Xie",
+        "Yonghui Yang",
+        "Teng Tu",
+        "Lei Meng",
+        "Tat-Seng Chua"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-14T06:59:12+00:00",
+      "link": "https://arxiv.org/pdf/2608.14011v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Generative recommendation autoregressively produces semantic item IDs; EchoRec adds multi-item prediction empowered by cycle-consistent preference alignment, directly advancing next-item prediction",
+      "llm_evidence_cn": "生成式推荐自回归生成物品语义ID，EchoRec以循环一致偏好对齐增强多物品预测，直接推进下一项预测任务",
+      "llm_evidence": "生成式推荐自回归生成物品语义ID，EchoRec以循环一致偏好对齐增强多物品预测，直接推进下一项预测任务",
+      "canonical_evidence": "生成式推荐自回归生成物品语义ID，EchoRec以循环一致偏好对齐增强多物品预测，直接推进下一项预测任务",
+      "llm_tldr_en": "EchoRec exploits future-behavior echo as ordered dense supervision through cycle-consistent preference alignment, turning multi-token prediction in generative recommendation into an effective training signal.",
+      "llm_tldr_cn": "生成式推荐在共享Token空间自回归生成物品语义ID，引入多Token预测有助于提高效率，但其作为稠密监督的潜力未被挖掘。论文分析发现用户未来行为与当前物品存在显著语义回声，但又因意图转移而随距离衰减，适合作为有序训练信号。据此提出EchoRec，用循环一致偏好对齐把这些回声变成有效监督，增强多物品预测并统一偏好建模与索引检索，提升生成式推荐效果。",
+      "llm_tldr": "生成式推荐在共享Token空间自回归生成物品语义ID，引入多Token预测有助于提高效率，但其作为稠密监督的潜力未被挖掘。论文分析发现用户未来行为与当前物品存在显著语义回声，但又因意图转移而随距离衰减，适合作为有序训练信号。据此提出EchoRec，用循环一致偏好对齐把这些回声变成有效监督，增强多物品预测并统一偏好建模与索引检索，提升生成式推荐效果。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.16274v2",
+      "source": "arxiv",
+      "title": "Decoupled Temporal Encoding for Generative Recommendation",
+      "abstract": "Positional encoding is a fundamental component of Transformer-based generative recommendation models, where user histories are modeled as autoregressive item sequences. Most positional encoding methods are inherited from natural language processing and mainly represent discrete item order. However, recommendation sequences go beyond ordered lists, as timestamps and temporal effects also shape item relations. Our work is motivated by a real-world food delivery and instant retail recommendation system, where user behavior exhibits multi-level temporal regularities, including recency effects, meal-time peaks, weekday-weekend shifts, and promotion-driven traffic bursts. Existing methods partially address this issue through timestamp features, interval embeddings, decay functions, or attention biases, but they usually inject heterogeneous temporal signals through a unified representation or a single modeling pathway, making it difficult to distinguish broad temporal dynamics from local order cues. To address this limitation, we propose Decoupled Temporal Encoding (DTE), a lightweight framework for generative recommendation. DTE separates temporal dynamics from order information through two complementary modules: a personalized macro-temporal module that injects compact temporal primitives into item embeddings, and a time-gated micro-sequential module that introduces relative-order bias only when interactions are temporally dense. DTE is also parameter-efficient and deployment-friendly, allowing easy integration into existing systems.",
+      "authors": [
+        "Pengfei Jia",
+        "Jingjian Wang",
+        "Jingmao Li",
+        "Ge Zhang",
+        "Feng Shi"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-17T08:47:21+00:00",
+      "link": "https://arxiv.org/pdf/2608.16274v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Transformer-based generative recommendation with autoregressive item sequences and decoupled temporal encoding",
+      "llm_evidence_cn": "生成式推荐自回归项目序列的解耦时间编码方法",
+      "llm_evidence": "生成式推荐自回归项目序列的解耦时间编码方法",
+      "canonical_evidence": "生成式推荐自回归项目序列的解耦时间编码方法",
+      "llm_tldr_en": "This paper proposes decoupled temporal encoding for generative recommendation, decomposing time into multiple semantic captures beyond discrete item order, to handle recency, meal-time peaks, weekday/weekend patterns, and promotion bursts in autoregressive item prediction.",
+      "llm_tldr_cn": "针对Transformer类生成式推荐把用户行为仅当作离散顺序、无法表达外卖和即时零售中多层时间规律的问题，论文提出解耦时序编码。该设计将时间因素拆解为多组语义连续向量，在保持自回归项目顺序的同时刻画近因性、餐点峰值、工作日/周末切换以及促销冲击。在真实场景数据上验证了该方法对下一项目预测精度的改进。",
+      "llm_tldr": "针对Transformer类生成式推荐把用户行为仅当作离散顺序、无法表达外卖和即时零售中多层时间规律的问题，论文提出解耦时序编码。该设计将时间因素拆解为多组语义连续向量，在保持自回归项目顺序的同时刻画近因性、餐点峰值、工作日/周末切换以及促销冲击。在真实场景数据上验证了该方法对下一项目预测精度的改进。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.18606v2",
+      "source": "arxiv",
+      "title": "OneModel: A Unified Foundation for Platform-Scale Multi-Scenario Ranking",
+      "abstract": "Platform-scale recommender systems often span multiple business streams such as organic recommendation, advertising, and merchant services, where user behaviors form a continuous cross-stream trajectory. Maintaining separate ranking systems fragments user representations and increases engineering cost. We propose \\textbf{OneModel}, a unified framework for multi-stream final ranking. OneModel maps heterogeneous behaviors into shared event sequences, learns long-context user representations with an action-oriented backbone, and introduces \\emph{Scenario-aware Information Modulation} to balance cross-stream transfer and stream-specific specialization. For production deployment, OneModel further adopts stratified user representation, multi-objective training, and optimized online serving with feature decomposition, user feature prefetching, shared user-tower computation, and graph-level inference optimization. We deploy OneModel in production at \\emph{Xiaohongshu}, where it delivers consistent offline gains over strong baselines and scales favorably with context length and model capacity. Online A/B tests improve Time Spent by \\textbf{+0.33\\%} and Engagement by \\textbf{+1.25\\%} in Explore Feed, lift advertising value by \\textbf{+3.43\\%} and CTR by \\textbf{+8.18\\%} in Feed Advertising, and raise DGMV by \\textbf{+1.1867\\%} and GPM by \\textbf{+2.1585\\%} in Merchant Recommendation, validating unified multi-stream ranking as an effective production foundation.",
+      "authors": [
+        "Yinqi Zhang",
+        "Peiyu Hu",
+        "Yuntian Tang",
+        "Siying Gu",
+        "Jiahao Liang",
+        "Longxin Kou",
+        "Haiqing Hu",
+        "Shuman Zhuang",
+        "Yubin Xu",
+        "Chenggen Sun",
+        "Bin Ye",
+        "Donghui Xu",
+        "Zhaoyu Liu",
+        "Jiang Rong",
+        "Yuting Jia",
+        "Zhaokai Luo",
+        "Leilei Ma",
+        "Yiying Xie",
+        "Yao Hu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-19T06:50:47+00:00",
+      "link": "https://arxiv.org/pdf/2608.18606v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Unified platform-scale ranking spanning organic recommendation, advertising, and merchant flows",
+      "llm_evidence_cn": "平台级多场景统一排序，横跨自然推荐、广告与商家服务",
+      "llm_evidence": "平台级多场景统一排序，横跨自然推荐、广告与商家服务",
+      "canonical_evidence": "平台级多场景统一排序，横跨自然推荐、广告与商家服务",
+      "llm_tldr_en": "OneModel provides a unified framework for platform-scale multi-stream final ranking, converting cross-scenario behaviors into shared event sequences and using scenario-aware modulation to balance transfer and specialization while supporting production deployment strategies.",
+      "llm_tldr_cn": "针对平台级多业务流自然推荐、广告与商家服务各自独立排序造成用户表示割裂与工程成本高的问题，OneModel将异构行为统一编码为共享事件序列。动作导向骨干网络学习长上下文用户状态，场景感知信息调制则兼顾跨流迁移与场景特化。文中给出分层表示、多目标等生产手段，实现在超大规模多场景排序上用单一模型替代多套系统。",
+      "llm_tldr": "针对平台级多业务流自然推荐、广告与商家服务各自独立排序造成用户表示割裂与工程成本高的问题，OneModel将异构行为统一编码为共享事件序列。动作导向骨干网络学习长上下文用户状态，场景感知信息调制则兼顾跨流迁移与场景特化。文中给出分层表示、多目标等生产手段，实现在超大规模多场景排序上用单一模型替代多套系统。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "joint modeling and serving of search, advertising, and recommendation systems at scale",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.20611v1",
+      "source": "arxiv",
+      "title": "Difficulty-Aware Semantic-ID Optimization for Generative Recommendation",
+      "abstract": "Semantic-ID-based generative recommendation casts retrieval and ranking as autoregressive generation over hierarchical item identifiers. A common recipe is SFT followed by GRPO, yet vanilla GRPO is poorly matched to this tree-structured task. Under the frozen SFT checkpoint, the exact target is absent from the first 16 candidates of the 50-beam constrained ranking for many prompts, and in harder cases none of these candidates enters the target SID branch. This prompt-level diagnostic motivates a training concern: when on-policy GRPO groups are similarly target-missing, item-level rewards may produce weak or degenerate reward variation even if some candidates follow part of the target path. We propose Difficulty-Aware Semantic-ID Optimization (DASO), a tree-aware post-training method that addresses this failure mode as an online rollout-allocation problem. Instead of using fixed difficulty buckets or uniformly injecting ground-truth completions, DASO profiles each current rollout group by prefix-match depth, locates the bottleneck SID levels where candidates leave the target path, and reallocates a bounded portion of the group to prefix-guided completions while retaining raw rollouts for contrast. A SID-prefix reward provides graded credit, while an auxiliary SFT anchor mitigates regression on examples already solved by the SFT checkpoint. On the public benchmarks, DASO improves over MiniOneRec-style GRPO on 11 of 12 metrics and achieves the best result on 9 of 12 metrics; it also improves most level-wise recall metrics on the internal recommendation task.",
+      "authors": [
+        "Xin Yu",
+        "Stephen Li",
+        "Sina Aghaei",
+        "Zifan Zhu",
+        "Jiamu Bai",
+        "Guanjie Huang",
+        "Bo Peng",
+        "Yiyao Liu",
+        "Lingzhou Xue"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-08-20T23:20:36+00:00",
+      "link": "https://arxiv.org/pdf/2608.20611v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "difficulty-aware RL for autoregressive semantic-ID item generation in generative recommendation",
+      "llm_evidence_cn": "语义ID的自回归生成与RL优化，面向生成式推荐",
+      "llm_evidence": "语义ID的自回归生成与RL优化，面向生成式推荐",
+      "canonical_evidence": "语义ID的自回归生成与RL优化，面向生成式推荐",
+      "llm_tldr_en": "DASO adapts policy optimization to hard cases in semantic-ID generative recommendation, improving autoregressive ranking and retrieval.",
+      "llm_tldr_cn": "在采用语义ID的生成式推荐中，通常先SFT后再做GRPO强化学习，但vanilla GRPO并不匹配树状标识生成，硬样本上会出现目标路径缺失和奖励退化问题。由此提出难度感知的语义ID优化方法DASO，针对候选路径缺失的程度调整训练信号。该方法在生成式推荐任务上带来更优的检索命中与排序效果，也证明了生成式推荐需要专门适配的强化学习。",
+      "llm_tldr": "在采用语义ID的生成式推荐中，通常先SFT后再做GRPO强化学习，但vanilla GRPO并不匹配树状标识生成，硬样本上会出现目标路径缺失和奖励退化问题。由此提出难度感知的语义ID优化方法DASO，针对候选路径缺失的程度调整训练信号。该方法在生成式推荐任务上带来更优的检索命中与排序效果，也证明了生成式推荐需要专门适配的强化学习。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.21012v1",
+      "source": "arxiv",
+      "title": "From a Static Multi-Level Small Semantic Codebook to a Dynamic Single-Level Large Semantic Codebook for Generative Recommendation",
+      "abstract": "Generative recommendation represents each item with a sequence of discrete Semantic IDs (SIDs) and predicts the sequence to retrieve the next item. Typical systems use multi-level residual quantization, which increases autoregressive decoding cost and creates a large hierarchical space that may be sparsely occupied. Static codebooks also become misaligned with current traffic as new items arrive and exposure distributions change. We propose a single-level large semantic codebook that replaces multiple residual semantic codes with one semantic token while retaining a separate collaborative disambiguation token to reduce item collisions. We further introduce an exposure-aware dynamic update mechanism based on temporal weight decay, exponential moving-average center updates, and an exposure-weighted penalty on SID changes. We also develop an offline evaluation framework covering representation quality, code utilization, cluster load, full-SID collision, and temporal stability. On two public datasets, the two-level SID improves mean Recall@10 by 5.0%-8.8% and mean NDCG@10 by 4.1%-5.1% for OneRec-V1, and by 7.1%-8.7% and 3.8%-8.5%, respectively, for OneRec-V2. Dynamic updating provides further gains on KuaiRec. Across three serving architectures, the shorter SID reduces estimated autoregressive-decoding FLOPs by 47.93%-48.70% and increases single-card QPS by 28.57%-47.0%. A five-day online A/B test serving 2.5% of production traffic improves the primary consumption metric by 0.792%.",
+      "authors": [
+        "Tianlu Xie",
+        "Xin Ku",
+        "Mingjie Sun",
+        "Yunhao Sha",
+        "Lixiang Wang",
+        "Peng Wang",
+        "Yiyu Wang",
+        "Wenjin Wu",
+        "Zhaojie Liu",
+        "Peng Jiang",
+        "Wenwu Ou"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.LG"
+      ],
+      "published": "2026-08-21T11:58:44+00:00",
+      "link": "https://arxiv.org/pdf/2608.21012v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Semantic codebook design for generative recommendation: dynamic single-level large codebook replaces multi-level residual quantization",
+      "llm_evidence_cn": "生成式推荐码本设计：动态单级大语义码本替代多级残差量化码本",
+      "llm_evidence": "生成式推荐码本设计：动态单级大语义码本替代多级残差量化码本",
+      "canonical_evidence": "生成式推荐码本设计：动态单级大语义码本替代多级残差量化码本",
+      "llm_tldr_en": "This paper upgrades generative recommendation codebooks from static multi-level residual IDs to a dynamic single-level large semantic token plus collaborative disambiguation, reducing decoding steps and adapting to exposure distribution changes for better retrieval accuracy.",
+      "llm_tldr_cn": "针对生成式推荐中多级残差量化语义码本解码成本高、空间稀疏且静态码本难以适配新流量的问题，论文提出动态单级大语义码本。该方法将每个项目表示为一个语义token，并添加协同消歧token来缓解碰撞；码本根据曝光分布动态更新。实验显示相比静态多级码本，生成步数减少，对增量项目与分布漂移场景的检索稳定性提升。",
+      "llm_tldr": "针对生成式推荐中多级残差量化语义码本解码成本高、空间稀疏且静态码本难以适配新流量的问题，论文提出动态单级大语义码本。该方法将每个项目表示为一个语义token，并添加协同消歧token来缓解碰撞；码本根据曝光分布动态更新。实验显示相比静态多级码本，生成步数减少，对增量项目与分布漂移场景的检索稳定性提升。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.22734v1",
+      "source": "arxiv",
+      "title": "Rethinking Item Tokenization in Generative Recommenders: From Fixed Atoms to Semantic Subwords",
+      "abstract": "In generative recommender systems, items are typically tokenized into fixed-length semantic ID sequences for autoregressive next-item prediction. However, for user-context modeling, this fine-grained representation triggers Intra-item Attention Overload: excessive attention is spent on low-level intra-item dependencies rather than high-level inter-item behavioral transitions.   To address this, we propose Semantic Subword Tokenization (SST), which represents historical items as variable-length semantic subwords while preserving fixed-length target decoding. SST first applies Item-level Subword Tokenization (IST) to merge stable adjacent atom tokens into compact semantic subword tokens, thereby reducing intra-item reassembly in the encoder. It then introduces Behavior-induced Co-occurrence Augmentation (BCA) to inject coarse-grained semantic prefix transition signals, guiding the freed modeling capacity toward inter-item behavioral regularities. Extensive experiments on three public datasets and three generative recommender backbones show empirical improvements of SST over fixed-length and transferable variable-length SID baselines. Code is available at https://github.com/mxrcandy/Semantic-Subword-Tokenization.",
+      "authors": [
+        "Xinrui Miao",
+        "Mingjia Yin",
+        "Jiaqing Zhang",
+        "Wei Guo",
+        "Yong Liu",
+        "Yuyang Ye",
+        "Hao Wang",
+        "Enhong Chen"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-24T02:42:51+00:00",
+      "link": "https://arxiv.org/pdf/2608.22734v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "generative recommenders tokenize items into semantic IDs for autoregressive next-item prediction; item tokenization",
+      "llm_evidence_cn": "面向自回归下一项预测的条目词元化方案，改进固定长度语义ID",
+      "llm_evidence": "面向自回归下一项预测的条目词元化方案，改进固定长度语义ID",
+      "canonical_evidence": "面向自回归下一项预测的条目词元化方案，改进固定长度语义ID",
+      "llm_tldr_en": "Fixed-length semantic ID tokenization causes intra-item attention overload in generative recommenders. Semantic Subword Tokenization reduces history into variable-length subword tokens while keeping fixed-length target decoding, improving behavioral transition modeling.",
+      "llm_tldr_cn": "生成式推荐常把条目编码为定长语义ID，但细粒度表示导致注意力过度集中于条目内部依赖，削弱跨条目行为建模。为解决此问题，论文提出语义子词分词SST，将历史条目表示为可变长度语义子词，同时保持目标端定长解码。它通过条目级子词合并减少条目内重组注意力开销，从而强化用户行为序列的语义。实验验证该分词方式可提升生成式推荐器的交互建模效果。",
+      "llm_tldr": "生成式推荐常把条目编码为定长语义ID，但细粒度表示导致注意力过度集中于条目内部依赖，削弱跨条目行为建模。为解决此问题，论文提出语义子词分词SST，将历史条目表示为可变长度语义子词，同时保持目标端定长解码。它通过条目级子词合并减少条目内重组注意力开销，从而强化用户行为序列的语义。实验验证该分词方式可提升生成式推荐器的交互建模效果。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.24034v1",
+      "source": "arxiv",
+      "title": "TAGR: Temporally Adaptive Generative Recommendation for Industrial Live-Streaming Advertising",
+      "abstract": "Live-streaming advertising is an important monetization channel on short-video and e-commerce platforms, where rapidly changing live content, promoted products, and user feedback impose strong freshness requirements on recommendation models. Existing generative recommenders designed for static domains fail at three levels: static semantic IDs (SID) cannot track evolving live ads; single-scale behavior modeling misses shifting intent; preference optimization conflicts between fresh on-policy feedback and training stability. We propose TAGR, a generative recommendation framework with temporal adaptation at three levels: live-ad tokenization, user intent modeling, and preference alignment. At the token level, Live Semantic-Collaborative ID (LSID) periodically refreshes each active ad's SID based on its current live scene and promoted products, while retaining a stable hierarchical token vocabulary for autoregressive generation. At the intent level, Intent-Aware Generation (IAG) models live-room entry histories at multiple temporal granularities as the primary intent sequence, keeps auxiliary behaviors as separate inputs, and weights next-token prediction (NTP) using post-request intent evidence and business value. At the alignment level, Intermittent On-Policy Preference Optimization (IOPO) periodically samples fresh candidate groups from the current policy and performs behavior- and value-aligned preference updates interleaved with supervised NTP maintenance to preserve learned behavior distribution. Deployed on a large-scale e-commerce live-stream advertising platform, TAGR improves live-room entry and shopping-cart click rates by 8.5% and 7.4%, respectively, and achieves a 16.1% revenue lift over the production baseline. These results demonstrate the effectiveness and industrial viability of temporally adaptive generative recommendation for live-stream advertising.",
+      "authors": [
+        "Wencai Ye",
+        "Guangyi Liu",
+        "Chaoyi Wang",
+        "Wenbin Luo",
+        "Shengyu Wang",
+        "Mingjie Sun",
+        "Peng Wang",
+        "Quanming Yao",
+        "Wenjin Wu",
+        "Peng Jiang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-25T03:47:52+00:00",
+      "link": "https://arxiv.org/pdf/2608.24034v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Generative recommendation framework with temporal adaptation for industrial live-streaming advertising",
+      "llm_evidence_cn": "面向工业直播广告的生成式推荐，在广告标记、意图建模和偏好对齐三层进行时间自适应",
+      "llm_evidence": "面向工业直播广告的生成式推荐，在广告标记、意图建模和偏好对齐三层进行时间自适应",
+      "canonical_evidence": "面向工业直播广告的生成式推荐，在广告标记、意图建模和偏好对齐三层进行时间自适应",
+      "llm_tldr_en": "TAGR is a generative recommendation framework for live-streaming advertising that introduces temporal adaptation at tokenization, user intent modeling, and preference alignment levels, using live semantic-collaborative IDs and multi-scale behavior modeling to track fast-changing ads and user intent.",
+      "llm_tldr_cn": "直播广告中的内容、推广品和用户反馈变化快速，现有面向静态领域的生成式推荐难以满足时效要求。TAGR在广告标记层引入直播语义协作ID以追踪实时广告，在意图层采用多尺度行为建模捕捉用户意图漂移，在偏好层设计兼顾在线反馈与稳定性的一致性优化。实验证明该框架能改善工业直播广告推荐的新鲜度与效果，为动态极强的广告推荐场景提供了时间自适应生成式方案。",
+      "llm_tldr": "直播广告中的内容、推广品和用户反馈变化快速，现有面向静态领域的生成式推荐难以满足时效要求。TAGR在广告标记层引入直播语义协作ID以追踪实时广告，在意图层采用多尺度行为建模捕捉用户意图漂移，在偏好层设计兼顾在线反馈与稳定性的一致性优化。实验证明该框架能改善工业直播广告推荐的新鲜度与效果，为动态极强的广告推荐场景提供了时间自适应生成式方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative models for ad retrieval, ad ranking, and sponsored content generation",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.25528v1",
+      "source": "arxiv",
+      "title": "TransRetrieval: Scaling Up Transformer-Based Retrieval for Industrial Recommendation",
+      "abstract": "Applying scaling laws to recommendation retrieval is hindered by feature heterogeneity: naively stacking Transformer layers yields diminishing returns because heterogeneous fields produce severe token-norm divergence. We present TransRetrieval, a Transformer-based retrieval framework that scales with both computational budget and cross-domain data. The key enabler is (1) weighted average aggregation, which restores the homogeneous-token assumption Transformers rely on. Building on this, we introduce (2) target token compression that cuts per-candidate FLOPs by 85% while preserving cross-attention expressiveness, and (3) position-style domain embeddings that unify multiple domains at negligible additional cost, turning cross-domain data into a scaling asset. On a 40-billion-interaction industrial dataset and the public KuaiRand benchmark, scaling compute from 0.1 to 2 MFLOPs per target yields +19.3/+22.2 pt Recall@2000, confirming robust log-linear scaling. In online A/B tests, TransRetrieval lifts platform revenue by 2.53% under the same end-to-end latency constraint as the production baseline.",
+      "authors": [
+        "Zhifei Zheng",
+        "Yunfei Liu",
+        "Bin Liu",
+        "Qiren Zhu",
+        "Hanbing Liu",
+        "Ziru Xu",
+        "Han Zhu",
+        "Jian Xu",
+        "Qi Qi",
+        "Bo Zheng"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-26T08:35:16+00:00",
+      "link": "https://arxiv.org/pdf/2608.25528v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "applies scaling laws to industrial recommendation retrieval, scaling Transformer with compute and data",
+      "llm_evidence_cn": "将缩放定律引入推荐召回，提出可随计算和跨域数据扩展的Transformer检索",
+      "llm_evidence": "将缩放定律引入推荐召回，提出可随计算和跨域数据扩展的Transformer检索",
+      "canonical_evidence": "将缩放定律引入推荐召回，提出可随计算和跨域数据扩展的Transformer检索",
+      "llm_tldr_en": "TransRetrieval scales Transformer-based retrieval for industrial recommendation by restoring the homogeneous-token assumption with weighted average aggregation, compressing target tokens to cut FLOPs by 85 percent, and unifying multiple domains via position-style embeddings.",
+      "llm_tldr_cn": "针对推荐检索中特征异构导致Transformer堆叠收益递减的问题，TransRetrieval提出加权平均聚合恢复同质化词元假设，并通过目标词元压缩降低85%的单候选计算量，用位置式域嵌入低成本统一多域数据。该框架能随计算预算和跨域数据规模有效扩展，在工业推荐场景验证了类缩放定律行为。这为规模化生成式或Transformer推荐检索提供了可行设计。",
+      "llm_tldr": "针对推荐检索中特征异构导致Transformer堆叠收益递减的问题，TransRetrieval提出加权平均聚合恢复同质化词元假设，并通过目标词元压缩降低85%的单候选计算量，用位置式域嵌入低成本统一多域数据。该框架能随计算预算和跨域数据规模有效扩展，在工业推荐场景验证了类缩放定律行为。这为规模化生成式或Transformer推荐检索提供了可行设计。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "empirical scaling laws for recommender systems describing data size, model capacity, and ranking quality",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.27382v2",
+      "source": "arxiv",
+      "title": "Token-Level Advertising",
+      "abstract": "Generative AI is transforming how people access information, challenging traditional advertising mechanisms built around predefined slots. Towards generation-native advertising, we propose the Latent Advertiser Mixture Auction (LAMA), a token-level advertising mechanism that embeds advertiser influence directly into the generation process. Advertisers report local continuation values that induce advertiser-specific next-token policies, from which the platform decodes through a latent mixture while updating an allocation posterior. We show that LAMA satisfies Markov DSIC and IR, and achieves near-optimal KL-regularized welfare. We further develop a learning-based implementation that reconstructs the required reports online from learned local advantages and root values. Proof-of-concept experiments on real-world commercial-search query splits show that LAMA improves platform welfare and revenue while maintaining user-facing response quality, providing initial evidence for the feasibility of generation-native advertising.",
+      "authors": [
+        "Hanbing Liu",
+        "Bowei Zhang",
+        "Changyuan Yu",
+        "Yinyu Ye",
+        "Qi Qi"
+      ],
+      "primary_category": "cs.GT",
+      "categories": [
+        "cs.GT",
+        "cs.LG"
+      ],
+      "published": "2026-08-27T17:18:27+00:00",
+      "link": "https://arxiv.org/pdf/2608.27382v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Token-level advertising mechanism embedding advertiser influence into generative AI output",
+      "llm_evidence_cn": "在生成过程token层面嵌入广告主影响的广告机制",
+      "llm_evidence": "在生成过程token层面嵌入广告主影响的广告机制",
+      "canonical_evidence": "在生成过程token层面嵌入广告主影响的广告机制",
+      "llm_tldr_en": "LAMA is a token-level auction mechanism for generation-native advertising: advertisers report continuation values and induce their own next-token policies; platform decodes via latent mixture while guaranteeing Markov DSIC/IR and near-optimal KL-regularized welfare.",
+      "llm_tldr_cn": "针对生成式AI正成为信息入口、传统固定版位广告不再适用的问题，本工作提出token级广告机制LAMA。广告主上报局部延续价值，平台得到各自的下一token策略，再以潜在混合方式解码生成并更新分配后验。理论证明其满足马尔可夫激励相容和个体理性，并接近KL正则福利最优；概念实验验证了该机制的可行性。",
+      "llm_tldr": "针对生成式AI正成为信息入口、传统固定版位广告不再适用的问题，本工作提出token级广告机制LAMA。广告主上报局部延续价值，平台得到各自的下一token策略，再以潜在混合方式解码生成并更新分配后验。理论证明其满足马尔可夫激励相容和个体理性，并接近KL正则福利最优；概念实验验证了该机制的可行性。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative models for ad retrieval, ad ranking, and sponsored content generation",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2608.29179v1",
+      "source": "arxiv",
+      "title": "TAAL: Mitigating Early Beam Pruning in Generative Recommendation via Temporal Autoregressive Alignment",
+      "abstract": "Generative recommendation encodes items as hierarchical semantic identifiers (SIDs) and retrieves the next item through autoregressive decoding. Standard next-token prediction, however, does not explicitly cover the multimodal transitions present in interaction sequences, leaving the ground-truth SID vulnerable to irreversible pruning at early beam-search branches. Across three public benchmarks, we find that 91.9\\%--96.6\\% of retrieval failures occur within the first two decoding steps. We therefore propose Temporal Autoregressive Alignment (TAAL). During training, TAAL constructs a joint $(c_1,c_2)$ soft target from historical transitions and aligns the early-prefix distribution with a forward KL objective. During inference, it calibrates candidate scores with pointwise mutual information (PMI) to reduce the influence of globally frequent prefixes. On Amazon Beauty, Instruments, and Yelp, TAAL improves NDCG@10 over the standard baseline by 39.5\\%, 6.7\\%, and 28.6\\%, respectively, while increasing full-SID survival by 3.9\\%--16.6\\%. Beam-width analysis further shows that the relative survival gain grows as the beam narrows, reaching 39.4\\% at $B=5$.",
+      "authors": [
+        "Lianjie Li",
+        "Zhiying Tu",
+        "Dianhui Chu",
+        "Hongliang Sun"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-29T10:11:47+00:00",
+      "link": "https://arxiv.org/pdf/2608.29179v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "generative recommendation with semantic IDs and autoregressive next-item decoding",
+      "llm_evidence_cn": "基于语义ID的自回归下一项生成的生成式推荐",
+      "llm_evidence": "基于语义ID的自回归下一项生成的生成式推荐",
+      "canonical_evidence": "基于语义ID的自回归下一项生成的生成式推荐",
+      "llm_tldr_en": "In semantic-ID generative recommenders, most retrieval failures happen in early beam decoding. TAAL constructs joint (c1,c2) soft targets from historical transitions and aligns early-prefix distributions with forward KL to mitigate irreversible pruning.",
+      "llm_tldr_cn": "在采用层次化语义ID的生成式推荐中，标准下一个词预测易导致真实条目在束搜索早期被不可逆剪掉，实验发现91.9%到96.6%的检索失败发生在前两步。为此提出时间自回归对齐TAAL，利用历史交互构造联合软标签并对齐前缀分布，在推理时修正早期束分支。多个公开基准上的结果表明它能显著增加生成检索的命中机会。该方法直接改善自回归推荐生成的质量。",
+      "llm_tldr": "在采用层次化语义ID的生成式推荐中，标准下一个词预测易导致真实条目在束搜索早期被不可逆剪掉，实验发现91.9%到96.6%的检索失败发生在前两步。为此提出时间自回归对齐TAAL，利用历史交互构造联合软标签并对齐前缀分布，在推理时修正早期束分支。多个公开基准上的结果表明它能显著增加生成检索的命中机会。该方法直接改善自回归推荐生成的质量。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2608.10535v1",
+      "source": "arxiv",
+      "title": "Multi Interests for Joint Search-Recommendation Modeling",
+      "abstract": "Search and recommendation are crucial for understanding user preferences. More and more studies are attempting to jointly model search behavior and recommendation behavior, by integrating user active search and passive recommendation behavior data to better mine user preferences. However, although existing cross-domain unified modeling frameworks can effectively compensate for the differences in behavior between domains, they overlook the expression of interests in different scenarios under mixed sequences. In this study, we propose a multi-interest-based mixed sequential modeling framework MIJSR, which performs multi-interest mining and adaptive integration on search recommendation mixed sequences from both structural and semantic perspectives. Specifically, our model can be roughly divided into three modules: cross-domain behavior fusion, multi-interest mining, and multi-task prediction. Firstly, we align the representations of query and item through contrastive learning training. Then, we extract the multi interests of the mixed behavior sequence from both structural and semantic perspectives. Structurally, we extract search interests, recommendation interests, and cross interests through subsequence partitioning and mask settings; In terms of semantics, we use the semantic information of queries for clustering and perform semantic segmentation on mixed sequences to construct semantic multi interests. Finally, the adaptive fusion of multiple interests is combined with other side information to use a progressive layered extraction model for multi-task prediction. Extensive experiments on two open-source datasets have shown that our model can further enhance its accuracy in search and recommendation by extracting users' multi interests at a fine-grained level. Codes are available at https://github.com/pxcstart/MIJSR.",
+      "authors": [
+        "Xiangchen Pan",
+        "Wei Wei",
+        "Huakang Niu",
+        "Zhicong Cheng"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-11T06:15:43+00:00",
+      "link": "https://arxiv.org/pdf/2608.10535v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "jointly models user search and recommendation behavior in mixed sequences",
+      "llm_evidence_cn": "在混合序列中统一建模用户的主动搜索与被动推荐行为",
+      "llm_evidence": "在混合序列中统一建模用户的主动搜索与被动推荐行为",
+      "canonical_evidence": "在混合序列中统一建模用户的主动搜索与被动推荐行为",
+      "llm_tldr_en": "MIJSR jointly models search and recommendation from mixed user sequences by mining and adaptively integrating multiple interests from structural and semantic perspectives, yielding better cross-domain preference modeling.",
+      "llm_tldr_cn": "现有跨域统一建模能融合搜索与推荐行为数据，但容易忽略混合序列中不同场景下的兴趣表达。论文提出基于多兴趣的混合序列建模框架MIJSR，从结构与语义两个角度挖掘用户多面兴趣并进行自适应整合，从而完善搜索推荐混合序列中的用户偏好建模。与现有联合框架相比，MIJSR在搜索与推荐协同建模上提供更强的跨域表达能力。该工作支持搜索、推荐系统中的统一兴趣建模需求。",
+      "llm_tldr": "现有跨域统一建模能融合搜索与推荐行为数据，但容易忽略混合序列中不同场景下的兴趣表达。论文提出基于多兴趣的混合序列建模框架MIJSR，从结构与语义两个角度挖掘用户多面兴趣并进行自适应整合，从而完善搜索推荐混合序列中的用户偏好建模。与现有联合框架相比，MIJSR在搜索与推荐协同建模上提供更强的跨域表达能力。该工作支持搜索、推荐系统中的统一兴趣建模需求。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "joint modeling and serving of search, advertising, and recommendation systems at scale",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2608.10447v1",
+      "source": "arxiv",
+      "title": "Towards Efficient Reasoning in LLM-Based Recommender Systems via Model Merging",
+      "abstract": "Large language model-based recommender systems are increasingly adopting slow-thinking models that generate step-by-step reasoning before making predictions, often achieving higher accuracy than fast-thinking models that predict directly. However, their reasoning traces are often unnecessarily verbose, increasing inference costs without commensurate accuracy gains. Existing training-based approaches to reasoning compression often incur substantial adaptation costs, while inference-time methods are brittle and difficult to scale. These limitations motivate model merging as a promising training-free direction for transferring specialised behaviours between models in a shared parameter space. In particular, merging a slow-thinking model with a fast-thinking counterpart provides a natural mechanism for balancing recommendation accuracy and reasoning conciseness. To this end, we propose, to our knowledge, the first model merging framework for reasoning compression in recommender systems. Unlike conventional merging methods that apply uniform merge coefficients across model components, our method performs fine-grained merging at the level of individual attention heads, capturing heterogeneous patterns in recommendation reasoning. Each attention head is assigned a distinct merge coefficient according to its contribution to critical reasoning evidence and its sensitivity to parameter change, enabling selective injection of the concise behaviour of the fast-thinking model into the slow-thinking model and reducing reasoning verbosity without compromising recommendation quality. Experiments on three benchmark datasets show that our method reduces reasoning length by up to 24.3% while outperforming competitive model merging baselines in maintaining recommendation accuracy. The code is available at https://github.com/linhledieu/REAM.",
+      "authors": [
+        "Linh Dieu Le",
+        "Tong Chen",
+        "Shazia Sadiq",
+        "Hongzhi Yin",
+        "Ming Jin",
+        "Junliang Yu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-11T04:01:35+00:00",
+      "link": "https://arxiv.org/pdf/2608.10447v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "LLM-based recommender systems with step-by-step reasoning, proposing model merging to compress verbose rationales and reduce inference cost while retaining accuracy",
+      "llm_evidence_cn": "基于大语言模型的推荐系统用模型合并压缩冗长推理并降本，属于大模型推荐方法",
+      "llm_evidence": "基于大语言模型的推荐系统用模型合并压缩冗长推理并降本，属于大模型推荐方法",
+      "canonical_evidence": "基于大语言模型的推荐系统用模型合并压缩冗长推理并降本，属于大模型推荐方法",
+      "llm_tldr_en": "This paper proposes model merging to compress verbose rationale in LLM-based recommender systems, transferring reasoning behaviour without training or brittle inference-time control, reducing cost while retaining accuracy.",
+      "llm_tldr_cn": "LLM推荐中逐步推理虽提升精度但轨迹冗长、推理成本高，而现有的训练压缩方法代价大、推理时方法不稳定。论文提出基于模型合并的无训练方向，将慢思考模型的专门行为迁移到快模型共享参数空间，在压缩推理冗长性的同时保持推荐质量。该方法不需要额外训练，避免推理时手工调节，适合推荐场景的大规模部署，为LLM-based推荐系统提供可扩展的高效推理新路径。",
+      "llm_tldr": "LLM推荐中逐步推理虽提升精度但轨迹冗长、推理成本高，而现有的训练压缩方法代价大、推理时方法不稳定。论文提出基于模型合并的无训练方向，将慢思考模型的专门行为迁移到快模型共享参数空间，在压缩推理冗长性的同时保持推荐质量。该方法不需要额外训练，避免推理时手工调节，适合推荐场景的大规模部署，为LLM-based推荐系统提供可扩展的高效推理新路径。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2608.16797v1",
+      "source": "arxiv",
+      "title": "UniDot: A Unified Network for Sequence Modeling and Feature Interaction in Large-scale Recommendation",
+      "abstract": "Industrial recommenders rely on two model families that have evolved largely independently: feature-interaction models over multi-field user/item features, and sequential models over user-behavior histories. Production systems couple them only loosely. To unify the two, we present UniDot, a novel architecture for post-click conversion prediction built from the factorization-machine (FM) point of view: the embedding inner product---which powers collaborative filtering and lets a recommender generalize to unseen user--item pairs---is the same primitive as attention's query dot key scoring, so a single dot-product of tokens can underlie both feature interaction and sequence modeling. UniDot tokenizes non-sequential fields and multi-domain behavioral sequences into one shared token space and stacks a single macro-block in which a token-mixing bus and a sequence-retrieval bus (item tokens cross-attending the histories) run in parallel and exchange state each layer through an MLP-Mixer fusion, while an FM Highway carries explicit per-layer dot-product interactions around the residual stack directly to the classifier. The sequence side is embedded once per forward pass and shared by all consumers, bounding inference latency. Trained with a dual sparse/dense (Adagrad + Muon) optimizer, an auxiliary conversion-delay head, and multi-path mutual learning, UniDot finished as the runner-up on the Industrial track of the TAAC KDD Cup 2026.",
+      "authors": [
+        "Rongcheng Lin",
+        "Yan Sun",
+        "Jamey Zhang",
+        "Guanglei Xiong",
+        "Ivan Ji",
+        "Xianjie Chen",
+        "Shujian Bu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-17T16:52:56+00:00",
+      "link": "https://arxiv.org/pdf/2608.16797v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "modern unified architecture for large-scale recommender systems combining sequence modeling and feature interaction",
+      "llm_evidence_cn": "面向大规模推荐系统的现代统一网络，融合序列建模与特征交互",
+      "llm_evidence": "面向大规模推荐系统的现代统一网络，融合序列建模与特征交互",
+      "canonical_evidence": "面向大规模推荐系统的现代统一网络，融合序列建模与特征交互",
+      "llm_tldr_en": "Industrial recommenders loosely couple feature-interaction and sequential models; UniDot unifies them via the shared dot-product primitive for post-click conversion prediction at scale.",
+      "llm_tldr_cn": "工业推荐系统通常将特征交互模型与行为序列模型松散独立地组合起来，制约了表达能力。UniDot从因子分解机视角指出嵌入内积是协同过滤和注意力打分共用的基础原语，因此将普通字段与行为序列统一定义为点积标记网络。该架构在点击后转化预测的大规模推荐评测中同时完成特征交互与序列建模。该结果表明基于内积的统一建模可简化生产系统并提升学习效率。",
+      "llm_tldr": "工业推荐系统通常将特征交互模型与行为序列模型松散独立地组合起来，制约了表达能力。UniDot从因子分解机视角指出嵌入内积是协同过滤和注意力打分共用的基础原语，因此将普通字段与行为序列统一定义为点积标记网络。该架构在点击后转化预测的大规模推荐评测中同时完成特征交互与序列建模。该结果表明基于内积的统一建模可简化生产系统并提升学习效率。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "modern transformer and generative architectures for web search and recommender systems beyond traditional statistical models",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2608.12184v2",
+      "source": "arxiv",
+      "title": "Making Collaborative Signals Count: Graph-Aware Large Language Models for Sequential Recommendation",
+      "abstract": "Large language models (LLMs) have been widely adopted as backbones for recommender systems. However, their language-centric pretraining makes it difficult to capture collaborative signals implicit in user-item interactions, which are crucial for personalized recommendation. Existing methods either inject collaborative representations produced by external recommenders or model only intra-sequence dependencies, limiting their ability to exploit global collaborative patterns. To address this limitation, we propose GALLM, a graph-aware LLM framework for sequential recommendation. GALLM constructs a collaborative graph over text tokens and item tokens, and models three types of relations: Text--Text relations for preserving semantic dependencies, Item--Text relations for aligning item tokens with their textual descriptions, and Item--Item relations derived from global item co-occurrence patterns. These relations are transformed into lightweight learnable attention biases and incorporated into the LLM attention mechanism, enabling collaborative-aware token interactions without introducing an additional graph encoder. Experiments on four real-world benchmarks show that GALLM achieves the best performance among the compared baselines, improving over the strongest baseline by 9.76\\% on average in HR@5.",
+      "authors": [
+        "Fenglin Yan",
+        "Bohao Wang",
+        "Jian Zhang",
+        "Yu Cui",
+        "Tongya Zheng",
+        "Ye Feng",
+        "Can Wang",
+        "Jiawei Chen"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-12T15:38:05+00:00",
+      "link": "https://arxiv.org/pdf/2608.12184v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Graph-aware large language model for sequential recommendation with collaborative signals.",
+      "llm_evidence_cn": "面向序列推荐的图感知大语言模型，捕获协同信号",
+      "llm_evidence": "面向序列推荐的图感知大语言模型，捕获协同信号",
+      "canonical_evidence": "面向序列推荐的图感知大语言模型，捕获协同信号",
+      "llm_tldr_en": "GALLM is a graph-aware LLM for sequential recommendation that models text-text, text-item and item-item relations over a collaborative token graph, enabling LLM backbones to exploit global collaborative patterns.",
+      "llm_tldr_cn": "大语言模型作为推荐骨干时，往往忽略用户-物品交互中的协同信号。GALLM在文本令牌与物品令牌上构造协作图，并显式建模文本-文本、文本-物品和物品-物品三类关系，使LLM能利用全局协作模式而非仅序列内依赖。在序列推荐评测中，图感知的LLM显著提升了个性化效果。该方法弥合了语言生成与协同过滤之间的鸿沟，是LLM驱动推荐的强有力方案。",
+      "llm_tldr": "大语言模型作为推荐骨干时，往往忽略用户-物品交互中的协同信号。GALLM在文本令牌与物品令牌上构造协作图，并显式建模文本-文本、文本-物品和物品-物品三类关系，使LLM能利用全局协作模式而非仅序列内依赖。在序列推荐评测中，图感知的LLM显著提升了个性化效果。该方法弥合了语言生成与协同过滤之间的鸿沟，是LLM驱动推荐的强有力方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2608.11846v1",
+      "source": "arxiv",
+      "title": "From Overlooked to Explored: Recovering Item Relations via Mixture of Perspectives for Sequential Recommendation",
+      "abstract": "Capturing user preference from a user's interaction sequence is the central challenge of Sequential Recommendation (SR). This preference intuitively emerges from inter-item relations: each item transition reflects a preference embedded in the relations between items, making the faithful capture of these relations essential for accurate recommendation. For this reason, self-attention is dominant in sequential recommendation for its ability to compute pairwise item interactions, yet our empirical analysis reveals that it consistently suffers from similarity bias across various types of transformer-based SR models: dot-product attention scores disproportionately favor similar items, systematically overlooking heterogeneous relations with meaningful preference signals and directly limiting recommendation performance. To address this, we propose PRISM (Perspective-based Relational Insight Synthesis Module), a module that re-examines item relations from multiple perspectives. PRISM employs K Perspective Lenses to calibrate attention from distinct viewpoints, combining an Affinity View that refines homogeneous relations and a Contrast View that exposes heterogeneous ones suppressed by similarity bias, enabling the model to capture the full spectrum of user preferences. Extensive experiments on seven real-world benchmarks demonstrate that PRISM consistently outperforms state-of-the-art baselines. Our code is available at https://github.com/327aem/PRISM/.",
+      "authors": [
+        "Junyoung Kim",
+        "Wonbin Kweon",
+        "Woojoo Kim",
+        "Jaehyung Lim",
+        "Dongha Kim",
+        "Hwanjo Yu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-12T09:39:04+00:00",
+      "link": "https://arxiv.org/pdf/2608.11846v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Mixture-of-perspectives transformer for sequential recommendation correcting self-attention similarity bias, contributing to modern transformer architectures for recommender systems",
+      "llm_evidence_cn": "提出多视角混合Transformer修正顺序推荐自注意力相似度偏差，属于现代Transformer推荐架构研究",
+      "llm_evidence": "提出多视角混合Transformer修正顺序推荐自注意力相似度偏差，属于现代Transformer推荐架构研究",
+      "canonical_evidence": "提出多视角混合Transformer修正顺序推荐自注意力相似度偏差，属于现代Transformer推荐架构研究",
+      "llm_tldr_en": "This paper identifies a similarity bias in transformer-based sequential recommenders where dot-product attention favors similar items, and proposes a mixture-of-perspectives approach to recover heterogeneous item relations and improve preference modeling.",
+      "llm_tldr_cn": "基于Transformer的顺序推荐模型过度依赖物品间相似度，容易忽视异构但关键的物品跳转关系。论文通过实证揭示软注意力分数的相似度偏差，并提出多视角混合的交互建模来显式恢复被低估的物品关系。该方法在顺序推荐中改善关系捕捉，提升了基于注意力的推荐架构对多样偏好的表征能力。",
+      "llm_tldr": "基于Transformer的顺序推荐模型过度依赖物品间相似度，容易忽视异构但关键的物品跳转关系。论文通过实证揭示软注意力分数的相似度偏差，并提出多视角混合的交互建模来显式恢复被低估的物品关系。该方法在顺序推荐中改善关系捕捉，提升了基于注意力的推荐架构对多样偏好的表征能力。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "modern transformer and generative architectures for web search and recommender systems beyond traditional statistical models",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2608.22979v1",
+      "source": "arxiv",
+      "title": "SA-RSQ: A Versatile Sparse Representation Framework for Multi-modal Recommender Systems",
+      "abstract": "Deploying high-dimensional multimodal features in industrial recommender systems incurs substantial storage and latency overhead. Hard quantization is compact but introduces boundary distortion, whereas dense soft quantization couples representation quality to the limited storage budget. We propose Sparse Activation-based Residual Soft Quantization (SA-RSQ), which uses Top-K sparse routing and softmax weights to store compact (Index, Probability) tuples. The stored tuples decouple per-item storage from codebook dimensionality; for a fixed selected support, gradients propagate through the routing weights and weighted reconstruction without relying on a straight-through estimator. Experiments on a proprietary food-delivery advertising dataset show favorable reconstruction-performance and CTR trade-offs across storage budgets of 8-48 bytes per item. A preliminary Next-Distribution Prediction study and a one-week online A/B test further demonstrate the practical potential of SA-RSQ, with relative lifts of +2.51% in CTR and +3.66% in CPM.",
+      "authors": [
+        "Xiang Wang",
+        "Shigang Quan",
+        "Tingzhen Chang",
+        "Kang Yang",
+        "Sitong Chen",
+        "Yabo Fan",
+        "Xingxing Wang",
+        "Zhaodian He"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-08-24T08:39:36+00:00",
+      "link": "https://arxiv.org/pdf/2608.22979v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Sparse quantization framework reducing storage and latency for multi-modal ad recommender systems.",
+      "llm_evidence_cn": "降低多模态广告推荐系统存储与延迟的稀疏量化方法",
+      "llm_evidence": "降低多模态广告推荐系统存储与延迟的稀疏量化方法",
+      "canonical_evidence": "降低多模态广告推荐系统存储与延迟的稀疏量化方法",
+      "llm_tldr_en": "SA-RSQ introduces sparse activation and residual soft quantization to store multimodal features as compact index-probability tuples, cutting storage and latency in industrial advertising recommender systems while preserving representation quality.",
+      "llm_tldr_cn": "工业多模态推荐在部署高维特征时面临存储与延迟瓶颈，硬量化会引入边界失真，密集软量化又受存储预算限制。SA-RSQ用Top-K稀疏路由和softmax权重存储紧凑的(索引,概率)元组，将单物品存储与码本维度解耦，并通过路由权重和加权重建传播梯度。在食品配送广告数据上的实验显示，该方法能压缩多模态表征并保持较高质量，适合植入大规模广告推荐系统。",
+      "llm_tldr": "工业多模态推荐在部署高维特征时面临存储与延迟瓶颈，硬量化会引入边界失真，密集软量化又受存储预算限制。SA-RSQ用Top-K稀疏路由和softmax权重存储紧凑的(索引,概率)元组，将单物品存储与码本维度解耦，并通过路由权重和加权重建传播梯度。在食品配送广告数据上的实验显示，该方法能压缩多模态表征并保持较高质量，适合植入大规模广告推荐系统。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "papers that study scaling up search advertising and recommendation systems including model size, data scale, and training efficiency",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2608.19665v1",
+      "source": "arxiv",
+      "title": "Training-Free LLM-Based Recommendation with Post-LLM Item Refinement Using Collaborative Signals",
+      "abstract": "Large language models (LLMs) have shown promise for training-free recommendation, but LLM-generated user interests are often too broad for fine-grained item retrieval. Existing methods incorporate collaborative filtering (CF) signals in a pre-LLM manner through candidate reranking or prompt augmentation, yielding limited gains. We propose CoRRe, a training-free recommendation framework with a post-LLM paradigm that injects CF signals into LLM-generated item representations, which are later matched with LLM-generated user interests for ranking. Specifically, CoRRe refines the directions of item embeddings using an item-item co-purchase graph and their magnitudes using item popularity. Experiments on real-world datasets show that CoRRe consistently outperforms existing training-free methods and achieves competitive or superior performance compared with training-based methods, without requiring any model training or task-specific fine-tuning.",
+      "authors": [
+        "Kyungho Kim",
+        "Sunwoo Kim",
+        "Geon Lee",
+        "Shinhwan Kang",
+        "Sojeong Kim",
+        "Liam Collins",
+        "Bhuvesh Kumar",
+        "Donald Loveland",
+        "Kijung Shin"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-20T06:01:59+00:00",
+      "link": "https://arxiv.org/pdf/2608.19665v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM-based training-free recommendation with post-LLM graph refinement",
+      "llm_evidence_cn": "基于大语言模型的免训练推荐，用协同信号后置精炼项目表示",
+      "llm_evidence": "基于大语言模型的免训练推荐，用协同信号后置精炼项目表示",
+      "canonical_evidence": "基于大语言模型的免训练推荐，用协同信号后置精炼项目表示",
+      "llm_tldr_en": "CoRRe injects collaborative filtering after LLM generation by refining LLM item embeddings with co-purchase directions and popularity magnitudes, then ranks them against LLM-generated user interests, improving training-free LLM recommendation without candidate reranking.",
+      "llm_tldr_cn": "针对免训练大语言模型推荐生成兴趣过宽且缺少平台协同知识的问题，CoRRe提出后LLM范式，在LLM生成项目表示之后注入协同信号。它使用项目共购图调整嵌入方向，用流行度调整表示幅度，再与LLM生成用户兴趣做匹配排序。真实数据集实验表明，这种训练免费的精炼方式优于预LLM式的提示增强与候选重排，同时保持低成本。",
+      "llm_tldr": "针对免训练大语言模型推荐生成兴趣过宽且缺少平台协同知识的问题，CoRRe提出后LLM范式，在LLM生成项目表示之后注入协同信号。它使用项目共购图调整嵌入方向，用流行度调整表示幅度，再与LLM生成用户兴趣做匹配排序。真实数据集实验表明，这种训练免费的精炼方式优于预LLM式的提示增强与候选重排，同时保持低成本。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2608.17316v2",
+      "source": "arxiv",
+      "title": "Empowering Compact LLMs with Fusion of Layer-wise Exits for Recommendation",
+      "abstract": "Large language model-based recommender systems (LLM-RSs) have demonstrated remarkable capabilities, but are computationally unsustainable for many real-world applications. Compact LLMs offer a practical alternative, yet their reduced capacity often requires reasoning or knowledge distillation methods that increase latency or depend on larger models. Combined with autoregressive generation, these approaches face severe scalability bottlenecks. In contrast, discriminative LLM-RSs enable efficient full-corpus ranking through embedding similarity, but compact backbones remain limited in expressiveness and structural adaptivity. We propose the Fusion of Layer-wise Exits for Sequential Recommendation (FLEXRec), a discriminative framework that enhances compact LLMs while retaining scalable full-corpus ranking. FLEXRec inserts prediction heads (i.e., exits) at multiple transformer layers and adaptively fuses their score distributions. An adaptive continuous router (AC-Router) dynamically selects both the number and identity of exits for each user sequence, while a novel target-k hinge loss regulates routing sparsity. Experiments on three real-world datasets with Qwen 3 1.7B and Llama 3.2 3B show that FLEXRec achieves state-of-the-art accuracy among competing methods while remaining highly efficient. Code: https://github.com/xurong-liang/FLEXRec",
+      "authors": [
+        "Xurong Liang",
+        "Tong Chen",
+        "Quoc Viet Hung Nguyen",
+        "Jianxin Li",
+        "Xiangliang Zhang",
+        "Hongzhi Yin"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-18T03:14:28+00:00",
+      "link": "https://arxiv.org/pdf/2608.17316v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Compact LLM discriminative ranking with layer-wise exit fusion to improve LLM-recommender efficiency.",
+      "llm_evidence_cn": "融合紧凑LLM层间出口的判别式推荐排序，改善LLM推荐效率与扩展性",
+      "llm_evidence": "融合紧凑LLM层间出口的判别式推荐排序，改善LLM推荐效率与扩展性",
+      "canonical_evidence": "融合紧凑LLM层间出口的判别式推荐排序，改善LLM推荐效率与扩展性",
+      "llm_tldr_en": "FLEXRec is a discriminative LLM recommendation framework that fuses layer-wise exits of compact LLMs for efficient full-corpus ranking, avoiding autoregressive generation bottlenecks while retaining expressiveness.",
+      "llm_tldr_cn": "大语言模型推荐系统表达力强但计算成本高，紧凑LLM又常需额外推理或蒸馏。本文提出FLEXRec判别式框架，融合紧凑LLM的层间出口特征，用embedding相似度实现全库高效排序。该方法绕开自回归生成瓶颈，同时提升紧凑骨干的表达力与结构适配性。在序列推荐实验上表现出更低的推理开销和可比的推荐准确率，适合规模化LLM推荐服务。",
+      "llm_tldr": "大语言模型推荐系统表达力强但计算成本高，紧凑LLM又常需额外推理或蒸馏。本文提出FLEXRec判别式框架，融合紧凑LLM的层间出口特征，用embedding相似度实现全库高效排序。该方法绕开自回归生成瓶颈，同时提升紧凑骨干的表达力与结构适配性。在序列推荐实验上表现出更低的推理开销和可比的推荐准确率，适合规模化LLM推荐服务。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "papers that study scaling up search advertising and recommendation systems including model size, data scale, and training efficiency",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2608.19998v1",
+      "source": "arxiv",
+      "title": "SCoRD: Semantic-Assisted Continual Retriever-Reranker Distillation for LLM-Based Recommendation",
+      "abstract": "Recommendation systems increasingly adopt a two-stage pipeline, where an ID-based retriever retrieves candidates and an LLM-based reranker refines their rankings. To improve retrieval quality, reranker-to-retriever distillation is commonly used to transfer the reranker's knowledge to the retriever. For practical deployment, however, this pipeline must continually adapt to evolving interests and incoming interactions. A naive solution is to repeatedly update the LLM reranker and distill its latest knowledge, but this incurs prohibitive costs. Updating the retriever alone is cheaper, but its limited capacity makes adaptation from sparse data difficult. We propose SCoRD, a continual knowledge distillation framework for LLM-based reranking pipelines under a non-stationary data stream. SCoRD introduces a semantic reasoning assistant that distills the LLM's ability to infer underlying user intents into reusable intent-level guidance. It selectively distills reranker knowledge to the retriever on low-confidence sequences, guides retriever-only updates without repeated LLM inference, and feeds retriever-derived representations and intent-drift signals back to the reranker. Experiments on real-world datasets show that SCoRD enables effective and efficient retriever-reranker co-adaptation.",
+      "authors": [
+        "Seunghyun Baek",
+        "Gyuseok Lee",
+        "Seunghan Lee",
+        "Wonbin Kweon",
+        "Dong Wang",
+        "SeongKu Kang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-08-20T13:11:28+00:00",
+      "link": "https://arxiv.org/pdf/2608.19998v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM-based retriever-reranker pipeline with semantic-aware continual distillation",
+      "llm_evidence_cn": "基于LLM检索-重排推荐管线的语义辅助持续蒸馏",
+      "llm_evidence": "基于LLM检索-重排推荐管线的语义辅助持续蒸馏",
+      "canonical_evidence": "基于LLM检索-重排推荐管线的语义辅助持续蒸馏",
+      "llm_tldr_en": "SCoRD continuously transfers the latest LLM reranker knowledge into an ID retriever through semantic-assisted distillation, avoiding repeated expensive reranker retraining and enabling cheap adaptation from sparse interactions.",
+      "llm_tldr_cn": "针对LLM重排器与ID检索器组成的推荐系统需要持续适配新交互、但反复更新LLM并蒸馏成本极高的问题，SCoRD提出持续蒸馏框架。它借助语义辅助信号，把当前重排器知识传入持续更新的检索器，同时缓解稀疏交互带来的容量不足与旧知识遗忘。实验表明在动态兴趣变化场景中能保持稳定检索质量并显著降低更新开销。",
+      "llm_tldr": "针对LLM重排器与ID检索器组成的推荐系统需要持续适配新交互、但反复更新LLM并蒸馏成本极高的问题，SCoRD提出持续蒸馏框架。它借助语义辅助信号，把当前重排器知识传入持续更新的检索器，同时缓解稀疏交互带来的容量不足与旧知识遗忘。实验表明在动态兴趣变化场景中能保持稳定检索质量并显著降低更新开销。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2608.20801v1",
+      "source": "arxiv",
+      "title": "Profiling What Matters: Context-Aware Item Profiles from Large-Scale Metadata for LLM Recommenders",
+      "abstract": "While Large Language Models (LLMs) have significantly advanced reranking in recommendation, effectively leveraging item-side information remains challenging. Real-world items are described by vast, heterogeneous, and unstructured metadata, where decision-relevant signals are often implicit, noisy, or buried in long descriptions. Moreover, feature salience is highly context-dependent, varying not only across items but also across users. Existing methods often rely on item titles, fixed attributes, or static item summaries, which limit personalized and fine-grained item understanding. To bridge this gap, we propose CAIRO, a user context-aware item profiling framework for LLM-based reranking. CAIRO first structures raw metadata and reviews into objective features and subjective traits, and employs a lightweight profiler to select the most relevant information for each user-item pair with limited serving-time overhead. The resulting profiles are concise and context-specific, providing relevant item-side evidence for the LLM's ranking decision. Experiments show that CAIRO consistently improves LLM-based reranking, highlighting the importance of item profiling that effectively exploits vast item-side information.",
+      "authors": [
+        "Dojun Hwang",
+        "Seunghan Lee",
+        "Cheonyoung Park",
+        "Sara Yu",
+        "SeongKu Kang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI",
+        "cs.CL"
+      ],
+      "published": "2026-08-21T07:20:06+00:00",
+      "link": "https://arxiv.org/pdf/2608.20801v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "User context-aware item profiling from large-scale metadata for improving LLM-based recommendation reranking",
+      "llm_evidence_cn": "面向LLM推荐重排的上下文感知物品画像框架，利用大规模元数据改善细粒度物品理解",
+      "llm_evidence": "面向LLM推荐重排的上下文感知物品画像框架，利用大规模元数据改善细粒度物品理解",
+      "canonical_evidence": "面向LLM推荐重排的上下文感知物品画像框架，利用大规模元数据改善细粒度物品理解",
+      "llm_tldr_en": "CAIRO addresses the difficulty of using vast heterogeneous metadata in LLM-based recommendation reranking by building user context-aware item profiles from structured raw metadata, supporting personalized fine-grained understanding beyond titles and static summaries.",
+      "llm_tldr_cn": "虽然LLM已显著提升推荐系统的重排性能，但真实物品的元数据规模巨大、异构且非结构化，且特征显著性随用户和上下文变化。CAIRO先通过结构化和用户上下文建模，从原始大量元数据中生成上下文感知的物品画像，再交给LLM用于重排。该方法克服了标题、固定属性或静态摘要的信息局限，提升了推荐重排的个性化与细粒度物品理解水平。",
+      "llm_tldr": "虽然LLM已显著提升推荐系统的重排性能，但真实物品的元数据规模巨大、异构且非结构化，且特征显著性随用户和上下文变化。CAIRO先通过结构化和用户上下文建模，从原始大量元数据中生成上下文感知的物品画像，再交给LLM用于重排。该方法克服了标题、固定属性或静态摘要的信息局限，提升了推荐重排的个性化与细粒度物品理解水平。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "modern transformer and generative architectures for web search and recommender systems beyond traditional statistical models",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2608.23400v1",
+      "source": "arxiv",
+      "title": "Adaptive Item-based Collaborative Structures via Noise Rescheduling in Diffusion for Generative Recommendation",
+      "abstract": "Discrete Diffusion Models (DDMs) have recently been introduced to recommendation systems, modeling user history as a token generation process via iterative denoising. However, while effective at capturing user-level sequential patterns, these methods often fail to explicitly integrate item-based collaborative filtering information, a critical component for accurate recommendation. This deficiency manifests in two key aspects: (1) the item representation is often semantic-focused, lacking collaborative priors for diffusion training; and (2) the denoising process employs a uniform noise schedule, treating all tokens indiscriminately and ignoring item-level adaptive structural dependencies. To bridge this gap, we propose ANR-DiffRec, a unified framework designed to encode item-based collaborative structures into discrete diffusion for generative recommendation. First, we explicitly incorporate an item co-occurrence matrix to guide semantic ID generation, providing a structured collaborative prior for discrete diffusion training. Second, we introduce an item-based adaptive noise rescheduling mechanism that dynamically adjusts denoising weights according to both local contextual recoverability and behavior-aware item dependencies. Specifically, the proposed strategy jointly models intra-item structural context and inter-item collaborative signals, enabling structure-aware denoising during diffusion training. Extensive experiments on multiple benchmarks demonstrate that our method consistently outperforms state-of-the-art generative recommendation models. Code: https://github.com/CalmaQi/ANR-DiffRec.",
+      "authors": [
+        "Jiaqi Wang",
+        "Tianying Liu",
+        "Heng Chang",
+        "Jihong Guan",
+        "Wengen Li",
+        "Shuigeng Zhou"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-08-24T15:47:35+00:00",
+      "link": "https://arxiv.org/pdf/2608.23400v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Discrete diffusion models for generative recommendation with item adaptive collaborative structure and noise schedule.",
+      "llm_evidence_cn": "利用离散扩散模型进行生成式推荐并自适应调整噪声协作结构",
+      "llm_evidence": "利用离散扩散模型进行生成式推荐并自适应调整噪声协作结构",
+      "canonical_evidence": "利用离散扩散模型进行生成式推荐并自适应调整噪声协作结构",
+      "llm_tldr_en": "This paper improves discrete diffusion models for generative recommendation by injecting item-level collaborative structures and rescheduling noise adaptively, so iterative denoising better captures item-to-item dependencies.",
+      "llm_tldr_cn": "离散扩散推荐模型通过迭代去噪生成用户历史令牌序列，但缺少物品级协同先验且噪声调度过于统一。作者在扩散训练中引入显式的物品协作信息，并依据物品自适应结构依赖重排噪音调度。实验表明这种结构感知的扩散方法能更好捕捉物品间依赖，在生成式推荐上超过均匀噪声的扩散基线。该工作让扩散推荐模型也具备较强的协同过滤能力。",
+      "llm_tldr": "离散扩散推荐模型通过迭代去噪生成用户历史令牌序列，但缺少物品级协同先验且噪声调度过于统一。作者在扩散训练中引入显式的物品协作信息，并依据物品自适应结构依赖重排噪音调度。实验表明这种结构感知的扩散方法能更好捕捉物品间依赖，在生成式推荐上超过均匀噪声的扩散基线。该工作让扩散推荐模型也具备较强的协同过滤能力。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    }
+  ]
+}

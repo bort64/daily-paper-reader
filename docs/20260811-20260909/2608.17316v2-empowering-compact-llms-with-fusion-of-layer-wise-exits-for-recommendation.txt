@@ -1,0 +1,545 @@
+Title: Empowering Compact LLMs with Fusion of Layer-wise Exits for Recommendation
+
+URL Source: https://arxiv.org/pdf/2608.17316v2
+
+Published Time: Fri, 28 Aug 2026 01:15:42 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# Empowering Compact LLMs with Fusion of Layer-wise Exits for Recommendation 
+
+Xurong Liang † Tong Chen † Quoc Viet Hung Nguyen ⊥ Jianxin Li § Xiangliang Zhang ‡ Hongzhi Yin †∗ 
+
+> †
+
+The University of Queensland, Australia, {xurong.liang,tong.chen,h.yin1 }@uq.edu.au 
+
+> ⊥
+
+Griffith University, Australia, henry.nguyen@griffith.edu.au 
+
+> §
+
+Edith Cowan University, Australia, jianxin.li@ecu.edu.au 
+
+> ‡
+
+University of Notre Dame, USA, xzhang33@nd.edu 
+
+Abstract —Large language model-based recommender systems (LLM-RSs) have demonstrated remarkable capabilities, but are also known to be computationally unsustainable for real-world applications. While utilizing compact LLMs ( e.g. , the ones with 3 billion or fewer parameters) is a direct workaround, the reduced model capacity often necessitates methods like reasoning and knowledge distillation that exacerbate inference latency or rely on larger LLM counterparts. Combined with their autoregressive nature, those generative LLM-RSs inevitably face a severe scalability bottleneck. In contrast, discriminative LLM-RSs use LLMs as embedding generators to support efficient full-corpus item ranking through embedding similarity, but are prone to the limited expressiveness of compact LLMs and lack structural adaptivity when extracting patterns from multifaceted user interactions. In this paper, we propose the Fusion of Layer-wise Exits for Sequential Recommendation (FLEXRec), a discriminative LLM-RS paradigm that supports scalable full-corpus item ranking and maintains high effectiveness when a compact LLM is in use. Specifically, treating each transformer block in an LLM as a layer , we bypass the single-output design of existing LLM-RSs by inserting prediction heads ( i.e. , exits )at each layer, allowing for an ensemble of layer-wise exits to capture a mixture of user preference patterns at different depths and granularities. We further design an adaptive continuous router (AC-Router), which enables the model to dynamically select both the number and identity of exits conditioned on each input user sequence. The AC-Router is regularized by a novel target-k hinge loss to enforce routing sparsity within a designated range of activated exits. Extensive experiments on three real-world datasets utilizing compact LLM backbones ( i.e. ,Qwen 3 1.7B and Llama 3.2 3B) demonstrate that FLEXRec achieves state-of-the-art accuracy among competing methods while remaining highly efficient. The codebase of FLEXRec is available at https://github.com/xurong-liang/FLEXRec. 
+
+Index Terms —Sequential Recommendation, Large Language Models, Layer-wise Exits, Mixture-of-Experts 
+
+I. I NTRODUCTION 
+
+Large language model-based recommender systems (LLM-RSs) have attracted surging interest from both academia [1], [2] and industry [3], [4] due to the mutual benefit between textual context modeling and user preference learning. To take full advantage of language modeling capabilities, most existing LLM-RSs rely on a sizable LLM backbone ( e.g. , 7 or 13 billion parameters [2], [5]). However, resorting to heavily parameterized LLMs to handle complex user interaction data is 
+
+*Hongzhi Yin is the corresponding author. 
+
+computationally unsustainable and difficult to scale [6]. Natu-rally, this has stimulated the trend of using LLMs with a more compact architecture ( e.g. , 1.7 billion parameters [7]) as the recommendation backbone. Nevertheless, as LLMs’ semantic comprehension capabilities are directly linked to their scales [6], the resulting LLM-RSs are subject to weakened ability to capture sophisticated user behavioral patterns. To counteract the limited modeling capacity inherent to compact LLMs, recent literature has explored two primary paradigms: reasoning and knowledge distillation. On the one hand, reasoning-enhanced frameworks introduce complicated reasoning techniques, such as chain-of-thought [8] or gen-erative behavioral comprehension [9], to force the compact model to generate intermediate rationales or context to aug-ment the recommendation. On the other hand, knowledge distillation frameworks [10], [11] train a lightweight student model that mimics the behaviors of a more capable (and commonly larger) teacher model. Although both can improve the recommendation accuracy with a compact LLM, they face severe operational limitations. Knowledge distillation requires expensive offline training and incurs high costs for hosting a powerful teacher backbone for knowledge transfer, while com-plex reasoning paradigms introduce substantial computational steps that severely exacerbate inference latency. In addition, as they mostly fall into the generative recommendation paradigm [11], [12], the compounding latency of autoregressive text generation is unavoidable. Together, those factors render such methods difficult to scale to full-corpus item ranking, which is a critical task in real-world systems where the model must retrieve the top-N items out of the entire dataset for each user. Even when frameworks generate engineered semantic token sequences rather than natural text [13], they rely on constrained sequence decoding mechanisms ( e.g. , Trie-based search [14]) to ensure valid item identifier combinations, which drastically caps system throughput compared with the traditional recommender systems. To resolve the scalability bottleneck and facilitate full-corpus item ranking, a different branch of LLM-RSs adopts a discriminative , embedding-based recommendation paradigm [11], [15], [16]. In this paradigm, users and items are pro-jected into the LLM semantic space solely for interaction modeling, allowing next-item predictions to be generated by computing affinity scores directly on the LLM embeddings. arXiv:2608.17316v2 [cs.IR] 27 Aug 2026 Since this strategy completely bypasses autoregressive text decoding, real-time ranking on the full item catalog becomes computationally viable. E4SRec [15] is an iconic framework in this category, capturing user preference embeddings from interaction records with an LLM to compute user-item affinity scores. Despite the efficiency benefits of this discriminative LLM-RS paradigm, it suffers from two key limitations when a compact LLM backbone is in use. First, as per the scaling law [6], [17], the quality of the contextualized embeddings degrades as model parameters shrink, impeding recommen-dation accuracy. Second, unlike generative methods that can flexibly steer the way LLM reasons with text tokens ( e.g. ,adaptive reasoning), in the discriminative paradigm, every user sequence is embedded and processed through exactly the same architectural pipeline regardless of how simple or complex the underlying preference pattern is, severely hindering model generalizability across diverse user populations. To this end, we seek to retain the efficiency of com-pact LLM backbones in discriminative LLM-RSs without compromising effectiveness. In this paper, we propose the 
+
+Fusion of Layer-wise Ex its for Sequential Rec ommendation (FLEXRec). Adopting the discriminative paradigm for full-corpus item ranking capacity, FLEXRec breaks away from the single-output constraint implemented by classic discriminative models [15]. In existing discriminative LLM-RSs, a user’s embeddings are propagated through all transformer layers 1
+
+to form the final prediction. Instead of discarding these in-termediate representations, FLEXRec explicitly extracts the user preference embeddings generated at every layer of the LLM backbone. This architecture enables a prediction head to be inserted after each layer, treating each depth as an independent exit point for user-item affinity score prediction. One can then combine the prediction score distributions across multiple exits to generate a fused score distribution. This layer-wise ensemble strategy is inspired by the observation that different architectural depths in an LLM capture distinct, hierarchical semantic patterns [18], [19]. In the context of sequential recommendation, this hierarchical capacity aligns with the need to model both immediate, short-term item transitions and high-level, long-term user intents [20], [21]. By aggregating score distributions generated from a diverse set of representations, FLEXRec introduces rich, complementary context that effectively compensates for the limited parameter breadth of small model sizes. Furthermore, to enable our model to adaptively reconfigure its structure for capturing each user’s nuanced preference patterns, we design an adaptive continuous router (AC-Router) to control the discrete, input-adaptive fusion of these layer-wise exits. Acting as a dynamic gating network inspired by mixture-of-experts (MoE) architectures [22], the AC-Router conditions its routing decision on the incoming user sequence to determine not only which exits are activated, but exactly 
+
+how many are needed. For simpler interaction patterns, the  
+
+> 1Throughout this paper, for simplicity, we refer to each individual trans-former block as a layer .
+
+router can activate fewer exits, whereas more intricate patterns can be modeled using richer exit combinations. To prevent redundant fusion and enforce computational sparsity, we intro-duce a joint optimization framework guided by a novel target-
+
+k hinge loss that softly penalizes the router when active exit counts fall outside a designated range. As such, our innovative design allows FLEXRec to achieve unparalleled recommenda-tion effectiveness without compromising inference throughput. We summarize our main contributions below:  
+
+> •
+
+We innovatively propose transitioning from static, single-exit LLM recommenders to a dynamic, multi-layer fusion paradigm. By adaptively ensembling prediction score distributions from various LLM propagation depths, we effectively compensate for the limited language model-ing capabilities of compact LLM backbones, facilitating highly accurate and scalable sequential recommendation for diverse user interaction behaviors.  
+
+> •
+
+We design the FLEXRec framework equipped with an adaptive continuous router (AC-Router) that utilizes con-tinuous ReLU routing to dynamically assign variable computational depth on a per-sequence basis. To ensure robust end-to-end training, we introduce a joint optimiza-tion framework, including a novel target-k hinge loss, to gracefully govern the exit fusion behavior with no additional parameter overhead.  
+
+> •
+
+We conduct extensive experiments on three real-world datasets to compare the performance of FLEXRec against state-of-the-art traditional and LLM-based sequential rec-ommenders. Utilizing small-scale backbones ( i.e. , Qwen 3 1.7B and Llama 3.2 3B), the results indicate that FLEXRec achieves superior recommendation accuracy and diverse layer utilization without compromising in-ference efficiency. II. R ELATED WORK 
+
+In this section, we outline relevant work across two main areas, namely LLM-based recommendation and MoE. 
+
+A. LLM-Based Recommendation 
+
+Existing LLM-RSs fall into two paradigms [12]: generative models that autoregressively decode item texts or tokens [2], [5], [13], [23]–[25], and discriminative models [11], [15] that project items into the LLM space to compute affinity scores. While highly effective, these methods typically rely on massive backbones ( e.g. , 7 billion parameters), making them computationally unsustainable for handling diverse, real-world user interactions at scale. To address this, lightweight approaches employ model com-pression ( e.g. , pruning [26], [27] and quantization [28], [29]) or knowledge distillation [10], [11] to condense heavy models into more compact architectures. Complementary research on lightweight recommendation has explored compositional embedding, embedding pruning and lightweight graph-based embeddings to reduce the storage and computational costs of conventional recommenders [30]–[34]. Alternatively, some work retains compact LLMs but introduces complex reasoning paradigms to inject supplementary context [8], [9]. Crucially, these methods enforce a static architectural ca-pacity, extracting ranking signals from a single, fixed output layer. In contrast, FLEXRec dynamically fuses exits from multiple propagation depths on a per-sequence basis. This multi-layer fusion strategy effectively compensates for the limited capacity of compact LLM backbones, significantly enhancing recommendation performance without relying on costly reasoning steps. 
+
+B. Mixture-of-Experts 
+
+Mixture-of-Experts (MoE) architectures scale model capac-ity without proportionally increasing computational cost by routing inputs to specialized sub-models (experts) [22], [35], [36]. While Top-k routing [36]–[39] remains the dominant strategy, it strictly allocates a fixed number of experts per instance. To overcome this rigidity, dynamic routing frameworks allocate a variable number of experts [40], [41]. Methods like continuous routing [42], [43] utilize fully differentiable functions, effectively mitigating the optimization difficulties of discrete sorting operations. While traditional MoE research focuses on scaling internal network width, FLEXRec uniquely adapts continuous MoE routing to facilitate the fusion of inter-mediate layer-wise exits, transforming the MoE paradigm into an adaptive depth-pruning and representation-fusion engine. III. M ETHOD 
+
+In this section, we present the design details of our proposed framework FLEXRec. 
+
+A. Problem Formulation 
+
+We consider a commonly used sequential recommendation setup. Let U and I respectively denote the sets of users and items. For an arbitrary user u ∈ U , her historical item interaction sequence, sorted in chronological order, is denoted as su = ( su 
+
+> 1
+
+, s u 
+
+> 2
+
+, . . . , s ut ), where suk ∈ I represents the k-th item interacted with by user u, and t is the length of the sequence. The objective of a sequential recommender system is to estimate the likelihood of interacting with each item 
+
+i ∈ I , so as to form a top-N ranking list at time t + 1 , given her historical sequence su.
+
+B. Backbone Recommender System 
+
+We follow [15] to build a base LLM encoder for discrimi-native recommendation. Specifically, FLEXRec first pretrains a classic ID-based sequential recommender, namely SASRec [20], to obtain collaborative item embeddings for all items in the dataset, denoted as Ept ∈ R|I|× dpt , where dpt is the embedding dimension of the SASRec model. To map these embeddings into the semantic language space of the LLM, a single-layer MLP linear projection f : Rdpt 7 →
+
+RdLLM is introduced for item ID injection, where dLLM is the hidden size of the LLM backbone. Given a user’s sequence su,the corresponding sequence of ID-injected item embeddings is gathered as Einj = [ esu 
+
+> 1
+
+, . . . , esut ] ∈ Rt×dLLM .For language modeling, E4SRec constructs the input to the LLM backbone by concatenating the embeddings of the task instructions, the injected item IDs, and a final response token: 
+
+E0 =
+
+
+
+Einst 
+
+Einj 
+
+Eresp 
+
+ , (1) where Einst ∈ Rlinst ×dLLM and Eresp ∈ R1×dLLM are the initial token embeddings of the instruction text (with length 
+
+linst ) and the response token, respectively. These concatenated embeddings E0 act as the input to the first layer of the LLM. After that, E0 are propagated through the L layers of the LLM backbone, generating the contextualized embeddings El
+
+after each layer l. In the vanilla E4SRec architecture, only the contextualized embeddings from the final layer EL are utilized. A single-layer MLP prediction head hL : RdLLM 7 →
+
+R|I| takes the propagated representation of the response token to compute raw affinity scores over all items in the dataset. A Softmax function is then applied to these scores to yield the predicted probability distribution OL ∈ R|I| :
+
+OL = Softmax (hL(eL)) , eL = EL
+
+> [−1]
+
+, (2) where EL 
+
+> [−1]
+
+denotes the extraction of the final row vector (corresponding to the response token) from the layer’s output sequence, yielding the extracted vector eL ∈ RdLLM .
+
+Multi-Layer Extension. As established in our motiva-tion, relying exclusively on the final layer of a compact LLM backbone for score distribution generation underutilizes the model’s limited capacity. Because different architectural depths encapsulate distinct hierarchical processing capabilities, ranging from localized short-term item transitions in shallow layers to abstract, long-term user intents in deeper blocks, extracting representations at every depth provides rich, com-plementary sequential context. To harness this diverse ranking logic, we extend the E4SRec architecture by inserting a series of prediction heads H = {h1, . . . , h L}, effectively creating multiple exits along the network’s forward pass. Specifically, 
+
+hl is the prediction head ( i.e. , exit) inserted immediately after the l-th layer of the LLM backbone. Generalizing Equation 2, the probability distribution Ol generated at exit l is computed as: 
+
+Ol = Softmax (hl(el)) , el = El
+
+> [−1]
+
+, for l = 1 , 2, . . . , L. 
+
+(3) This set of exits H subsequently serves as the candidate pool for our adaptive routing and fusion mechanism. 
+
+C. Adaptive Continuous Router 
+
+To enable the dynamic fusion of layer-wise exits for sequen-tial recommendation, we introduce the adaptive continuous router (AC-Router). As outlined in Section III-B, our backbone LLM is augmented with a diversified set of exits within its intermediate layers. Conditioned on each user sequence, AC-Router dynamically selects an optimal subset of LLM layers for preference modeling. For each historical sequence su,the AC-Router takes the response token embedding generated immediately after the first LLM layer, denoted as e1 = E1[−1] ,to compute raw routing logits z ∈ RL:
+
+z = e1Wz , (4) where Wz ∈ RdLLM ×L is a learnable projection matrix that maps the hidden dimension to the number of available layer-wise exits L.In traditional Mixture-of-Experts (MoE) architectures, Top-
+
+k routing is the dominant expert selection strategy due to its simplicity [36]–[38]. However, Top-k routing forces ev-ery input sequence to fuse exactly k distributions [41]–[43], which imposes unnecessary computational overhead on sim-pler sequences yet artificially limits the diversity of layer-wise exits when tackling complex ones. Furthermore, without proper workarounds, its non-differentiable nature is known to interfere with end-to-end training [42]. As such, our proposed AC-Router utilizes a piecewise activation function [42] to generate sparse routing weights. Specifically, we apply the Rectified Linear Unit (ReLU) func-tion over the raw logits at the vector level, i.e. , w = ReLU (z).In the context of MoE solutions, this continuous routing paradigm increases the fusion diversity as it controls not only the identity but also the number of experts ( i.e. , exits in our case) used for each input sample. While Top-k routing restricts a sequence to  Lk
+
+ possible exit fusion combinations, applying ReLU exponentially expands the combinatorial space to 2L−1.This expanded capacity allows the AC-Router to flexibly tailor the semantic depth and ensemble composition to the specific characteristics of each user sequence. However, the ReLU activation introduces a vulnerability: if all raw logits in z fall below zero, the routing weights w
+
+will collapse entirely, resulting in no exits being selected. To guarantee computational stability, we apply a conditional shift constraint to the raw logits prior to activation to compute the routing weights w:
+
+s = min(max( z) − ϵ, 0) ,
+
+ˆz = z − sg (s),
+
+w = ReLU (ˆ z),
+
+(5) where ϵ is a precision safety margin ( e.g. , ϵ = 0.1) and sg (·) denotes the stop-gradient operator, which prevents the optimizer from artificially inflating the scalar shift s during backpropagation. This constraint guarantees that the maximum logit always survives with at least magnitude ϵ.We apply normalization to the gating weights for score fusion. The final gating weights are defined as g = {gl}Ll=1 ,such that: 
+
+gl = wl
+
+PLm=1 wm + ξ , (6) where wl ∈ w is the routing weight for the l-th layer, and ξ
+
+is a small constant ( e.g. , ξ = 1e −9) to prevent zero-division. For any gl ∈ g, if gl = 0 , then the corresponding exit hl is disabled for the current sequence. Based on the sparse gating weights g, the set of active exits for a given user sequence is defined as: 
+
+A = {l | gl > 0}. (7) In FLEXRec, the maximum required propagation depth is determined by the deepest active layer, lmax = max( A). The LLM sequentially propagates embeddings only up to lmax and all subsequent layers and exits are skipped. Finally, the model fuses the predicted score distributions from the activated exits using their normalized gating weights: 
+
+Of used = X
+
+> l∈A
+
+glOl. (8) The fused score distribution Of used will be used to produce the ultimate Top-N ranking list for recommendation. 
+
+D. Learning to Fuse Layer-wise Exits 
+
+While the AC-Router establishes the forward-pass mechan-ics for dynamic layer fusion, it requires carefully formulated loss objectives to correctly map user sequence features to optimal exit combinations. We introduce the following three distinct loss terms to shape the router’s behavior: 
+
+Target-k Hinge Loss. This is our key innovation that makes AC-Router different from traditional MoE routers. While methods like Top-k routing [36]–[38], [44] rely on a hyperparameter k to strictly define the number of active ex-perts per sequence, we argue that enforcing a hard cardinality ceiling throttles fusion diversity. Instead, we propose a soft cardinality penalty that encourages the AC-Router to select between [1 , k ] exits organically. We estimate the number of active exits C via a continuous Sigmoid surrogate, and apply an asymmetric Two-Sided Hinge Loss to penalize deviations from the desired range: 
+
+C =
+
+> L
+
+X
+
+> l=1
+
+σ(τ · ˆzl),
+
+LHinge = max(0 , C − k) + γ max(0 , 1 − C),
+
+(9) where σ(·) is the Sigmoid function, τ is a temperature scalar defining distribution sharpness ( e.g. , τ = 10 ), and γ ≥ 1 con-trols the strength of the lower-bound penalty. This formulation ensures that if C > k , the first term generates gradients to reduce logit magnitudes, while if C < 1, the second term penalizes the network to prevent routing failure. Setting γ > 1
+
+(e.g. , γ = 2 ) strongly discourages the zero-layer assignment problem, which is further guaranteed mechanically by the safe logits in Equation 5. Unlike recent continuous routing approaches [43] that rely on complex simplex projections [45] and dedicated auxiliary MLPs to dynamically predict threshold bounds, our target-k hinge loss achieves cardinality regulation organically through gradient shaping. It leverages an intuitive, fully differentiable behavioral penalty to encourage exit utilization within the target range [1 , k ], requiring no additional parameter overhead. 
+
+Load Balancing Loss. To prevent router collapse, where the network greedily routes traffic to a small subset of exits [22], Stage 1  
+
+> LLM Backbone
+> LoRA
+> ℎ𝐿
+> 𝐞 L
+> 𝑶 𝐿
+> Stage 2
+> LLM Backbone
+> +
+> LoRA
+> 𝐞 𝟏
+> ℎ1𝑶 1
+
+… 
+
+> ℎL−1 𝑶 L−1
+> ℎ𝐿
+> 𝐞 L−𝟏
+> LLM Backbone +
+> LoRA
+> 𝐞 𝟏
+> ℎ1
+> ℎL−1
+> ℎ𝐿
+
+…                      
+
+> 𝐞 L−𝟏
+> 𝐞 L
+> AC-Router
+> 𝐞 𝟏
+> 𝒈 1= 0.35
+> 𝒈 L−1 = 0
+> 𝒈 L= 0.65
+> 𝑶 𝑓𝑢𝑠𝑒𝑑
+> Stage 3
+> ### Instruction: Given the user’s purchase history, predict next possible item to be purchased.
+> ### Historical Item Input: 𝒆 14 |𝒆 56 |𝒆 99 |𝒆 1520 | …
+> ### Response:
+> ID projector 𝒇 ID projector 𝒇 ID projector 𝒇
+> LoRA, 𝑓 & Final Exit ℎ𝐿 Training Intermediate Exits ℋ𝒾𝓃𝓉ℯ𝓇 Training AC-Router Training
+> ℒ𝓇ℯ𝒸
+> ℒinter
+> ℒ𝓇ℯ𝒸
+> ℒLB , ℒ Hinge , ℒ 𝒵
+> Trainable Frozen
+> Router enabled weight
+> Router disabled weight
+> 𝑶 L−1
+> 𝑶 L
+> 𝑶 1
+
+Fig. 1: Overview of the FLEXRec framework and its three-stage training. Stage 1 trains the base components via Lrec . Stage 2 warms up intermediate exits Hinter via Linter . Stage 3 optimizes the AC-Router using Lrec alongside router-specific loss terms ( LLB , LHinge , LZ ). In the given sequence example, solid green arrows depict active routing weights assigned by the AC-Router, whereas dotted arrows indicate unselected exits that do not contribute to the final fused distribution Of used .[35], standard MoE models [38] rely on discrete load balanc-ing objectives. Because our AC-Router generates continuous weights without discrete sorting, we formulate a continuous analog utilizing a Softmax proxy: 
+
+¯Pl = 1
+
+B
+
+> B
+
+X
+
+> b=1
+
+Softmax (z(b))l,
+
+LLB = L
+
+> L
+
+X
+
+> l=1
+
+¯P 2 
+
+> l
+
+,
+
+(10) where z(b) are the raw router logits for the b-th user sequence in a batch of size B. The Softmax transformation enforces a sum-to-one competition among exits, preventing an opti-mization loophole where the network trivially minimizes the penalty by driving all independent logits negative. Minimizing the variance of this proxy distribution ¯P successfully encour-ages balanced utilization across all exits. 
+
+Projection Anchoring (Z-Loss). Mixed-precision training (e.g. , FP16/BF16) is a mandatory standard for scaling LLMs efficiently [46]–[48]. However, during mixed-precision MoE training, unconstrained routing logits naturally diverge to extreme magnitudes, causing exponential activations to over-flow and destabilize the network [39], [49]. While discrete MoE models rely on Z-loss to prevent Softmax partition overflow [39], it serves an even more critical structural role in our continuous architecture. Because our target-k hinge loss (Equation 9) relies on Sigmoid surrogates, extreme logit magnitudes cause catastrophic vanishing gradients, rendering the cardinality penalty blind. We therefore apply a simplified 
+
+L2 Z-loss directly to the raw routing logits: 
+
+LZ = mean (z2). (11) Minimizing this loss effectively bounds pre-activation repre-sentations near zero, ensuring numerical stability, preserving steep gradients for the cardinality estimator, and preventing degenerate routing solutions. 
+
+E. Model Training 
+
+We visualize the framework overview in Figure 1. The model training procedure is divided into three stages: 
+
+Stage 1: LLM Recommendation Backbone Training. In this stage, we perform classic E4SRec [15] finetuning, wherein only the item ID projection layer f , the LoRA [50] trainable components, and the final exit hL are actively trained. We use the originally designed cross-entropy loss and the last exit prediction score distribution OL for optimization. Note that for brevity, we omit the user index u from the layer-wise score distributions ( e.g. , OL and Ol) throughout our formulations: 
+
+Lrec = − X
+
+> u∈U
+
+log 
+
+
+
+OLsut+1 
+
+
+
+, (12) where sut+1 is the ground truth next-item for user u, OLsut+1 
+
+denotes the predicted probability assigned specifically to sut+1 .
+
+Stage 2: Intermediate Exits Training. Once the backbone model is adequately trained, we freeze the ID projector f ,the LoRA modules, and the final exit hL. In training stage 2, we instantiate the set of intermediate exits after each LLM layer except the final layer, denoted as Hinter = H \ { hL}.The objective of this stage is to force each intermediate exit to independently learn how to map its corresponding layer’s contextualized embedding, El
+
+> [−1]
+
+, into a valid item ranking distribution. The forward pass is executed layer-by-layer, and the logits extracted after each layer are passed through a softmax function to obtain the layer-wise distributions Ol. The loss function is defined as the mean cross-entropy across all 
+
+L − 1 intermediate exits: 
+
+Linter = 1
+
+L − 1
+
+> L−1
+
+X
+
+> l=1
+
+X
+
+> u∈U
+
+− log 
+
+
+
+Olsut+1 
+
+
+
+, (13) where Olsut+1 denotes the predicted probability assigned to the ground-truth next item sut+1 by the l-th intermediate exit. The strategy to train the single-exit recommender first, followed by the co-training of the intermediate exits, is inspired by [51]. This ensures the backbone is sufficiently trained and stabilized before warming up the intermediate layers. Consequently, we ensure that each exit point produces a mathematically stable and semantically meaningful score distribution, providing a high-quality, pre-conditioned expert pool for the router. 
+
+Stage 3: AC-Router Training. In training stage 3, we freeze all LLM backbone parameters, the ID projector f , and all exits H. The only trainable component is the AC-Router’s projection matrix Wz . We optimize the three router training objective functions introduced in Section III-D: 
+
+Lrouter = αLLB + λLHinge + βLZ , (14) where α, λ, β control the penalty strengths of load balance, target-k hinge and projection anchoring respectively; alongside the recommendation loss Lrec defined in Equation 12, with the score distribution changed to Of used . Because the exits are already competent rankers, the router’s gradients are purely a reflection of its fusion strategy. This allows the AC-Router to efficiently learn optimal, sequence-specific exit combina-tions without interference from shifting score distributions. Additionally, because this final tuning stage is computationally lightweight, it unlocks a highly flexible deployment paradigm. One can efficiently train a suite of distinct routers, each trained with a different target-k value to accommodate the specific computational constraints and performance requirements of various devices, while sharing the exact same frozen backbone obtained from the previous two training stages. IV. E XPERIMENT 
+
+In this section, we document the experiments conducted to verify the performance and efficiency merits of our proposed method FLEXRec. We organize this section to answer four research questions (RQs):  
+
+> •
+
+RQ1: Does FLEXRec outperform traditional and other LLM-based recommender systems?  
+
+> •
+
+RQ2: What is the effectiveness of the proposed compo-nents in FLEXRec?  
+
+> •
+
+RQ3: How sensitive is FLEXRec to different hyperpa-rameters?  
+
+> •
+
+RQ4: How does FLEXRec fuse the exits for various user sequences? TABLE I: Statistics of the datasets. 
+
+Dataset # Users # Items # Actions Sparsity 
+
+Toys 19,412 11,924 167,597 99.93% Beauty 22,363 12,101 198,502 99.93% Yelp 30,431 20,033 316,354 99.95% 
+
+A. Experiment Settings 
+
+Datasets. Experiments are carried out on three public benchmark datasets: Amazon review data [52] — Toys and Games (Toys) and Beauty, as well as the Yelp review dataset 
+
+> 2
+
+. The statistics of the datasets are shown in Table I. We follow the preprocessing practices described in [15], [53] to apply the 5-core item filtering. For data partition, we follow [15], [20] to perform the leave-one-out strategy, wherein for each user sequence, the last and second-last items are treated as test and validation data and the rest are used in training. 
+
+Evaluation Metrics. To evaluate the recommendation per-formance, we adopt the commonly used metrics NDCG@N 
+
+and Recall@N with N set to {10 , 20 }. We also record the average user inference time for each method to compare the inference efficiency. 
+
+Baseline Methods. We evaluate FLEXRec against tradi-tional sequential models ( SASRec [20], BERT4Rec [21]) and state-of-the-art LLM-based recommenders. The latter includes 
+
+E4SRec [15] (our static, single-exit counterpart), SPRec [54] (self-play debiasing), SETRec [55] (order-agnostic model-ing), LLM-SRec [11] (knowledge distillation), and HUM 
+
+[16] (heterogeneous user modeling). In addition, to isolate our AC-Router’s efficacy, we substitute it with alternative MoE routing strategies implemented identically on our multi-layer architecture: discrete Top-k routing ( SparseToken [37]), threshold-based dynamic routing ( DynamicMoE [40]), and simplex-projected continuous routing ( LD-MoLE [43]). All LLM frameworks are tested on small-scale backbones (Qwen 3 1.7B [7], Llama 3.2 3B [56]). We also evaluate vanilla E4SRec with larger backbones ( i.e. , Qwen 3 4B, Llama 3.1 8B) to serve as a Skyline performance indicator. 
+
+Implementation Details. For FLEXRec, we initialize item ID embeddings using a pretrained SASRec model with a dimension size of 64 , which are then linearly projected to match the hidden size of the LLM backbone. In Stage 1, we perform LoRA [50] finetuning on the LLM backbone for 
+
+2 epochs. In Stage 2, we train the intermediate exits for a maximum of 5 epochs, selecting the checkpoint that yields the best average performance across all layers. In Stage 3, we train the AC-Router for 2 epochs, implementing an early stopping patience of 10 evaluations, with model validation performed every 500 steps. Across all stages, the global batch size is fixed at 128 , using a micro-batch size of 32 for the Toys and Yelp datasets, and 64 for the Beauty dataset. We utilize the AdamW optimizer with a cosine learning rate scheduler and an initial learning rate of 3e −4. For FLEXRec’s routing hyperparameters, we set the target k = 3 and fix the structural 
+
+> 2https://business.yelp.com/data/resources/open-dataset/ 0.0000 0.0100 0.0200 0.0300 0.0400
+> 0.0584
+> Toys-Qwen 0.0200 0.0300 0.0400 0.0500
+> 0.0603
+> 0.0700
+> Toys-Llama 0.0000 0.0100 0.0200 0.0300 0.0400
+> 0.0530
+> Beauty-Qwen 0.0300 0.0350 0.0400 0.0450 0.0500
+> 0.0574
+> Beauty-Llama 0.0140 0.0160 0.0180 0.0200 0.0220 0.0240
+> 0.0271
+> Yelp-Qwen 0.0210 0.0220 0.0230 0.0240
+> 0.0249
+> 0.0260
+> Yelp-Llama
+
+Fig. 2: Performance distribution (NDCG@20) of all indepen-dent exits across datasets and backbones. The red dashed line, with its exact magnitude marked in bold red on the x-axis, denotes the performance of FLEXRec. constants as ξ = 1e −9, ϵ = 0 .1, τ = 10 , and γ = 2 . We fine-tune the loss weights α ∈ {0.005 , 0.01 , 0.05 , 0.1, 0.15 },
+
+β ∈ {1e −5, 1e −4, 1e −3, 1e −2, 1e −1}, and 
+
+λ ∈ {0.5, 1, 1.5, 2, 2.5}. All experiments are conducted on a single NVIDIA H100 PCIe (80GB) GPU. 
+
+B. Overall Performance (RQ1) 
+
+We present the overall performance results of our work and baseline methods in Table II. First, we observe that the Skyline setting consistently outperforms the standard E4SRec baseline, confirming that the parameter scale of the LLM backbone is crucial to the performance of general LLM-RS architectures. However, FLEXRec effectively subverts this reliance on sheer parameter size. Despite using a backbone approximately half the size of the Skyline setting, FLEXRec consistently achieves the best performance among the compa-rable compact-backbone methods on the N = 10 metrics. It additionally surpasses the larger-backbone Skyline in several settings, including Beauty under both backbones and Yelp under Qwen. To verify the effectiveness of layer-wise exit fusion instead of simply selecting the best exits after the Stage 1 and 2 training, we also present the distribution plots of all independent exits in Figure 2. Notably, FLEXRec’s adaptive fusion consistently outperforms the best-performing individual exit across all evaluated settings. When comparing our framework against MoE variants ( i.e. ,SparseToken, DynamicMoE, and LD-MoLE), we observe that while the variants generally improve upon the original E4SRec on Toys and Beauty, they falter on the sparser Yelp dataset, especially for SparseToken and DynamicMoE variants. As for other LLM methods, their performance varies greatly and generally falls short of discriminative models like E4SRec and FLEXRec. Some methods, such as SPRec, even underperform traditional models. One possible explanation is their greater sensitivity to item textual representations, which may affect sample selection during DPO training. Regarding model inference efficiency, traditional methods naturally incur the lowest latency due to their architectural simplicity. Among LLM-based approaches, the discriminative E4SRec remains the fastest. This showcases the major merit of discriminative models compared to generative ones ( e.g. ,SETRec), which rely on time-consuming autoregressive text decoding. Our method inherits this efficiency paradigm. By processing the sequence in a single forward pass and utilizing lightweight routing, FLEXRec introduces minimal additional latency (less than 1ms overhead compared to E4SRec) while delivering impressive accuracy gains. 
+
+C. Ablation Study (RQ2) 
+
+We conduct ablation studies on the three AC-Router-related loss terms in Section III-D to demonstrate their importance in training an optimal router for layer-wise exit fusion. Table III presents the performance of the default framework alongside variants where individual loss components are disabled. The empirical results confirm that the default setting consistently achieves the highest accuracy across all datasets and both LLM backbones. Disabling any of the introduced loss terms leads to a sub-optimally trained router and inevitably impedes overall recommendation performance. Additionally, we investigate the impact of the proposed target-k hinge loss ( LHinge ) in controlling the number of exits utilized for fusion. Figure 3 plots the exit usage statistics to compare the default setting against the variant lacking LHinge .Removing this hinge loss clearly causes severe routing in-stability. For instance, the maximum number of active exits surges to 16 on the Beauty dataset under the Qwen backbone. In contrast, the default configuration substantially reduces extreme exit activation and keeps the average utilization near the target capacity. 
+
+D. Hyperparameter Study (RQ3) 
+
+We investigate FLEXRec’s sensitivity to various hyperpa-rameter configurations. Specifically, we evaluate the impact of the load balancing loss weight ( α), the target-k hinge loss weight ( λ), the Z-loss weight ( β), and the target num-ber of exits ( k). We tune these hyperparameters within the following ranges: α ∈ {0.005 , 0.01 , 0.05 , 0.1, 0.15 }, λ ∈{0.5, 1, 1.5, 2, 2.5}, β ∈ {1e −5, 1e −4, 1e −3, 1e −2, 1e −1},and k ∈ { 1, 2, 3, 4, 5}. The overall performance trends are illustrated in Figure 4. 
+
+Effect of the load balancing loss weight ( α). The pa-rameter α plays a critical role in FLEXRec’s performance. Under the Qwen backbone, the Yelp dataset peaks at α = 0 .05 ,whereas the Toys dataset experiences a noticeable performance dip at this value before recovering. Conversely, with the Llama backbone, α = 0 .05 yields the optimal result for Toys. These divergent trends suggest that the optimal α is highly dependent on the interplay between the dataset’s characteristics and the underlying LLM architecture. TABLE II: The overall performance benchmark of FLEXRec and baseline methods. Skyline settings represent E4SRec evaluated with a larger LLM backbone ( i.e. , Qwen 3 4B and Llama 3.1 8B) to establish an upper-bound performance reference. Boldface and underline indicate the best and second-best results, respectively, among the comparable methods under each backbone setting.                                                                                                                                                                                                                                                                                                                                                              
+
+> LLM Method Toys Beauty Yelp
+> N@10 R@10 N@20 R@20 T(ms) N@10 R@10 N@20 R@20 T(ms) N@10 R@10 N@20 R@20 T(ms) —SASRec 0.0353 0.0649 0.0421 0.0919 0.01 0.0288 0.0571 0.0376 0.0922 0.01 0.0173 0.0354 0.0233 0.0593 0.01 BERT4Rec 0.0210 0.0385 0.0257 0.0571 0.01 0.0228 0.0458 0.0287 0.0695 0.01 0.0174 0.0345 0.0232 0.0578 0.01 Qwen Skyline 0.0539 0.0867 0.0616 0.1172 9.51 0.0435 0.0745 0.0510 0.1045 9.49 0.0199 0.0400 0.0260 0.0643 9.83 SPRec 0.0170 0.0328 0.0208 0.0478 238.05 0.0073 0.0140 0.0092 0.0217 244.36 0.0099 0.0109 0.0102 0.0125 77.65 SETRec 0.0423 0.0760 0.0510 0.1107 130.94 0.0380 0.0714 0.0462 0.1037 141.49 0.0177 0.0358 0.0239 0.0605 139.81 LLM-SRec 0.0255 0.0485 0.0322 0.0753 62.01 0.0198 0.0412 0.0263 0.0674 67.54 0.0148 0.0307 0.0203 0.0529 46.10 HUM 0.0269 0.0565 0.0349 0.0883 23.43 0.0204 0.0444 0.0280 0.0746 24.38 0.0136 0.0249 0.0172 0.0391 23.91 E4SRec 0.0452 0.0742 0.0515 0.0990 6.89 0.0391 0.0694 0.0470 0.1006 7.00 0.0188 0.0383 0.0248 0.0621 6.98 SparseToken 0.0499 0.0803 0.0561 0.1050 7.31 0.0445 0.0763 0.0526 0.1083 7.40 0.0180 0.0358 0.0239 0.0594 7.69 DynamicMoE 0.0497 0.0791 0.0560 0.1040 7.35 0.0426 0.0747 0.0506 0.1063 7.37 0.0191 0.0381 0.0251 0.0619 7.87 LD-MoLE 0.0516 0.0816 0.0578 0.1064 7.60 0.0438 0.0753 0.0513 0.1054 6.63 0.0184 0.0365 0.0242 0.0598 6.68
+> FLEXRec 0.0521 0.0830 0.0584 0.1084 7.53 0.0451 0.0775 0.0530 0.1091 7.10 0.0207 0.0407 0.0271 0.0666 7.49 Llama Skyline 0.0526 0.0836 0.0595 0.1113 10.66 0.0471 0.0788 0.0556 0.1126 10.19 0.0206 0.0407 0.0268 0.0655 10.84 SPRec 0.0184 0.0331 0.0224 0.0489 65.86 0.0158 0.0268 0.0187 0.0383 144.54 0.0136 0.0156 0.0140 0.0172 200.84 SETRec 0.0446 0.0811 0.0532 0.1153 126.58 0.0418 0.0768 0.0504 0.1111 127.39 0.0189 0.0376 0.0250 0.0620 128.84 LLM-SRec 0.0194 0.0376 0.0257 0.0628 53.62 0.0189 0.0384 0.0255 0.0646 55.44 0.0138 0.0284 0.0190 0.0493 37.22 HUM 0.0341 0.0724 0.0443 0.1127 20.58 0.0299 0.0632 0.0394 0.1011 21.77 0.0185 0.0339 0.0232 0.0524 21.02 E4SRec 0.0481 0.0773 0.0546 0.1035 6.48 0.0470 0.0771 0.0549 0.1084 6.57 0.0182 0.0366 0.0243 0.0608 6.78 SparseToken 0.0521 0.0828 0.0592 0.1110 7.31 0.0488 0.0803 0.0563 0.1104 8.42 0.0181 0.0370 0.0241 0.0611 7.55 DynamicMoE 0.0492 0.0793 0.0557 0.1054 7.36 0.0476 0.0771 0.0548 0.1055 7.87 0.0167 0.0340 0.0227 0.0577 7.07 LD-MoLE 0.0512 0.0820 0.0581 0.1095 7.38 0.0488 0.0795 0.0564 0.1094 7.51 0.0182 0.0369 0.0247 0.0627 7.14
+> FLEXRec 0.0524 0.0848 0.0603 0.1166 7.43 0.0498 0.0818 0.0574 0.1122 8.12 0.0188 0.0376 0.0249 0.0617 7.31
+
+TABLE III: Ablation study of FLEXRec on three datasets using both Qwen and Llama backbones. “Default” setting refers to the model utilizing all loss components. We evaluate the impact of removing the load balancing loss (w/o LLB ), the target-k
+
+hinge loss (w/o LHinge ), and the Z-loss (w/o LZ ). 
+
+LLM Variant Toys Beauty Yelp 
+
+N@10 R@10 N@20 R@20 N@10 R@10 N@20 R@20 N@10 R@10 N@20 R@20 Qwen 
+
+Default 0.0521 0.0830 0.0584 0.1084 0.0451 0.0775 0.0530 0.1091 0.0207 0.0407 0.0271 0.0666 w/o LLB 0.0476 0.0772 0.0540 0.1027 0.0447 0.0766 0.0528 0.1088 0.0177 0.0350 0.0235 0.0585 w/o LHinge 0.0504 0.0787 0.0564 0.1026 0.0444 0.0766 0.0523 0.1082 0.0190 0.0373 0.0249 0.0609 w/o LZ 0.0471 0.0769 0.0536 0.1024 0.0445 0.0771 0.0523 0.1079 0.0183 0.0367 0.0241 0.0597 Llama 
+
+Default 0.0524 0.0848 0.0603 0.1166 0.0498 0.0818 0.0574 0.1122 0.0188 0.0376 0.0249 0.0617 w/o LLB 0.0486 0.0778 0.0554 0.1049 0.0483 0.0784 0.0559 0.1087 0.0170 0.0348 0.0229 0.0585 w/o LHinge 0.0488 0.0781 0.0553 0.1039 0.0485 0.0793 0.0561 0.1092 0.0166 0.0344 0.0223 0.0569 w/o LZ 0.0513 0.0846 0.0592 0.1158 0.0495 0.0803 0.0567 0.1090 0.0169 0.0342 0.0225 0.0564 
+
+Effect of the target-k hinge loss weight ( λ). The empirical results demonstrate a general preference for λ = 1 , at which all three datasets achieve robust recommendation accuracy. As 
+
+λ increases beyond this optimal point, we observe a marginal performance degradation, which is particularly evident on the Toys dataset under the Qwen backbone and the Yelp dataset under the Llama backbone. 
+
+Effect of the Z-loss weight (β). Setting β = 1e −3
+
+consistently delivers optimal or near-optimal results across all evaluated scenarios. The stabilizing effect of this regularizer is most prominent on the Beauty dataset under the Llama back-bone: the performance suffers a sharp decline at β = 1e −4
+
+but immediately recovers and peaks when β is increased to 
+
+1e −3.
+
+Effect of the target number of exits ( k). Across all datasets and both LLM backbones, setting target k = 3 consistently yields the highest recommendation accuracy. This indicates that dynamically routing and fusing roughly three exits strikes the optimal balance between extracting sufficient semantic richness and preventing the introduction of noisy, redundant signals into the learning process. 
+
+E. Adaptive Routing Case Study (RQ4) 
+
+To study how FLEXRec assigns exits across varying user profiles, we categorize user sequences into five length-based groups and visualize the average exits assigned in Figure 5. It is observed that the number of exits used for fusion is heavily influenced by the choice of LLM backbone. FLEXRec consistently activates more exits when utilizing Llama (ap-proximately 3 on average) than when utilizing Qwen (ap-proximately 2). This indicates that the AC-Router effectively calibrates to the inherent representational capacity and layer dynamics of the underlying LLM backbone model. w/o Hinge Default 02
+
+> 3
+> 46810
+
+(a) Toys-Qwen 02 
+
+> 3
+> 468
+
+(b) Toys-Llama 0 
+
+> 3
+> 510 15 20
+
+(c) Beauty-Qwen 02 
+
+> 3
+> 46
+
+(d) Beauty-Llama 0 
+
+> 3
+> 510 15 20
+
+(e) Yelp-Qwen 02 
+
+> 3
+> 46810
+
+(f) Yelp-Llama 
+
+Fig. 3: Impact of the target-k hinge loss ( LHinge ) on the number of active exits across inference samples. The y-axis denotes the number of active exits assigned by the AC-Router for a given user sequence. The vertical bars represent the minimum to maximum range of exits assigned across all samples, while the diamond markers denote the average number of exits used. The red dotted horizontal line represents the target number of exits ( k = 3 ). Toys Beauty Yelp | Qwen Llama 0.0524 0.0567 0.0609                   
+
+> NDCG@20
+> 0.005 0.01 0.05 0.1 0.15
+> Effect of
+> 0.0223 0.0247 0.0271
+> 0.0520 0.0566 0.0612
+> 0.5 11.5 22.5
+> Effect of
+> 0.0220 0.0245 0.0271
+> 0.0522 0.0563 0.0603
+> 1e5
+> 1e4
+> 1e3
+> 1e2
+> 1e1
+> Effect of
+> 0.0227 0.0249 0.0271
+> 0.0517 0.0560 0.0603
+> 12345
+> Effect of Target k
+> 0.0218 0.0244 0.0271
+
+Fig. 4: Impact of different hyperparameters ( α, λ, β, and k) on the recommendation performance (NDCG@20) of FLEXRec. Solid and dashed lines represent the Qwen and Llama backbones, respectively. A split-axis design dynamically scales the y-axis to visually separate the higher-performing datasets (Toys and Beauty) from the sparser dataset (Yelp). Furthermore, the standard deviation within each sequence-length group remains substantial, indicating that FLEXRec does not rely solely on rigid length-based heuristics. Instead, sequences of similar lengths can receive different routing decisions, suggesting that the router responds to sequence-012345  
+
+> Toys Beauty Yelp
+> 5
+> 6 10
+> 11 20
+> 21 50
+> 51+ 0123455
+> 6 10
+> 11 20
+> 21 50
+> 51+ 5
+> 6 10
+> 11 20
+> 21 50
+> 51+
+> User Sequence Length Average Exits Assigned Qwen Llama
+
+Fig. 5: Adaptive routing behavior of FLEXRec across vary-ing user sequence lengths. The x-axis categorizes users into interaction history bins, while the y-axis indicates the average number of exits assigned. Error bars denote the standard deviation of the router’s decisions. specific information beyond interaction-history length. This behavior is particularly evident with the Llama backbone, where within-group variation is comparatively large. V. C ONCLUSION 
+
+In this paper, we propose FLEXRec, a layer-wise exit fusion framework that enhances compact LLMs for scalable sequential recommendation. FLEXRec adopts a discrimina-tive retrieval paradigm to enable efficient full-corpus ranking and employs an adaptive continuous router (AC-Router) to dynamically select and fuse layer-wise score distributions for each user sequence. A novel target-k hinge loss further regulates the number of activated exits to maintain routing sparsity. Extensive experiments on three real-world datasets demonstrate that FLEXRec effectively compensates for the limited capacity of compact LLM backbones, achieving state-of-the-art accuracy among compact-backbone methods while maintaining efficient inference. ACKNOWLEDGMENTS 
+
+This work is partially supported by the Australian Re-search Council (Grant No. DE230101033, FT210100624, LP230200892, LP240200546, LP250200778, DP260100326 and DP240101814). REFERENCES [1] K. Bao, J. Zhang, Y. Zhang, W. Wang, F. Feng, and X. He, “Tallrec: An effective and efficient tuning framework to align large language model with recommendation,” in RecSys , 2023, pp. 1007–1014. [2] Y. Zhang, F. Feng, J. Zhang, K. Bao, Q. Wang, and X. He, “Collm: Integrating collaborative embeddings into large language models for recommendation,” TKDE , 2025. [3] C. Yu et al. , “Cosmo: A large-scale e-commerce common sense knowl-edge generation and serving system at amazon,” in Companion of SIGMOD , 2024, pp. 148–160. [4] X. Liang, V. Nguyen, V. Le, P. Albert, and J. Monteil, “In-context learn-ing for addressing user cold-start in sequential movie recommenders,” in RecSys , 2025, pp. 979–982. [5] J. Liao, S. Li, Z. Yang, J. Wu, Y. Yuan, X. Wang, and X. He, “Llara: Large language-recommendation assistant,” in SIGIR , 2024. [6] J. Kaplan, S. McCandlish, T. Henighan, T. B. Brown, B. Chess, R. Child, S. Gray, A. Radford, J. Wu, and D. Amodei, “Scaling laws for neural language models,” arXiv preprint arXiv:2001.08361 , 2020. [7] A. Yang et al. , “Qwen3 technical report,” 2025. [8] W. Yue, Y. Yin, X. Zhang, B. Shi, T. Liang, and J. Wan, “Cot4rec: Revealing user preferences through chain of thought for recommender systems,” in AAAI , vol. 39, no. 12, 2025, pp. 13 142–13 151. [9] X. Kong, J. Jiang, B. Liu, Z. Xu, H. Zhu, J. Xu, B. Zheng, J. Wu, and X. Wang, “Think before recommendation: Autonomous reasoning-enhanced recommender,” NIPS , vol. 38, pp. 141 209–141 232, 2025. [10] Y. Cui, F. Liu, P. Wang, B. Wang, H. Tang, Y. Wan, J. Wang, and J. Chen, “Distillation matters: empowering sequential recommenders to match the performance of large language models,” in RecSys , 2024. [11] S. Kim, H. Kang, K. Kim, J. Kim, D. Kim, M. Yang, K. Oh, J. McAuley, and C. Park, “Lost in sequence: Do large language models understand sequential recommendation?” in KDD , 2025, pp. 1160–1171. [12] L. Wu et al. , “A survey on large language models for recommendation,” 
+
+WWW , 2024. [13] W. Wang, H. Bao, X. Lin, J. Zhang, Y. Li, F. Feng, S.-K. Ng, and T.-S. Chua, “Learnable item tokenization for generative recommendation,” in 
+
+CIKM , 2024, pp. 2400–2409. [14] N. De Cao, G. Izacard, S. Riedel, and F. Petroni, “Autoregressive entity retrieval,” in ICLR , 2020. [15] X. Li, C. Chen, X. Zhao, Y. Zhang, and C. Xing, “E4srec: An elegant effective efficient extensible solution of large language models for sequential recommendation,” arXiv preprint arXiv:2312.02443 , 2023. [16] H. Bao, W. Wang, X. Lin, F. Zhu, T. Sun, F. Feng, and T.-S. Chua, “Het-erogeneous user modeling for llm-based recommendation,” in RecSys ,2025, pp. 145–154. [17] Z. Hong et al. , “Scale matters: Large language models with billions (rather than millions) of parameters better match neural representations of natural language,” 2024. [18] O. Skean, M. R. Arefin, D. Zhao, N. N. Patel, J. Naghiyev, Y. Lecun, and R. Shwartz-Ziv, “Layer by layer: Uncovering hidden representations in language models,” in ICML . PMLR, 2025, pp. 55 854–55 875. [19] A. Gromov, K. Tirumala, H. Shapourian, P. Glorioso, and D. Roberts, “The unreasonable ineffectiveness of the deeper layers,” in ICLR , 2025. [20] W.-C. Kang and J. McAuley, “Self-attentive sequential recommenda-tion,” in ICDM . IEEE, 2018, pp. 197–206. [21] F. Sun, J. Liu, J. Wu, C. Pei, X. Lin, W. Ou, and P. Jiang, “Bert4rec: Sequential recommendation with bidirectional encoder representations from transformer,” in CIKM , 2019, pp. 1441–1450. [22] S. Mu and S. Lin, “A comprehensive survey of mixture-of-experts: Algorithms, theory, and applications,” 2025. [23] S. Kim, H. Kang, S. Choi, D. Kim, M. Yang, and C. Park, “Large language models meet collaborative filtering: An efficient all-round llm-based recommender system,” in KDD , 2024, pp. 1395–1406. [24] K. Bao, J. Zhang, W. Wang, Y. Zhang, Z. Yang, Y. Luo, C. Chen, F. Feng, and Q. Tian, “A bi-step grounding paradigm for large language models in recommendation systems,” TORS , vol. 3, no. 4, pp. 1–27, 2025. [25] J. Tan, S. Xu, W. Hua, Y. Ge, Z. Li, and Y. Zhang, “Idgenrec: Llm-recsys alignment with textual id learning,” in SIGIR , 2024, pp. 355–364. [26] M. Sun, Z. Liu, A. Bair, and J. Z. Kolter, “A simple and effective pruning approach for large language models,” in ICLR , 2024. [27] X. Ma, G. Fang, and X. Wang, “Llm-pruner: On the structural pruning of large language models,” NIPS , vol. 36, pp. 21 702–21 720, 2023. [28] G. Xiao, J. Lin, M. Seznec, H. Wu, J. Demouth, and S. Han, “Smoothquant: Accurate and efficient post-training quantization for large language models,” in ICML . PMLR, 2023, pp. 38 087–38 099. [29] T. Dettmers, M. Lewis, Y. Belkada, and L. Zettlemoyer, “Gpt3. int8 (): 8-bit matrix multiplication for transformers at scale,” NIPS , 2022. [30] X. Liang, T. Chen, Q. V. H. Nguyen, J. Li, and H. Yin, “Learning compact compositional embeddings via regularized pruning for recom-mendation,” in ICDM , 2023, pp. 378–387. [31] H. V. Tran, T. Chen, G. Ye, Q. V. H. Nguyen, K. Zheng, and H. Yin, “On-device content-based recommendation with single-shot embedding pruning: A cooperative game perspective,” in WWW , 2025, pp. 772–785. [32] Y. Qu, L. Qu, T. Chen, X. Zhao, J. Li, and H. Yin, “Sparse gradient training for recommender systems,” Data Science and Engineering ,vol. 11, no. 1, pp. 230–247, 2026. [33] X. Liang, T. Chen, L. Cui, Y. Wang, M. Wang, and H. Yin, “Lightweight embeddings for graph collaborative filtering,” in SIGIR , 2024, pp. 1296– 1306. [34] X. Liang, T. Chen, W. Yuan, and H. Yin, “Lightweight embeddings with graph rewiring for collaborative filtering,” TOIS , vol. 43, no. 4, pp. 1–29, 2025. [35] W. Cai, J. Jiang, F. Wang, J. Tang, S. Kim, and J. Huang, “A survey on mixture of experts in large language models,” TKDE , 2025. [36] D. Dai et al. , “Deepseekmoe: Towards ultimate expert specialization in mixture-of-experts language models,” in ACL , 2024. [37] N. Shazeer, A. Mirhoseini, K. Maziarz, A. Davis, Q. Le, G. Hinton, and J. Dean, “Outrageously large neural networks: The sparsely-gated mixture-of-experts layer,” in ICLR , 2017. [38] W. Fedus, B. Zoph, and N. Shazeer, “Switch transformers: Scaling to trillion parameter models with simple and efficient sparsity,” JMLR ,vol. 23, no. 120, pp. 1–39, 2022. [39] B. Zoph, I. Bello, S. Kumar, N. Du, Y. Huang, J. Dean, N. Shazeer, and W. Fedus, “St-moe: Designing stable and transferable sparse expert models,” arXiv preprint arXiv:2202.08906 , 2022. [40] Q. Huang, Z. An, N. Zhuang, M. Tao, C. Zhang, Y. Jin, K. Xu, L. Chen, S. Huang, and Y. Feng, “Harder task needs more experts: Dynamic routing in moe models,” in ACL , 2024, pp. 12 883–12 895. [41] Y. Guo, Z. Cheng, X. Tang, Z. Tu, and T. Lin, “Dynamic mixture of experts: An auto-tuning approach for efficient transformer models,” in 
+
+ICLR , 2025. [42] Z. Wang, J. Zhu, and J. Chen, “Remoe: Fully differentiable mixture-of-experts with relu routing,” in ICLR , 2025. [43] Y. Zhuang, Y. Shen, Y. Bian, Q. Su, S. Ji, Y. Shi, and F. Miao, “Ld-mole: Learnable dynamic routing for mixture of lora experts,” in ICLR ,2026. [44] X. Shi, S. Wang, Y. Nie, D. Li, Z. Ye, Q. Wen, and M. Jin, “Time-moe: Billion-scale time series foundation models with mixture of experts,” in 
+
+ICLR , 2025. [45] A. Laha, S. A. Chemmengath, P. Agrawal, M. Khapra, K. Sankara-narayanan, and H. G. Ramaswamy, “On controllable sparse alternatives to softmax,” NIPS , vol. 31, 2018. [46] P. Micikevicius et al. , “Mixed precision training,” in ICLR , 2018. [47] M. Shoeybi, M. Patwary, R. Puri, P. LeGresley, J. Casper, and B. Catan-zaro, “Megatron-lm: Training multi-billion parameter language models using model parallelism,” arXiv preprint arXiv:1909.08053 , 2019. [48] H. Touvron et al. , “Llama: Open and efficient foundation language models,” 2023. [49] A. Chowdhery et al. , “Palm: Scaling language modeling with pathways,” 
+
+JMLR , 2023. [50] E. J. Hu et al. , “Lora: Low-rank adaptation of large language models,” in ICLR , 2022. [51] J. Xin, R. Tang, J. Lee, Y. Yu, and J. Lin, “Deebert: Dynamic early exiting for accelerating bert inference,” in ACL , 2020, pp. 2246–2251. [52] R. He and J. McAuley, “Ups and downs: Modeling the visual evolution of fashion trends with one-class collaborative filtering,” in WWW , 2016. [53] K. Zhou, H. Wang, W. X. Zhao, Y. Zhu, S. Wang, F. Zhang, Z. Wang, and J.-R. Wen, “S3-rec: Self-supervised learning for sequential recom-mendation with mutual information maximization,” in CIKM , 2020. [54] C. Gao, R. Chen, S. Yuan, K. Huang, Y. Yu, and X. He, “Sprec: Self-play to debias llm-based recommendation,” in WWW , 2025, pp. 5075–5084. [55] X. Lin, H. Shi, W. Wang, F. Feng, Q. Wang, S.-K. Ng, and T.-S. Chua, “Order-agnostic identifier for large language model-based generative recommendation,” in SIGIR , 2025, pp. 1923–1933. [56] A. Grattafiori et al. , “The llama 3 herd of models,” 2024.

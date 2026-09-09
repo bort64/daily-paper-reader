@@ -1,0 +1,3767 @@
+Title: Token-Level Advertising
+
+URL Source: https://arxiv.org/pdf/2608.27382v2
+
+Published Time: Mon, 07 Sep 2026 01:15:45 GMT
+
+Number of Pages: 24
+
+Markdown Content:
+# Token-Level Advertising ∗
+
+# Hanbing Liu 
+
+Renmin University of China Beijing, China liuhanbing@ruc.edu.cn 
+
+# Bowei Zhang 
+
+Renmin University of China Beijing, China 2023201812@ruc.edu.cn 
+
+# Changyuan Yu 
+
+Beijing, China changyuanyu83@outlook.com 
+
+# Yinyu Ye 
+
+Stanford University Stanford, CA, USA yinyu-ye@stanford.edu 
+
+# Qi Qi ✉
+
+Renmin University of China Beijing, China qi.qi@ruc.edu.cn 
+
+## Abstract 
+
+Generative AI is transforming how people access information, chal-lenging traditional advertising mechanisms built around predefined slots. Towards generation-native advertising, we propose the La-tent Advertiser Mixture Auction (LAMA), a token-level advertising mechanism that embeds advertiser influence directly into the gen-eration process. Advertisers report local continuation values that induce advertiser-specific next-token policies, from which the plat-form decodes through a latent mixture while updating an allocation posterior. We show that LAMA satisfies Markov DSIC and IR, and achieves near-optimal KL-regularized welfare. We further develop a learning-based implementation that reconstructs the required reports online from learned local advantages and root values. Proof-of-concept experiments on real-world commercial-search query splits show that LAMA improves platform welfare and revenue while maintaining user-facing response quality, providing initial evidence for the feasibility of generation-native advertising. 
+
+## CCS Concepts 
+
+• Theory of computation → Algorithmic mechanism design ;• Information systems → Online advertising .
+
+## Keywords 
+
+mechanism design, game theory, large language models, auction, computational advertising 
+
+## 1 Introduction 
+
+“The medium is the message.” 
+
+— Marshall McLuhan, Understanding Media (1964) The medium through which people access online information is undergoing a fundamental transformation. For decades, internet in-terfaces have largely organized information by retrieving, ranking, and presenting content that already exists. Search engines return ranked results; recommendation systems select items from a col-lection. Generative AI introduces a different mode of information access. Rather than simply choosing what to present, AI-native interfaces synthesize responses dynamically around user intent, with the content itself taking shape as the interaction unfolds. The 
+
+> ∗
+
+Preprint. Work in progress. Underline colors indicate the advertiser source of each token (Qwen3 tokenizer is used throughout the paper). In our mechanism, advertisers can influence the final response at token-level granularity. best running shoes     
+
+> Sponsored
+> #1 #2 #3
+> What are the best running shoes?
+> For daily training, the Nike Pegasus 41
+> stands out for its comfort and durability. It offers great cushioning and a breathable upper, making it a reliable choice for miles. If you prefer stability, the ASICS Gel-Kayno 30
+> is excellent for support and long runs. For budget-friendly options, consider the New Balance Fresh Foam 680v8 , which is balanced and versatile for most runners.
+> Ad Ad Ad
+
+Figure 1: In generation-native advertising, ad opportunities are no longer predefined slots: when they emerge, which advertisers are shown, and how they are presented jointly shape user experience and marketing effectiveness. 
+
+medium is no longer merely organizing information; it is generating it. Advertising has historically been built around the structure of the medium in which it appears. In traditional internet interfaces, this has led to a simple but powerful abstraction: the slot. Whether it is a sponsored-search position, a reserved display placement, or a promoted position in a recommendation feed, the commercial opportunity can typically be defined in advance and then assigned to advertisers. But this abstraction becomes less natural when the surrounding content is itself generated. As shown in Figure 1, a product may become relevant only as an answer develops in a particular direction, and an early generation choice can make a later brand mention either natural or jarring. In such settings, generation does more than fill an advertising opportunity—it can help create one. The advertising opportunity is no longer merely a slot inside generated content; it can be shaped by the generation process itself. This shift calls for a corresponding change in mechanism design. Traditional advertising mechanisms largely separate two questions: what opportunities exist, and who should receive them? Auction theory has developed powerful tools for the latter, typically taking the former as given. This separation is natural when the advertising slot exists before the auction begins, but begins to break down when the generation trajectory itself determines whether and how an advertiser can be meaningfully incorporated. Thus, a mechanism that only allocates predefined opportunities leaves an important part of the generative medium outside the allocation process. Recent work has begun to rethink what constitutes an advertis-ing opportunity in generative interfaces. Rather than relying only arXiv:2608.27382v2 [cs.GT] 4 Sep 2026 Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+on fixed slots, some approaches define opportunities over segments or context-dependent positions within generated text, while others first construct complete candidate responses and then select, ag-gregate, or insert sponsored content at the response level. These abstractions make advertising substantially more adaptive to gener-ated context: where an ad can appear, or which sponsored response is appropriate, may now depend on the content produced by the model. Yet the mechanism typically operates on an opportunity that has already been identified—a segment, a position, or a completed response. Generation shapes the opportunity, but is not itself the allocation process. In this paper, we take the next step and formulate a generation-native paradigm for computational advertising, in which advertis-ing is directly embedded into the generation process. Advertisers are treated as strategic participants whose messages can influence how the response evolves, while the platform jointly determines generated content, advertising allocation, and payments. Within this broader paradigm, we study a particularly native instantiation at the token level: advertisers may influence the response at every generation step. A user query initializes a sequential process, and at each generated prefix, the platform combines advertiser messages with the reference language model and the current mechanism state to determine what token to generate next and how the advertising allocation should evolve. The goal is to incorporate advertiser incen-tives and platform monetization into generation while preserving the naturalness and usefulness of the generated content. Making advertising a native part of generation introduces several technical challenges. Most importantly, incentive design becomes inherently sequential: a report submitted at one prefix can change the future generation trajectory, which in turn changes the ad-vertiser’s subsequent opportunities and eventual payoff. Truthful behavior must therefore remain optimal not only at the beginning of generation, but also after any reachable future states. Advertiser in-fluence must also be balanced against the reference language model so that monetization does not come at the expense of response quality. At the same time, language model inference already incurs substantial serving latency, requiring the mechanism to introduce only minimal additional overhead. Finally, a tractable mechanism should still admit a meaningful efficiency guarantee relative to an ideal welfare-maximizing benchmark. To address these challenges, we propose the Latent Advertiser Mixture Auction (LAMA) for the fundamental single-winner setting. At each prefix, advertisers’ local reports induce advertiser-specific next-token policies, and LAMA generates next token from a latent mixture of these policies. The mixture weights evolve as a Bayesian allocation posterior as tokens are observed, linking the generation trajectory to the eventual advertising allocation. Once generation terminates, this posterior determines the final allocation, together with payments designed for the sequential setting. We show that LAMA satisfies Markov dominant-strategy incentive compatibil-ity and individual rationality. Moreover, it achieves near-optimal KL-regularized welfare, with the optimality gap vanishing as the regularization diminishes. We further develop a practical implementation that avoids ex-plicitly reasoning over the full token tree or requiring advertisers to compute complex reports themselves. The platform provides re-porting as a learned service: a shared advertiser-conditioned model recovers local signals along the realized generation path and an-chors them with an advertiser-specific root estimate, allowing the reports required by LAMA to be reconstructed online. This de-sign turns the theoretical sequential mechanism into a lightweight serving-time procedure that can operate over a small candidate set of advertisers with modest additional language-model computation. We evaluate LAMA in simulation on real-world query splits with model-predicted impression values. We compare against heuristic mechanisms that allocate advertising either before or after genera-tion, as well as a representative response-level aggregation mecha-nism. Across the evaluated settings, LAMA achieves the strongest platform welfare and revenue while maintaining high advertiser value and user-side response quality. These results provide an ini-tial proof of concept for the generation-native advertising para-digm: allowing advertisers to participate directly in the token-level generation process can improve monetization while preserving high-quality generated responses. Our contributions are summarized as follows. (1) Generation-native advertising. We develop a token-level formulation of generation-native advertising, where adver-tiser participation is embedded directly into the sequential generation process and jointly shapes the response and eventual allocation. (2) Token-level mechanism design. We propose LAMA for the fundamental single-winner setting and establish Markov DSIC and IR, together with near-optimal KL-regularized welfare, with an additive gap of at most 𝛽 log |N | .(3) Practical implementation. We develop a learning-based implementation that reconstructs the reports required by LAMA online and supports efficient serving. (4) Proof-of-concept evaluation. Experiments on real-world search query splits show that LAMA improves platform welfare and revenue while maintaining advertiser value and user-facing response quality. 
+
+## 2 Model 
+
+We model token-level advertising as a sequential mechanism em-bedded in the generation process of a language model. A user query initializes a token-level decision process. At each non-terminal prefix, advertisers may submit local reports based on the publicly observed state, and the platform uses these reports together with its privately observed history to choose the next token distribution, the advertising allocation, and payments. The central distinction from classical sponsored-search models is that the advertising opportu-nity is not an exogenously given slot. Instead, it is endogenously shaped by the generated trajectory itself. 
+
+Context space and reference generation. Let V be the token vo-cabulary and let 𝐿 be the maximum generation length 1. The context space is S := V ≤𝐿 = Ð𝐿 𝑡 =0 V𝑡 , where V0 = {∅} . For two contexts 
+
+𝑥 1, 𝑥 2 ∈ S , we write [𝑥 1, 𝑥 2] for their concatenation whenever the resulting sequence has length at most 𝐿 . A user query 𝑞 ∈ S is drawn from a query distribution D and serves as the initial state. The platform has an organic language-model policy 𝜋 ref (· | 𝑠 ) ∈ 
+
+Δ++ (V) , 𝑠 ∈ S , which describes the next-token distribution in the   
+
+> 1Natually, We assume | V | ≥ 3.Token-Level Advertising
+
+absence of advertising intervention 2. We also write 𝜋 0 for 𝜋 ref . A trajectory from query 𝑞 is 𝜏 = (𝑠 0 = 𝑞, 𝑎 0, 𝑠 1, 𝑎 1, . . . , 𝑠 𝑇 𝜏 ), 𝑠 𝑡 +1 =
+
+[𝑠 𝑡 , 𝑎 𝑡 ]. Let EOS ∈ V denote the end-of-sequence token. A state is terminal if it contains EOS or reaches the maximum length. We denote the terminal set by S𝑇 , and write 𝐿 (𝑠 ) ⊆ S 𝑇 for the set of terminal descendants of a non-terminal state 𝑠 . For a trajectory 𝜏 ,its realized terminal state is denoted by ℓ (𝜏 ) = 𝑠 𝑇 𝜏 .
+
+Advertisers and private types. There are 𝑛 ≥ 2 advertisers, in-dexed by N = [𝑛 ] = {1, . . . , 𝑛 }. Each advertiser 𝑖 has a private termi-nal reward function 𝑟 𝑖 : S𝑇 → R≥0. The value 𝑟 𝑖 (ℓ) represents ad-vertiser 𝑖 ’s value from receiving the advertising opportunity when the generated response terminates at ℓ. We write 𝑟 = (𝑟 1, . . . , 𝑟 𝑛 )
+
+for the type profile and 𝑟 −𝑖 for the profile excluding advertiser 𝑖 .The allocation of the advertising opportunity is represented by a vector 𝜆 ∈ Λ ⊆ [ 0, 1]𝑛 , where Λ is an exogenously given feasible al-location set. For example, Λ may encode slot-capacity constraints or exposure constraints. This paper focuses on the fundamental single-winner setting: the advertising opportunity is endogenously shaped by the generation process, but the eventual sponsored outcome is assigned to a single advertiser. Thus, Λ = Δ(N ) . The realized gross value of advertiser 𝑖 on trajectory 𝜏 is therefore 𝜆 𝑖 𝑟 𝑖 (ℓ (𝜏 )) .
+
+Platform histories. To describe a mechanism that operates during generation, we introduce the history privately observed by the platform. A platform history at time 𝑡 is 
+
+ℎ𝑡 = (𝑠 0, 𝑚 0, 𝑎 0, . . . , 𝑠 𝑡 −1, 𝑚 𝑡 −1, 𝑎 𝑡 −1, 𝑠 𝑡 ),
+
+where 𝑠 0 = 𝑞 , 𝑎 𝑡 ∈ V is the token generated at time 𝑡 , and 𝑚 𝑡 =
+
+(𝑚 1,𝑡 , . . . , 𝑚 𝑛,𝑡 ) denotes the profile of messages submitted by the advertisers at time 𝑡 . Advertisers observe only the current state 𝑠 𝑡 ,which is public, whereas the platform observes the entire history. The state evolves deterministically according to 𝑠 𝑡 +1 = [𝑠 𝑡 , 𝑎 𝑡 ]. Let 
+
+H denote the set of non-terminal platform histories, and let 𝑠 (ℎ) be the current state at the end of history ℎ. A terminal platform history is denoted by ℎ𝑇 = (𝑠 0, 𝑚 0, 𝑎 0, . . . , 𝑠 𝑇 −1, 𝑚 𝑇 −1, 𝑎 𝑇 −1, 𝑠 𝑇 ), where 𝑠 𝑇 ∈S𝑇 . We write 𝜏 (ℎ𝑇 ) for the token trajectory induced by the terminal history ℎ𝑇 , and ℓ (ℎ𝑇 ) = 𝑠 𝑇 for its terminal state. 
+
+Sequential mechanisms. A sequential mechanism for token-level advertising is a tuple 
+
+Γ =  {M 𝑖 (ℎ)} 𝑖 ∈ N ,ℎ ∈ H , 𝑥, 𝜆, 𝑝 .
+
+For each non-terminal platform history ℎ, M𝑖 (ℎ) is advertiser 𝑖 ’s feasible message space after that history. Given ℎ ∈ H and a joint message 𝑚 = (𝑚 1, . . . , 𝑚 𝑛 ) ∈ M ( ℎ) := Î𝑖 ∈ N M𝑖 (ℎ), the next-token rule is 𝑥 (· | ℎ, 𝑚 ) ∈ Δ(V) . The instantaneous payment rule is 𝑝 𝑖 (ℎ, 𝑚, 𝑎 ) ∈ R, which specifies advertiser 𝑖 ’s payment when token 𝑎 is generated after history ℎ under report profile 𝑚 . The final allocation rule is 𝜆 (ℎ𝑇 ) ∈ Λ. Thus, the feasible message spaces, token-generation rule, payments, and final allocation may depend on the entire platform history 3. In particular, history-dependent message spaces allow the platform to check a new report against values previously recorded in its report ledger. The timing is as follows. (1) The user query 𝑞 ∼ D initializes the process at 𝑠 0 = 𝑞 .     
+
+> 2Thus, the reference policy has full support over the entire context space.
+> 3When no ambiguity arises, we sometimes use the current state 𝑠 (ℎ)in place of the platform history ℎfor brevity and intuition.
+
+(2) At each non-terminal state 𝑠 𝑡 , each advertiser 𝑖 submits a message 𝑚 𝑖,𝑡 ∈ M 𝑖 (ℎ𝑡 ). Let 𝑚 𝑡 = (𝑚 1,𝑡 , . . . , 𝑚 𝑛,𝑡 ).(3) The mechanism chooses a next-token distribution 𝑥 (· | 
+
+ℎ𝑡 , 𝑚 𝑡 ), draws 𝑎 𝑡 ∼ 𝑥 (· | ℎ𝑡 , 𝑚 𝑡 ), and charges 𝑝 𝑖 (ℎ𝑡 , 𝑚 𝑡 , 𝑎 𝑡 )
+
+for each 𝑖 ∈ N .(4) The state updates deterministically as 𝑠 𝑡 +1 = [𝑠 𝑡 , 𝑎 𝑡 ]. If 
+
+𝑠 𝑡 +1 ∈ S 𝑇 , the process terminates and the mechanism im-plements the feasible allocation 𝜆 (ℎ𝑇 ) ∈ Λ.
+
+Direct mechanisms are a special case as the platform can ask each advertiser to submit its entire reward function. However, such mechanisms are impractical for online generation because full re-porting may be slow and may reveal private information about trajectories that are never realized. Our definition therefore em-phasizes lightweight reports, and we will see that they suffice to achieve strong performance for the platform. 
+
+Strategies and induced policies. Let Θ𝑖 denote advertiser 𝑖 ’s type space. A strategy of advertiser 𝑖 maps its type and each non-terminal public state to a message: 𝜎 𝑖 : Θ𝑖 ×(S\S 𝑇 ) → Ðℎ∈ H M𝑖 (ℎ). A strat-egy is feasible if 𝜎 𝑖 (𝑟 𝑖 , 𝑠 (ℎ)) ∈ M 𝑖 (ℎ) at every history at which it is used. Given 𝜎 = (𝜎 1, . . . , 𝜎 𝑛 ) and type profile 𝑟 , the induced joint report at history ℎ is 𝑚 𝜎,𝑟 (ℎ) := (𝜎 1 (𝑟 1, 𝑠 (ℎ)) , . . . , 𝜎 𝑛 (𝑟 𝑛 , 𝑠 (ℎ))) .
+
+Together with the mechanism Γ, these reports determine the con-tinuation token policy 𝜋 Γ 
+
+> 𝜎,𝑟
+
+(𝑎 | ℎ) := 𝑥 (𝑎 | ℎ, 𝑚 𝜎,𝑟 (ℎ)) , 𝑎 ∈ V , and hence a distribution PΓ 
+
+> 𝜎,𝑟
+
+(· | ℎ) over terminal histories extending ℎ.
+
+Utilities. Advertisers have standard quasi-linear utilities. At a terminal history ℎ𝑇 , advertiser 𝑖 ’s realized utility is 𝑢 Γ 
+
+> 𝑖
+
+(ℎ𝑇 ; 𝑟 𝑖 ) =
+
+𝜆 𝑖 (ℎ𝑇 )𝑟 𝑖 (ℓ (ℎ𝑇 )) − Í𝑇 −1  
+
+> 𝑡 =0
+
+𝑝 𝑖 (ℎ𝑡 , 𝑚 𝑡 , 𝑎 𝑡 ). For a non-terminal platform history ℎ, a type profile 𝑟 , a strategy 𝜎 𝑖 , and opponent strategies 
+
+𝜎 −𝑖 , the continuation expected utility 𝑈 Γ 
+
+> 𝑖
+
+(ℎ; 𝑟 𝑖 , 𝜎 𝑖 , 𝜎 −𝑖 ; 𝑟 −𝑖 ) is 
+
+Eℎ𝑇 ∼PΓ 
+
+> 𝜎,𝑟 (· | ℎ)
+
+
+
+𝜆 𝑖 (ℎ𝑇 )𝑟 𝑖 (ℓ (ℎ𝑇 )) −  
+
+> 𝑇 −1
+
+∑︁  
+
+> 𝑡 =𝑡 (ℎ)
+
+𝑝 𝑖 (ℎ𝑡 , 𝑚 𝑡 , 𝑎 𝑡 )
+
+
+
+.
+
+Truthful reporting. The truthful report is specified by a mechanism-specific type-related reporting rule 𝜂 𝑖 : Θ𝑖 ×(S\S 𝑇 ) → Ðℎ∈ H M𝑖 (ℎ).
+
+For example, the sub-tree reporting rule 𝜂 𝑖 (𝑟 𝑖 , 𝑠 ) = 𝑟 𝑖 |𝐿 (𝑠 ) and the value function reporting rule 𝜂 𝑖 (𝑠 ; 𝑟 𝑖 ) = (𝑉 ∗ 
+
+> 𝑟 𝑖
+
+([ 𝑠, 𝑎 ])) 𝑎 ∈ V . It defines the truthful strategy 𝜎 tr  
+
+> 𝑖
+
+(𝑟 𝑖 , 𝑠 ) := 𝜂 𝑖 (𝑠 ; 𝑟 𝑖 ).
+
+Because a sequential mechanism allows advertisers to report information dynamically, incentive compatibility requires that an advertiser cannot wait for a favorable generated prefix and then manipulate its future reports. Formally, Definition 1 (Markov DSIC and IR). The mechanism Γ is Markov dominant-strategy incentive compatible (Markov DSIC) if, for every advertiser 𝑖 , type profile 𝑟 , feasible opponent strategy pro-file 𝜎 −𝑖 , reachable platform history ℎ after advertiser 𝑖 has reported truthfully along the prefix, and feasible continuation deviation 𝜎 ′ 
+
+> 𝑖
+
+,
+
+𝑈 Γ
+
+> 𝑖
+
+ ℎ; 𝑟 𝑖 , 𝜎 tr  
+
+> 𝑖
+
+, 𝜎 −𝑖 ; 𝑟 −𝑖 
+
+ ≥ 𝑈 Γ
+
+> 𝑖
+
+ ℎ; 𝑟 𝑖 , 𝜎 ′ 
+
+> 𝑖
+
+, 𝜎 −𝑖 ; 𝑟 −𝑖 
+
+ . It is individually ra-tional (IR) if, truthful participation from the initial state 𝑠 0 = 𝑞 gives nonnegative expected utility: 𝑈 Γ
+
+> 𝑖
+
+ 𝑞 ; 𝑟 𝑖 , 𝜎 tr  
+
+> 𝑖
+
+, 𝜎 −𝑖 ; 𝑟 −𝑖 
+
+ ≥ 0.
+
+KL-regularized social welfare. The platform’s objective is to gen-erate native and useful content while allocating advertising oppor-tunities efficiently. For a query 𝑞 , type profile 𝑟 , generation policy Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+𝜋 , define the KL-regularized social welfare SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ) as 
+
+E𝜏 ∼𝜋 (· | 𝑞 )
+
+"∑︁  
+
+> 𝑖 ∈ N
+
+𝜆 𝑖 (ℎ𝑇 )𝑟 𝑖 (ℓ (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝜋 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+.
+
+The first term is gross advertiser value under the generated content and realized allocation. The divergence term penalizes deviation from the organic policy, which optimizes user experience. 4 Thus 
+
+𝛽 > 0 controls the balance between monetization and content naturalness. When the query is also random, the expected welfare is E𝑞 ∼D 
+
+SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ) .
+
+Mechanism design problem. For each query-type pair (𝑞, 𝑟 ), a sequential mechanism Γ and its truthful reporting rule induce a token policy 𝜋 Γ 
+
+> 𝑞,𝑟
+
+and allocation rule 𝜆 Γ 
+
+> 𝑞,𝑟
+
+from the initial state. The platform chooses the mechanism to maximize induced welfare: max  
+
+> Γ
+
+E𝑞 ∼D , 𝑟 ∼𝐹 (· | 𝑞 )
+
+h
+
+SW 𝛽 
+
+
+
+𝜋 Γ 
+
+> 𝑞,𝑟
+
+, 𝜆 Γ 
+
+> 𝑞,𝑟
+
+| 𝑞, 𝑟 
+
+i 
+
+s.t. Γ is Markov DSIC and IR ,𝜆 Γ 
+
+> 𝑞,𝑟
+
+(𝜏 ) ∈ Λ, ∀𝑞, 𝑟, 𝜏 . 
+
+Here 𝐹 (· | 𝑞 ) denotes the conditional distribution over the type profiles of advertisers recalled for query 𝑞 . For ex-post analysis, the same objective can be studied pointwise for each realized (𝑞, 𝑟 ).
+
+## 3 Latent Advertiser Mixture Auction 
+
+We propose Latent Advertiser Mixture Auction (LAMA) to tackle this challenge. The key idea is to view the generation process as Bayesian sequential decision making that identifies the advertiser who values the generation opportunity most. As we will see, this perspective leads to a simple algorithm that is both fast and efficient. 
+
+Sequential reports. At a non-terminal state 𝑠 , advertiser 𝑖 reports a child-value vector b𝑉 𝑠 𝑖 = (b𝑉 𝑠 𝑖 ([ 𝑠, 𝑎 ])) 𝑎 ∈ V . The intended truthful report is 𝜂 𝑖 (𝑠 ; 𝑟 𝑖 ) =  𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ])  
+
+> 𝑎 ∈ V
+
+, where 𝑉 ∗ 
+
+> 𝑖
+
+is the optimal soft value function induced by advertiser 𝑖 ’s terminal reward 𝑟 𝑖 :
+
+𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ) = max  
+
+> 𝜋
+
+E𝜏 ∼𝜋 (· | 𝑠 )
+
+"
+
+𝑟 𝑖 (ℓ (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝜋 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+.
+
+Given a reported child-value vector, define advertiser 𝑖 ’s induced local policy by 
+
+b𝜋 𝑖 (𝑎 | 𝑠 ; b𝑉 𝑠 𝑖 ) :=
+
+𝜋 ref (𝑎 | 𝑠 ) exp 
+
+b𝑉 𝑠 𝑖 ([ 𝑠, 𝑎 ])/ 𝛽 
+
+Í𝑎 ′ ∈ V 𝜋 ref (𝑎 ′ | 𝑠 ) exp 
+
+b𝑉 𝑠 𝑖 ([ 𝑠, 𝑎 ′])/ 𝛽 
+
+ .
+
+This is the next-token policy that would be optimal if advertiser 𝑖 ’s reported truthfully. 
+
+Allocation posterior and next-token rule. The mechanism main-tains an allocation posterior 𝜌 (𝑠 ) ∈ Δ(N ) . At the query 𝑞 , after re-ceiving the first child-value reports, initialize 𝑍 𝑖 (𝑞 ) := Í𝑎 ∈ V 𝜋 ref (𝑎 |
+
+𝑞 ) exp (b𝑉 𝑞 𝑖 ([ 𝑞, 𝑎 ])/ 𝛽 ), and set 𝜌 𝑖 (𝑞 ) := 𝑍 𝑖 (𝑞 )Í𝑗 ∈N 𝑍 𝑗 (𝑞 ) .
+
+At a reached non-terminal state 𝑠 , after receiving reports b𝑉 𝑠 =
+
+(b𝑉 𝑠  
+
+> 1
+
+, . . . , b𝑉 𝑠 𝑛 ), the mechanism samples hierarchically: first sample a latent advertiser 𝐼 ∼ 𝜌 (𝑠 ) and then generate the next token from 
+
+> 4This KL-divergence penalty is standard in the reinforcement learning with human feedback (RLHF, [23]) literature.
+
+that advertiser’s induced policy, 𝑎 ∼ b𝜋 𝐼 (· | 𝑠 ; b𝑉 𝑠 𝐼 ). Marginally, this sampling rule induces the mixture next-token distribution 
+
+𝑥 (𝑎 | 𝑠, b𝑉 𝑠 , 𝜌 (𝑠 )) :=∑︁  
+
+> 𝑖 ∈ N
+
+𝜌 𝑖 (𝑠 )b𝜋 𝑖 (𝑎 | 𝑠 ; b𝑉 𝑠 𝑖 ).
+
+The subsequent posterior update is precisely Bayesian inference about this latent advertiser after observing the realized token. After token 𝑎 is realized, the posterior is updated by Bayes’ rule: 
+
+𝜌 𝑖 ([ 𝑠, 𝑎 ]) = 𝜌 𝑖 (𝑠 )b𝜋 𝑖 (𝑎 | 𝑠 ; b𝑉 𝑠 𝑖 )
+
+𝑥 (𝑎 | 𝑠, b𝑉 𝑠 , 𝜌 (𝑠 )) .
+
+If a terminal history ℎ𝑇 is reached, the final allocation rule is 𝜆 (ℎ𝑇 ) =
+
+𝜌 (ℓ (ℎ𝑇 )) ∈ Δ(N) .
+
+Payment rule. The payment rule has two components. First, after the initial reports at the query prefix 𝑞 , advertiser 𝑖 pays an entry fee 𝑝 𝑖 (𝑞 ; b𝑉 ):
+
+𝜌 𝑖 (𝑞 )b𝑉 𝑖 (𝑞 ) − 𝛽 log ∑︁  
+
+> 𝑗 ∈ N
+
+exp (b𝑉 𝑗 (𝑞 )/ 𝛽 ) + 𝛽 log (1 +∑︁ 
+
+> 𝑗 ≠𝑖
+
+exp (b𝑉 𝑗 (𝑞 )/ 𝛽 )) ,
+
+where b𝑉 𝑖 (𝑞 ) = 𝛽 log 𝑍 𝑖 (𝑞 ) is the root value induced by the initial child-value report. Second, along the generated path, the mecha-nism charges advertisers according to the change in their posterior-weighted reported continuation value. At a transition 𝑠 → [ 𝑠, 𝑎 ],define the instantaneous payment 
+
+𝑝 𝑖 (𝑠, b𝑉 𝑠 , 𝑎 ) := 𝜌 𝑖 ([ 𝑠, 𝑎 ]) b𝑉 𝑠 𝑖 ([ 𝑠, 𝑎 ]) − 𝜌 𝑖 (𝑠 )b𝑉 𝑖 (𝑠 ),
+
+where the parent value b𝑉 𝑖 (𝑠 ) is the value previously recorded in the platform ledger. Thus, the mechanism charges advertiser 𝑖 when the realized token makes its continuation prospects more favorable, and subsidizes it when situation gets worse, preserving its incentive to continue participating after an unfavorable transition. 
+
+Feasible message space. We require reports to satisfy the soft Bellman recursion. This is easy to verify online: for each advertiser, the platform only needs to store a scalar, i,e. the value previously reported for the current state, and compare it with the soft Bellman aggregation of the newly reported child values. Formally, Definition 2 (Bellman consistency). At a history ℎ with cur-rent state 𝑠 = 𝑠 (ℎ), let b𝑉 𝑖 (𝑠 ) be advertiser 𝑖 ’s value for 𝑠 already stored in the ledger. The feasible message space is 
+
+M𝑖 (ℎ) :=
+
+(
+
+R| V | , 𝑠 = 𝑞, 
+
+{𝑣 ∈ R| V | : 𝛽 log Í𝑎 ∈ V 𝜋 ref (𝑎 | 𝑠 )𝑒 𝑣 𝑎 /𝛽 = b𝑉 𝑖 (𝑠 )} , 𝑠 ≠ 𝑞. 
+
+Here 𝑣 𝑎 is the reported value of the child state [𝑠, 𝑎 ] in b𝑉 𝑠 𝑖 .
+
+We now ready to show the main incentive guarantee. Theorem 1 (Markov DSIC and IR of LAMA). The LAMA with Bellman-consistent message spaces is Markov DSIC and IR for the truthful reporting rule 𝜂 𝑖 (𝑠 ; 𝑟 𝑖 ) =  𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ])  
+
+> 𝑎 ∈ V
+
+.
+
+Proof sketch. First consider globally Bellman-consistent di-rect reports and write 𝑧 𝑖 (𝑠 ) = exp (b𝑉 𝑖 (𝑠 )/ 𝛽 ) and 𝑧 (𝑠 ) = Í𝑗 𝑧 𝑗 (𝑠 ).Bellman consistency makes each 𝑧 𝑖 harmonic under 𝜋 ref . Substitut-ing this identity into the Bayesian update yields 𝜌 𝑖 (𝑠 ) = 𝑧 𝑖 (𝑠 )/ 𝑧 (𝑠 )
+
+and 𝑥 (𝑎 | 𝑠 ) = 𝜋 ref (𝑎 | 𝑠 )𝑧 ([ 𝑠, 𝑎 ])/ 𝑧 (𝑠 ). The factors telescope along Token-Level Advertising 
+
+a path, so the joint probability that terminal state ℓ is generated and allocated to advertiser 𝑖 is 
+
+𝛼 𝑖,ℓ (b𝑉 ) = 𝑃 0 (ℓ | 𝑞 ) exp (b𝑉 𝑖 (ℓ)/ 𝛽 )
+
+Íℓ′ 𝑃 0 (ℓ′ | 𝑞 ) Í𝑗 exp (b𝑉 𝑗 (ℓ′)/ 𝛽 ) .
+
+This is exactly the gradient, with respect to terminal reports, of the convex log-sum-exp potential Φ𝑞 defined in the appendix. The telescoping LAMA payment is the corresponding potential-based payment, so the convex supporting hyperplane inequality gives direct truthfulness. Nonnegative rewards imply 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) ≥ 1, which makes truthful utility nonnegative relative to the outside option. It remains to connect online reports to this direct construction. Fix a reached state 𝑠 after a truthful prefix. Any feasible continua-tion deviation defines a Bellman-consistent value function inside the subtree rooted at 𝑠 . When 𝑠 ≠ 𝑞 , feasibility forces its root value to equal the truthful value already stored at 𝑠 ; when 𝑠 = 𝑞 , there are no ancestors to preserve. Use the deviating values inside the subtree and 𝑉 ∗ 
+
+> 𝑖
+
+everywhere else. The result is a globally Bellman-consistent direct report with the same continuation policy, allocation, and pay-ments as the online deviation. Direct DSIC and IR then immediately imply Markov DSIC and IR for the sequential mechanism. □
+
+Efficiency. LAMA also provides strong efficiency guarantee. In-tuitively, it implements two soft lotteries: one over generated re-sponses through KL-regularized decoding and one over advertisers through entropy-regularized allocation. The resulting welfare loss is at most 𝛽 log |N | relative to the optimal KL-regularized benchmark, and the mechanism approaches first-best welfare as 𝛽 → 0+.Theorem 2 (Optimization objective and asymptotic effi-ciency). Fix a query 𝑞 and a type profile 𝑟 . Let (𝑥 𝛽 , 𝜆 𝛽 ) be the truth-ful policy and terminal allocation induced by LAMA. Then (𝑥 𝛽 , 𝜆 𝛽 )
+
+maximizes the entropy-relaxed welfare: 
+
+E𝜏 ∼𝑥 (· | 𝑞 )
+
+"∑︁  
+
+> 𝑖 ∈ N
+
+𝜆 𝑖 (𝜏 )𝑟 𝑖 (ℓ (𝜏 )) + 𝛽 H ( 𝜆 (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝑥 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+.
+
+Moreover, relative to the optimal KL-regularized welfare in the simplex allocation setting, sup 𝜋,𝜆 SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ), the welfare loss of the Latent Advertiser Mixture mechanism is bounded by 
+
+0 ≤ sup 
+
+> 𝜋,𝜆
+
+SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ) − SW 𝛽 (𝑥 𝛽 , 𝜆 𝛽 | 𝑞, 𝑟 ) ≤ 𝛽 log |N | .
+
+Thus, lim 𝛽 →0+ SW 𝛽 (𝑥 𝛽 , 𝜆 𝛽 | 𝑞, 𝑟 ) = max ℓ ∈𝐿 (𝑞 ) max 𝑖 ∈ N 𝑟 𝑖 (ℓ). The same welfare-gap bound holds after taking expectation over 𝑞 ∼ D .
+
+## 4 Practical Implementation 
+
+In practice, computing the reports required by LAMA is gener-ally beyond the capabilities of individual advertisers. At each non-terminal state 𝑠 , advertiser 𝑖 would need to submit the continuation vector  𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ])  
+
+> 𝑎 ∈ V
+
+. Doing so requires both high-quality user feedback data and considerable computational resources. We there-fore provide reporting as a platform-side service analogous to auto-bidding [1, 17]: the platform learns value reports from advertising feedback and serves them on advertisers’ behalf. As we will show, the platform can avoid learning the full soft value function through reinforcement learning by decomposing reporting into two simpler stages. It learns local soft advantages, which determine changes in value between adjacent prefixes, and a root value, which anchors the absolute scale. These two outputs are then assembled into the required report along the realized path. Both stages can use standard supervised signals and be implemented by advertiser-conditioned services shared across advertisers. 
+
+## 4.1 Value Decomposition 
+
+For a prefix 𝑠 and next token 𝑎 , the optimal soft advantage for advertiser 𝑖 satisfies 𝐴 ∗ 
+
+> 𝑖
+
+(𝑠, 𝑎 ) = 𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ]) − 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ) 5 . For a completed response 𝑦 = (𝑎 0, . . . , 𝑎 𝑇 𝑦 −1), let 𝑠 𝑡 = [𝑞, 𝑎 <𝑡 ], ℓ 𝑦 = [𝑞, 𝑦 ]. Then the value of every prefix can be obtained from the root value by telescoping: 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 𝑡 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ) + Í𝑡 −1 
+
+> 𝑘 =0
+
+𝐴 ∗ 
+
+> 𝑖
+
+(𝑠 𝑘 , 𝑎 𝑘 ). Thus, to construct the truthful child-value report at any reachable state, it is enough to know the root value 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ) and the local advantages 𝐴 ∗ 
+
+> 𝑖
+
+(𝑠, 𝑎 ).We now present the learning objectives for these two functions. Define 𝑟 𝑖 (ℓ𝑦 ) as advertiser 𝑖 ’s population value for receiving the advertising impression opportunity from response 𝑦 . Let D denote the population comparison distribution over (𝑖, 𝑞, 𝑦, 𝑦 ′), and use 
+
+D (· | 𝑖, 𝑞 ) for its single-response marginal when only 𝑦 is needed. 
+
+I. Local advantages. For any policy 𝜋 𝑖 , define the cumulative re-sponse score as 𝐺 𝜋 𝑖 (𝑞, 𝑦 ) := 𝛽 log 𝜋 𝑖 (𝑦 |𝑞 )   
+
+> 𝜋 ref (𝑦 |𝑞 )
+
+= 𝛽 Í𝑇 𝑦 −1  
+
+> 𝑡 =0
+
+log 𝜋 𝑖 (𝑎 𝑡 |𝑠 𝑡 )    
+
+> 𝜋 ref (𝑎 𝑡 |𝑠 𝑡 )
+
+.
+
+To learn these token-level log-ratios, the platform samples paired responses 𝑦 and 𝑦 ′ under the same advertiser-query pair (𝑖, 𝑞 ). From their scalar rewards, it constructs the Bradley-Terry [5] win rate 
+
+𝜔 𝑖 (𝑞 ; 𝑦, 𝑦 ′) := Pr (𝑦 ≻ 𝑦 ′ | 𝑖, 𝑞 ) = 𝜎  𝑟 𝑖 (ℓ𝑦 ) − 𝑟 𝑖 (ℓ𝑦 ′ ) .
+
+Let Δ𝜋 𝑖 (𝑞 ; 𝑦, 𝑦 ′) := 𝐺 𝜋 𝑖 (𝑞, 𝑦 ) − 𝐺 𝜋 𝑖 (𝑞, 𝑦 ′). The ideal local-advantage objective is therefore the binary cross-entropy, 
+
+L( 𝜋 ) := −E(𝑖,𝑞,𝑦,𝑦 ′ )∼D 
+
+h
+
+𝜔 𝑖 (𝑞 ; 𝑦, 𝑦 ′) log 𝜎  Δ𝜋 𝑖 (𝑞 ; 𝑦, 𝑦 ′)
+
++  1 − 𝜔 𝑖 (𝑞 ; 𝑦, 𝑦 ′) log 𝜎  −Δ𝜋 𝑖 (𝑞 ; 𝑦, 𝑦 ′) i
+
+.
+
+As we will show later, under the usual regularity conditions, the pop-ulation minimizer 𝜋 † matches the Bradley-Terry log-odds and there-fore identifies reward differences between completed responses under the same (𝑖, 𝑞 ). In the soft-control view, the corresponding local log-ratio b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 ) := 𝛽 log 𝜋 † 
+
+> 𝑖
+
+(𝑎 | 𝑠 )/ 𝜋 ref (𝑎 | 𝑠 ) recovers the local soft advantage 𝐴 ∗ 
+
+> 𝑖
+
+(𝑠, 𝑎 ).
+
+II. Root values. The root value is anchored separately from scalar rewards. Since a terminal state has value 𝑉 ∗ 
+
+> 𝑖
+
+(ℓ𝑦 ) = 𝑟 𝑖 (ℓ𝑦 ), telescop-ing gives, for every completed response, 
+
+𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ) = 𝑟 𝑖 (ℓ𝑦 ) −  
+
+> 𝑇 𝑦 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+𝐴 ∗ 
+
+> 𝑖
+
+(𝑠 𝑡 , 𝑎 𝑡 ).
+
+Averaging this residual over population responses for the same (𝑖, 𝑞 )
+
+recovers the root value. The two ideal learning tasks are therefore: learn local advantages from BT-weighted pairwise differences, and thereby anchor the root value with terminal rewards. The next theorem shows that the population local-advantage optimum identifies both the local soft advantages and a residual formula for the root value. The ledger recursion is then enabled to                                    
+
+> 5Conventionally, the optimal soft advantage function measures the incremen-tal value of taking action 𝑎 at state 𝑠 and then following an optimal soft pol-icy, relative to the optimal soft value at 𝑠 . Formally, 𝐴 ∗
+> 𝑖 (𝑠, 𝑎 ):=𝑟 𝑖 (𝑠, 𝑎 ) +
+> max 𝜋
+> E𝜏 ∼𝜋 (·| 𝑠 ′ )
+> Í (𝑢,𝑏 ) ∈ 𝜏 𝑟 𝑖 (𝑢, 𝑏 )−𝛽 DKL (𝜋 (· | 𝑠 ′) ∥ 𝜋 ref (· | 𝑠 ′) ) −𝑉 ∗
+> 𝑖 (𝑠 ).In our deterministic token context setting with only terminal rewards, the maximized continuation objective is 𝑉 ∗
+> 𝑖 ( [ 𝑠, 𝑎 ] ) , yielding the displayed identity.
+
+Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi What are the best running shoes?  
+
+> 1
+
+Report 2 Next-Token Generation 3 Update 4 Settlement Advertisers Nike Pegasus 41 NI ASICS Gel-Kayano 30 AS New Balance Fresh Foam 880 NB Winning URL                                
+
+> For daily training, the Nike Pegasus 41 stands out for its comfort and durability. It offers great cushioning and a breathable upper, making it a reliable choice for miles. If you prefer stability, the ASICS Gel-Kayano 30 is excellent for support and long runs. For budget-friendly …
+> Repeat until the end of answer [EOS] NI AS NB
+> Winner
+> 𝐼 ∗∼ 𝜌 (𝑠 𝑇 )
+> Payment Hyperlink 𝑃 !∗
+> NI NB NI AS NB
+> For daily training, the Nike Pegasus 41 stands out for its comfort and durability. It offers great cushioning and a breathable upper, making it a reliable choice for miles. If you prefer … For daily training, the Nike Pegasus 41 stands out for its comfort and durability. It offers great cushioning and a breathable upper, making it a reliable choice for miles. If you prefer … For daily training, the Nike Pegasus 41 stands out for its comfort and durability. It offers great cushioning and a breathable upper, making it a reliable choice for miles. If you prefer stability
+> AS
+> Generator
+> 𝐼 ∼ 𝜌 (𝑠 ")
+> Sampling
+> 𝑎 "∼ 𝜋 %!(⋅|𝑠 ")
+> stability Token Values
+> 𝑉 '#([𝑠 ", 𝑎]) 𝑎∈𝒱
+> Consistency Checking
+> 𝑉 '$"#=𝛽 log /𝜋 ref (𝑎 |𝑠 ")
+> 𝑎∈𝒱
+> 𝑒 %#& [$ ",)] /,
+> AS NB NI
+> Posterior Ledger
+> 𝑉 '$"$% #
+> 𝜌 #𝑠 "-. = 𝜌 #𝑠 "𝜋 %#𝒂 𝒕 𝑠 "/𝑥(𝒂 𝒕 |𝑠 ", 𝑉 ', 𝜌(𝑠 "))
+> ↑↑ ↑↓
+
+Figure 2: Overview of the Latent Advertiser Mixture Auction (LAMA). (1) Report: Advertisers report soft values for the current child states, and the platform verifies Bellman consistency against the value stored in its ledger. (2) Next-token generation: The platform samples an advertiser from its current belief, whose optimal policy generates the next token. (3) Update: After the context changes, the platform updates the ledger and its belief over the optimal advertiser via Bayes’ rule. (4) Settlement: Once the response is complete, the platform samples a winning advertiser from the posterior; the winner pays the corresponding charge and receives the hyperlink placement. See Figure 3 for additional impression formats. 
+
+reconstruct the optimal soft value on every reached prefix, formally justifying the value decomposition above. Theorem 3 (Exact recovery). Suppose D has full comparison support 6. Then the optimal token policy 𝜋 ∗ is the unique minimizer of the local-advantage objective L. Relatedly, the recovered log-ratio 
+
+b𝐴 †
+
+𝑖 (𝑠, 𝑎 ) := 𝛽 log 𝜋 †
+
+𝑖 (𝑎 | 𝑠 )/ 𝜋 ref (𝑎 | 𝑠 ) equals 𝐴 ∗
+
+𝑖 (𝑠, 𝑎 ). Also, the root value 𝑣 †
+
+𝑖 (𝑞 ) := E𝑦 ∼D (· | 𝑖,𝑞 )
+
+h
+
+𝑟 𝑖 (ℓ𝑦 ) − Í𝑇 𝑦 −1
+
+𝑡 =0 b𝐴 †
+
+𝑖 (𝑠 𝑡 , 𝑎 𝑡 )
+
+i
+
+equals 𝑉 ∗
+
+𝑖 (𝑞 ).
+
+Finally, initialize b𝑉 𝑖 (𝑞 ) := 𝑣 †
+
+𝑖 (𝑞 ) and recursively define b𝑉 𝑖 ([ 𝑠, 𝑎 ]) :=
+
+b𝑉 𝑖 (𝑠 ) + b𝐴 †
+
+𝑖 (𝑠, 𝑎 ). Then b𝑉 𝑖 (𝑠 ) = 𝑉 ∗
+
+𝑖 (𝑠 ) at every reachable prefix. Con-sequently, the resulting child-value vector is exactly the truthful soft-value report required by LAMA. Shared report model. Motivated by this recovery result, and to reduce the cost of training and serving separate models, the plat-form instantiates the two learned components with a single shared pretrained backbone. All advertisers share the parameters, while information specific to each advertiser 𝑖 enters only through a con-ditioning prompt 𝜅 𝑖 , which contains its identity and campaign in-formation, such as the creative, landing page, and targeting context. For any generation prefix 𝑠 , the same model is run on the concate-nated context [𝜅 𝑖 , 𝑠 ] and produces next-token logits 𝑧 𝜃 (𝑎 | [ 𝜅 𝑖 , 𝑠 ]) .The policy for advertiser 𝑖 is the softmax of these logits: 
+
+𝜋 𝜃,𝑖 (𝑎 | 𝑠 ) := softmax 𝑎 𝑧 𝜃 (𝑎 | [ 𝜅 𝑖 , 𝑠 ]) = exp 𝑧 𝜃 (𝑎 | [ 𝜅 𝑖 , 𝑠 ]) 
+
+Í𝑏 ∈ V exp 𝑧 𝜃 (𝑏 | [ 𝜅 𝑖 , 𝑠 ]) .
+
+And the root anchor is produced by a fine-tuned scalar value head attached to the same shared representation: 
+
+𝑣 𝜙,𝑖 (𝑞 ) := 𝑣 𝜙 ([ 𝜅 𝑖 , 𝑞 ]) .
+
+The deployed object is therefore a single shared model that produces advertiser-specific outputs: next-token logits for local reports and a scalar root value for initializing the ledger. Appendix A gives the practical finite-sample training procedure in Algorithm 2. 
+
+> 6
+
+for every advertiser-query pair (𝑖, 𝑞 ) in its marginal support and every distinct pair of feasible completed responses 𝑦, 𝑦 ′, Pr D (𝑦, 𝑦 ′ |𝑖, 𝑞 ) > 0.
+
+## 4.2 Serving-time Procedure 
+
+Figure 2 provides an intuitive overview of LAMA. At serving time, the learned objects above are exposed as a single report service. For each query 𝑞 , the platform first retrieves a small candidate set of advertisers through the standard advertising funnel. For each retrieved advertiser 𝑖 , it builds the advertiser prefix 𝜅 𝑖 , evaluates the root value, and initializes the value ledger by b𝑉 𝑖 (𝑠 0) := 𝑣 𝜙,𝑖 (𝑞 ). The same root values initialize the allocation posterior. At each non-terminal prefix 𝑠 𝑡 , the service returns advertiser-conditioned logits. The platform converts them into local advantages b𝐴 𝜃,𝑖 (𝑠 𝑡 , 𝑎 ) =
+
+𝛽 log (𝜋 𝜃,𝑖 (𝑎 | 𝑠 𝑡 )/ 𝜋 ref (𝑎 | 𝑠 𝑡 )) and therefore into child-value reports 
+
+b𝑉 𝑠 𝑡 
+
+𝑖 ([ 𝑠 𝑡 , 𝑎 ]) = b𝑉 𝑖 (𝑠 𝑡 ) + b𝐴 𝜃,𝑖 (𝑠 𝑡 , 𝑎 ). 7 The remaining steps follow the theoretical mechanism directly. Since the candidate advertiser set is typically small, LAMA incurs only a small constant-factor overhead in language model forward passes relative to generating a reference answer, keeping online serving lightweight. Algorithm 1 formally summarizes the serving procedure. Notably, the fractional form of LAMA may charge an advertiser that does not ultimately receive the advertising opportunity. We therefore use the equivalent randomized settlement in Algorithm 1: after the final posterior is formed, the platform samples the winner 
+
+𝐼 ∗ ∼ 𝜌 (𝑠 𝑇 ), settles only with that winner, and charges zero to all non-winners. Because this preserves expected utilities, the incentive-compatibility guarantees carry over directly. It also yields outcome IR while preserving expected weak budget balance, even though individual payment transfers may have either sign. Proposition 1 (Outcome IR and Expected WBB). If the served reports are exact, then the winner-settled LAMA implementation in Algorithm 1 is outcome individually rational: for every realized terminal state and sampled winner, non-winners pay zero and the winning advertiser 𝑖 obtains non-negative realized utility. Moreover, conditional on the query and candidate advertiser set, the platform is weakly budget balanced in expectation: E[Í𝑖 ∈ N 𝑃 𝑖 (𝑠 𝑇 , 𝐼 ∗)] ≥ 0.
+
+> 7
+
+This report is Bellman-consistent, regardless of whether the learned model is already optimal. To see this, since Í𝑎 ∈V 𝜋 ref (𝑎 | 𝑠 𝑡 ) exp ( b𝐴 𝜃,𝑖 (𝑠 𝑡 , 𝑎 )/ 𝛽 ) = Í𝑎 ∈V 𝜋 𝜃,𝑖 (𝑎 |
+
+𝑠 𝑡 ) = 1, we therefore have 𝛽 log Í𝑎 ∈V 𝜋 ref (𝑎 | 𝑠 𝑡 ) exp ( b𝑉 𝑠𝑡 𝑖 ( [ 𝑠 𝑡 , 𝑎 ] )/ 𝛽 ) =
+
+𝛽 log [exp ( b𝑉 𝑖 (𝑠 𝑡 )/ 𝛽 ) Í𝑎 ∈V 𝜋 ref (𝑎 | 𝑠 𝑡 ) exp ( b𝐴 𝜃,𝑖 (𝑠 𝑡 , 𝑎 )/ 𝛽 ) ] = b𝑉 𝑖 (𝑠 𝑡 ).Token-Level Advertising 
+
+Algorithm 1 Latent Advertiser Mixture Auction (LAMA) 
+
+Require: Query 𝑞 , Candidate advertisers N = {1, . . . , 𝑛 }, Refer-ence policy 𝜋 ref , Shared report model (𝜋 𝜃 , 𝑣 𝜙 ), Temperature 𝛽  
+
+> 1:
+
+Initialize: Context 𝑠 0 ← 𝑞 , Step 𝑡 ← 0, Allocation posterior 
+
+𝜌 𝑖 (𝑠 0) ← exp (𝑣 𝜙,𝑖 (𝑞 )/ 𝛽 )     
+
+> Í𝑗 ∈N exp (𝑣 𝜙,𝑗 (𝑞 )/ 𝛽 )
+
+for all 𝑖 ∈ N  
+
+> 2:
+
+Initialize Ledger: ˆ𝑉 𝑖 (𝑠 0) ← 𝑣 𝜙,𝑖 (𝑞 ) for all 𝑖 ∈ N  
+
+> 3:
+
+while 𝑠 𝑡 is not terminal do  
+
+> 4:
+
+for each advertiser 𝑖 ∈ N do  
+
+> 5:
+
+// Compute local advantage and consistent child-value reports  
+
+> 6:
+
+ˆ𝐴 𝜃,𝑖 (𝑠 𝑡 , 𝑎 ) ← 𝛽 log 𝜋 𝜃,𝑖 (𝑎 |𝑠 𝑡 )    
+
+> 𝜋 ref (𝑎 |𝑠 𝑡 )
+
+∀𝑎 ∈ V  
+
+> 7:
+
+ˆ𝑉 𝑠 𝑡  
+
+> 𝑖
+
+([ 𝑠 𝑡 , 𝑎 ]) ← ˆ𝑉 𝑖 (𝑠 𝑡 ) + ˆ𝐴 𝜃,𝑖 (𝑠 𝑡 , 𝑎 ) ∀𝑎 ∈ V  
+
+> 8:
+
+end for  
+
+> 9:
+
+// Hierarchical Sampling Process  
+
+> 10:
+
+Sample a latent advertiser 𝐼 ∼ 𝜌 (𝑠 𝑡 ) ⊲ Choose guiding advertiser  
+
+> 11:
+
+Sample next token 𝑎 𝑡 ∼ ˆ𝜋 𝐼 (· | 𝑠 𝑡 ) ⊲ Generate token from that advertiser’s policy  
+
+> 12:
+
+// Update state and Bayesian allocation posterior  
+
+> 13:
+
+𝑠 𝑡 +1 ← [ 𝑠 𝑡 , 𝑎 𝑡 ] 
+
+> 14:
+
+for each advertiser 𝑖 ∈ N do  
+
+> 15:
+
+𝜌 𝑖 (𝑠 𝑡 +1) ← 𝜌 𝑖 (𝑠 𝑡 ) · 𝜋 𝜃,𝑖 (𝑎 𝑡 |𝑠 𝑡 )         
+
+> 𝑥 (𝑎 𝑡 |𝑠 𝑡 ,ˆ𝑉 𝑠𝑡 ,𝜌 (𝑠 𝑡 ) )
+
+⊲ Posterior update  
+
+> 16:
+
+ˆ𝑉 𝑖 (𝑠 𝑡 +1) ← ˆ𝑉 𝑖 (𝑠 𝑡 ) + ˆ𝐴 𝜃,𝑖 (𝑠 𝑡 , 𝑎 𝑡 ) ⊲ Update value ledger  
+
+> 17:
+
+end for  
+
+> 18:
+
+𝑡 ← 𝑡 + 1 
+
+> 19:
+
+end while  
+
+> 20:
+
+Terminal State Reached: Let 𝑠 𝑇 be the terminal state, Total tokens generated 𝑇  
+
+> 21:
+
+// Winner-Pay Settlement: Sample a single winner from the final posterior  
+
+> 22:
+
+Sample a winner 𝐼 ∗ ∼ 𝜌 (𝑠 𝑇 ) 
+
+> 23:
+
+for each advertiser 𝑖 ∈ N do  
+
+> 24:
+
+if 𝑖 = 𝐼 ∗ then  
+
+> 25:
+
+// Telescoped trajectory-level payment  
+
+> 26:
+
+𝑃 𝑖 ← 𝜌 𝑖 (𝑠 𝑇 ) ˆ𝑉 𝑖 (𝑠 𝑇 ) − 𝛽 log Í𝑗 ∈ N exp ( ˆ𝑉 𝑗 (𝑠 0)/ 𝛽 ) + 
+
+𝛽 log 
+
+
+
+1 + Í𝑗 ≠𝑖 exp (b𝑉 𝑗 (𝑠 0)/ 𝛽 )
+
+ 
+
+> 27:
+
+𝑃 𝑖 ← 𝜌 𝑖 (𝑠 𝑇 )−1𝑃 𝑖 ⊲ Adjust by winning probability  
+
+> 28:
+
+else  
+
+> 29:
+
+𝑃 𝑖 ← 0 ⊲ Non-winners pay nothing  
+
+> 30:
+
+end if  
+
+> 31:
+
+end for  
+
+> 32:
+
+return Generated sequence 𝑠 𝑇 , Winner 𝐼 ∗, Payments 
+
+(𝑃 1, . . . , 𝑃 𝑛 )
+
+## 5 Experiments 
+
+In this section, we empirically evaluate the proposed LAMA in generation-native advertising settings. The goal is to test whether token-level participation of advertisers can improve monetization while preserving the quality and naturalness of generated responses. 
+
+## 5.1 Setup 
+
+We evaluate mechanisms across representative advertising verticals. Each vertical consists of a set of user queries, candidate advertisers and advertiser descriptions. We use a reference language model (Qwen3-14B [29]), advertiser-shared report models (trained LoRA heads [18]), and a prediction model for oracle impression value [21, 31]. The main experiments cover three verticals constructed from real-world commercial search query splits in the Webis Generated Native Ads 2024 dataset [24]: Workout , Vacation , and Car . Each vertical contains three heterogeneous advertisers. 
+
+Baselines. We first compare against six heuristic incentive com-patible baselines obtained by combining two auction rules with three generation rules. The auction rules are: (i) Before. The winner is chosen before generation uniformly at random, and the advertiser pays nothing. (ii) After. The candidate responses are generated first. Then advertisers are scored using predicted impression value, and a second-price auction is applied. The generation rules are: (i) 
+
+Original. Generate only with the reference model. (ii) Edit. Use a no-ad reference response as the base and insert sponsored content of an advertiser through a fused editing process. (iii) Policy. Each advertiser submits its preferred response, i.e., the content it expects to maximize its impression value. We approximate this response using best-of-K sampling from the advertiser’s optimal policy, with candidates ranked by self-predicted impression value. We also compare against MOSAIC [25], a representative response-level aggregation mechanism. It generates 𝑀 complete context-aware candidate responses, scores each candidate by aggregate advertiser value, and selects a final response via a weighted lottery. 
+
+Metrics. Our evaluation considers three perspectives: the plat-form, the advertiser, and the user. On the platform side, we report 
+
+(i) Welfare, defined as the realized advertising value minus the KL regularization term that captures the user-experience cost, and 
+
+(ii) Revenue, defined as the payment collected from the winning advertiser. On the advertiser side, we measure (i) Value, namely the impression value obtained by the winning advertiser. On the user side, we evaluate (i) Quality. Since the KL penalty alone does not fully reflect the actual user experience of the generated text, we adopt the evaluation rubrics from the GEM-Bench [19] to assess user utility. Specifically, Quality aggregates multiple dimen-sions, including answer relevance, informativeness, fluency and coherence, ad naturalness, ad factuality, and intrusiveness. 
+
+## 5.2 Main Results 
+
+Table 1 summarizes the main results. LAMA achieves the strongest overall performance among the compared methods, attaining the highest mean platform welfare (0 .5205), revenue (0 .8305), advertiser value (0 .8568), and user quality (66 .5239). Relative to the allocate-after policy baseline, LAMA delivers a clear improvement in rev-enue, together with further gains in welfare and advertiser value. At the same time, it preserves user-facing response quality, matching the best-performing baseline on this dimension. Appendix D pro-vides additional experimental evidence, including case studies and token-level analyses for complementary and competing advertisers, latency measurements, value prediction accuracy and calibration, and bid-offset sweeps of allocation, payment, and advertiser utility. Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+Table 1: Main results on three representative verticals from Webis. Smaller gray values denote 95% bootstrap errors. Method Platform User Advertiser Wel. ↑ Rev. ↑ Qua. ↑ Val. ↑
+
+Allocate before generation 
+
+Reference 0.2945  
+
+> ±0.0117
+
+0.0000  
+
+> ±0.0000
+
+52.9429  
+
+> ±0.2753
+
+0.2945  
+
+> ±0.0116
+
+Edit 0.0297  
+
+> ±0.0138
+
+0.0000  
+
+> ±0.0000
+
+65.7685  
+
+> ±0.2323
+
+0.2598  
+
+> ±0.0133
+
+Policy 0.4562  
+
+> ±0.0070
+
+0.0000  
+
+> ±0.0000
+
+65.1635  
+
+> ±0.2230
+
+0.8225  
+
+> ±0.0045
+
+Allocate after generation 
+
+Reference 0.3558  
+
+> ±0.0134
+
+0.2875  
+
+> ±0.0112
+
+53.8997  
+
+> ±0.2642
+
+0.3558  
+
+> ±0.0132
+
+Edit 0.1772  
+
+> ±0.0135
+
+0.2490  
+
+> ±0.0117
+
+66.4785  
+
+> ±0.2423
+
+0.4046  
+
+> ±0.0132
+
+Policy 0.5080  
+
+> ±0.0041
+
+0.7501  
+
+> ±0.0053
+
+65.5939  
+
+> ±0.2197
+
+0.8253  
+
+> ±0.0044
+
+MOSAIC 0.4390  
+
+> ±0.0118
+
+0.5274  
+
+> ±0.0121
+
+60.4100  
+
+> ±0.3236
+
+0.5550  
+
+> ±0.0118
+
+LAMA (Ours) 0.5205  
+
+> ±0.0053
+
+0.8305  
+
+> ±0.0049
+
+66.5239  
+
+> ±0.2278
+
+0.8568  
+
+> ±0.0043
+
+Taken together, these results provide an initial proof of concept for LAMA: token-level advertiser participation can improve moneti-zation without sacrificing response quality, suggesting the potential of generation-native advertising as a viable paradigm. 
+
+## 6 Related Work 
+
+Classical online advertising auctions typically allocate exogenously defined inventory, such as sponsored-search or display slots, through mechanisms including GSP and VCG [10, 27]. Subsequent work in-corporates cascade effects, ad externalities, and richer click-through-rate structures [2, 7, 11], and studies the joint optimization of ad-vertising and organic content across search, recommendation, e-commerce, and contextual advertising [3, 6, 12–14, 20]. Despite richer interactions with users and surrounding content, these mod-els largely retain a common abstraction: the mechanism allocates pre-existing slots, items, or positions whose advertising opportuni-ties are defined before allocation. Generative interfaces challenge this abstraction because adver-tising opportunities may depend on the response being generated. More broadly, recent work studies mechanisms in which strategic agents influence LLM outputs through next-token distributions or preferences, making generation itself part of the mechanism outcome [8, 9, 25]. In LLM advertising, some works define oppor-tunities over discourse segments or context-dependent position– creative pairs [4, 15], while others study response-level ad insertion [28]. More LLM-native approaches incorporate response-quality constraints [16], allocate advertising through the model’s output distribution [32], or explore opportunities arising from retrieval decisions and internal model representations [26, 30]. Together, these works progressively move advertising allocation from fixed slots toward the generation process itself. Our work takes a further step toward generation-native adver-tising by allowing advertisers to influence generation at token-level granularity. Rather than allocating an opportunity identified before or after generation, LAMA operates along the generation trajectory: advertiser influence evolves with the current prefix, posterior beliefs, and continuation values. Thus, the advertising op-portunity itself emerges dynamically through generation, shifting the mechanism-design problem from allocating sponsored content within generated responses to governing how advertiser influence shapes the response-generation process. 
+
+## 7 Conclusion 
+
+In this work, we introduced generation-native advertising, where advertising opportunities are shaped during generation rather than allocated only after they have been formed. LAMA instantiates this idea at token level, achieving Markov DSIC and IR with bounded welfare loss, together with a practical learning-based implementa-tion. Proof-of-concept experiments show that LAMA can improve monetization while maintaining user-facing response quality. More broadly, our results point toward a new direction for advertising mechanism design in generative interfaces, where mechanisms gov-ern not only who receives an advertising opportunity, but also how that opportunity emerges through generation. 
+
+## References                     
+
+> [1] Gagan Aggarwal, Ashwinkumar Badanidiyuru, and Aranyak Mehta. 2019. Auto-bidding with constraints. In International Conference on Web and Internet Eco-nomics . Springer, 17–30. [2] Gagan Aggarwal, Jon Feldman, S. Muthukrishnan, and Martin Pál. 2008. Spon-sored Search Auctions with Markovian Users. In Internet and Network Economics, 4th International Workshop, WINE 2008, Shanghai, China, December 17-20, 2008. Proceedings (Lecture Notes in Computer Science) , Christos H. Papadimitriou and Shuzhong Zhang (Eds.). Springer, 621–628. doi:10.1007/978-3-540-92185-1_68 [3] Nan An, Weian Li, Qi Qi, and Liang Zhang. 2025. Merging Mechanisms for Ads and Organic Items in E-commerce Platforms. Proceedings of the AAAI Conference on Artificial Intelligence 39, 13 (April 2025), 13547–13554. doi:10.1609/aaai.v39i13. 33479 [4] Santiago Balseiro, Kshipra Bhawalkar, Yuan Deng, Zhe Feng, Jieming Mao, Aranyak Mehta, Vahab Mirrokni, Renato Paes Leme, Di Wang, and Song Zuo. 2025. Position Auctions in AI-Generated Content. arXiv:2506.03309 [cs.GT] https://arxiv.org/abs/2506.03309 [5] Ralph Allan Bradley and Milton E Terry. 1952. Rank analysis of incomplete block designs: I. the method of paired comparisons. Biometrika 39, 3/4 (1952), 324–345. [6] Carlos Carrion, Zenan Wang, Harikesh Nair, Xianghong Luo, Yulin Lei, Peiqin Gu, Xiliang Lin, Wenlong Chen, Junsheng Jin, Fanan Zhu, Changping Peng, Yongjun Bao, Zhangang Lin, Weipeng Yan, and Jingping Shao. 2023. Blending Advertising with Organic Content in E-commerce via Virtual Bids. Proceedings of the AAAI Conference on Artificial Intelligence 37, 13 (June 2023), 15476–15484. doi:10.1609/aaai.v37i13.26835 [7] Ruggiero Cavallo and Christopher A. Wilkens. 2014. GSP with General Inde-pendent Click-through-Rates. In Web and Internet Economics - 10th International Conference, WINE 2014, Beijing, China, December 14-17, 2014. Proceedings (Lecture Notes in Computer Science) , Tie-Yan Liu, Qi Qi, and Yinyu Ye (Eds.). Springer, 400–416. doi:10.1007/978-3-319-13129-0_32 [8] Avinava Dubey, Zhe Feng, Rahul Kidambi, Aranyak Mehta, and Di Wang. 2024. Auctions with LLM Summaries. In Proceedings of the 30th ACM SIGKDD Confer-ence on Knowledge Discovery and Data Mining, KDD 2024, Barcelona, Spain, August 25-29, 2024 , Ricardo Baeza-Yates and Francesco Bonchi (Eds.). ACM, 713–722. doi:10.1145/3637528.3672022 [9] Paul Dütting, Vahab Mirrokni, Renato Paes Leme, Haifeng Xu, and Song Zuo. 2024. Mechanism Design for Large Language Models. In Proceedings of the ACM on Web Conference 2024, WWW 2024, Singapore, May 13-17, 2024 , Tat-Seng Chua, Chong-Wah Ngo, Ravi Kumar, Hady W. Lauw, and Roy Ka-Wei Lee (Eds.). ACM, 144–155. doi:10.1145/3589334.3645511
+
+Token-Level Advertising 
+
+[10] Benjamin Edelman, Michael Ostrovsky, and Michael Schwarz. 2007. Internet Advertising and the Generalized Second-Price Auction: Selling Billions of Dollars Worth of Keywords. American Economic Review 97, 1 (Feb. 2007), 242–259. doi:10.1257/aer.97.1.242 [11] Nicola Gatti, Marco Rocco, Paolo Serafino, and Carmine Ventre. 2016. Towards Better Models of Externalities in Sponsored Search Auctions. In ECAI 2016 - 22nd European Conference on Artificial Intelligence, 29 August-2 September 2016, The Hague, The Netherlands - Including Prestigious Applications of Artificial Intelligence (PAIS 2016) (Frontiers in Artificial Intelligence and Applications) , Gal A. Kaminka, Maria Fox, Paolo Bouquet, Eyke Hüllermeier, Virginia Dignum, Frank Dignum, and Frank van Harmelen (Eds.). IOS Press, 1167–1175. doi:10.3233/978-1-61499-672-9-1167 [12] Nicola Gatti, Marco Rocco, Paolo Serafino, and Carmine Ventre. 2018. Towards better models of externalities in sponsored search auctions. Theor. Comput. Sci. 
+
+745 (2018), 150–162. doi:10.1016/J.TCS.2018.06.011 [13] Arpita Ghosh and Mohammad Mahdian. 2008. Externalities in online advertising. In Proceedings of the 17th International Conference on World Wide Web, WWW 2008, Beijing, China, April 21-25, 2008 , Jinpeng Huai, Robin Chen, Hsiao-Wuen Hon, Yunhao Liu, Wei-Ying Ma, Andrew Tomkins, and Xiaodong Zhang (Eds.). ACM, 161–168. doi:10.1145/1367497.1367520 [14] Ioannis Giotis and Anna R. Karlin. 2008. On the Equilibria and Efficiency of the GSP Mechanism in Keyword Auctions with Externalities. In Internet and Network Economics, 4th International Workshop, WINE 2008, Shanghai, China, December 17-20, 2008. Proceedings (Lecture Notes in Computer Science) , Christos H. Papadimitriou and Shuzhong Zhang (Eds.). Springer, 629–638. doi:10.1007/978-3-540-92185-1_69 [15] MohammadTaghi Hajiaghayi, Sébastien Lahaie, Keivan Rezaei, and Suho Shin. 2024. Ad Auctions for LLMs via Retrieval Augmented Generation. In Advances in Neural Information Processing Systems , A. Globerson, L. Mackey, D. Belgrave, A. Fan, U. Paquet, J. Tomczak, and C. Zhang (Eds.), Vol. 37. Curran Associates, Inc., 18445–18480. doi:10.52202/079017-0585 [16] Jiale Han and Xiaowu Dai. 2026. Mechanism Design for Quality-Preserving LLM Advertising. arXiv:2605.10964 [cs.GT] https://arxiv.org/abs/2605.10964 [17] Yue He, Xiujun Chen, Di Wu, Junwei Pan, Qing Tan, Chuan Yu, Jian Xu, and Xiaoqiang Zhu. 2021. A unified solution to constrained bidding in online display advertising. In Proceedings of the 27th ACM SIGKDD Conference on Knowledge Discovery & Data Mining . 2993–3001. [18] Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen. 2021. Lora: Low-rank adaptation of large language models. arXiv preprint arXiv:2106.09685 (2021). [19] Silan Hu, Shiqi Zhang, Yimin Shi, and Xiaokui Xiao. 2026. GEM-Bench: A Benchmark for Ad-Injected Response Generation within Generative Engine Marketing. arXiv:2509.14221 [cs.IR] https://arxiv.org/abs/2509.14221 [20] Weian Li, Qi Qi, Changjun Wang, and Changyuan Yu. 2023. Optimally integrating ad auction into e-commerce platforms. Theoretical Computer Science 976 (Oct. 2023), 114141. doi:10.1016/j.tcs.2023.114141 [21] lv12. 2024. esci-ms-marco-MiniLM-L-12-v2. https://huggingface.co/lv12/esci-ms-marco-MiniLM-L-12-v2. Cross-encoder fine-tuned on the Amazon ESCI dataset; based on cross-encoder/ms-marco-MiniLM-L12-v2. [22] Marshall McLuhan. 1964. Understanding media . Vol. 2002. Routledge London. [23] Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, et al. 2022. Training language models to follow instructions with human feedback. Advances in neural information processing systems 35 (2022), 27730–27744. [24] Sebastian Schmidt, Ines Zelch, Janek Bevendorff, Benno Stein, Matthias Hagen, and Martin Potthast. 2024. Detecting Generated Native Ads in Conversational Search. In Companion Proceedings of the ACM Web Conference 2024 . ACM, 722– 725. doi:10.1145/3589335.3651489 [25] Ermis Soumalias, Michael J. Curry, and Sven Seuken. 2024. Truthful Aggregation of LLMs with an Application to Online Advertising. CoRR abs/2405.05905 (2024). arXiv:2405.05905 doi:10.48550/ARXIV.2405.05905 [26] Haoran Sun, Xinrui Song, Xinyu Zhang, Zhaohua Chen, Xu Chu, Zhilin Zhang, Chuan Yu, Jian Xu, Bo Zheng, and Xiaotie Deng. 2026. LERA: LLM-Enhanced RAG for Ad Auction in Generative Chatbots. arXiv:2605.16474 [cs.IR] https: //arxiv.org/abs/2605.16474 [27] Hal R. Varian. 2007. Position Auctions. International Journal of Industrial Orga-nization 25, 6 (Dec. 2007), 1163–1178. doi:10.1016/j.ijindorg.2006.10.002 [28] Shengwei Xu, Zhaohua Chen, Xiaotie Deng, Zhiyi Huang, and Grant Schoenebeck. 2026. Ad Insertion in LLM-Generated Responses. arXiv:2601.19435 [cs.GT] https://arxiv.org/abs/2601.19435 [29] An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, et al. 2025. Qwen3 technical report. arXiv preprint arXiv:2505.09388 (2025). [30] Peiran Yun, Wenxin Xu, Jiayuan Liu, Yihang Zhang, Liang Zeng, Lingkai Kong, and Tonghan Wang. 2026. LLM Advertisement based on Neuron Auctions. arXiv:2605.08326 [cs.LG] https://arxiv.org/abs/2605.08326 [31] Yanzhao Zhang, Mingxin Li, Dingkun Long, Xin Zhang, Huan Lin, Baosong Yang, Pengjun Xie, An Yang, Dayiheng Liu, Junyang Lin, Fei Huang, and Jingren Zhou. 2025. Qwen3 Embedding: Advancing Text Embedding and Reranking Through Foundation Models. arXiv preprint arXiv:2506.05176 (2025). doi:10.48550/arXiv. 2506.05176 [32] Chujie Zhao, Qun Hu, Shiping Song, Dagui Chen, Han Zhu, Jian Xu, and Bo Zheng. 2026. LLM-Auction: Generative Auction towards LLM-Native Advertising. arXiv:2512.10551 [cs.GT] https://arxiv.org/abs/2512.10551 
+
+## A Report-Model Training 
+
+Algorithm 2 gives a practical implementation of the decomposed two learning tasks in Section 4.1. 
+
+## B Potential Business Format 
+
+Figure 3 presents three representative business formats for applying LAMA in the single-winner setting: a hyperlink embedded in the generated response, a clickable response block, and a sponsored card displayed alongside the response. 
+
+## C Proofs 
+
+Lemma 1 (Optimal soft Bellman recursion). Consider a finite-horizon token MDP with deterministic transition 𝑠 𝑡 +1 = [𝑠 𝑡 , 𝑎 𝑡 ], ref-erence policy 𝜋 ref , and terminal reward 𝑟 : S𝑇 → R. For every state 𝑠 ,define the optimal KL-regularized continuation value 
+
+𝑉 ∗ (𝑠 ) := sup 
+
+𝜋 
+
+E𝜏 ∼𝜋 (· | 𝑠 )
+
+"
+
+𝑟 (𝑠 𝑇 ) − 𝛽 
+
+𝑇 𝜏 −1∑︁ 
+
+𝑡 =0
+
+log 𝜋 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+.
+
+Assume 𝜋 ref (𝑎 | 𝑠 ) > 0 for every feasible action 𝑎 at every non-terminal state 𝑠 . Then 𝑉 ∗ satisfies the terminal boundary condition 
+
+𝑉 ∗ (ℓ) = 𝑟 (ℓ), ℓ ∈ S 𝑇 , and the soft Bellman recursion 
+
+𝑉 ∗ (𝑠 ) = 𝛽 log ∑︁ 
+
+𝑎 ∈ V 
+
+𝜋 ref (𝑎 | 𝑠 ) exp 
+
+𝑉 ∗ ([ 𝑠, 𝑎 ]) 
+
+𝛽 
+
+
+
+, 𝑠 ∉ S𝑇 .
+
+Moreover, the optimal continuation policy is 
+
+𝜋 ∗ (𝑎 | 𝑠 ) = 𝜋 ref (𝑎 | 𝑠 ) exp (𝑉 ∗ ([ 𝑠, 𝑎 ])/ 𝛽 )
+
+Í𝑎 ′ ∈ V 𝜋 ref (𝑎 ′ | 𝑠 ) exp (𝑉 ∗ ([ 𝑠, 𝑎 ′])/ 𝛽 ) .
+
+Proof. The terminal condition is immediate. If 𝑠 = ℓ ∈ S 𝑇 ,the process has already terminated and no further KL penalty is incurred, so 
+
+𝑉 ∗ (ℓ) = 𝑟 (ℓ).
+
+Now fix a non-terminal state 𝑠 . Any continuation policy can be decomposed into its first-step action distribution 
+
+𝜇 (𝑎 ) := 𝜋 (𝑎 | 𝑠 ) ∈ Δ(V) 
+
+and continuation policies after each child state [𝑠, 𝑎 ]. Hence, by the principle of optimality, 
+
+𝑉 ∗ (𝑠 ) = max 
+
+𝜇 ∈Δ( V ) 
+
+(∑︁ 
+
+𝑎 ∈ V 
+
+𝜇 (𝑎 )𝑉 ∗ ([ 𝑠, 𝑎 ]) − 𝛽 ∑︁ 
+
+𝑎 ∈ V 
+
+𝜇 (𝑎 ) log 𝜇 (𝑎 )
+
+𝜋 ref (𝑎 | 𝑠 )
+
+)
+
+.
+
+This is a strictly concave optimization problem over the simplex. Introduce a Lagrange multiplier 𝜉 for the constraint Í𝑎 𝜇 (𝑎 ) = 1. The Lagrangian is 
+
+L( 𝜇, 𝜉 ) =∑︁ 
+
+𝑎 ∈ V 
+
+𝜇 (𝑎 )𝑉 ∗ ([ 𝑠, 𝑎 ]) − 𝛽 ∑︁ 
+
+𝑎 ∈ V 
+
+𝜇 (𝑎 ) log 𝜇 (𝑎 )
+
+𝜋 ref (𝑎 | 𝑠 )+ 𝜉  ∑︁ 
+
+𝑎 ∈ V 
+
+𝜇 (𝑎 ) − 1
+
+!
+
+.Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi What are the best running shoes?    
+
+> The best running shoe depends on your specific needs—whether you prioritize everyday comfort, added support, or value for money. For daily training, the Nike Pegasus 41 stands out for its comfort and durability. It offers great cushioning and a breathable upper, making it a reliable choice for miles. If you prefer stability, the ASICS Gel-Kayano 30 is excellent for support and long runs. For budget-friendly options, …
+
+(a) Hyperlink What are the best running shoes?    
+
+> The best running shoe depends on your specific needs, whether you prioritize everyday comfort, added support, or value for money. For daily training, the Nike Pegasus 41 stands out for its comfort and durability. It offers great cushioning and a breathable upper, …
+> Sponsored · Nike
+
+(b) Clickable Block What are the best running shoes?     
+
+> For daily training, the Nike Pegasus 41 stands out for its comfort and durability. It offers great cushioning and a breathable upper, making it a reliable choice for miles. If you prefer stability…
+> Nike Pegasus 41
+> Nike.com Sponsored Visit site
+> More Information
+
+(c) Sponsored Card 
+
+Figure 3: Potential commercialization formats for LAMA. (a) Hyperlink: the winning advertiser’s brand name in the generated response is hyperlinked to its landing page; this is the format used in our experiments. (b) Clickable Block: the entire response block links to the advertiser’s landing page. (c) Sponsored Card: an advertisement card is displayed below the generated response, a format currently adopted by platforms such as ChatGPT Go, Google AI Overviews, and Baidu AI Smart Answers. 
+
+For every action 𝑎 with 𝜇 (𝑎 ) > 0, the first-order condition gives 
+
+𝜕 L
+
+𝜕𝜇 (𝑎 ) = 𝑉 ∗ ([ 𝑠, 𝑎 ]) − 𝛽 
+
+
+
+log 𝜇 (𝑎 )
+
+𝜋 ref (𝑎 | 𝑠 ) + 1
+
+
+
++ 𝜉 = 0.
+
+Therefore log 𝜇 (𝑎 )
+
+𝜋 ref (𝑎 | 𝑠 ) = 𝑉 ∗ ([ 𝑠, 𝑎 ]) + 𝜉 − 𝛽 𝛽 ,
+
+or equivalently 
+
+𝜇 (𝑎 ) = 𝜋 ref (𝑎 | 𝑠 ) exp 
+
+𝑉 ∗ ([ 𝑠, 𝑎 ]) 
+
+𝛽 
+
+
+
+exp 
+
+ 𝜉 − 𝛽 𝛽 
+
+
+
+.
+
+The final exponential factor is independent of 𝑎 , so normalization gives 
+
+𝜇 ∗ (𝑎 ) = 𝜋 ref (𝑎 | 𝑠 ) exp (𝑉 ∗ ([ 𝑠, 𝑎 ])/ 𝛽 )
+
+Í𝑎 ′ ∈ V 𝜋 ref (𝑎 ′ | 𝑠 ) exp (𝑉 ∗ ([ 𝑠, 𝑎 ′])/ 𝛽 ) .
+
+This is the optimal continuation policy 𝜋 ∗ (𝑎 | 𝑠 ).It remains to compute the optimal value. Let 
+
+𝑍 (𝑠 ) :=∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 ref (𝑎 | 𝑠 ) exp 
+
+𝑉 ∗ ([ 𝑠, 𝑎 ]) 
+
+𝛽 
+
+
+
+.
+
+From the expression for 𝜇 ∗,log 𝜇 ∗ (𝑎 )
+
+𝜋 ref (𝑎 | 𝑠 ) = 𝑉 ∗ ([ 𝑠, 𝑎 ]) 
+
+𝛽 − log 𝑍 (𝑠 ).
+
+Substituting this identity into the one-step objective gives 
+
+𝑉 ∗ (𝑠 ) =∑︁ 
+
+> 𝑎
+
+𝜇 ∗ (𝑎 )𝑉 ∗ ([ 𝑠, 𝑎 ]) − 𝛽 ∑︁ 
+
+> 𝑎
+
+𝜇 ∗ (𝑎 ) log 𝜇 ∗ (𝑎 )
+
+𝜋 ref (𝑎 | 𝑠 )
+
+=∑︁ 
+
+> 𝑎
+
+𝜇 ∗ (𝑎 )𝑉 ∗ ([ 𝑠, 𝑎 ]) − 𝛽 ∑︁ 
+
+> 𝑎
+
+𝜇 ∗ (𝑎 )
+
+𝑉 ∗ ([ 𝑠, 𝑎 ]) 
+
+𝛽 − log 𝑍 (𝑠 )
+
+
+
+= 𝛽 log 𝑍 (𝑠 ).
+
+Hence 
+
+𝑉 ∗ (𝑠 ) = 𝛽 log ∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 ref (𝑎 | 𝑠 ) exp 
+
+𝑉 ∗ ([ 𝑠, 𝑎 ]) 
+
+𝛽 
+
+
+
+,
+
+which proves the soft Bellman recursion. □
+
+Lemma 2 (Convexity and gradient of weighted log-sum– exp). Let 𝛽 > 0, let K be a finite index set, and let {𝑤 𝑘 }𝑘 ∈ K be nonnegative weights, not all zero. Define 
+
+𝐹 𝛽 (𝑥 ) = 𝛽 log  ∑︁  
+
+> 𝑘 ∈ K
+
+𝑤 𝑘 exp 
+
+ 𝑥 𝑘 
+
+𝛽 
+
+!
+
+, 𝑥 ∈ RK .
+
+Then 𝐹 𝛽 is convex on RK . Moreover, 𝐹 𝛽 is differentiable and, for each 
+
+𝑘 ∈ K ,
+
+𝜕𝐹 𝛽 (𝑥 )
+
+𝜕𝑥 𝑘 
+
+= 𝑤 𝑘 exp (𝑥 𝑘 /𝛽 )
+
+Í𝑘 ′ ∈ K 𝑤 𝑘 ′ exp (𝑥 𝑘 ′ /𝛽 ) .
+
+Proof. Let 
+
+𝑍 𝛽 (𝑥 ) =∑︁  
+
+> 𝑘 ∈ K
+
+𝑤 𝑘 exp 
+
+ 𝑥 𝑘 
+
+𝛽 
+
+
+
+,
+
+and define 
+
+𝑝 𝑘 (𝑥 ) = 𝑤 𝑘 exp (𝑥 𝑘 /𝛽 )
+
+𝑍 𝛽 (𝑥 ) .
+
+Since the weights are nonnegative and not all zero, 𝑍 𝛽 (𝑥 ) > 0 for every 𝑥 . Hence 𝑝 (𝑥 ) = (𝑝 𝑘 (𝑥 )) 𝑘 ∈ K is a probability vector over K.Direct differentiation gives 
+
+𝜕𝐹 𝛽 (𝑥 )
+
+𝜕𝑥 𝑘 
+
+= 𝛽 · 1
+
+𝑍 𝛽 (𝑥 ) · 𝑤 𝑘 · 1
+
+𝛽 exp 
+
+ 𝑥 𝑘 
+
+𝛽 
+
+
+
+= 𝑝 𝑘 (𝑥 ).
+
+Therefore, 
+
+∇𝐹 𝛽 (𝑥 ) = 𝑝 (𝑥 ).
+
+We next compute the Hessian. For any 𝑘, 𝑘 ′ ∈ K ,
+
+𝜕𝑝 𝑘 (𝑥 )
+
+𝜕𝑥 𝑘 ′
+
+= 1
+
+𝛽 𝑝 𝑘 (𝑥 ) ( 1{𝑘 = 𝑘 ′ } − 𝑝 𝑘 ′ (𝑥 )) .
+
+Thus 
+
+∇2𝐹 𝛽 (𝑥 ) = 1
+
+𝛽 
+
+ diag (𝑝 (𝑥 )) − 𝑝 (𝑥 )𝑝 (𝑥 )⊤  .
+
+For any vector 𝑣 ∈ RK ,
+
+𝑣 ⊤∇2𝐹 𝛽 (𝑥 )𝑣 = 1
+
+𝛽 
+
+∑︁ 𝑘 ∈ K 
+
+𝑝 𝑘 (𝑥 )𝑣 2 
+
+> 𝑘
+
+− ∑︁  
+
+> 𝑘 ∈ K
+
+𝑝 𝑘 (𝑥 )𝑣 𝑘 
+
+!2
+
+.Token-Level Advertising 
+
+Algorithm 2 Practical Training of the Shared Report Model 
+
+Require: Advertiser-Query pairs D𝐼𝑄 , Advertiser prefix {𝜅 𝑖 }𝑖 ∈ N ,Reference policy 𝜋 ref , Rollout budget 𝐵 , Temperature 𝛽  
+
+> 1:
+
+// Construct pairwise comparison data  
+
+> 2:
+
+bDpair ← ∅ , bDroot ← ∅ ⊲ Initialize training datasets  
+
+> 3:
+
+for each advertiser-query pair (𝑖, 𝑞 ) ∈ D 𝐼𝑄 do  
+
+> 4:
+
+for 𝑏 = 1, . . . , 𝐵 do  
+
+> 5:
+
+𝑦 (𝑏 ) 
+
+> 𝑖,𝑞
+
+∼ 𝜋 ref (· | [ 𝜅 𝑖 , 𝑞 ]) ⊲ Sample responses  
+
+> 6:
+
+𝑟 𝑖 (ℓ𝑦 (𝑏 )
+
+> 𝑖,𝑞
+
+) ← OnlineTest (𝑖, 𝑞, 𝑦 (𝑏 ) 
+
+> 𝑖,𝑞
+
+) ⊲ Estimate population impression value from online experiments  
+
+> 7:
+
+end for  
+
+> 8:
+
+for every 1 ≤ 𝑏 < 𝑏 ′ ≤ 𝐵 do ⊲ Full comparison  
+
+> 9:
+
+𝜔 (𝑏,𝑏 ′ ) 
+
+> 𝑖
+
+(𝑞 ) ← 𝜎 
+
+
+
+𝑟 𝑖 (ℓ𝑦 (𝑏 )
+
+> 𝑖,𝑞
+
+) − 𝑟 𝑖 (ℓ𝑦 (𝑏 ′ )
+
+> 𝑖,𝑞
+
+)
+
+ 
+
+> 10:
+
+bDpair ← bDpair ∪
+
+n 𝑖, 𝑞, 𝑦 (𝑏 ) 
+
+> 𝑖,𝑞
+
+, 𝑦 (𝑏 ′ ) 
+
+> 𝑖,𝑞
+
+, 𝜔 (𝑏,𝑏 ′ ) 
+
+> 𝑖
+
+(𝑞 )o 
+
+> 11:
+
+end for  
+
+> 12:
+
+end for  
+
+> 13:
+
+// Train local advantages  
+
+> 14:
+
+𝜋 𝜃 ← 𝜋 ref ⊲ Initialize advertiser-shared policy model  
+
+> 15:
+
+Δ𝜋 𝜃  
+
+> 𝑖
+
+(𝑞 ; 𝑦, 𝑦 ′) ← 𝛽 
+
+ 
+
+> 𝑇 𝑦 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝜋 𝜃,𝑖 (𝑎 𝑡 | [ 𝜅 𝑖 , 𝑠 𝑡 ]) 
+
+𝜋 ref (𝑎 𝑡 | [ 𝜅 𝑖 , 𝑠 𝑡 ]) − 
+
+> 𝑇 𝑦 ′−1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝜋 𝜃,𝑖 (𝑎 ′ 
+
+> 𝑡
+
+| [ 𝜅 𝑖 , 𝑠 ′ 
+
+> 𝑡
+
+]) 
+
+𝜋 ref (𝑎 ′ 
+
+> 𝑡
+
+| [ 𝜅 𝑖 , 𝑠 ′ 
+
+> 𝑡
+
+]) 
+
+ 
+
+> 16:
+
+bL( 𝜋 𝜃 ) ← 1
+
+| bDpair |∑︁ (𝑖,𝑞,𝑦,𝑦 ′,𝜔 )∈ bDpair 
+
+"𝜔 log 𝜎  Δ𝜋 𝜃  
+
+> 𝑖
+
+(𝑞 ; 𝑦, 𝑦 ′)
+
++ ( 1 − 𝜔 ) log 𝜎  −Δ𝜋 𝜃  
+
+> 𝑖
+
+(𝑞 ; 𝑦, 𝑦 ′)# 
+
+> 17:
+
+𝜃 † ← arg min 𝜃 bL( 𝜋 𝜃 ) ⊲ Optimize local advantages  
+
+> 18:
+
+// Learn root values from residual targets  
+
+> 19:
+
+for each advertiser-query pair (𝑖, 𝑞 ) ∈ D 𝐼𝑄 do  
+
+> 20:
+
+for 𝑏 = 1, . . . , 𝐵 do  
+
+> 21:
+
+e𝑦 (𝑏 ) 
+
+> 𝑖,𝑞
+
+∼ 𝜋 𝜃 †,𝑖 (· | [ 𝜅 𝑖 , 𝑞 ]) ⊲ Sample on-policy responses  
+
+> 22:
+
+𝑟 𝑖 (ℓe𝑦 (𝑏 )
+
+> 𝑖,𝑞
+
+) ← OnlineTest (𝑖, 𝑞, e𝑦 (𝑏 ) 
+
+> 𝑖,𝑞
+
+) 
+
+> 23:
+
+e𝑣 (𝑏 ) 
+
+> 𝑖,𝑞
+
+← 𝑟 𝑖 (ℓe𝑦 (𝑏 )
+
+> 𝑖,𝑞
+
+) − 𝛽  
+
+> 𝑇 e𝑦 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝜋 𝜃 †,𝑖 (𝑎 𝑡 | [ 𝜅 𝑖 , 𝑠 𝑡 ]) 
+
+𝜋 ref (𝑎 𝑡 | [ 𝜅 𝑖 , 𝑠 𝑡 ])  
+
+> 24:
+
+bDroot ← bDroot ∪
+
+n 𝑖, 𝑞, e𝑣 (𝑏 )
+
+> 𝑖,𝑞
+
+o 
+
+> 25:
+
+end for  
+
+> 26:
+
+end for  
+
+> 27:
+
+𝑣 𝜙 ← AttachValueHead (𝜋 𝜃 † ) ⊲ Initialize root-value model  
+
+> 28:
+
+𝜙 † ← arg min 
+
+> 𝜙
+
+1
+
+| bDroot |∑︁ (𝑖,𝑞, e𝑣 ) ∈ bDroot 
+
+ 𝑣 𝜙,𝑖 (𝑞 ) − e𝑣 2 
+
+> 29:
+
+return Shared report model  𝜋 𝜃 † , 𝑣 𝜙 †
+
+
+
+The term inside the brackets is the variance of the random variable that takes value 𝑣 𝑘 with probability 𝑝 𝑘 (𝑥 ). Hence it is nonnegative. Since 𝛽 > 0, we have 
+
+𝑣 ⊤∇2𝐹 𝛽 (𝑥 )𝑣 ≥ 0for every 𝑣 ∈ RK . Therefore, 
+
+∇2𝐹 𝛽 (𝑥 ) ⪰ 0,
+
+which implies that 𝐹 𝛽 is convex. □
+
+Lemma 3 (Desirability Representation). Fix an initial context 
+
+𝑞 . Let b𝑉 =  b𝑉 𝑖 (𝑢 )   
+
+> 𝑖 ∈ N , 𝑢 ⪰𝑞
+
+be a globally Bellman-consistent report ledger on the subtree rooted at 𝑞 . Define 
+
+b𝑧 𝑖 (𝑢 ) := exp b𝑉 𝑖 (𝑢 )
+
+𝛽 
+
+!
+
+, 𝑧 (𝑢 ; b𝑉 ) :=∑︁  
+
+> 𝑗 ∈ N
+
+b𝑧 𝑗 (𝑢 ).
+
+Then the online decision rule is equivalently represented by 
+
+𝜌 𝑖 (𝑢 ; b𝑉 ) = b𝑧 𝑖 (𝑢 )
+
+𝑧 (𝑢 ; b𝑉 ) , 𝑥 b𝑉 (𝑎 | 𝑢 ) = 𝜋 ref (𝑎 | 𝑢 ) 𝑧 ([ 𝑢, 𝑎 ]; b𝑉 )
+
+𝑧 (𝑢 ; b𝑉 )
+
+for every reached non-terminal descendant 𝑢 ⪰ 𝑞 . In particular, if the rollout terminates at ℓ ∈ 𝑆 𝑇 , then the terminal ad allocation is 
+
+𝜆 𝑖 (ℓ; b𝑉 ) = 𝜌 𝑖 (ℓ; b𝑉 ) = b𝑧 𝑖 (ℓ)
+
+𝑧 (ℓ; b𝑉 ) .
+
+Proof. Global Bellman consistency implies that, for every non-terminal descendant 𝑢 ⪰ 𝑞 ,
+
+b𝑧 𝑖 (𝑢 ) =∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 ref (𝑎 | 𝑢 )b𝑧 𝑖 ([ 𝑢, 𝑎 ]) .
+
+Hence the advertiser-specific token rule can be rewritten as 
+
+b𝜋 𝑖 (𝑎 | 𝑢 ) = 𝜋 ref (𝑎 | 𝑢 ) b𝑧 𝑖 ([ 𝑢, 𝑎 ]) 
+
+b𝑧 𝑖 (𝑢 ) .
+
+We prove the representation by induction along the realized path. At the root, the initialization gives 
+
+𝜌 𝑖 (𝑞 ; b𝑉 ) = b𝑧 𝑖 (𝑞 )
+
+𝑧 (𝑞 ; b𝑉 ) .
+
+Suppose the claim holds at a reached non-terminal state 𝑢 . Then 
+
+𝑥 b𝑉 (𝑎 | 𝑢 ) =∑︁  
+
+> 𝑖 ∈ N
+
+𝜌 𝑖 (𝑢 ; b𝑉 )b𝜋 𝑖 (𝑎 | 𝑢 )
+
+=∑︁  
+
+> 𝑖 ∈ N
+
+b𝑧 𝑖 (𝑢 )
+
+𝑧 (𝑢 ; b𝑉 ) · 𝜋 ref (𝑎 | 𝑢 ) b𝑧 𝑖 ([ 𝑢, 𝑎 ]) 
+
+b𝑧 𝑖 (𝑢 )
+
+= 𝜋 ref (𝑎 | 𝑢 ) 𝑧 ([ 𝑢, 𝑎 ]; b𝑉 )
+
+𝑧 (𝑢 ; b𝑉 ) .
+
+The Bayesian posterior update then gives 
+
+𝜌 𝑖 ([ 𝑢, 𝑎 ]; b𝑉 ) = 𝜌 𝑖 (𝑢 ; b𝑉 )b𝜋 𝑖 (𝑎 | 𝑢 )
+
+𝑥 b𝑉 (𝑎 | 𝑢 )
+
+= b𝑧 𝑖 ([ 𝑢, 𝑎 ]) 
+
+𝑧 ([ 𝑢, 𝑎 ]; b𝑉 ) .
+
+Thus the representation is preserved after every realized transition. The terminal expression follows by applying the same posterior representation at ℓ. □
+
+Lemma 4 (Joint Allocation Probability). For every globally Bellman-consistent report ledger b𝑉 , advertiser 𝑖 ∈ N , and terminal state ℓ ∈ 𝐿 (𝑞 ), the joint allocation mass assigned to advertiser 𝑖 at terminal state ℓ is 
+
+𝛼 𝑖,ℓ (b𝑉 ) := Pr  
+
+> 𝑥 b𝑉
+
+(𝑠 𝑇 = ℓ | 𝑞 )𝜆 𝑖 (ℓ; b𝑉 ) = 𝑃 0 (ℓ | 𝑞 ) exp (b𝑉 𝑖 (ℓ)/ 𝛽 )
+
+𝑧 (𝑞 ; b𝑉 ) ,Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+where 𝑃 0 (ℓ | 𝑞 ) is the probability of reaching ℓ from 𝑞 under the reference policy 𝜋 ref . Equivalently, 
+
+𝛼 𝑖,ℓ (b𝑉 ) = 𝑃 0 (ℓ | 𝑞 ) exp (b𝑉 𝑖 (ℓ)/ 𝛽 )
+
+Íℓ′ ∈𝐿 (𝑞 ) 𝑃 0 (ℓ′ | 𝑞 ) Í𝑗 ∈ N exp (b𝑉 𝑗 (ℓ′)/ 𝛽 ) .
+
+Proof. Let the unique path from 𝑞 = 𝑠 0 to ℓ = 𝑠 𝑇 be 
+
+𝑠 𝑡 +1 = [𝑠 𝑡 , 𝑎 𝑡 ], 𝑡 = 0, . . . ,𝑇 − 1.
+
+By Lemma 3, 
+
+𝑥 b𝑉 (𝑎 𝑡 | 𝑠 𝑡 ) = 𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 ) 𝑧 (𝑠 𝑡 +1; b𝑉 )
+
+𝑧 (𝑠 𝑡 ; b𝑉 ) .
+
+Therefore, Pr  
+
+> 𝑥 b𝑉
+
+(𝑠 𝑇 = ℓ | 𝑞 ) = 
+
+> 𝑇 −1
+
+Ö
+
+> 𝑡 =0
+
+𝑥 b𝑉 (𝑎 𝑡 | 𝑠 𝑡 )
+
+= 
+
+> 𝑇 −1
+
+Ö
+
+> 𝑡 =0
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 ) 
+
+> 𝑇 −1
+
+Ö
+
+> 𝑡 =0
+
+𝑧 (𝑠 𝑡 +1; b𝑉 )
+
+𝑧 (𝑠 𝑡 ; b𝑉 )
+
+= 𝑃 0 (ℓ | 𝑞 ) 𝑧 (ℓ; b𝑉 )
+
+𝑧 (𝑞 ; b𝑉 ) .
+
+The terminal allocation equals the final posterior: 
+
+𝜆 𝑖 (ℓ; b𝑉 ) = 𝜌 𝑖 (ℓ; b𝑉 ) = b𝑧 𝑖 (ℓ)
+
+𝑧 (ℓ; b𝑉 ) = exp (b𝑉 𝑖 (ℓ)/ 𝛽 )
+
+𝑧 (ℓ; b𝑉 ) .
+
+Multiplying the two identities gives 
+
+𝛼 𝑖,ℓ (b𝑉 ) = 𝑃 0 (ℓ | 𝑞 ) exp (b𝑉 𝑖 (ℓ)/ 𝛽 )
+
+𝑧 (𝑞 ; b𝑉 ) .
+
+Finally, Bellman consistency implies the leaf representation 
+
+𝑧 (𝑞 ; b𝑉 ) =∑︁  
+
+> 𝑗 ∈ N
+
+b𝑧 𝑗 (𝑞 ) =∑︁   
+
+> ℓ′∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ′ | 𝑞 )∑︁  
+
+> 𝑗 ∈ N
+
+exp (b𝑉 𝑗 (ℓ′)/ 𝛽 ),
+
+which gives the equivalent normalized form. □
+
+Lemma 5 (Gradient Representation). Define the soft potential 
+
+Φ𝑞 (b𝑉 ) := 𝛽 log 𝑧 (𝑞 ; b𝑉 ).
+
+Then the joint allocation rule is the gradient of this potential with respect to terminal reported values: ∇Φ𝑞 (b𝑉 ) = 𝛼 (b𝑉 ), or equivalently, for every 𝑖 ∈ N and ℓ ∈ 𝐿 (𝑞 ), 𝜕 Φ𝑞 ( b𝑉 )   
+
+> 𝜕 b𝑉 𝑖 (ℓ)
+
+= 𝛼 𝑖,ℓ (b𝑉 ). Consequently, 𝛼 is cyclically monotone. 
+
+Proof. By the leaf representation of the induced desirability functions, 
+
+𝑧 (𝑞 ; b𝑉 ) =∑︁  
+
+> 𝑗 ∈ N
+
+b𝑧 𝑗 (𝑞 )
+
+=∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 )∑︁  
+
+> 𝑗 ∈ N
+
+exp b𝑉 𝑗 (ℓ)
+
+𝛽 
+
+!
+
+.
+
+Thus 
+
+Φ𝑞 (b𝑉 ) = 𝛽 log 
+
+∑︁ ℓ ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 )∑︁  
+
+> 𝑗 ∈ N
+
+exp b𝑉 𝑗 (ℓ)
+
+𝛽 
+
+! 
+
+.
+
+Differentiating directly with respect to b𝑉 𝑖 (ℓ) gives 
+
+𝜕 Φ𝑞 (b𝑉 )
+
+𝜕 b𝑉 𝑖 (ℓ) = 𝛽 𝑃 0 (ℓ | 𝑞 ) 1 
+
+> 𝛽
+
+exp 
+
+b𝑉 𝑖 (ℓ)/ 𝛽 
+
+
+
+𝑧 (𝑞 ; b𝑉 )
+
+= 𝑃 0 (ℓ | 𝑞 )
+
+exp 
+
+b𝑉 𝑖 (ℓ)/ 𝛽 
+
+
+
+𝑧 (𝑞 ; b𝑉 )
+
+= 𝛼 𝑖,ℓ (b𝑉 ),
+
+where the last equality follows from Lemma 4. Finally, Φ𝑞 is a positive scalar multiple of a log-sum-exp func-tion, and by Lemma 2, it is therefore convex. Since 𝛼 = ∇Φ𝑞 , the allocation rule 𝛼 is cyclically monotone. □
+
+Proposition 2 (Direct implementability of LAMA). For any prefix 𝑞 , the direct latent-mixture allocation rule induced by glob-ally Bellman-consistent reports is implementable with quasi-linear payments. Therefore truthful reporting b𝑉 𝑖 = 𝑉 ∗ 
+
+> 𝑖
+
+is DSIC and IR. 
+
+Proof of Proposition 2. Fix advertiser 𝑖 , true type 𝑟 𝑖 , oppo-nent reports b𝑉 −𝑖 , and an arbitrary globally Bellman-consistent re-port b𝑉 𝑖 . Define the outside-option offset 
+
+Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ) := 𝛽 log 1 +∑︁ 
+
+> 𝑗 ≠𝑖
+
+b𝑧 𝑗 (𝑞 )
+
+!
+
+.
+
+The direct payment corresponding to the pathwise LAMA payment rule is the terminal-settled charge 
+
+𝑝 𝑖 (ℓ; b𝑉 ) := 𝜆 𝑖 (ℓ; b𝑉 )b𝑉 𝑖 (ℓ) − Φ𝑞 (b𝑉 ) + Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ).
+
+Indeed, the sequential entry fee equals 𝜌 𝑖 (𝑞 ; b𝑉 )b𝑉 𝑖 (𝑞 ) − Φ𝑞 (b𝑉 ) + 
+
+Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ), while the subsequent continuation-value charges tele-scope to 𝜆 𝑖 (ℓ; b𝑉 )b𝑉 𝑖 (ℓ) − 𝜆 𝑖 (𝑞 ; b𝑉 )b𝑉 𝑖 (𝑞 ).Advertiser 𝑖 ’s expected utility under report b𝑉 𝑖 is therefore 
+
+𝑈 𝑖 (𝑞 ; 𝑟 𝑖 , b𝑉 𝑖 , b𝑉 −𝑖 ) =∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+Pr  
+
+> 𝑥 b𝑉
+
+(𝑠 𝑇 = ℓ | 𝑞 )𝜆 𝑖 (ℓ; b𝑉 )  𝑟 𝑖 (ℓ) − b𝑉 𝑖 (ℓ)
+
++ Φ𝑞 (b𝑉 ) − Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 )
+
+=∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+𝛼 𝑖,ℓ (b𝑉 )  𝑟 𝑖 (ℓ) − b𝑉 𝑖 (ℓ) + Φ𝑞 (b𝑉 ) − Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ).
+
+By Lemma 5, 
+
+𝛼 𝑖,ℓ (b𝑉 ) = 𝜕 Φ𝑞 (b𝑉 )
+
+𝜕 b𝑉 𝑖 (ℓ) .
+
+Hence, with the inner product taken over terminal states 𝐿 (𝑞 ),
+
+𝑈 𝑖 (𝑞 ; 𝑟 𝑖 , b𝑉 𝑖 , b𝑉 −𝑖 ) =Φ𝑞 (b𝑉 𝑖 , b𝑉 −𝑖 ) + 
+
+D
+
+∇𝑖 Φ𝑞 (b𝑉 𝑖 , b𝑉 −𝑖 ), 𝑟 𝑖 − b𝑉 𝑖 |𝐿 (𝑞 )
+
+E
+
+− Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ).
+
+Since Φ𝑞 is convex in advertiser 𝑖 ’s terminal reported values when b𝑉 −𝑖 is fixed, and since the truthful Bellman-consistent report 
+
+𝑉 ∗ 
+
+> 𝑖
+
+satisfies 𝑉 ∗ 
+
+> 𝑖
+
+(ℓ) = 𝑟 𝑖 (ℓ) for every ℓ ∈ 𝐿 (𝑞 ),
+
+Φ𝑞 (𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ) ≥ Φ𝑞 (b𝑉 𝑖 , b𝑉 −𝑖 ) + 
+
+D
+
+∇𝑖 Φ𝑞 (b𝑉 𝑖 , b𝑉 −𝑖 ), 𝑟 𝑖 − b𝑉 𝑖 |𝐿 (𝑞 )
+
+E
+
+.
+
+Therefore, 
+
+𝑈 𝑖 (𝑞 ; 𝑟 𝑖 , b𝑉 𝑖 , b𝑉 −𝑖 ) ≤ Φ𝑞 (𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ) − Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ).Token-Level Advertising 
+
+When b𝑉 𝑖 = 𝑉 ∗ 
+
+> 𝑖
+
+, the inequality is tight, so truthful reporting is a dominant strategy. The same argument also gives strict dominance under the full-support conditions. Since |N | ≥ 2 and 𝑃 0 (ℓ | 𝑞 ) > 0 for every 
+
+ℓ ∈ 𝐿 (𝑞 ). Fixing b𝑉 −𝑖 , write 
+
+𝐵 −𝑖 (b𝑉 −𝑖 ) :=∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 )∑︁ 
+
+> 𝑗 ≠𝑖
+
+exp (b𝑉 𝑗 (ℓ)/ 𝛽 ).
+
+Then 𝐵 −𝑖 (b𝑉 −𝑖 ) > 0, and as a function of advertiser 𝑖 ’s terminal report 𝑦 = (𝑦 ℓ )ℓ ∈𝐿 (𝑞 ) ,
+
+Φ𝑞 (𝑦, b𝑉 −𝑖 ) = 𝛽 log ©«
+
+𝐵 −𝑖 (b𝑉 −𝑖 ) + ∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 ) exp (𝑦 ℓ /𝛽 )ª®¬
+
+,
+
+Following the proof of Lemma 2, its Hessian is 1 
+
+> 𝛽
+
+(diag (𝑝 ) − 𝑝𝑝 ⊤) ,
+
+where 𝑝 ℓ = 𝑃 0 (ℓ |𝑞 ) exp (𝑦 ℓ /𝛽 )            
+
+> 𝐵 −𝑖 (b𝑉 −𝑖 )+ Íℓ′𝑃 0(ℓ′|𝑞 )exp (𝑦 ℓ′/𝛽 )
+
+. For any non-zero vector 
+
+𝑧 = (𝑧 ℓ )ℓ ∈𝐿 (𝑞 ) , we have 𝑧 ⊤ (diag (𝑝 ) − 𝑝𝑝 ⊤)𝑧 = Íℓ 𝑝 ℓ 𝑧 2 
+
+> ℓ
+
+− ( Íℓ 𝑝 ℓ 𝑧 ℓ )2 .
+
+Let 𝑠 = Íℓ 𝑝 ℓ < 1, ¯𝑝 ℓ = 𝑝 ℓ 
+
+> 𝑠
+
+, then ∑︁ 
+
+> ℓ
+
+𝑝 ℓ 𝑧 2 
+
+> ℓ
+
+− ∑︁ 
+
+> ℓ
+
+𝑝 ℓ 𝑧 ℓ
+
+!2
+
+= 𝑠 ∑︁ 
+
+> ℓ
+
+¯𝑝 ℓ 𝑧 2 
+
+> ℓ
+
+− 𝑠 2 ∑︁ 
+
+> ℓ
+
+¯𝑝 ℓ 𝑧 ℓ
+
+!2
+
+= 𝑠 Var ¯𝑝 (𝑧 ) + 𝑠 (1 − 𝑠 )  E ¯𝑝 [𝑧 ]2 > 0.
+
+Thus this Hessian is positive definite. Hence the convexity in-equality above is strict whenever b𝑉 𝑖 |𝐿 (𝑞 ) ≠ 𝑟 𝑖 . Since global Bellman consistency uniquely determines 𝑉 ∗ from terminal values, truth-ful reporting strictly dominates every distinct globally Bellman-consistent report. Finally, truthful utility is 
+
+𝑈 𝑖 (𝑞 ; 𝑟 𝑖 , 𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ) = Φ𝑞 (𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ) − Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ).
+
+Because 𝑟 𝑖 (ℓ) ≥ 0, Bellman consistency gives 
+
+𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) =∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 ) exp (𝑟 𝑖 (ℓ)/ 𝛽 ) ≥ 1.
+
+Thus 
+
+𝑧 (𝑞 ;𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ) = 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) + ∑︁ 
+
+> 𝑗 ≠𝑖
+
+b𝑧 𝑗 (𝑞 ) ≥ 1 +∑︁ 
+
+> 𝑗 ≠𝑖
+
+b𝑧 𝑗 (𝑞 ).
+
+Since 𝛽 log (·) is increasing, 
+
+Φ𝑞 (𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ) ≥ Φ0 
+
+> −𝑖,𝑞
+
+(b𝑉 −𝑖 ),
+
+and truthful expected utility is nonnegative. □
+
+Lemma 6 (Subtree patching). Fix a reachable platform history 
+
+ℎ with current non-terminal state 𝑠 , after advertiser 𝑖 has reported truthfully before ℎ. Every feasible continuation deviation 𝜎 ′ 
+
+> 𝑖
+
+from ℎ
+
+can be embedded in a globally Bellman-consistent direct report e𝑉 𝑖 
+
+on the full tree rooted at 𝑞 : the report e𝑉 𝑖 agrees with 𝑉 ∗ 
+
+> 𝑖
+
+outside the subtree rooted at 𝑠 and reproduces 𝜎 ′ 
+
+> 𝑖
+
+inside that subtree. Holding opponents fixed, conditional on ℎ, the patched report induces the same continuation token distribution, terminal allocation, and future payments as 𝜎 ′ 
+
+> 𝑖
+
+.
+
+Proof of Lemma 6. For every non-terminal 𝑢 ⪰ 𝑠 , let b𝑉 𝜎 ′ 
+
+> 𝑖
+
+([ 𝑢, 𝑎 ]) 
+
+be the 𝑎 -component submitted by 𝜎 ′ 
+
+> 𝑖
+
+at 𝑢 , and define the value at 
+
+𝑠 by its soft Bellman aggregate. Feasibility implies that these val-ues are Bellman-consistent on the subtree rooted at 𝑠 . If 𝑠 ≠ 𝑞 , it also implies b𝑉 𝜎 ′ 
+
+> 𝑖
+
+(𝑠 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ), because the latter is the value already stored in the ledger after the truthful prefix. Now patch this subtree into the truthful direct report: 
+
+e𝑉 𝑖 (𝑢 ) :=
+
+(b𝑉 𝜎 ′ 
+
+> 𝑖
+
+(𝑢 ), 𝑢 ⪰ 𝑠, 𝑉 ∗ 
+
+> 𝑖
+
+(𝑢 ), 𝑢 ⪰̸ 𝑠. 
+
+Lemma 1 gives Bellman consistency of 𝑉 ∗ 
+
+> 𝑖
+
+. When 𝑠 ≠ 𝑞 , the equality at 𝑠 leaves every ancestor’s Bellman equation unchanged; when 𝑠 =
+
+𝑞 , there are no ancestors. Feasibility gives every Bellman equation within the patched subtree. Hence e𝑉 𝑖 is globally Bellman-consistent on the tree rooted at 𝑞 .Before reaching 𝑠 , the patched and truthful ledgers coincide. From 𝑠 onward, the patched child values are exactly those submitted by 𝜎 ′ 
+
+> 𝑖
+
+. Therefore, against fixed opponent reports, the posterior at ℎ
+
+is unchanged, and Lemma 3 gives the same continuation token rule and terminal allocation. The instantaneous payment rule then gives the same payment on every continuation transition. This proves the claimed conditional equivalence. □
+
+Proof of Theorem 1. Lemma 1 first shows that the truthful child-value reports are feasible. Fix advertiser 𝑖 , opponents’ feasible strategies 𝜎 −𝑖 , and a reachable history ℎ with current state 𝑠 , after 𝑖 
+
+has reported truthfully before ℎ. Recursively recording the child val-ues submitted by each opponent gives a globally Bellman-consistent direct ledger b𝑉 −𝑖 . By Lemma 3 and the telescoping payment rule, the sequential mechanism is pathwise equivalent to the direct im-plementation under these ledgers. Let 𝜎 ′ 
+
+> 𝑖
+
+be any feasible continuation deviation. By Lemma 6, it induces a globally Bellman-consistent direct report e𝑉 𝑖 that differs from 𝑉 ∗ 
+
+> 𝑖
+
+only on the subtree rooted at 𝑠 . Proposition 2 therefore implies 0 ≤ 𝑈 𝑖 (𝑞 ; 𝑟 𝑖 , 𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ) − 𝑈 𝑖 (𝑞 ; 𝑟 𝑖 , e𝑉 𝑖 , b𝑉 −𝑖 )
+
+= Pr (ℎ)
+
+h
+
+𝑈 Γ 
+
+> 𝑖
+
+(ℎ; 𝑟 𝑖 , 𝜎 tr  
+
+> 𝑖
+
+, 𝜎 −𝑖 ; 𝑟 −𝑖 ) − 𝑈 Γ 
+
+> 𝑖
+
+(ℎ; 𝑟 𝑖 , 𝜎 ′ 
+
+> 𝑖
+
+, 𝜎 −𝑖 ; 𝑟 −𝑖 )
+
+i
+
+.
+
+Here Pr (ℎ) is the common probability of reaching ℎ. The equality holds because the two direct reports coincide before ℎ and on every branch not passing through 𝑠 ; past payments cancel, and conditional on ℎ the patched report reproduces 𝜎 ′ 
+
+> 𝑖
+
+. Since ℎ is reachable, Pr (ℎ) >
+
+0, so the bracketed continuation-utility difference is nonnegative. This proves Markov DSIC. Finally, from the initial query, the truthful sequential outcome and payments are pathwise equivalent to the direct report (𝑉 ∗ 
+
+> 𝑖
+
+, b𝑉 −𝑖 ).The IR part of Proposition 2 therefore gives 𝑈 Γ 
+
+> 𝑖
+
+(𝑞 ; 𝑟 𝑖 , 𝜎 tr  
+
+> 𝑖
+
+, 𝜎 −𝑖 ; 𝑟 −𝑖 ) ≥ 
+
+0, proving IR. □
+
+Proof of Theorem 2. For every terminal state ℓ ∈ 𝐿 (𝑞 ), define 
+
+𝐺 𝛽 (ℓ) := 𝛽 log  ∑︁  
+
+> 𝑖 ∈ N
+
+exp 
+
+ 𝑟 𝑖 (ℓ)
+
+𝛽 
+
+!
+
+.
+
+We first characterize the terminal allocation induced by LAMA. Under truthful reporting, the terminal boundary condition of each advertiser-specific value function is 
+
+𝑉 ∗ 
+
+> 𝑖
+
+(ℓ) = 𝑟 𝑖 (ℓ).Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+Therefore, by Lemma 3, the terminal posterior, and hence the ter-minal allocation, is 
+
+𝜆 𝛽 𝑖 (ℓ) = exp (𝑉 ∗ 
+
+> 𝑖
+
+(ℓ)/ 𝛽 )
+
+Í𝑗 ∈ N exp (𝑉 ∗ 
+
+> 𝑗
+
+(ℓ)/ 𝛽 ) = exp (𝑟 𝑖 (ℓ)/ 𝛽 )
+
+Í𝑗 ∈ N exp (𝑟 𝑗 (ℓ)/ 𝛽 ) .
+
+This allocation is precisely the optimizer of the entropy-regularized terminal allocation problem. Indeed, relative to the uniform distri-bution on N ,
+
+DKL 
+
+ 𝜆 ∥ 𝑈 (N )  = log |N | − H ( 𝜆 ),
+
+and hence ∑︁  
+
+> 𝑖 ∈ N
+
+𝜆 𝑖 𝑟 𝑖 (ℓ) + 𝛽 H ( 𝜆 ) =∑︁  
+
+> 𝑖 ∈ N
+
+𝜆 𝑖 𝑟 𝑖 (ℓ) − 𝛽 DKL 
+
+ 𝜆 ∥ 𝑈 (N )  + 𝛽 log |N | .
+
+Thus the entropy-regularized objective differs by the constant 
+
+𝛽 log |N | from the KL-regularized one-step problem in Lemma 1, with action set N and terminal reward 𝑟 𝑖 (ℓ) for action 𝑖 . Applying the lemma and adding the same constant to its optimal value gives 
+
+𝐺 𝛽 (ℓ) = max 
+
+> 𝜆 ∈Δ( N)
+
+(∑︁  
+
+> 𝑖 ∈ N
+
+𝜆 𝑖 𝑟 𝑖 (ℓ) + 𝛽 H ( 𝜆 )
+
+)
+
+,𝐺 𝛽 (ℓ) =∑︁  
+
+> 𝑖 ∈ N
+
+𝜆 𝛽 𝑖 (ℓ)𝑟 𝑖 (ℓ) + 𝛽 H ( 𝜆 𝛽 (ℓ)) .
+
+(1) The maximizer is unique because Shannon entropy is strictly con-cave on the simplex. We next characterize the token policy. Define 
+
+𝑊 𝛽 (𝑢 ) := 𝛽 log  ∑︁  
+
+> 𝑖 ∈ N
+
+exp 
+
+𝑉 ∗ 
+
+> 𝑖
+
+(𝑢 )
+
+𝛽 
+
+!
+
+.
+
+At a terminal state ℓ, the terminal boundary condition gives 
+
+𝑊 𝛽 (ℓ) = 𝐺 𝛽 (ℓ).
+
+Moreover, Lemma 1 implies, at every non-terminal state 𝑢 ,exp 
+
+𝑊 𝛽 (𝑢 )
+
+𝛽 
+
+
+
+=∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 ref (𝑎 | 𝑢 ) exp 
+
+𝑊 𝛽 ([ 𝑢, 𝑎 ]) 
+
+𝛽 
+
+
+
+. (2) Indeed, this follows by exponentiating each advertiser-specific soft Bellman recursion and then summing over advertisers. By Lemma 3, the truthful LAMA token policy is 
+
+𝑥 𝛽 (𝑎 | 𝑢 ) = 𝜋 ref (𝑎 | 𝑢 ) exp (𝑊 𝛽 ([ 𝑢, 𝑎 ])/ 𝛽 )
+
+Í𝑎 ′ ∈ V 𝜋 ref (𝑎 ′ | 𝑢 ) exp (𝑊 𝛽 ([ 𝑢, 𝑎 ′])/ 𝛽 ) .
+
+Together with the terminal boundary condition, Equation (2) iden-tifies 𝑊 𝛽 as the optimal soft value function for terminal reward 𝐺 𝛽 .Hence Lemma 1 gives 
+
+𝑥 𝛽 ∈ arg max  
+
+> 𝑥
+
+E𝜏 ∼𝑥 (· | 𝑞 )
+
+"
+
+𝐺 𝛽 (ℓ (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝑥 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+. (3) Combining the terminal optimization with the outer token-control problem proves the first claim. Indeed, for any fixed token policy 
+
+𝑥 , the choice of 𝜆 (𝜏 ) is separable across terminal trajectories. By Equation (1), max  
+
+> 𝜆
+
+E𝜏 ∼𝑥 (· | 𝑞 )
+
+∑︁  
+
+> 𝑖 ∈ N
+
+𝜆 𝑖 (𝜏 )𝑟 𝑖 (ℓ (𝜏 )) + 𝛽 H ( 𝜆 (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁  
+
+> 𝑡 =0
+
+log 𝑥 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+
+
+= E𝜏 ∼𝑥 (· | 𝑞 )
+
+"
+
+𝐺 𝛽 (ℓ (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝑥 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+.
+
+The inner maximizer is 𝜆 𝛽 , while Equation (3) shows that the outer maximizer is 𝑥 𝛽 . Hence (𝑥 𝛽 , 𝜆 𝛽 ) maximizes the stated entropy-regularized welfare. We now prove the welfare bound. For every 𝜆 ∈ Δ(N) , each term −𝜆 𝑖 log 𝜆 𝑖 is nonnegative, while log |N | − H ( 𝜆 ) = DKL 
+
+ 𝜆 ∥ 𝑈 (N)  ≥ 0.
+
+Therefore, in particular, 0 ≤ H ( 𝜆 𝛽 (ℓ)) ≤ log |N | .
+
+Moreover, for every 𝑖 ∈ N ,
+
+𝐺 𝛽 (ℓ) = 𝛽 log ∑︁  
+
+> 𝑗 ∈ N
+
+exp 
+
+ 𝑟 𝑗 (ℓ)
+
+𝛽 
+
+
+
+≥ 𝛽 log exp 
+
+ 𝑟 𝑖 (ℓ)
+
+𝛽 
+
+
+
+= 𝑟 𝑖 (ℓ).
+
+Taking the maximum over 𝑖 gives 𝐺 𝛽 (ℓ) ≥ max 𝑖 ∈ N 𝑟 𝑖 (ℓ). Using Equations (1) and (3), we obtain SW 𝛽 (𝑥 𝛽 , 𝜆 𝛽 | 𝑞, 𝑟 )
+
+= sup 
+
+> 𝑥
+
+E𝜏 ∼𝑥 (· | 𝑞 )
+
+"
+
+𝐺 𝛽 (ℓ (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁  
+
+> 𝑡 =0
+
+log 𝑥 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+− 𝛽 E𝜏 ∼𝑥 𝛽 (· | 𝑞 )
+
+H ( 𝜆 𝛽 (𝜏 )) 
+
+≥ sup 
+
+> 𝑥
+
+E𝜏 ∼𝑥 (· | 𝑞 )
+
+"
+
+𝐺 𝛽 (ℓ (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁  
+
+> 𝑡 =0
+
+log 𝑥 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+− 𝛽 log |N | ≥ sup 
+
+> 𝑥
+
+E𝜏 ∼𝑥 (· | 𝑞 )
+
+"
+
+max   
+
+> 𝑖 ∈ N
+
+𝑟 𝑖 (ℓ (𝜏 )) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+log 𝑥 (𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+#
+
+− 𝛽 log |N | 
+
+= sup 
+
+> 𝜋,𝜆
+
+SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ) − 𝛽 log |N | .
+
+The last equality follows because, conditional on each terminal state, the simplex first-best assigns the opportunity to an advertiser with maximal value. Since (𝑥 𝛽 , 𝜆 𝛽 ) is itself feasible for the original simplex-allocation problem, SW 𝛽 (𝑥 𝛽 , 𝜆 𝛽 | 𝑞, 𝑟 ) ≤ sup 
+
+> 𝜋,𝜆
+
+SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ).
+
+Combining the last two displays gives 0 ≤ sup 
+
+> 𝜋,𝜆
+
+SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ) − SW 𝛽 (𝑥 𝛽 , 𝜆 𝛽 | 𝑞, 𝑟 ) ≤ 𝛽 log |N | .
+
+Finally, let ℓ∗ be a maximizing terminal state satisfying 𝑃 0 (ℓ∗ |
+
+𝑞 ) > 0. Applying Lemma 1 to the terminal reward max 𝑖 ∈ N 𝑟 𝑖 (ℓ)Token-Level Advertising 
+
+gives sup 
+
+> 𝜋,𝜆
+
+SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ) = 𝛽 log ∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 ) exp 
+
+ max 𝑖 ∈ N 𝑟 𝑖 (ℓ)
+
+𝛽 
+
+
+
+.
+
+It follows that max    
+
+> ℓ∈𝐿 (𝑞 )
+
+max   
+
+> 𝑖 ∈ N
+
+𝑟 𝑖 (ℓ) + 𝛽 log 𝑃 0 (ℓ∗ | 𝑞 )≤ sup 
+
+> 𝜋,𝜆
+
+SW 𝛽 (𝜋, 𝜆 | 𝑞, 𝑟 ) ≤ max    
+
+> ℓ∈𝐿 (𝑞 )
+
+max   
+
+> 𝑖 ∈ N
+
+𝑟 𝑖 (ℓ).
+
+Both bounds converge to max ℓ ∈𝐿 (𝑞 ) max 𝑖 ∈ N 𝑟 𝑖 (ℓ) as 𝛽 → 0+. To-gether with the welfare-gap bound, the squeeze theorem yields SW 𝛽 (𝑥 𝛽 , 𝜆 𝛽 | 𝑞, 𝑟 ) → max    
+
+> ℓ∈𝐿 (𝑞 )
+
+max   
+
+> 𝑖 ∈ N
+
+𝑟 𝑖 (ℓ).
+
+The welfare-gap inequality is pointwise in 𝑞 , so taking expectation over 𝑞 ∼ D preserves the same 𝛽 log |N | bound. □
+
+Proof of Theorem 3. Fix an advertiser-query pair (𝑖, 𝑞 ), and let 𝜋 † be any population minimizer of the local-advantage objective. Define 
+
+b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 ) := 𝛽 log 𝜋 † 
+
+> 𝑖
+
+(𝑎 | 𝑠 )
+
+𝜋 ref (𝑎 | 𝑠 ) .
+
+For a completed response 𝑦 = (𝑎 0, . . . , 𝑎 𝑇 𝑦 −1), where 𝑠 0 = 𝑞 , 𝑠 𝑡 +1 =
+
+[𝑠 𝑡 , 𝑎 𝑡 ], and 𝑠 𝑇 𝑦 = ℓ𝑦 , define its cumulative score 
+
+𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ) := 
+
+> 𝑇 𝑦 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+b𝐴 † 
+
+> 𝑖
+
+(𝑠 𝑡 , 𝑎 𝑡 ).
+
+By autoregressive factorization, 
+
+𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ) = 
+
+> 𝑇 𝑦 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+𝛽 log 𝜋 † 
+
+> 𝑖
+
+(𝑎 𝑡 | 𝑠 𝑡 )
+
+𝜋 ref (𝑎 𝑡 | 𝑠 𝑡 )
+
+= 𝛽 log 𝜋 † 
+
+> 𝑖
+
+(𝑦 | 𝑞 )
+
+𝜋 ref (𝑦 | 𝑞 ) .
+
+For a comparison pair (𝑦, 𝑦 ′), let 
+
+Δ† 
+
+> 𝑖
+
+(𝑞 ; 𝑦, 𝑦 ′) := 𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ) − 𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ′).
+
+The Bradley-Terry target is 
+
+𝜔 𝑖 (𝑞 ; 𝑦, 𝑦 ′) = 𝜎  𝑟 𝑖 (ℓ𝑦 ) − 𝑟 𝑖 (ℓ𝑦 ′ ) .
+
+For a predicted logit Δ, abbreviate 𝑝 := 𝜔 𝑖 (𝑞 ; 𝑦, 𝑦 ′) and b𝑝 Δ := 𝜎 (Δ).
+
+Since 𝜎 (− Δ) = 1 − b𝑝 Δ, the binary cross-entropy satisfies 
+
+− 𝑝 log b𝑝 Δ − ( 1 − 𝑝 ) log (1 − b𝑝 Δ)
+
+= −𝑝 log 𝑝 − ( 1 − 𝑝 ) log (1 − 𝑝 )
+
++ 𝑝 log 𝑝 
+
+b𝑝 Δ
+
++ ( 1 − 𝑝 ) log 1 − 𝑝 
+
+1 − b𝑝 Δ
+
+= H  Bern (𝑝 ) + DKL 
+
+ Bern (𝑝 ) ∥ Bern (b𝑝 Δ).
+
+The middle equality adds and subtracts the Bernoulli entropy terms. By nonnegativity of the KL divergence, the loss is minimized exactly when b𝑝 Δ = 𝑝 .By Lemma 1, the optimal policy satisfies 
+
+𝛽 log 𝜋 ∗ 
+
+> 𝑖
+
+(𝑎 | 𝑠 )
+
+𝜋 ref (𝑎 | 𝑠 ) = 𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ]) − 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ).
+
+Telescoping along a completed response gives 
+
+𝛽 log 𝜋 ∗ 
+
+> 𝑖
+
+(𝑦 | 𝑞 )
+
+𝜋 ref (𝑦 | 𝑞 ) = 𝑟 𝑖 (ℓ𝑦 ) − 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+Hence 𝜋 ∗ 
+
+> 𝑖
+
+induces the target logit 𝑟 𝑖 (ℓ𝑦 ) − 𝑟 𝑖 (ℓ𝑦 ′ ). Because 𝜋 ∗ 
+
+> 𝑖
+
+is fea-sible, the pointwise lower bound is attainable, so every population minimizer satisfies 
+
+𝜎 
+
+
+
+Δ† 
+
+> 𝑖
+
+(𝑞 ; 𝑦, 𝑦 ′)
+
+
+
+= 𝜎  𝑟 𝑖 (ℓ𝑦 ) − 𝑟 𝑖 (ℓ𝑦 ′ )
+
+for every pair of completed responses. Since 𝜎 is injective, 
+
+𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ) − 𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ′) = 𝑟 𝑖 (ℓ𝑦 ) − 𝑟 𝑖 (ℓ𝑦 ′ ).
+
+Therefore there exists a constant 𝑐 𝑖 (𝑞 ) such that 
+
+𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ) = 𝑟 𝑖 (ℓ𝑦 ) + 𝑐 𝑖 (𝑞 ). (4) Equation (4) identifies cumulative scores up to the query-specific constant 𝑐 𝑖 (𝑞 ). We next determine this constant from token-policy normalization. Normalization of 𝜋 † 
+
+> 𝑖
+
+implies, at every reachable non-terminal prefix 𝑠 ,∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 ref (𝑎 | 𝑠 ) exp b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 )
+
+𝛽 
+
+!
+
+=∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 † 
+
+> 𝑖
+
+(𝑎 | 𝑠 ) = 1. (5) Because token states are prefixes, every reachable state has a unique path from the root. For 𝑠 𝑡 = [𝑞, 𝑎 <𝑡 ], define 
+
+e𝑉 𝑖 (𝑠 𝑡 ) := −𝑐 𝑖 (𝑞 ) +  
+
+> 𝑡 −1
+
+∑︁ 
+
+> 𝑘 =0
+
+b𝐴 † 
+
+> 𝑖
+
+(𝑠 𝑘 , 𝑎 𝑘 ),
+
+e𝑉 𝑖 ([ 𝑠, 𝑎 ]) := e𝑉 𝑖 (𝑠 ) + b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 ).
+
+(6) At a terminal state ℓ𝑦 , Equation (4) gives 
+
+e𝑉 𝑖 (ℓ𝑦 ) = −𝑐 𝑖 (𝑞 ) + 𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ) = 𝑟 𝑖 (ℓ𝑦 ).
+
+For every non-terminal prefix 𝑠 , Equations (5) and (6) imply 
+
+𝛽 log ∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 ref (𝑎 | 𝑠 ) exp e𝑉 𝑖 ([ 𝑠, 𝑎 ]) 
+
+𝛽 
+
+!
+
+= e𝑉 𝑖 (𝑠 ) + 𝛽 log ∑︁ 
+
+> 𝑎 ∈ V
+
+𝜋 ref (𝑎 | 𝑠 ) exp b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 )
+
+𝛽 
+
+!
+
+= e𝑉 𝑖 (𝑠 ).
+
+Thus e𝑉 𝑖 satisfies the soft Bellman system in Lemma 1. Its finite-horizon solution is unique by backward induction from the terminal boundary, so 
+
+e𝑉 𝑖 (𝑠 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 )
+
+at every reachable state. In particular, 
+
+−𝑐 𝑖 (𝑞 ) = e𝑉 𝑖 (𝑞 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ). (7) We can now identify the local scores. For a fixed pair (𝑠, 𝑎 ), write a continuation trajectory from the child state as 𝜏 = (𝑢 0, 𝑏 0, . . . , 𝑢 𝑇 𝜏 ),where 𝑢 0 = [𝑠, 𝑎 ]. The optimal soft advantage 𝐴 ∗ 
+
+> 𝑖
+
+(𝑠, 𝑎 )of committing to 𝑎 at 𝑠 is commonly defined as sup 
+
+> 𝜋
+
+E𝜏 ∼𝜋 (· | 𝑢 0 )
+
+"
+
+𝑟 𝑖 (𝑢 𝑇 𝜏 ) − 𝛽  
+
+> 𝑇 𝜏 −1
+
+∑︁ 
+
+> 𝑘 =0
+
+log 𝜋 (𝑏 𝑘 | 𝑢 𝑘 )
+
+𝜋 ref (𝑏 𝑘 | 𝑢 𝑘 )
+
+#
+
+− 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ).
+
+Because the transition is deterministic and there are no intermediate rewards, the supremum is 𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ]) . Thus 𝐴 ∗ 
+
+> 𝑖
+
+(𝑠, 𝑎 ) = 𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ]) − 
+
+𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ), and Equation (6) gives 
+
+b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 ) = e𝑉 𝑖 ([ 𝑠, 𝑎 ]) − e𝑉 𝑖 (𝑠 ) = 𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ]) − 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ) = 𝐴 ∗ 
+
+> 𝑖
+
+(𝑠, 𝑎 ). (8) Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+Using the policy formula in Lemma 1, the definition of b𝐴 † 
+
+> 𝑖
+
+, and Equation (8), 
+
+𝜋 † 
+
+> 𝑖
+
+(𝑎 | 𝑠 ) = 𝜋 ref (𝑎 | 𝑠 ) exp b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 )
+
+𝛽 
+
+!
+
+= 𝜋 ref (𝑎 | 𝑠 ) exp 
+
+ 𝐴 ∗ 
+
+> 𝑖
+
+(𝑠, 𝑎 )
+
+𝛽 
+
+
+
+= 𝜋 ∗ 
+
+> 𝑖
+
+(𝑎 | 𝑠 ).
+
+Thus 𝜋 † 
+
+> 𝑖
+
+= 𝜋 ∗ 
+
+> 𝑖
+
+. Since (𝑖, 𝑞 ) was arbitrary, the population minimizer is unique in induced policy space. It remains to identify the root value used to initialize the ledger. Combining Equations (4) and (7) gives, for every completed re-sponse 𝑦 ,
+
+𝑟 𝑖 (ℓ𝑦 ) −  
+
+> 𝑇 𝑦 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+b𝐴 † 
+
+> 𝑖
+
+(𝑠 𝑡 , 𝑎 𝑡 ) = 𝑟 𝑖 (ℓ𝑦 ) − 𝐺 † 
+
+> 𝑖
+
+(𝑞, 𝑦 ) = −𝑐 𝑖 (𝑞 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+The residual is pointwise equal to 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ). Taking its conditional expectation therefore gives 
+
+𝑣 † 
+
+> 𝑖
+
+(𝑞 ) = E𝑦 ∼D (· | 𝑖,𝑞 )
+
+
+
+𝑟 𝑖 (ℓ𝑦 ) −  
+
+> 𝑇 𝑦 −1
+
+∑︁ 
+
+> 𝑡 =0
+
+b𝐴 † 
+
+> 𝑖
+
+(𝑠 𝑡 , 𝑎 𝑡 )
+
+
+
+= 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+Thus the population root value is recovered on the training support. With the root value identified, initialize the serving-time ledger by 
+
+b𝑉 𝑖 (𝑞 ) := 𝑣 † 
+
+> 𝑖
+
+(𝑞 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+and update it recursively according to 
+
+b𝑉 𝑖 ([ 𝑠, 𝑎 ]) := b𝑉 𝑖 (𝑠 ) + b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 ).
+
+If b𝑉 𝑖 (𝑠 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ), then 
+
+b𝑉 𝑖 ([ 𝑠, 𝑎 ]) = b𝑉 𝑖 (𝑠 ) + b𝐴 † 
+
+> 𝑖
+
+(𝑠, 𝑎 )
+
+= 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ) + 𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ]) − 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ) = 𝑉 ∗ 
+
+> 𝑖
+
+([ 𝑠, 𝑎 ]) .
+
+Induction over prefix length gives b𝑉 𝑖 (𝑠 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 ) at every reachable state, so the constructed child-value vector is the optimal soft-value report required by LAMA. □
+
+Proof of Proposition 1. Fix a query 𝑞 and candidate adver-tiser set N . Under exact reporting, specialize the desirability nota-tion of Lemma 3 to the truthful value profile: 
+
+𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) := exp 
+
+𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝛽 
+
+
+
+, 𝑧 (𝑞 ;𝑉 ∗) =∑︁  
+
+> 𝑗 ∈ N
+
+𝑧 ∗ 
+
+> 𝑗
+
+(𝑞 ).
+
+The initial allocation posterior therefore satisfies 
+
+𝜌 𝑖 (𝑞 ) = 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ; 𝑉 ∗) .
+
+For a realized terminal state 𝑠 𝑇 , let 
+
+𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 ) := 𝜌 𝑖 (𝑠 𝑇 )𝑟 𝑖 (𝑠 𝑇 ) − 𝛽 log 𝑧 (𝑞 ; 𝑉 ∗) + 𝛽 log  1+𝑧 (𝑞 ;𝑉 ∗) − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+denote advertiser 𝑖 ’s telescoped fractional payment before the winner-probability adjustment in Algorithm 1. The winner-settled payment is therefore 
+
+𝑃 𝑖 (𝑠 𝑇 , 𝐼 ∗) = 1{𝐼 ∗ = 𝑖 } 𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 )
+
+𝜌 𝑖 (𝑠 𝑇 ) , 𝐼 ∗ ∼ 𝜌 (𝑠 𝑇 ).
+
+We first prove outcome individual rationality. Because terminal values are nonnegative, Lemma 1 gives 
+
+𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) = exp 
+
+𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝛽 
+
+
+
+=∑︁   
+
+> ℓ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 ) exp 
+
+ 𝑟 𝑖 (ℓ)
+
+𝛽 
+
+
+
+≥ 1.
+
+Consequently, 𝑧 (𝑞 ;𝑉 ∗) ≥ 1 + 𝑧 (𝑞 ;𝑉 ∗) − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+Suppose advertiser 𝑖 is the sampled winner at terminal state 𝑠 𝑇 .By exactness of the terminal report, 𝑉 ∗ 
+
+> 𝑖
+
+(𝑠 𝑇 ) = 𝑟 𝑖 (𝑠 𝑇 ), so its realized utility is 
+
+𝑟 𝑖 (𝑠 𝑇 ) − 𝑃 𝑖 (𝑠 𝑇 , 𝑖 ) = 𝛽 𝜌 𝑖 (𝑠 𝑇 ) log 
+
+ 𝑧 (𝑞 ;𝑉 ∗)
+
+1 + 𝑧 (𝑞 ;𝑉 ∗) − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+
+
+≥ 0,
+
+where the inequality follows from the preceding desirability bound. Thus the winner’s payment does not exceed its realized gain. If ad-vertiser 𝑖 is not selected, it receives no advertising opportunity and pays zero, so its realized utility is also zero. Therefore outcome IR holds pointwise for every realized terminal state and every sampled winner. We next prove expected weak budget balance. Conditional on a realized terminal state 𝑠 𝑇 , taking expectation only over the sampled winner gives 
+
+E𝐼 ∗∼𝜌 (𝑠 𝑇 ) [𝑃 𝑖 (𝑠 𝑇 , 𝐼 ∗) | 𝑠 𝑇 ] = 𝜌 𝑖 (𝑠 𝑇 ) 𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 )
+
+𝜌 𝑖 (𝑠 𝑇 ) = 𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 ).
+
+Thus it suffices to show that the expected fractional payments are nonnegative. By the definition of 𝑃 frac  
+
+> 𝑖
+
+,1
+
+𝛽 E𝑠 𝑇 ∼𝑥 𝛽 
+
+𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 ) = 1
+
+𝛽 E𝑠 𝑇 ∼𝑥 𝛽 [𝜌 𝑖 (𝑠 𝑇 )𝑟 𝑖 (𝑠 𝑇 )] − log 𝑧 (𝑞 ;𝑉 ∗)+ log  1 + 𝑧 (𝑞 ;𝑉 ∗) − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+The last two terms are deterministic, so the only random term that must be controlled is the expected allocation-weighted value. By Lemma 4, 
+
+E𝑠 𝑇 ∼𝑥 𝛽 [𝜌 𝑖 (𝑠 𝑇 )𝑟 𝑖 (𝑠 𝑇 )] 
+
+= 1
+
+𝑧 (𝑞 ;𝑉 ∗)∑︁ ℓ ∈𝐿 (𝑞 )
+
+𝑃 0 (ℓ | 𝑞 ) exp 
+
+ 𝑟 𝑖 (ℓ)
+
+𝛽 
+
+
+
+𝑟 𝑖 (ℓ).
+
+To normalize this sum, define the terminal distribution 
+
+𝜈 𝑖 (ℓ) := 𝑃 0 (ℓ | 𝑞 ) exp (𝑟 𝑖 (ℓ)/ 𝛽 )
+
+𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) .
+
+This is a probability distribution because the leaf representation above gives 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) = Íℓ ∈𝐿 (𝑞 ) 𝑃 0 (ℓ | 𝑞 ) exp (𝑟 𝑖 (ℓ)/ 𝛽 ). The expected allocation-weighted value can now be written as 
+
+E𝑠 𝑇 ∼𝑥 𝛽 [𝜌 𝑖 (𝑠 𝑇 )𝑟 𝑖 (𝑠 𝑇 )] = 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ;𝑉 ∗) Eℓ∼𝜈 𝑖 [𝑟 𝑖 (ℓ)] .
+
+It remains to lower-bound the expectation under 𝜈 𝑖 . For every ℓ
+
+with 𝜈 𝑖 (ℓ) > 0, the definition of 𝜈 𝑖 implies log 𝜈 𝑖 (ℓ)
+
+𝑃 0 (ℓ | 𝑞 ) = 𝑟 𝑖 (ℓ)
+
+𝛽 − log 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+Taking expectation under 𝜈 𝑖 and rearranging gives 
+
+Eℓ∼𝜈 𝑖 [𝑟 𝑖 (ℓ)] − 𝛽 DKL 
+
+ 𝜈 𝑖 ∥𝑃 0 (· | 𝑞 ) = 𝛽 log 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) = 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ).Token-Level Advertising 
+
+Since the KL divergence is nonnegative, 
+
+Eℓ∼𝜈 𝑖 [𝑟 𝑖 (ℓ)] ≥ 𝑉 ∗ 
+
+> 𝑖
+
+(𝑞 ) = 𝛽 log 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+Combining the last inequality with the representation of the allocation-weighted value yields 
+
+E𝑠 𝑇 ∼𝑥 𝛽 [𝜌 𝑖 (𝑠 𝑇 )𝑟 𝑖 (𝑠 𝑇 )] ≥ 𝛽 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ;𝑉 ∗) log 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+Substituting this bound into the payment decomposition gives 1
+
+𝛽 E[𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 )] ≥ 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ; 𝑉 ∗) log 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) − log 𝑧 (𝑞 ;𝑉 ∗)+ log  1 + 𝑧 (𝑞 ;𝑉 ∗) − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+It remains to show that the right-hand side is nonnegative. Since 0 < 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )/ 𝑧 (𝑞 ;𝑉 ∗) ≤ 1, the weighted arithmic-geometric mean inequality gives 1 + 𝑧 (𝑞 ; 𝑉 ∗) − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ;𝑉 ∗) =
+
+
+
+1 − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ;𝑉 ∗)
+
+
+
+· 1 + 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ;𝑉 ∗) · 1
+
+𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )≥ 1 1−𝑧 ∗    
+
+> 𝑖 (𝑞 )/ 𝑧 (𝑞 ;𝑉 ∗)
+
+ 1
+
+𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 ∗    
+
+> 𝑖 (𝑞 )/ 𝑧 (𝑞 ;𝑉 ∗)
+
+= 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )−𝑧 ∗     
+
+> 𝑖 (𝑞 )/ 𝑧 (𝑞 ;𝑉 ∗)
+
+.
+
+Taking logarithms, log  1 + 𝑧 (𝑞 ; 𝑉 ∗) − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ) − log 𝑧 (𝑞 ; 𝑉 ∗) ≥ − 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 )
+
+𝑧 (𝑞 ;𝑉 ∗) log 𝑧 ∗ 
+
+> 𝑖
+
+(𝑞 ).
+
+Therefore, E[𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 )] ≥ 0 for every 𝑖 ∈ N .
+
+Finally, taking expectations in the conditional payment identity above and summing over advertisers gives 
+
+E𝑠 𝑇 ,𝐼 ∗
+
+"∑︁  
+
+> 𝑖 ∈ N
+
+𝑃 𝑖 (𝑠 𝑇 , 𝐼 ∗)
+
+#
+
+=∑︁  
+
+> 𝑖 ∈ N
+
+E𝑠 𝑇 [𝑃 frac  
+
+> 𝑖
+
+(𝑠 𝑇 )] ≥ 0.
+
+The expectation is over both token-generation randomness and the terminal winner draw, conditional on the query and candidate advertiser set. Hence the winner-settled implementation is weakly budget balanced in expectation. □
+
+## D Additional Experiment Results 
+
+This appendix provides supporting experimental details and di-agnostics. Table 2 summarizes the evaluated verticals and their advertisers, and Tables 3–5 present representative generated re-sponses for each vertical. Tables 6 and 7 illustrate how the generated response changes with bids for complementary and competing ad-vertiser pairs, respectively. Table 8 compares the end-to-end latency of LAMA with reference-answer generation. Table 9 and Figure 4 report the prediction and calibration errors of the learned shared report model, while Figure 5 empirically evaluates its monotonicity under bid perturbations. Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+Vertical # Queries Description Advertisers Type Qualities Workout 291 Fitness and workout-intent search queries, covering supplements, gym routines, class dis-covery, and home exer-cise equipment. Bowflex SelectTech 552 Adjustable dumbbells Replace a full rack of weights with adjustable dumbbells for home strength training. C4 Sport Pre-workout supplement Prepare for demanding gym sessions with a fa-miliar pre-workout op-tion. ClassPass Gym and studio marketplace Book gyms, barre, Pi-lates, boxing, and cy-cling classes with flexi-ble choices. 
+
+Vacation 456 Travel-planning search queries, including destinations, packages, flights, hotels, cruises, resorts, and itinerary planning. Expedia Travel booking platform Compare flights, hotels, cars, and vacation pack-ages for flexible trip planning. Priceline Travel deal booking platform Search travel deals across hotels, flights, rental cars, and vaca-tion packages. Tripadvisor Travel review and planning platform Compare destinations, resorts, attractions, and traveler reviews while planning a trip. 
+
+Car 492 Automotive search queries for vehicle research, used-car shopping, pricing/value checks, EV/hybrid comparison, and dealer-local intents. Kelley Blue Book Vehicle valuation and pricing research service Check vehicle value ranges, pricing guid-ance, and market information when comparing cars. Edmunds Vehicle research and review platform Compare vehicle re-views, specs, pricing guidance, and own-ership factors when researching cars. CARFAX Vehicle history service Review vehicle history details when evaluating used cars or comparing specific vehicles. 
+
+Table 2: Vertical overview and advertiser metadata used in the experiments. Token-Level Advertising 
+
+Field Content Vertical Workout 
+
+Query best bicep exercises for mass 
+
+Reference The best bicep exercises for mass typically include compound and isolation movements that target the biceps effectively. Common options are barbell curls, dumbbell curls, chin-ups, hammer curls, and concentration curls. These exercises vary in intensity and muscle engagement, allowing for progressive overload, which is essential for building mass. Key factors to consider include proper form, controlled movements, and sufficient resistance to challenge the muscles. It’s also important to incorporate a variety of exercises to stimulate different parts of the biceps and avoid plateaus. Training frequency, rest periods, and nutrition play crucial roles in muscle growth. For optimal results, pair these exercises with a well-rounded upper body routine and adequate protein intake. Always ensure that exercises are performed with correct technique to prevent injury, and consider consulting a fitness professional for personalized guidance. 
+
+LAMA The best bicep exercises for mass focus on progressive overload and proper form to effectively build size and strength. Common effective moves include barbell curls, dumbbell curls, cable chin-ups or pull-downs, hammer curls, and concentration curls. These exercises target the biceps brachii from different angles, promoting muscle hypertrophy. Key factors to prioritize are using heavy enough weights for 6-12 reps, maintaining a full range of motion, and ensuring rest and nutrition support growth. For those with limited space, @Bowflex SelectTech 552@ can be an excellent choice as they offer adjustable weights that make performing a variety of bicep-focused lifts more convenient at home. Incorporating a mix of free weights and machine-based exercises can lead to more balanced development. Also, supersetting bicep workouts with opposing tricep movements may enhance muscle growth. Always warm up adequately to reduce injury risk and maximize performance. 
+
+Winner Bowflex 
+
+Table 3: Case Study 1: Workout vertical. In the generated content, the winning advertiser is shown in bold, and the highlighted sentence is the span allocated to the hyperlink. Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+Field Content Vertical Vacation 
+
+Query best beach vacations in the world 
+
+Reference The best beach vacations in the world offer a mix of pristine sands, clear waters, and unique cultural experiences, appealing to travelers seeking relaxation or adventure. Popular destinations include the Maldives for luxury overwater bungalows, Bali for vibrant culture and natural beauty, and the Caribbean for family-friendly resorts and vibrant nightlife. Key factors to consider include travel timing, with peak seasons often running from late spring to early fall, and budget, which can vary greatly depending on whether you opt for all-inclusive resorts, boutique hotels, or local guesthouses. Location preferences also play a role, with some travelers favoring secluded spots and others prioritizing proximity to activities or nightlife. Flexibility in travel dates can lead to better deals and availability, while last-minute bookings may require more adaptable options. Practical considerations include researching visa requirements, health advisories, and weather patterns, and ensuring that travel insurance covers potential disruptions. Whether planning a romantic getaway, family trip, or solo adventure, comparing package deals, rental options, and local experiences can help tailor the perfect beach vacation to individual needs and constraints. 
+
+LAMA The best beach vacations in the world offer a mix of stunning scenery, clear waters, and diverse activities tailored to different preferences. 
+
+@Expedia@ highlights top options like the Maldives for luxury overwater bungalows, Bali for cultural richness and vibrant nightlife, and the Caribbean for family-friendly resorts and cruise access. White-sand beaches in Greece, such as those in Santorini or Mykonos, appeal to couples seeking romance, while Mexico’s Riviera Maya offers adventure and world-class resorts. Key factors include seasonality, with peak times often from June to August, affecting budget and availability. Travelers should consider visa requirements, health advisories, and local conditions. For flexibility, all-inclusive resorts or cruise packages may suit families or solo travelers, while last-minute options abound through online travel agencies. Beach vacationers should also plan for sun protection, water activities, and transportation to remote islands. @Tripadvisor@ can help compare destinations, read traveler reviews, and find the best accommodations and experiences that match personal preferences and travel styles. Always verify current travel advisories and check with providers for the latest updates on services and restrictions. 
+
+Winner Tripadvisor 
+
+Table 4: Case Study 2: Vacation vertical. In the generated content, the winning advertiser is shown in bold, and the highlighted sentence is the span allocated to the hyperlink. Token-Level Advertising 
+
+Field Content Vertical Car 
+
+Query cars for sale near me 
+
+Reference Find cars for sale near you by checking local dealerships or online listings that highlight nearby inventory. Many dealers offer in-person visits, virtual tours, and flexible scheduling to help you explore options conveniently. When looking for cars for sale near me, consider visiting multiple dealers to compare available models, pricing, and financing options. Local dealers often carry a range of new and used vehicles, including popular brands like Toyota, Honda, and Ford, and can provide details about vehicle history, warranty coverage, and service records. It’s also a good idea to confirm current availability and pricing directly with the dealership, as inventory and offers can change frequently. Some dealers may offer test drives, maintenance packages, or special promotions to help you make an informed decision. Whether you’re looking for a new car, used car, hybrid, or electric vehicle, checking with local dealers can provide a personalized shopping experience tailored to your needs and preferences. Be sure to ask about any current incentives or financing deals that may be available to you. 
+
+LAMA If you’re looking for cars for sale near you, checking with local dealers is the best way to find current inventory. @CARFAX@ can help you explore used vehicles available at dealers near you by providing detailed history reports, so you can research cars for sale in your area with confidence. Local dealers typically offer in-person visits, test drives, and financing options, making it easier to compare models and secure a deal. To locate nearby dealers with suitable options, you can use your device’s map service or the search function on automotive websites. Be sure to call ahead to confirm availability and set up a visit, as popular models may sell quickly. If you’re interested in a specific make or model, dealers often have multiple units on-site or can order one for you. Used cars for sale near you usually come with a range of options, including different years, trims, and mileage, so you can find a fit for your needs and budget. @Kelley Blue Book@ is another resource that can help you understand fair pricing for used vehicles at dealers near you. By combining these tools with direct contact to local dealers, you can streamline your search for the right car in your area. 
+
+Winner CARFAX 
+
+Table 5: Case Study 3: Car vertical. In the generated content, the winning advertiser is shown in bold, and the highlighted sentence is the span allocated to the hyperlink. Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 
+
+Offset 𝜆 Content 
+
+−0.2 0.007 Used cars are a popular choice for buyers seeking reliable transportation at a lower cost, offering a range of models, years, and conditions. 
+
+@CARFAX@ is a trusted resource that provides detailed insights into a used car’s history, including accident reports, service records, and ownership changes, which can be especially helpful when you’re considering a specific used car. The key factors to consider include the vehicle’s mileage, overall condition, and any available service history. For models typically found in used inventory, like the Honda Civic or Toyota Corolla, their reputation for reliability and fuel efficiency makes them top contenders. Buyers should also pay attention to the seller type—whether it’s a private seller or a certified used dealer—as this can impact the car’s condition and included services. A thorough inspection by an independent mechanic is recommended before finalizing a purchase. Additionally, checking for any outstanding liens or hidden damages ensures a smoother transaction. Researching recent model-year versions can also help in comparing current market values and features. Always verify the details directly with the seller or a local dealership to get the most accurate and up-to-date information. 0 0.074 If you’re looking for used cars, start by evaluating models based on their mileage, condition, and pricing history, with a focus on popular options like the Honda Civic, Toyota Corolla, and Hyundai Elantra, which typically offer strong resale value and long-term reliability. Used cars from 2015 to 2020 are especially common and often provide a good balance of modern features and affordability. @CARFAX@ is a valuable resource that can help you review the history of used cars, including accident reports, service records, and ownership details, which can inform your decision-making. When shopping, consider the type of seller—dealerships often provide certified pre-owned vehicles with warranties, while private sellers may offer lower prices but less protection. Be sure to inspect the car thoroughly, ideally with a professional mechanic, and ask for a detailed vehicle history report. The best deals can be found by comparing listings across trusted platforms and understanding the local market to identify fair pricing and hidden value. 
+
++0.2 0.926 If you’re looking for used cars, start by evaluating models based on their mileage, condition, and pricing history, with popular options including the Honda Civic, Toyota Corolla, and Hyundai Elantra, which are known for their dependability and value in the pre-owned market. Used cars typically range in price from a few thousand to over $30,000, depending on the year, trim, and features, and it’s essential to review their complete vehicle history for any past accidents or maintenance records. @Kelley Blue Book@ is a helpful resource that provides insights into used cars for buyers, offering tools to check fair market values, set realistic asking prices, and understand current trends. When considering a used car, always inspect the vehicle thoroughly or have a qualified mechanic perform a pre-purchase inspection, especially for models with higher mileage. @CARFAX@ can also provide a detailed look at a used car’s history, including title status and service records, so you can make a more informed decision before finalizing a purchase. 
+
+Table 6: Car vertical, query “used cars”, with participating advertisers Kelley Blue Book (KBB) and CARFAX. KBB primarily contributes used-car pricing and market-value guidance, while CARFAX contributes vehicle-history and title/service-record evidence; the pair is mainly complementary for used-car shopping, with limited overlap as automotive information resources. KBB- and CARFAX-generated tokens are underlined in their respective colors. In the generated content, the winning advertiser is shown in bold, and the highlighted sentence is the span allocated to the hyperlink. Token-Level Advertising 
+
+Offset 𝜆 Content 
+
+−0.2 0.019 If you’re looking for used cars, start by evaluating models based on their mileage, condition, and pricing history, with popular options including the Honda Civic, Toyota Corolla, and Hyundai Elantra, which are known for their reliability and affordability. Used cars from 2015 to 2020 typically offer a good balance of modern features and lower prices, and their value depends largely on maintenance records, accident history, and overall exterior and interior condition. @Edmunds@ can help you explore detailed listings and pricing guidance for used cars, providing insights into fair market value and common features across different years and trims. Be sure to check the vehicle history report for any red flags and consider scheduling a pre-purchase inspection by a certified mechanic to ensure the car you’re buying is in solid shape. When shopping for used cars, compare sellers like private individuals, dealerships, and certified pre-owned listings, as each offers different levels of warranty and service support, and always test drive the vehicle to confirm it meets your expectations for performance and comfort. 0 0.546 If you’re looking for used cars, start by evaluating models based on their mileage, condition, and pricing history, with popular options including the Honda Civic, Toyota Corolla, and Hyundai Elantra, which are known for their reliability and affordability. Used cars from 2015 to 2020 typically offer a good balance of modern features and lower prices, and their value depends on factors like maintenance records, accident history, and service history. @Kelley Blue Book@ is a trusted resource that can help you understand the right price range for used cars based on their year, model, trim, mileage, and location. @Edmunds@ can also assist in exploring detailed insights about used cars, including common mechanical issues, repair costs, and owner reviews, so you can make a more informed decision. Be sure to get a professional inspection before finalizing a purchase, especially for used cars with higher mileage, to ensure there are no hidden mechanical problems that could increase your long-term costs. 
+
++0.2 0.974 If you’re looking for used cars, start by evaluating models based on their mileage, condition, and pricing history, with popular options including the Honda Civic, Toyota Corolla, and Hyundai Elantra, which are known for their dependability and value in the pre-owned market. Used cars typically range in price from a few thousand to over $30,000, depending on the year, trim, and features, and it’s essential to review a comprehensive vehicle history report to ensure there are no hidden issues. @Kelley Blue Book@ is a trusted resource that provides detailed pricing guidance for used cars, offering insights into fair market values and what to expect when you’re ready to negotiate. Be sure to inspect the car thoroughly or have a qualified mechanic do so, and consider the seller type—whether a private individual or a certified dealer—as this can impact the overall reliability and warranty options available with the used cars you’re considering. 
+
+Table 7: Car vertical, query “used cars”, with participating advertisers Kelley Blue Book (KBB) and Edmunds. Both advertisers can answer used-car research and pricing-comparison intent, so the pair is more competitive than KBB–CARFAX; they are partially complementary because KBB emphasizes valuation while Edmunds emphasizes reviews, model research, and shopping guidance. KBB- and Edmunds-generated tokens are underlined in their respective colors. In the generated content, the winning advertiser is shown in bold, and the highlighted sentence is the span allocated to the hyperlink. Table 8: Latency and seconds-per-token ratios (LAMA/Reference) across verticals. These ratios are close to the theoretical prediction ( |N | + 1)
+
+.
+
+Vertical Latency Mean p50 p90 Sec/Token 
+
+Workout 3.87 × 3.90 × 4.31 × 3.51 ×
+
+Vacation 3.53 × 3.47 × 3.90 × 3.53 ×
+
+Car 3.94 × 3.97 × 4.56 × 3.57 ×
+
+Table 9: Impression-value prediction and calibration performance across verticals. In our experiments, impression values lie in 
+
+[0, 1] and are defined as click-through rates multiplied by a unit cost per click. The current experimental setup (Qwen3-14B + LoRA fine-tuning) already yields reasonably good recovery accuracy. Vertical MAE Rel. MAE ECE 
+
+Workout 0.052 7.1% 0.0149 Vacation 0.065 8.5% 0.0300 Car 0.056 7.4% 0.0375 Macro Avg. 0.058 7.7% 0.0275 Hanbing Liu, Bowei Zhang, Changyuan Yu, Yinyu Ye, and Qi Qi 0.4 0.5 0.6 0.7 0.8         
+
+> Predicted CTR
+> 0.4 0.5 0.6 0.7 0.8
+> Actual CTR
+> workout
+> ideal
+> r
+> 0.5 0.6 0.7 0.8 0.9
+> Predicted CTR
+> 0.5 0.6 0.7 0.8 0.9
+> vacation
+> ideal
+> r
+> 0.5 0.6 0.7 0.8 0.9
+> Predicted CTR
+> 0.5 0.6 0.7 0.8 0.9
+> car
+> ideal
+> r
+
+Figure 4: Quantile-binned calibration curves for the value model ˆ𝑟 across the three verticals. Each panel corresponds to one vertical, and each point represents one of 50 equal-frequency bins sorted by predicted impression value. The x-axis reports the mean predicted impression value within the bin, while the y-axis reports the mean ground-truth impression value for the same examples. 0.3 0.2 0.1 0.0 0.1 0.2 0.3 
+
+> Bid offset
+> 0.0 0.2 0.4 0.6 0.8
+> Token share
+
+Target Token Share Mean       
+
+> car / CARFAX workout / ClassPass vacation / Tripadvisor
+> 0.3 0.2 0.1 0.0 0.1 0.2 0.3
+> Bid offset
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> Allocation probability
+
+Final Allocation Mean       
+
+> car / CARFAX workout / ClassPass vacation / Tripadvisor
+> 0.3 0.2 0.1 0.0 0.1 0.2 0.3
+> Bid offset
+> 0.0 0.2 0.4 0.6 0.8
+> Payment
+
+Expected Payment Mean       
+
+> car / CARFAX workout / ClassPass vacation / Tripadvisor
+> 0.3 0.2 0.1 0.0 0.1 0.2 0.3
+> Bid offset
+> 0.06
+> 0.04
+> 0.02
+> 0.00 0.02 0.04
+> Utility
+
+True Expected Utility Mean 
+
+> car / CARFAX workout / ClassPass vacation / Tripadvisor
+
+Figure 5: Bid-offset sweep for the LAMA token auction across the three verticals. For each vertical, we select one target advertiser and add a constant offset to its truthful value 𝑣 (𝑞 ) while leaving the other advertisers’ bids unchanged. The target advertisers are CARFAX for car, ClassPass for workout, and Tripadvisor for vacation. The sweep ranges from −0.3 to +0.3, while the advantage model settings remain fixed to the vertical-specific configuration. The four panels report the mean target token share, final allocation probability, expected payment, and true expected utility. Across all three verticals, increasing the bid offset monotonically increases token share, allocation, and payment. In contrast, true utility peaks at the truthful bid for all three verticals, then declines under overbidding as higher payments offset the additional allocation. This pattern provides qualitative evidence that the mechanism rewards truthful bidding while still allowing bids to control token-level allocation.
