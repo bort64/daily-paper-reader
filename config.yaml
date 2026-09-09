@@ -25,3 +25,79 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
+  intent_profiles:
+    - tag: search-rec
+      description: 搜广推、规模化扩展、生成式搜广推及AI检索相关论文
+      enabled: true
+      paper_sources:
+        - arxiv
+        - biorxiv
+      keywords:
+        - keyword: generative retrieval
+          keyword_cn: 生成式检索
+          query: generative retrieval models that directly generate document identifiers for web search
+        - keyword: generative recommendation
+          keyword_cn: 生成式推荐
+          query: generative recommendation systems that autoregressively produce item lists or next item predictions
+        - keyword: generative advertising
+          keyword_cn: 生成式广告
+          query: generative models for ad retrieval, ad ranking, and sponsored content generation
+        - keyword: search advertising recommendation
+          keyword_cn: 搜索广告推荐
+          query: joint modeling and serving of search, advertising, and recommendation systems at scale
+        - keyword: recommendation scaling laws
+          keyword_cn: 推荐系统扩展规律
+          query: empirical scaling laws for recommender systems describing data size, model capacity, and ranking quality
+        - keyword: scaling up recommendation models
+          keyword_cn: 扩展推荐模型
+          query: techniques for scaling up deep learning based recommendation and ranking models on large user item graphs
+      intent_queries:
+        - query: >-
+            papers that study scaling up search advertising and recommendation systems including model size, data scale,
+            and training efficiency
+          query_cn: 关于扩展搜索、广告、推荐系统（模型规模、数据规模、训练效率）的论文
+          enabled: true
+          source: manual
+          note: ''
+        - query: >-
+            generative search, advertising, and recommendation methods based on large language models or generative
+            retrieval
+          query_cn: 基于大语言模型或生成式检索的生成式搜索、广告和推荐方法
+          enabled: true
+          source: manual
+          note: ''
+        - query: >-
+            modern transformer and generative architectures for web search and recommender systems beyond traditional
+            statistical models
+          query_cn: 面向网页搜索和推荐系统的 transformer 与生成式架构方法
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-09-09T09:36:51.086Z'
+source_backends:
+  arxiv:
+    papers_table: arxiv_papers
+    use_vector_rpc: true
+    vector_rpc: match_arxiv_papers
+    vector_rpc_exact: match_arxiv_papers_exact
+    use_bm25_rpc: true
+    bm25_rpc: match_arxiv_papers_bm25
+    sync_table: arxiv_sync_status
+    sync_success_value: success
+    schema: public
+    kind: supabase
+    enabled: true
+    url: https://lyucdwgefyfbmaiopjbk.supabase.co
+    anon_key: sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq
+  biorxiv:
+    papers_table: biorxiv_papers
+    use_vector_rpc: true
+    vector_rpc: match_biorxiv_papers_exact
+    vector_rpc_exact: match_biorxiv_papers_exact
+    use_bm25_rpc: true
+    bm25_rpc: match_biorxiv_papers_bm25
+    schema: public
+    kind: supabase
+    enabled: true
+    url: https://lyucdwgefyfbmaiopjbk.supabase.co
+    anon_key: sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq
