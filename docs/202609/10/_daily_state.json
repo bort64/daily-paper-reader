@@ -1,0 +1,89 @@
+{
+  "date": "20260910",
+  "date_label": "",
+  "generated_at": "2026-09-10 22:12:03 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.02062v1",
+      "route": "202609/10/2609.02062v1-spar-enhancing-industrial-scale-generative-poi-recommendation-via-real-world-spatial-perception",
+      "title": "SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "工业级生成式POI推荐自回归生成语义ID",
+      "first_seen_at": "2026-09-10 22:12:03 UTC",
+      "updated_at": "2026-09-10 22:12:03 UTC"
+    },
+    {
+      "paper_id": "2609.02964v1",
+      "route": "202609/10/2609.02964v1-when-optimization-becomes-manipulation-defending-generative-search-against-malicious-generative-engine-optimization",
+      "title": "When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "防御针对生成式搜索引擎的恶意生成引擎优化",
+      "first_seen_at": "2026-09-10 22:12:03 UTC",
+      "updated_at": "2026-09-10 22:12:03 UTC"
+    },
+    {
+      "paper_id": "2609.03290v2",
+      "route": "202609/10/2609.03290v2-unicon-a-unified-context-centric-modeling-paradigm-for-ctr-prediction",
+      "title": "UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "统一上下文中心CTR建模并扩大模型容量与扩展性",
+      "first_seen_at": "2026-09-10 22:12:03 UTC",
+      "updated_at": "2026-09-10 22:12:03 UTC"
+    },
+    {
+      "paper_id": "2609.03459v1",
+      "route": "202609/10/2609.03459v1-flowtt-exploiting-computation-flow-reuse-in-irregular-tensor-train-embedding",
+      "title": "FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "推荐模型嵌入表的规模化高效查表",
+      "first_seen_at": "2026-09-10 22:12:03 UTC",
+      "updated_at": "2026-09-10 22:12:03 UTC"
+    },
+    {
+      "paper_id": "2609.03674v1",
+      "route": "202609/10/2609.03674v1-llm4aigq-llm-based-ai-guidance-query-generation-framework-for-multi-interest-mining",
+      "title": "LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "基于LLM为电商搜索生成引导查询",
+      "first_seen_at": "2026-09-10 22:12:03 UTC",
+      "updated_at": "2026-09-10 22:12:03 UTC"
+    }
+  ]
+}

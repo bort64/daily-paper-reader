@@ -1,0 +1,218 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-10T22:08:15.508505+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 1,
+    "deep_cap": 6,
+    "deep_selected": 1,
+    "quick_candidates": 4,
+    "quick_skim_target": 11,
+    "quick_selected": 4
+  },
+  "deep_dive": [
+    {
+      "id": "2609.02062v1",
+      "source": "arxiv",
+      "title": "SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception",
+      "abstract": "Generative Point-of-Interest (POI) recommendation, autoregressively generating a target POI's semantic ID (SID), holds great promise for Location-Based Services, where a recommendation helps only if the user can reach it. Yet, existing methods operate within an interest space defined by behavior sequences and collaborative signals, where geography enters only as a textual attribute of the SID, leaving no explicit mechanism to learn or preserve how urban places are related by distance, direction, and reachability; their predictions are thus behaviorally plausible yet far from the user's real-time location. We argue that such services require injecting real urban spatial knowledge into the interest space, rather than inferring geography from behavior alone. Hence, we propose SPAR, a unified framework whose three synergistic stages jointly construct, cultivate, and preserve urban spatial knowledge: (1) at the tokenization level, Spatially-Intrinsic SID (SI-SID) explicitly encodes longitude--latitude coordinates into a sinusoidal geospatial embedding and fuses it with the textual semantic embedding, producing identifiers via RQ-Kmeans that are simultaneously semantically and geographically consistent; (2) at the cognition level, Multi-Granular Geospatial CPT (MG-CPT) continually pre-trains the base LLM on 25 curated geospatial datasets organized into three tiers of basic attributes, pairwise relations, and city-scale navigation, so that scattered POIs cohere into a connected urban space; and (3) at the adaptation level, Task-Vector Anchored SFT (TV-SFT) anchors the acquired spatial knowledge as a frozen parameter-space task vector to prevent its catastrophic forgetting during behavioral fine-tuning, thereby fusing the two spaces. Extensive quantitative and visualization experiments on two public and four industrial-scale datasets demonstrate the effectiveness of SPAR.",
+      "authors": [
+        "Fangye Wang",
+        "Yunjin Gu",
+        "Haowen Lin",
+        "Yifang Yuan",
+        "Song Yang",
+        "Xiaojiang Zhou",
+        "Pengjie Wang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-02T03:40:53+00:00",
+      "link": "https://arxiv.org/pdf/2609.02062v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Industrial-scale generative POI recommendation autoregressively generating semantic IDs",
+      "llm_evidence_cn": "工业级生成式POI推荐自回归生成语义ID",
+      "llm_evidence": "工业级生成式POI推荐自回归生成语义ID",
+      "canonical_evidence": "工业级生成式POI推荐自回归生成语义ID",
+      "llm_tldr_en": "Generative POI recommendation autoregressively generates semantic IDs, but existing methods treat geography only as a textual attribute, ignoring real distance and reachability. SPAR injects real urban spatial knowledge into the interest space for industrial-scale location-based recommendation.",
+      "llm_tldr_cn": "生成式兴趣点推荐通过自回归生成目标POI的语义ID，但现有方法仅在行为序列与协同信号构成的兴趣空间中建模，地理信息只作为语义ID的文本属性，难以反映真实的空间邻近与可达性。本文提出SPAR，将真实城市空间知识注入兴趣空间，增强工业级生成式POI推荐的空间感知能力。实验表明该方法能给出更贴合用户实时位置的推荐结果。该工作强调了位置服务中空间可达性对生成式推荐的重要性。",
+      "llm_tldr": "生成式兴趣点推荐通过自回归生成目标POI的语义ID，但现有方法仅在行为序列与协同信号构成的兴趣空间中建模，地理信息只作为语义ID的文本属性，难以反映真实的空间邻近与可达性。本文提出SPAR，将真实城市空间知识注入兴趣空间，增强工业级生成式POI推荐的空间感知能力。实验表明该方法能给出更贴合用户实时位置的推荐结果。该工作强调了位置服务中空间可达性对生成式推荐的重要性。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.02964v1",
+      "source": "arxiv",
+      "title": "When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization",
+      "abstract": "This paper focuses on defending generative search engines against malicious Generative Engine Optimization (GEO), which rewrites web documents to match engines' citation preferences and thereby manipulates generated answers. Recent GEO methods have advanced from hand-crafted rewriting to automated and agentic optimization, substantially increasing the visibility of target documents in generated answers. However, defending against such manipulation poses two major challenges: attack documents remain factually consistent with their originals, rendering fact verification and perplexity filtering ineffective, and the features they amplify equally characterize high-quality benign content. To address these limitations, we propose GEO Defender, a two-stage defense aligned with the attack chain that requires no fine-tuning of the target LLM. GEO Defender consists of Shield Reranker and Training-Free Shield Generation (TFSG). Specifically, Shield Reranker learns a preference-based defensive residual over a frozen base reranker, demoting GEO-rewritten documents while preserving relevance judgments, and TFSG distills defense outcomes into a natural-language experience library that guides the target LLM's source use at inference. Experiments on two state-of-the-art closed-source LLMs and three open-source LLMs across seven GEO attacks demonstrate that GEO Defender reduces the average attack success rate from 50.32% to 6.20%, retains 94.12% of benign-evidence use, preserves answer quality, and generalizes to unseen attacks from construction instances.",
+      "authors": [
+        "Haozhang Li",
+        "Yangguang Shao",
+        "Xinjie Lin",
+        "Zhong Guan",
+        "Mi Zhou",
+        "Junzheng Shi"
+      ],
+      "primary_category": "cs.CR",
+      "categories": [
+        "cs.CR",
+        "cs.AI"
+      ],
+      "published": "2026-09-02T07:13:40+00:00",
+      "link": "https://arxiv.org/pdf/2609.02964v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Defending generative search engines against malicious generative engine optimization",
+      "llm_evidence_cn": "防御针对生成式搜索引擎的恶意生成引擎优化",
+      "llm_evidence": "防御针对生成式搜索引擎的恶意生成引擎优化",
+      "canonical_evidence": "防御针对生成式搜索引擎的恶意生成引擎优化",
+      "llm_tldr_en": "Generative search engines are vulnerable to malicious GEO rewriting that manipulates answers while staying factually consistent; this paper studies defenses against such manipulation.",
+      "llm_tldr_cn": "生成式搜索引擎易受恶意生成引擎优化GEO攻击，攻击者改写网页以迎合引用偏好从而操纵生成答案，且攻击文档与原文事实一致，使事实核查与困惑度过滤失效。本文研究如何防御此类操纵，分析其两大挑战并探索有效的检测与防御机制。工作表明传统防御手段难以奏效，需要针对生成式搜索特性的新方法。其贡献在于提升生成式搜索对操纵的鲁棒性与可信度。",
+      "llm_tldr": "生成式搜索引擎易受恶意生成引擎优化GEO攻击，攻击者改写网页以迎合引用偏好从而操纵生成答案，且攻击文档与原文事实一致，使事实核查与困惑度过滤失效。本文研究如何防御此类操纵，分析其两大挑战并探索有效的检测与防御机制。工作表明传统防御手段难以奏效，需要针对生成式搜索特性的新方法。其贡献在于提升生成式搜索对操纵的鲁棒性与可信度。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.03290v2",
+      "source": "arxiv",
+      "title": "UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction",
+      "abstract": "Unified modeling has become a major direction for industrial click-through rate (CTR) prediction. Existing approaches typically unify sequential and non-sequential signals at the token level, model their interactions in a shared backbone, and increase model capacity to improve scaling behavior. However, this division originates from legacy feature-engineering practice and is misaligned with the underlying decision process. User behavior is inherently a sequence of homogeneous context units; at the level of input organization, historical behavior and the current request differ only in whether their outcomes are observed or remain to be predicted. Treating them as heterogeneous signals obscures structural dependencies within the user's decision context, limiting both scaling efficiency and prediction quality. This limitation is particularly pronounced in context-rich scenarios such as e-commerce shelves and waterfall feeds. To address this, we propose UniCon, a unified context-centric modeling architecture that treats the request context as the basic modeling unit and organizes history and prediction targets as homogeneous context units. Intra-context attention captures local coupling among items within a context (Locality), while inter-context attention models the dynamic evolution of decision states across contexts (Dynamics). This organization bridges the structural gap between history and target and supports more effective scaling of unified CTR models. Context-unit-level sequence compression further reduces deployment overhead. On Meituan search advertising, UniCon improves offline AUC by 0.0139 over a strong production baseline and achieves statistically significant online lifts of 3.09% in RPM, 2.07% in CTR, and 2.95% in revenue.",
+      "authors": [
+        "Jiajun Cui",
+        "Zhengqi Xu",
+        "Fan Zhang",
+        "Zhangteng",
+        "Gu Tang",
+        "Honghong Zhu",
+        "Mengxi Wu",
+        "Yulin Liang",
+        "Xingxing Wang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-03T02:33:12+00:00",
+      "link": "https://arxiv.org/pdf/2609.03290v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Unified context-centric CTR modeling with increased model capacity and scaling",
+      "llm_evidence_cn": "统一上下文中心CTR建模并扩大模型容量与扩展性",
+      "llm_evidence": "统一上下文中心CTR建模并扩大模型容量与扩展性",
+      "canonical_evidence": "统一上下文中心CTR建模并扩大模型容量与扩展性",
+      "llm_tldr_en": "UniCon proposes a context-centric unified modeling paradigm for CTR prediction, treating historical behavior and current request as homogeneous context units in a shared backbone to improve scaling and structure modeling.",
+      "llm_tldr_cn": "工业点击率预测中，现有统一建模沿用特征工程惯例，把序列与非序列信号当作异质输入处理，与用户决策过程的结构并不一致。本文提出UniCon这一上下文中心的统一建模范式，将历史行为与当前请求都视为同质的上下文单元序列，在共享骨干中统一建模并扩大模型容量。该范式改善了结构依赖的刻画与规模扩展行为，为大规模CTR预测的统一建模提供了新思路。",
+      "llm_tldr": "工业点击率预测中，现有统一建模沿用特征工程惯例，把序列与非序列信号当作异质输入处理，与用户决策过程的结构并不一致。本文提出UniCon这一上下文中心的统一建模范式，将历史行为与当前请求都视为同质的上下文单元序列，在共享骨干中统一建模并扩大模型容量。该范式改善了结构依赖的刻画与规模扩展行为，为大规模CTR预测的统一建模提供了新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.03459v1",
+      "source": "arxiv",
+      "title": "FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding",
+      "abstract": "Tensor-Train (TT) decomposition effectively compresses large embedding tables in recommendation models, but TT-based embedding lookup remains inefficient because partially shared computation flows across input indices are not fully reused and intermediate results are repeatedly materialized off-chip between sequential TT-core contractions. We present FlowTT, a flow-aware GPU execution framework that reformulates TT gather as a set of prefix-shared irregular computation flows. FlowTT combines flow-aligned prefix-based index grouping, a fused TT-embedding execution path with on-chip intermediate retention, and persistent-thread scheduling with chunk-based work stealing and L2 checkpointing to preserve reuse under skewed workloads. By co-designing task formation, data buffering, and scheduling with the structure of TT gather, FlowTT reduces redundant TT-core operations, global-memory traffic, and load imbalance. On Meta's synthetic recommendation benchmarks (Meta-240, Meta-480, and Meta-788), FlowTT consistently achieves the lowest latency compared to existing methods. At batch size 32,768, it reduces latency by up to 42.2% in inference and 49.2% in training relative to EcoRec, while also achieving the lowest inference peak memory usage. These results show that exposing prefix-shared computation is key to efficient TT-based embedding execution.",
+      "authors": [
+        "Jongmin Seok",
+        "Chae Eun Rhee"
+      ],
+      "primary_category": "cs.DC",
+      "categories": [
+        "cs.DC",
+        "cs.AR"
+      ],
+      "published": "2026-09-03T07:17:33+00:00",
+      "link": "https://arxiv.org/pdf/2609.03459v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "efficient embedding lookup for scaling recommendation models",
+      "llm_evidence_cn": "推荐模型嵌入表的规模化高效查表",
+      "llm_evidence": "推荐模型嵌入表的规模化高效查表",
+      "canonical_evidence": "推荐模型嵌入表的规模化高效查表",
+      "llm_tldr_en": "FlowTT reformulates Tensor-Train embedding lookup as prefix-shared irregular computation flows with fused execution and on-chip retention, improving efficiency of compressed embedding tables in recommendation models.",
+      "llm_tldr_cn": "Tensor-Train分解能压缩推荐模型的大规模嵌入表，但其查表因跨索引共享的计算流未被复用、中间结果反复落盘而效率低下。该文提出FlowTT，把TT查表重构为前缀共享的非规则计算流，结合前缀索引分组、融合执行与片上中间保留、持久线程调度与L2检查点。实验表明其在倾斜负载下显著提升嵌入查表效率。该工作为推荐模型嵌入表的规模化压缩与高效执行提供了系统方案。",
+      "llm_tldr": "Tensor-Train分解能压缩推荐模型的大规模嵌入表，但其查表因跨索引共享的计算流未被复用、中间结果反复落盘而效率低下。该文提出FlowTT，把TT查表重构为前缀共享的非规则计算流，结合前缀索引分组、融合执行与片上中间保留、持久线程调度与L2检查点。实验表明其在倾斜负载下显著提升嵌入查表效率。该工作为推荐模型嵌入表的规模化压缩与高效执行提供了系统方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.03674v1",
+      "source": "arxiv",
+      "title": "LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining",
+      "abstract": "Guidance queries stimulate user consumption by extracting preferences to provide search queries with guidance value, playing a crucial role in the e-commerce field. Traditional AI-generated queries (AIGQ) generation primarily relies on a two-stage \"Query-to-AI-Generated-Query\" (Q2AIGQ) association paradigm, first recalling user primary search queries from user profiles, historical behavior sequences, item-side information, and the current query through multi-path retrieval, then generalizing AIGQ via rule-based methods. This approach suffers from semantic drift due to information cascade loss; additionally, primary search query derivation heavily depends on \"user-item\" co-occurrence relationships, lacking exploration of user multi-interests, resulting in guidance queries with low value and mismatched purchase intent. To address the expressive limitations of traditional co-occurrence-based retrieval, we propose LLM4AIGQ, an LLM-based solution for generating AI guidance queries tailored to users' multi-interests. This approach segments user interests by integrating user profiles and historical interaction sequences, infers specific consumption intents for each sub-interest, and subsequently generates corresponding AIGQ. In terms of model training, we employ a post-training pipeline comprising Supervised Fine-Tuning (SFT), Reinforcement Learning (RL), and Direct Preference Optimization (DPO) to enhance the model's capability in generating AIGQ. We also introduce a multi-level reward design to satisfy the requirements of multi-objective optimization and long-chain reasoning in practical applications. Regarding deployment, we adopt a nearline-generation and online-read architecture to meet latency constraints. Extensive experimental analyses demonstrate that our model achieves robust performance in both offline evaluations and online A/B tests.",
+      "authors": [
+        "Xiangchen Pan",
+        "Jiayi Xu",
+        "Jing Wang",
+        "Xing Fang",
+        "Lingyun Zhu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-03T11:13:01+00:00",
+      "link": "https://arxiv.org/pdf/2609.03674v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based generative query generation for e-commerce search",
+      "llm_evidence_cn": "基于LLM为电商搜索生成引导查询",
+      "llm_evidence": "基于LLM为电商搜索生成引导查询",
+      "canonical_evidence": "基于LLM为电商搜索生成引导查询",
+      "llm_tldr_en": "Guidance queries drive e-commerce consumption, but traditional AI-generated query pipelines suffer semantic drift and rely on user-item co-occurrence. LLM4AIGQ uses large language models to directly generate guidance queries while mining multi-interest preferences.",
+      "llm_tldr_cn": "电商搜索中的引导查询能激发用户消费，但传统AI生成查询依赖两阶段召回与规则泛化，存在信息级联损失导致的语义漂移，且过度依赖用户-物品共现关系，缺乏多兴趣挖掘。本文提出LLM4AIGQ，利用大语言模型直接生成引导查询，并挖掘用户多兴趣偏好。实验表明该方法缓解了语义漂移并提升了查询的引导价值。该工作展示了LLM在搜索查询生成中的应用潜力。",
+      "llm_tldr": "电商搜索中的引导查询能激发用户消费，但传统AI生成查询依赖两阶段召回与规则泛化，存在信息级联损失导致的语义漂移，且过度依赖用户-物品共现关系，缺乏多兴趣挖掘。本文提出LLM4AIGQ，利用大语言模型直接生成引导查询，并挖掘用户多兴趣偏好。实验表明该方法缓解了语义漂移并提升了查询的引导价值。该工作展示了LLM在搜索查询生成中的应用潜力。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

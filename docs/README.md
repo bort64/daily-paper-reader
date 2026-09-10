@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-09</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-10</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 14 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 5 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>6</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>8</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>1</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>4</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-09 21:26:43 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-10 22:12:03 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,10 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日精读6篇、速读8篇，共梳理14篇推荐系统前沿论文；最值得关注的是《Exploring Bottom-Up Clustering for Creating Semantic IDs》提出的语义ID聚类方案（9.0分），以及《RetrievalFormer》用双编码器兼顾近邻检索与冷物品推荐（8.0分）；建议进一步留意SWIM生成重排序评测与HubMixer特征交互优化。</p>
+<p>今日共生成 5 篇推荐（精读 1 篇，速读 4 篇）</p>
+<p>精读：《SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception》（9.0/10）</p>
+<p>速读：《When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization》（6.0/10）, 《UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction》（6.0/10）, 《FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding》（6.0/10）</p>
+<p>这些结果覆盖了当下较热的方向，建议先看精读区论文的关键问题与方法。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +81,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">6 篇</strong>
+    <strong class="dpr-home-dashboard-count">1 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Exploring Bottom-Up Clustering for Creating Semantic IDs">Exploring Bottom-Up Clustering for Creating Semantic IDs</span></li><li><span class="dpr-home-dashboard-paper-title" title="RetrievalFormer: A Dual-Encoder Transformer for Efficient Approximate Nearest Neighbor Retrieval and Cold-Item Recommendation">RetrievalFormer: A Dual-Encoder Transformer for Efficient Approximate Nearest Neighbor Retrieval and Cold-Item Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Tlow: Flow-based Item Tokenizer for Recommendation">Tlow: Flow-based Item Tokenizer for Recommendation</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception">SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>6</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -91,12 +94,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">8 篇</strong>
+    <strong class="dpr-home-dashboard-count">4 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking">SWIM: Step-Wise Integrated Measure for Session-supervised List Evaluation in Generative Re-ranking</span></li><li><span class="dpr-home-dashboard-paper-title" title="HubMixer: Progressive Latent Hub Mixing for Parameter-Efficient Feature Interaction in Recommendation">HubMixer: Progressive Latent Hub Mixing for Parameter-Efficient Feature Interaction in Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Latent-Aligned Reasoning for Multimodal Recommendation">Latent-Aligned Reasoning for Multimodal Recommendation</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization">When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization</span></li><li><span class="dpr-home-dashboard-paper-title" title="UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction">UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction</span></li><li><span class="dpr-home-dashboard-paper-title" title="FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding">FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>8</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>4</strong></span></div>
 </section>
 </div>
 

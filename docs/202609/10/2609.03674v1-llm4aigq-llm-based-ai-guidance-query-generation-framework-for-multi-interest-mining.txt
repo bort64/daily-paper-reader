@@ -1,0 +1,649 @@
+Title: LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining
+
+URL Source: https://arxiv.org/pdf/2609.03674v1
+
+Published Time: Fri, 04 Sep 2026 01:04:09 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining 
+
+## Xiangchen Pan 
+
+Huazhong University of Science and Technology, Alibaba Group Wuhan, China pxcstart666@gmail.com 
+
+## Jiayi Xu 
+
+Alibaba Group Hangzhou, China youyi.xjy@alibaba-inc.com 
+
+## Jing Wang 
+
+Alibaba Group Hangzhou, China jing.wangj1@taobao.com 
+
+## Xing Fang ∗
+
+Nankai University, Alibaba Group Hangzhou, China fangxing.fx@taobao.com 
+
+## Lingyun Zhu 
+
+Alibaba Group Hangzhou, China zly234561@taobao.com 
+
+Abstract 
+
+Guidance queries stimulate user consumption by extracting pref-erences to provide search queries with guidance value, playing a crucial role in the e-commerce field. Traditional AI-generated queries(AIGQ) generation primarily relies on a two-stage "Query-to-Ai-Generated-Query"(Q2AIGQ) association paradigm, first recalling user primary search queries from user profiles, historical behavior sequences, item-side information, and the current query through multi-path retrieval, then generalizing AIGQ via rule-based meth-ods. This approach suffers from semantic drift due to information cascade loss; additionally, primary search query derivation heavily depends on "user-item" co-occurrence relationships, lacking explo-ration of user multi-interests, resulting in guidance queries with low value and mismatched purchase intent. To address the expressive limitations of traditional co-occurrence-based retrieval, we propose LLM4AIGQ, an LLM-based solution for generating AI guidance queries tailored to users’ multi-interests. This approach segments user interests by integrating user profiles and historical interaction sequences, infers specific consumption intents for each sub-interest, and subsequently generates corresponding AIGQ. In terms of model training, we employ a post-training pipeline comprising Supervised Fine-Tuning (SFT), Reinforcement Learning (RL), and Direct Pref-erence Optimization (DPO) to enhance the model’s capability in generating AIGQ. We also introduce a multi-level reward design to satisfy the requirements of multi-objective optimization and long-chain reasoning in practical applications. Regarding deployment, we adopt an nearline-generation and online-read architecture to meet latency constraints. Extensive experimental analyses demon-strate that our model achieves robust performance in both offline evaluations and online A/B tests. 
+
+> ∗Corresponding author. Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+> Conference acronym ’XX, Woodstock, NY
+> © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM ISBN 978-1-4503-XXXX-X/2018/06 https://doi.org/XXXXXXX.XXXXXXX
+
+Keywords 
+
+Query Recommendation, LLM-based Recommendation, Reinforce-ment Learning 
+
+ACM Reference Format: 
+
+Xiangchen Pan, Jiayi Xu, Jing Wang, Xing Fang, and Lingyun Zhu. 2018. LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining. In Proceedings of Make sure to enter the correct con-ference title from your rights confirmation email (Conference acronym ’XX). 
+
+ACM, New York, NY, USA, 10 pages. https://doi.org/XXXXXXX.XXXXXXX 
+
+1 Introduction 
+
+Shopping agents provide product recommendations and decision support through natural-language interactions, yet users may strug-gle to articulate their needs at the outset. To lower this interaction barrier, e-commerce platforms proactively present AI-generated queries (AIGQs) as guidance queries in scenarios such as homepage recommendation and AI-powered search. Once selected, an AIGQ serves as an initial request to the shopping agent. It should there-fore reflect user preferences and convey actionable shopping intent, thereby improving user engagement and conversion.Existing meth-ods commonly follow a two-stage Q2AIGQ paradigm: they first infer the user’s primary search query [6, 9, 22] through multiple rea-soning paths based on the user profile and interaction history, item-side information, and the current query, and then, transform them into AIGQs through rule-based generalization. This intermediate-query bottleneck causes information loss and semantic drift. More-over, anchor-query inference is often dominated by isolated search behaviors and user-item co-occurrence signals, limiting its ability to model users’ diverse interests and personalized intent. Conse-quently, the resulting AIGQs may provide limited guidance and poorly align with users’ actual shopping intent. Large language models (LLMs) have been widely applied in rec-ommendation systems [12, 17] due to their strong semantic under-standing and text generation capabilities. For example, XRec [14] maps collaborative features into the semantic space of LLMs for ex-plainable recommendation; ReFICR [33] enables retrieval-augmented LLMs to perform conversational recommendation through instruc-tion tuning; and Rec-R1 [10] leverages reward-driven reinforcement learning to help LLMs better understand users’ implicit intents and generate outputs aligned with user needs. As illustrated in Fig. 1, compared with traditional discriminative multi-channel retrieval arXiv:2609.03674v1 [cs.IR] 3 Sep 2026 Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, Jiayi Xu, Jing Wang, Xing Fang, and Lingyun Zhu query  user  item           
+
+> q2q u2q i2q
+> RankModel
+> query --> guidance query
+> Top-K
+> query
+> Cases Rules
+> Role WorkFlow
+> guidance query
+> Large Language Model
+> user
+> user profile
+> query item
+> multi-behaviors sequence
+> guidance query
+> interest --> guidance query
+> Top-N
+> interest
+> （retrieval ）(generate)
+> style business value
+> relation diversity
+> （a) Discriminative Traditional pipeline （b) Generative LLM-based pipeline
+> Multi-path recall & ReRanking
+
+Figure 1: Comparison between Generative Pipeline and Tra-ditional Discriminative Pipeline in the Development of Guid-ance queries 
+
+methods, LLM-based generative query generation can better cap-ture personalized user intent and avoid semantic drift caused by information cascade loss. Motivated by this, we explore the use of LLMs to infer users’ shopping guidance intent from user pro-files and historical behavior sequences, thereby generating AIGQ with higher commercial value and stronger alignment with user purchase intentions. However, given the vast diversity of items and user groups, effi-ciently generating accurate and personalized AI-powered guidance queries remains challenging. Specifically, three key challenges need to be addressed: (1) Multi-interest modeling under noisy in-teractions. Users typically exhibit diverse consumption interests, while their historical interaction sequences inevitably contain noise caused by accidental interactions [16, 25, 31], exposure bias, and so on. Therefore, it is crucial to effectively mitigate the impact of such noise and accurately identify users’ primary interests. (2) Effective supervision without explicit ground truth. AI-generated guid-ance queries do not have strictly defined ground-truth answers, making it challenging to reliably assess their quality and construct effective supervision signals that guide the model to optimize in a reasonable direction. (3) Efficient inference for online serving. 
+
+Online dynamic inference requires high responsiveness and low latency. Therefore, substantially reducing LLM inference latency while preserving generation quality is essential for satisfying the real-time requirements of practical e-commerce systems. To address the first challenge, we design task-specific instruc-tions to enable the LLM to learn how to disentangle users’ diverse interests and generate AIGQ for each identified sub-interest. Specif-ically, user profiles mainly reflect relatively stable long-term inter-ests, whereas behavioral sequences capture short-term interests that are often more dynamic and heterogeneous [24, 28, 35]. We first employ a state-of-the-art LLM as the teacher model to decom-pose each user’s historical interaction sequence. Through sequence merging and pruning, we construct multiple subsequences, each representing a coherent and distinct interest, and use them as super-vision labels. These interest-specific subsequences, together with the corresponding user profiles, are then used as training data to guide the LLM in discovering and modeling multiple user interests. To address the second challenge, we build upon supervised fine-tuning (SFT) and further conduct reinforcement learning (RL) with a multi-objective reward design. Specifically, we first employ a state-of-the-art LLm as teacher model to partition user interests and generate a guidance query for each identified sub-interest, which serves as the reference output. During the SFT stage, the LLM is provided only with single-interest subsequences, with the primary objective of learning the desired generation style and patterns of guidance queries. During the RL stage, in contrast, the instruction data consist of user behavior sequences involving multiple mixed interests, requiring the model to autonomously explore and infer the underlying interest partitioning. The task instructions explicitly specify the expected reasoning process and output format. We fur-ther design reward functions from multiple levels for the reasoning (think) and final answer components separately, thereby jointly supervising the model’s intent understanding and text generation capabilities. To address the third challenge, we adopt two complementary strategies to improve inference efficiency. First, we employ a near-line generation and online retrieval deployment paradigm, where guidance queries are generated in advance through nearline infer-ence and directly retrieved during online serving, thereby substan-tially reducing the latency requirements imposed on LLM inference. Second, we further apply Direct Preference Optimization (DPO) [19] to enable the model to preserve the reasoning effectiveness of the think mode under a non-think inference mode. By eliminating ex-plicit reasoning traces and substantially reducing the number of generated tokens, this strategy accelerates LLM inference while maintaining the quality of generated guidance queries. In summary, we propose LLM4AIGQ, an LLM-based framework for multi-interest-aware AI guidance query generation, with a three-stage SFT–RL–DPO training pipeline. The main contributions are summarized as follows. 
+
+• We propose LLM4AIGQ, an LLM-based framework for multi-interest-aware AI guidance query generation, addressing cascad-ing information loss and insufficient personalized intent model-ing in traditional pipelines. 
+
+• We adopt a three-stage SFT–RL–DPO training pipeline. The SFT stage focuses on learning the style of AIGQ, while the RL stage uses multi-objective rewards to supervise interest disentangle-ment and high-quality query generation. The DPO stage further optimizes the model’s reasoning expression in non-think mode through preference optimization. 
+
+• For deployment, we adopt a nearline generation and online re-trieval architecture. User guidance query pools are updated of-fline daily, while nearline LLM inference dynamically generates queries based on recent interactions. The system satisfies strict online latency requirements and achieves strong performance in both offline and online evaluations. 
+
+2 Related Work 2.1 Query Recommendation 
+
+Traditional query recommendation mainly focuses on query–item relevance matching. Methods such as QEM [1] and DREM [3] esti-mate user interests based on semantic similarity between queries and items. To better capture personalized intent, subsequent studies incorporate user profiles and historical search behaviors. HEM [2] models long-term preferences from reviews via user embeddings, LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+while AEM uses attention to aggregate historical interactions con-ditioned on the current query. ZAM [1] extends AEM with a zero-attention vector to adaptively control personalization, and TEM employs a Transformer encoder to capture sequential dependen-cies in search histories. Some studies further explore multi-interest modeling. CAMI [11] disentangles multiple interests using knowl-edge graph embeddings, while GraphSRRL [13] exploits structural patterns in user–query–item graphs to enhance interest representa-tions. Recently, given the complementarity between search and rec-ommendation behaviors, methods such as USER [34], UniSAR [21], and MIJSR [18] jointly model both scenarios for query recommen-dation. Unlike conventional query recommendation, our task not only identifies suitable items that match user interests as search entities, but also improves the shopping guidance value to stimulate consumption. We therefore incorporate multi-behavior data and model both long- and short-term interests to capture personalized intent from multiple perspectives. 
+
+2.2 LLM-based Recommendation 
+
+With strong semantic understanding and text generation capabil-ities, LLMs have attracted increasing attention in recommender systems [15, 29, 36]. Early studies mainly used LLMs to enhance textual representations and capture semantic correlations for better recommendation. For example, LLMRec [27] leverages LLMs to augment user–item interactions and textual information for graph-based recommendation. Other studies align LLMs with downstream recommendation tasks through instruction tuning, such as TALL-Rec [4]. With advances in chain-of-thought reasoning and reinforce-ment learning, recent studies have explored various combinations of RL and SFT to further improve reasoning capabilities. In rec-ommendation, methods such as Rec-R1 [10], Reason4Rec [5], and OneReason [23] employ RL algorithms such as PPO and GRPO [20] with tailored reward models to enhance preference understand-ing and factual reasoning. Our work adopts an SFT–RL–DPO post-training pipeline to improve guidance query generation, with multi-dimensional rewards to support multi-objective optimization and long-chain reasoning. 
+
+3 Preliminary 
+
+This work uses LLM to infer AIGQ based on users’ multiple interests. The following introduces the data composition and task objectives. 
+
+Data Composition: The input for LLM-based generation of AI guidance queries mainly consists of two components: the task instruction 𝑅 and the user context 𝐶 𝑢 . The user context is further composed of the user profile 𝑃 𝑢 and the user historical sequence 
+
+𝑆 𝑢 . The user profile is summarized and extracted by the Qwen model based on the user’s consumption patterns and basic personal information. The user historical sequence 𝑆 𝑢 primarily contains the user’s recent behaviors, where each behavior 𝐵 𝑢 consists of a timestamp 𝑡 , behavior type 𝑎 , and behavior content 𝑐 . The behavior types 𝑎 include like, favorite, add-to-cart, purchase, and search. For search behaviors, the behavior content 𝑐 corresponds to the user’s query terms; for all other behaviors, it corresponds to the associated item titles. 
+
+Task Objective: The LLM is required to identify user interests 
+
+𝐼 𝑢 based on the provided user context 𝐶 𝑢 and generate AIGQ for LLM for Context Compressing       
+
+> Item Title Item CPV Item Treecate
+> ......
+> Short Title
+> LLM-SFT
+> System Prompt User Profile
+> ......
+> One Behavoir
+> <idx-1>
+> <time>
+> <type>
+> <content>
+> <idx-k>
+> ......
+> Data Process and Context Compressing
+> Guidance Queries
+> Ground Truth
+> ......
+> Interest_1 Interest_2
+> LLM-SFT: AIGQ Style Learning in Single Interest
+> LLM-RLVR
+> [THINK]
+> [ANSWER]
+> (Ground
+> Truth)
+> Maximum Ordered Match
+> Query-Level Reward Interest-Level Reward Global-Level Reward
+> LLM-DPO
+> LLM-RLVR
+> LLM-Base
+> [NON-THINK]
+> LLM-RLVR
+> [THINK]
+> Pos Sample
+> Neg Sample
+> [NON-THINK]
+> LLM-RL: Interest Division and AIGQ Generation
+> LLM-DPO: Distill the Reasoning Ability of Think Model
+> Cache
+> Engine
+> Request
+> LLM4AIGQ Nearline
+> LLM4AIGQ Online
+> Guidance
+> Query
+> ......
+> Click N items
+> Guidance
+> Query
+> Online Deployment
+> Reward
+
+Figure 2: The overview framework of LLM4AIGQ. In the data preprocessing stage, an LLM is used to generate item short titles from item-side information, enabling compressed extraction of behavioral content.The SFT stage is conducted under single-interest scenarios to guide the learning of AIGQ styles. The RL stage adopts multi-level reward functions to supervise interest disentanglement and query generation. DPO further learns the reasoning expression of think mode through preference optimization. For deployment, we adopt a nearline generation and online retrieval architecture. 
+
+each sub-interest. The summarized interests should closely align with the user’s consumption patterns, while the generated guidance queries should effectively address user purchase pain points, pro-vide shopping-guidance value, and remain concise and compliant. 
+
+4 Methodology 
+
+In this section, we introduce the LLM4AIGQ framework in detail, as illustrated in Fig. 2. The framework adopts a three-stage train-ing paradigm: SFT → RL → DPO. The SFT stage enables the LLM to learn the style of AIGQ through supervised learning. The RL stage trains the LLM to perform interest segmentation and infer consumption intent under complex scenarios. The DPO stage dis-tills the reasoning capability of the LLM in think mode, enabling high-quality reasoning outcomes in non-think mode. For model deployment, we adopt a nearline generation and online retrieval architecture. The following sections provide detailed descriptions of each component. 
+
+4.1 Data Process and Context Compression 
+
+Before model training, considering the large volume of users’ his-torical consumption data, we truncate the historical interaction sequence to reduce unnecessary computational overhead. Specif-ically, only the most recent 50 interaction behaviors are retained to capture users’ short-term interests. For each interaction behav-ior 𝐵 𝑢 , we represent it in the format "<Index number 𝑖𝑑𝑥 ><Time 
+
+𝑡 ><Behavior type 𝑎 >Behavior content 𝑐 ", with behaviors separated Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, Jiayi Xu, Jing Wang, Xing Fang, and Lingyun Zhu 
+
+by "|". The time information 𝑡 denotes the interval relative to the current time. Depending on the behavior type 𝑎 , the behavior con-tent 𝑐 corresponds to either the associated item title or the user’s search query. The original item titles lack standardized naming conventions and have poor readability; And many titles have a lot of informa-tion redundancy in order to pursue search exposure. In order to simplify the expression of behavior sequences, we attempted to use the Qwen3-30B-A3B model to summarize a short item title from the original item title 𝑖 𝑑 , cpv information 𝑖 𝑐 , and brand category information 𝑖 𝑏 , removing redundant information such as marketing keywords and flagship stores. In order to make the item short titles inferred by LLM concise and effective, we use the item short titles inferred by the larger-capacity model (deepseek-V4 Pro) as the standard answer to fine tune the item short title task for LLM. The optimization objective can be seen in Equ. 1: 
+
+L𝑠ℎ𝑜𝑟𝑡 = −𝐸 (𝑥,𝑧 )∼D [
+
+> 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+𝑙𝑜𝑔𝑃 (𝑧 𝑡 |𝑧 <𝑡 , 𝑥 ; 𝜃 )] (1) Where 𝑥 = [𝑖 𝑑 , 𝑖 𝑐 , 𝑖 𝑏 ] represents the model input, which is item related information, 𝜃 is the model parameter, and 𝑇 is the length of the generated short title. Here are the instructions for the short title task. 
+
+System Prompt: Please extract item short titles based on item information and map the item to short query text that reflects core selling points and user concerns for representation. 
+
+User Prompt: {"title": "[Hot Selling] Haier Refrigerator Double Door Air Cooled Frost Free Household Energy saving Large Capacity", "cpv": "Brand": "Haier", "Style": "Double Door", "Cooling Method": "Air Cooled", "treecate_full_cath": "Household; Refrigerator; Double Door Ice Box", "treecate_name": "Double Door Refrigerator" }
+
+Output: {Predicted short titles.} 
+
+4.2 SFT Training: AIGQ Style Learning in Single Interest 
+
+The aim of SFT stage is to help LLM understand the definition of AIGQ and what constitutes good AIGQ. To this end, we will indicate in the task instructions the possible application scenarios of AIGQ (single item consultation, comparative decision-making, category selection, etc.), and require the model to output AIGQ that have guidance value while ensuring content compliance and concise expression. However, through manual testing, it was found that the AIGQ generated directly using the Qwen3-30B-A3B [32] model have problems such as low guidance value and poor expression diversity. In contrast, the AIGQ generated by the larger-capacity model (deepseek-V4 Pro) are more in line with practical application scenarios in terms of expression and have greater guidance value. Therefore, we use the inference results of the larger-capacity model as the standard answer, and enhance the model’s understanding of AIGQ through instruction fine-tuning. The historical behavior sequence of users is usually complex and diverse, and may contain multiple user interests. After practical testing, it has been found that directly using historical behavior data of composite interests to fine tune the model can easily lead to the problem of autonomous extrapolation during inference, and is not friendly to low-frequency trigger words. The generated multiple candidate AIGQ often focus on a single main interest. To address the above issue, we first employ a state-of-the-art LLM to perform interest segmentation on the user historical sequence 
+
+𝑆 𝑢 . For each sub-interest 𝐼 𝑘 , the corresponding subsequence 𝑆 𝑘 
+
+is extracted in chronological order, and the associated guidance queries is inferred accordingly. This design encourages the model to focus on learning the style of guidance queries generation rather than selecting among multiple interests. The objective function for this stage is defined as follows: 
+
+L𝑠𝑡 𝑦𝑙𝑒 = −𝐸 (𝑃 𝑢 ,𝑆 𝑢 ,𝑧 )∼D [
+
+> 𝐾
+
+∑︁ 
+
+> 𝑘 =1
+> 𝑇
+
+∑︁ 
+
+> 𝑡 =1
+
+𝑙𝑜𝑔𝑃 (𝑦 𝑡 |𝑦 <𝑡 , 𝑃 𝑢 , 𝑆 𝑘 ; 𝜃 )] (2) where 𝑃 𝑢 denotes the user profile, 𝜃 represents the model param-eters (Qwen3-30B-A3B in our implementation), and 𝑇 denotes the length of the generated AIGQ. 
+
+4.3 RL Training: Interest Division and AIGQ Generation 
+
+This stage aims to guide the LLM to autonomously perform in-terest segmentation and generate corresponding AIGQ for each sub-interest through multi-dimensional reward design. To better supervise model training, the LLM is instructed to conduct step-by-step reasoning according to the prompt instructions before produc-ing the final answer. An example prompt is shown below: 
+
+Think step by step Step 1: Summarize the user’s multiple interests and di-vide them into sub sequences based on the mixed se-quence of multiple interests. 
+
+Step 2: Infer consumption intentions for each subse-quence and make predictions for the next item. 
+
+Step 3: Generate 3 corresponding AI guidance queries for each subsequence and provide normalized confidence scores. 
+
+Answer 
+
+{"interest_tag": [query1, query2, query3], "interest_tag": [query1, query2, query3], ... }For Step 1, the model is required to segment the historical se-quence into at most three interest subsequences based on temporal proximity of user behaviors, semantic relevance, and profile pref-erences. For each subsequence 𝑆 𝑘 , the corresponding interaction behaviors 𝐵 𝑘 = [𝐵 𝑘 1 , ..., 𝐵 𝑘 𝑚 ] are identified, and an interest label 𝐼 𝑘 
+
+is summarized. For Step 2, the model is required to infer the user’s current consumption intent 𝑀 𝑘 based on the interest label 𝐼 𝑘 , the item LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+characteristics reflected in 𝐵 𝑘 , and the user profile 𝑃 𝑢 , while also predicting the next potentially preferred item 𝑖 𝑘 .For Step 3, the model is required to generate three guidance queries according to the inferred interest 𝐼 𝑘 and the predicted item 
+
+𝑖 𝑘 , and assign a confidence score 𝑐 to each guidance query. After completing the above reasoning process, the model outputs the inferred interest labels and their corresponding guidance queries in JSON format as the final answer. After imposing strict constraints on the model’s reasoning pro-cess, we further design multiple reward functions to improve train-ing effectiveness. Considering that multi-objective optimization may introduce issues such as objective conflicts and diluted train-ing signals, we adopt a hierarchical reward design. Specifically, rewards are defined at four granularities: think-level, query-level, interest-level, and global-level, enabling supervision of the model’s reasoning accuracy from multiple perspectives. 
+
+4.3.1 Think-Level Reward. The think-level reward is designed to supervise the rationality of interest segmentation and the accu-racy of interest mining. We first employ a high-parameter model (DeepSeek-V4-Pro) to generate reference reasoning processes and standard outputs under the same prompt settings. Assume that the reference interest subsequences are denoted as ˆ 𝑆 𝑢 = [ ˆ𝑆 1, ..., ˆ𝑆 𝑚 ],with corresponding interest labels ˆ 𝐼 𝑢 = [ ˆ𝐼 1, ..., ˆ𝐼 𝑚 ]. The model-generated subsequences are denoted as 𝑆 𝑢 = [𝑆 1, ..., 𝑆 𝑛 ], with cor-responding interest labels 𝐼 𝑢 = [𝐼 1, ..., 𝐼 𝑛 ]. Since the number of inferred interests may differ between the reference output and the model output, and considering that LLMs generally place primary interests earlier and secondary interests later during reasoning, we adopt an optimal ordered matching algorithm to obtain the most reasonable alignment strategy 𝑀 . The implementation details of the matching algorithm are provided in Alg. 1. The matching score between ˆ 𝐼 𝑖 and ˆ 𝐼 𝑗 is mainly determined by the overlap between their corresponding interest subsequences ˆ 𝑆 𝑖 and 𝑆 𝑗 . Moreover, since matching primary interests is more important during sub-interest alignment, sequence length is introduced as a penalty factor to refine the matching rule. The matching score is computed as follows: 
+
+𝑠𝑐𝑜𝑟𝑒 ( ˆ𝐼 𝑖 , 𝐼 𝑗 ) = 2 ∗ (| ˆ𝑆 𝑖 | ∩ | 𝑆 𝑗 |) | ˆ𝑆 𝑖 | + | 𝑆 𝑗 | ∗ 𝑙𝑜𝑔 (| ˆ𝑆 𝑖 | + | 𝑆 𝑗 |) (3) After obtaining the matching set 𝑀 , we compute the interest accuracy reward 𝑅 𝑚𝑎𝑡𝑐ℎ using an action-logic matching strategy. For each matched pair (𝑎, 𝑏 ) ∈ 𝑀 , the action reward 𝑅 𝑎𝑐𝑡𝑖𝑜𝑛 is calculated based on the number of matched behaviors between the corresponding subsequences ˆ 𝑆 𝑎 and 𝑆 𝑏 , while the logic reward 
+
+𝑅 𝑙𝑜𝑔𝑖𝑐 is computed according to the semantic similarity between the corresponding interest labels ˆ 𝐼 𝑎 and 𝐼 𝑏 . The overall formulation of 𝑅 𝑚𝑎𝑡𝑐ℎ is defined as follows: 
+
+𝑅 𝑚𝑎𝑡𝑐ℎ = 1
+
+|𝑀 |∑︁ (𝑎,𝑏 ) ∈ 𝑀 
+
+𝑅 𝑎,𝑏 = 1
+
+|𝑀 |∑︁ (𝑎,𝑏 ) ∈ 𝑀 
+
+𝑅 (𝑎,𝑏 ) 
+
+> 𝑎𝑐𝑡𝑖𝑜𝑛
+
+∗ 𝑅 (𝑎,𝑏 )
+
+> 𝑙𝑜𝑔𝑖𝑐
+
+𝑅 𝑎𝑐𝑡𝑖𝑜𝑛   
+
+> (𝑎,𝑏 )
+
+= 2 ∗ (| ˆ𝑆 𝑎 | ∩ | 𝑆 𝑏 |) | ˆ𝑆 𝑎 | + | 𝑆 𝑏 | , 𝑅 𝑙𝑜𝑔𝑖𝑐   
+
+> (𝑎,𝑏 )
+
+= 𝑔 (𝑓 ( ˆ𝐼 𝑎 ), 𝑓 (𝐼 𝑏 )) 
+
+(4) 
+
+Algorithm 1: Optimal Ordered Matching Algorithm 
+
+Input: Sequence ˆ 𝑆 𝑢 of length 𝑚 , Sequence 𝑆 𝑢 of length 𝑛 ,Score function score (𝑎, 𝑏 )
+
+Output: Maximum score value, DP table, and Parent pointers for backtracking  
+
+> 1
+
+𝑚 ← length ( ˆ𝑆 𝑢 ); 
+
+> 2
+
+𝑛 ← length (𝑆 𝑢 ); 
+
+> 3
+
+Initialize 𝐷𝑃 [0..𝑚 ] [ 0..𝑛 ] with zeros;  
+
+> 4
+
+Initialize 𝑃𝑎𝑟𝑒𝑛𝑡 [0..𝑚 ] [ 0..𝑛 ] with null;  
+
+> 5
+
+for 𝑖 ← 1 to 𝑚 do  
+
+> 6
+
+for 𝑗 ← 1 to 𝑛 do  
+
+> 7
+
+𝑏𝑒𝑠𝑡 ← 𝐷𝑃 [𝑖 − 1] [ 𝑗 ] 
+
+> 8
+
+𝑃𝑎𝑟𝑒𝑛𝑡 [𝑖 ] [ 𝑗 ] ← ( 𝑖 − 1, 𝑗, ’skip ˆ 𝑆 𝑢 ’); 
+
+> 9
+
+if 𝐷𝑃 [𝑖 ] [ 𝑗 − 1] > 𝑏𝑒𝑠𝑡 then  
+
+> 10
+
+𝑏𝑒𝑠𝑡 ← 𝐷𝑃 [𝑖 ] [ 𝑗 − 1] 
+
+> 11
+
+𝑃𝑎𝑟𝑒𝑛𝑡 [𝑖 ] [ 𝑗 ] ← ( 𝑖, 𝑗 − 1, ’skip 𝑆 𝑢 ’); 
+
+> 12
+
+𝑚𝑎𝑡𝑐ℎ𝑉 𝑎𝑙 ←
+
+𝐷𝑃 [𝑖 − 1] [ 𝑗 − 1] + score ( ˆ𝑆 𝑢 [𝑖 − 1], 𝑆 𝑢 [ 𝑗 − 1]) ; 
+
+> 13
+
+if 𝑚𝑎𝑡𝑐ℎ𝑉 𝑎𝑙 > 𝑏𝑒𝑠𝑡 then  
+
+> 14
+
+𝑏𝑒𝑠𝑡 ← 𝑚𝑎𝑡𝑐ℎ𝑉 𝑎𝑙  
+
+> 15
+
+𝑃𝑎𝑟𝑒𝑛𝑡 [𝑖 ] [ 𝑗 ] ← ( 𝑖 − 1, 𝑗 − 1, ’match’ ); 
+
+> 16
+
+𝐷𝑃 [𝑖 ] [ 𝑗 ] ← 𝑏𝑒𝑠𝑡 ; 
+
+> 17
+
+return (𝐷𝑃 [𝑚 ] [ 𝑛 ], 𝐷𝑃, 𝑃𝑎𝑟𝑒𝑛𝑡 );where 𝑓 (·) denotes the semantic encoder, implemented using the mge-small model, and 𝑔 (·) denotes the similarity function, com-puted via cosine similarity.In addition to the interest accuracy re-ward, we further introduce a format reward for the reasoning pro-cess, requiring the model to strictly follow the predefined three-step reasoning procedure specified in the instruction. Specifically, we detect the presence of the key tokens ["Step1", "Step2", "Step3"] and parse each step in JSON format to verify whether all required attribute keys are complete. If the output satisfies the format con-straints, 𝑅 𝑡ℎ𝑖𝑛𝑘 _𝑓 𝑜𝑟𝑚𝑎𝑡 = 1; otherwise, 𝑅 𝑡ℎ𝑖𝑛𝑘 _𝑓 𝑜𝑟𝑚𝑎𝑡 = 0. 
+
+4.3.2 Query-Level Reward. The query-level reward is designed to supervise the generation of guidance queries that are both com-mercially valuable and content-compliant. To this end, we design two types of rewards and apply them to each generated guidance query 𝑞 𝑘 𝑗 under every sub-interest 𝐼 𝑘 .The first is a length reward 
+
+𝑅 𝑙𝑒𝑛𝑔𝑡ℎ . We require the guidance query to contain no more than 15 Chinese characters to ensure concise expression. If the requirement is satisfied, 𝑅 𝑙𝑒𝑛𝑔𝑡ℎ = 1; otherwise, 𝑅 𝑙𝑒𝑛𝑔𝑡ℎ = 0. The second is the shopping-guidance value reward 𝑅 𝑣𝑎𝑙𝑢𝑒 . We first train a judge model on manually annotated data to evaluate the commercial guidance value of each guidance query. The judge model assigns a rating 𝑟𝑡 ∈ { 𝑆, 𝐴, 𝐵 }, and different rewards are assigned according to the corresponding rating level. 
+
+𝑅 𝑣𝑎𝑙𝑢𝑒 =
+
+
+
+1, if 𝑟𝑡 = 𝑆 
+
+0.5, if 𝑟𝑡 = 𝐴 
+
+0, if 𝑟𝑡 = 𝐵 
+
+(5) The criteria for each rating level are defined as follows: Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, Jiayi Xu, Jing Wang, Xing Fang, and Lingyun Zhu 
+
+S Level: Targeting specific consumer groups or usage scenarios; Reflecting decisions; Helping users under-stand differences in item parameters comparison. 
+
+A Level: Contain flagship store channel words; Adver-tising statement sentence; The content is vague and gen-eral. 
+
+B Level: The sentence is not smooth; Non e-commerce content; The answer cannot be mapped to a real item; No information difference; Brand category mismatch; Con-tent involving politics, pornography, and other unsafe elements. 
+
+4.3.3 Interest-Level Reward. The interest-level reward is designed to supervise the content accuracy and stylistic diversity of multiple candidate guidance queries within the same interest cluster. To this end, we design three reward functions. The first is the semantic accuracy reward 𝑅 𝑠𝑒𝑚 . Assume that the reference guidance queries generated by the high-parameter model under sub-interest 𝐼 𝑘 is denoted as ˆ 𝑞 𝑘 , while the model generates 
+
+𝑇 candidate guidance queries 𝑞 𝑘 = [𝑞 𝑘 1 , 𝑞 𝑘 2 , ..., 𝑞 𝑘 𝑇 ] for the same interest. Meanwhile, Step 3 provides the confidence scores {𝑐 𝑘 }𝑇 𝑖 =1
+
+for each guidance query. We first normalize the confidence scores to obtain the importance weights {𝑤 𝑘 }𝑇 𝑖 =1 for each guidance query, and then compute the semantic similarity between each candidate guidance query 𝑞 𝑘 𝑗 and the reference guidance query ˆ 𝑞 𝑘 . The fi-nal semantic accuracy reward 𝑅 𝑠𝑒𝑚 is obtained through weighted aggregation of these similarity scores. 
+
+𝑅 𝑠𝑒𝑚 =
+
+> 𝑇
+
+∑︁ 
+
+> 𝑖 =1
+
+𝑤 𝑘 𝑖 𝑔 (𝑓 (𝑞 𝑘 𝑖 ), 𝑓 ( ˆ𝑞 𝑘 )) , 𝜔 𝑘 𝑖 = 𝑐 𝑘 𝑖 
+
+Í𝑇 𝑗 =1 𝑐 𝑘 𝑗 
+
+(6) where 𝑘 denotes the corresponding interest cluster, 𝑔 (·) repre-sents the similarity function implemented using cosine similarity, and 𝑓 (·) denotes the semantic encoder, implemented with the mge-small model. In addition, we design a stylistic diversity reward 𝑅 𝑠𝑡 𝑦𝑙𝑒 to en-courage varied expressions of guidance queries within the same interest cluster. We adopt the Type-Token Ratio (TTR) to measure stylistic diversity, where the ratio of unique tokens to the total number of tokens in 𝑞 𝑘 = [𝑞 𝑘 1 , 𝑞 𝑘 2 , ..., 𝑞 𝑘 𝑇 ] is used as the value of 
+
+𝑅 𝑠𝑡 𝑦𝑙𝑒 .
+
+𝑅 𝑠𝑡 𝑦𝑙𝑒 = | ∪ 𝑇 𝑖 =1 {𝑇𝑜𝑘𝑒𝑛 (𝑞 𝑘 𝑖 )}| 
+
+Í𝑇 𝑖 =1 |𝑇𝑜𝑘𝑒𝑛 (𝑞 𝑘 𝑖 )| (7) Finally, we introduce a simple format constraint reward 𝑅 𝑓 𝑜𝑟𝑚𝑎𝑡 ,which requires the number of candidate guidance queries 𝑁 𝑞 gen-erated for each interest cluster to exactly match the instructed quantity 𝑇 , preventing the model from generating too few or too many guidance queries. 
+
+𝑅 𝑓 𝑜𝑟𝑚𝑎𝑡 =
+
+(
+
+1, if 𝑁 𝑞 = 𝑇 
+
+0, otherwise (8) 
+
+4.3.4 Global-Level Reward. The global-level reward is designed to supervise content diversity across different interests. Specifically, we aim to encourage diversified interests and avoid homogeneous expressions among interest clusters. To this end, we introduce a content diversity reward 𝑅 𝑐𝑜𝑛𝑡𝑒𝑛𝑡 .Assume that the model outputs 𝑁 interest groups 𝐼 𝑢 = [𝐼 1, 𝐼 2, ..., 𝐼 𝑁 ],where each sub-interest 𝐼 𝑗 contains 𝑇 guidance queries 𝑄 𝑗 = [𝑞 1, 𝑞 2, ..., 𝑞 𝑇 ].We first apply mean pooling over the semantic representations of the guidance queries within each group to obtain the seman-tic representation of the corresponding interest cluster: 𝐸 ( ¯𝑄 𝑗 ) =
+
+𝑀𝑒𝑎𝑛𝑃𝑜𝑜𝑙 (𝐸 (𝑞 1), 𝐸 (𝑞 2), ..., 𝐸 (𝑞 𝑇 )) .We then compute the semantic similarity between different interest clusters to obtain the similarity matrix 𝐸 𝑄 ∈ 𝑅 𝑁 ×𝑁 . Finally, the value of 𝑅 𝑐𝑜𝑛𝑡𝑒𝑛𝑡 is calculated based on 𝐸 𝑄 . The corresponding formulas are defined as follows: 
+
+𝑅 𝑐𝑜𝑛𝑡𝑒𝑛𝑡 = 1 − 1
+
+𝑁 (𝑁 − 1)
+
+> 𝑁
+
+∑︁ 
+
+> 𝑖 =1
+> 𝑁
+
+∑︁ 
+
+> 𝑗 =1,𝑗 ≠𝑖
+
+𝐸 𝑖 𝑗 (9) where 𝐸 𝑖 𝑗 denotes the semantic similarity between 𝐸 ( ¯𝑄 𝑖 ) and 
+
+𝐸 ( ¯𝑄 𝑗 ).
+
+4.3.5 Multi-Reward based GRPO Optimization. We first integrate the multiple rewards described above using weighted aggregation, and then optimize the model with the GRPO algorithm. The formu-lation of the response-level reward is given below. 
+
+𝑅 𝑟𝑒𝑠𝑝𝑜𝑛𝑠𝑒 = 𝑅 𝑡ℎ𝑖𝑛𝑘 + 𝑅 𝑞𝑢𝑒𝑟 𝑦 + 𝑅 𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 + 𝑅 𝑔𝑙𝑜𝑏𝑎𝑙 
+
+𝑅 𝑡ℎ𝑖𝑛𝑘 = 𝜔 𝑡ℎ𝑖𝑛𝑘 _𝑓 𝑜𝑟𝑚𝑎𝑡 𝑅 𝑡ℎ𝑖𝑛𝑘 _𝑓 𝑜𝑟𝑚𝑎𝑡 + 𝜔 𝑚𝑎𝑡𝑐ℎ 𝑅 𝑚𝑎𝑡𝑐ℎ 
+
+𝑅 𝑞𝑢𝑒𝑟 𝑦 = 1
+
+𝑁 ∗ 𝑇  
+
+> 𝑁 ∗𝑇
+
+∑︁ 
+
+> 𝑖 =1
+
+(𝜔 𝑙𝑒𝑛𝑔𝑡ℎ 𝑅 𝑖 𝑙𝑒𝑛𝑔𝑡ℎ + 𝜔 𝑣𝑎𝑙𝑢𝑒 𝑅 𝑖 𝑣𝑎𝑙𝑢𝑒 )
+
+𝑅 𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 = 1
+
+𝑁 
+
+> 𝑁
+
+∑︁ 
+
+> 𝑖 =1
+
+(𝜔 𝑠𝑒𝑚 𝑅 𝑖 𝑠𝑒𝑚 + 𝜔 𝑠𝑡 𝑦𝑙𝑒 𝑅 𝑖 𝑠𝑡 𝑦𝑙𝑒 + 𝜔 𝑓 𝑜𝑟𝑚𝑎𝑡 𝑅 𝑖 𝑓 𝑜𝑟𝑚𝑎𝑡 )
+
+𝑅 𝑔𝑙𝑜𝑏𝑎𝑙 = 𝜔 𝑐𝑜𝑛𝑡𝑒𝑛𝑡 𝑅 𝑐𝑜𝑛𝑡𝑒𝑛𝑡 
+
+(10) where 𝑁 denotes the number of interest clusters inferred by the model, and 𝑇 denotes the number of guidance queries generated under each interest cluster. 𝜔 ∗ denotes the weight of the correspond-ing reward function. The objective function for this stage is defined as follows: 
+
+J𝑔𝑟𝑝𝑜 = 𝐸 [ 1
+
+𝐺 
+
+> 𝐺
+
+∑︁ 
+
+> 𝑖 =1
+
+𝑚𝑖𝑛 (𝑟 𝑖 (𝜃 )𝐴 𝑖 , 𝑐𝑙𝑖𝑝 (𝑟 𝑖 (𝜃 ), 1 − 𝜖, 1 + 𝜖 )𝐴 𝑖 ) − 𝛽𝐷 𝐾𝐿 ]
+
+𝑟 𝑖 (𝜃 ) = 𝜋 𝜃 (𝑜 𝑖 |𝑞 )
+
+𝜋 𝑜𝑙𝑑 (𝑜 𝑖 |𝑞 ) , 𝐴 𝑖 = 𝑅 𝑖 − 𝑚𝑒𝑎𝑛 ({ 𝑅 1, 𝑅 2, ..., 𝑅 𝐺 }) 
+
+𝑠𝑡𝑑 ({ 𝑅 1, 𝑅 2, ..., 𝑅 𝐺 }) + 𝜖 
+
+(11) where 𝑜 𝑖 denotes the i-th sampled output sequence, 𝑞 represents the model input, 𝜋 𝜃 denotes the current policy, and 𝜋 𝑜𝑙𝑑 denotes the previous policy. 
+
+4.4 DPO Training: Distill the Reasoning Ability of Think Mode 
+
+After reinforcement learning with multi-reward supervision, the model achieves substantial improvements in both interest segmenta-tion accuracy and the quality of generated guidance queries. How-ever, in online environments where real-time user interactions require high responsiveness, multi-step reasoning during inference can significantly increase latency. Therefore, in practical deploy-ment, we expect the model to directly generate the final answers without explicit reasoning steps. LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+Experimental results show that when deep reasoning is removed, the quality of the generated guidance queries deteriorates notice-ably. This phenomenon can be attributed to the conditional distribu-tion shift caused by the discrepancy between training and inference output formats, which consequently leads to degraded inference performance. To address this issue, we introduce DPO training to distill the model’s reasoning capability acquired under the thinking mode through preference alignment. Specifically, We first use the model checkpoint from RL stage generate responses under the thinking mode and retain only their final answers as positive samples 𝑦 𝑤 ,while discarding the explicit reasoning traces. Responses directly generated under the non-thinking mode are used as negative sam-ples 𝑦 𝑙 . To enhance discriminability, 70% of the negative samples are collected from checkpoints of the RL stage, while the remaining 30% are sampled from the base model. After constructing the positive and negative sample pairs, the optimization objective of the model is defined as follows: 
+
+J𝐷𝑃𝑂 (𝜋 𝜃 ; 𝜋 𝑟𝑒 𝑓 ) = −𝐸 [𝑙𝑜𝑔𝜎 (𝛽𝑙𝑜𝑔 𝜋 𝜃 (𝑦 𝑤 |𝑥 )
+
+𝜋 𝑟𝑒 𝑓 (𝑦 𝑤 |𝑥 ) − 𝛽𝑙𝑜𝑔 𝜋 𝜃 (𝑦 𝑙 |𝑥 )
+
+𝜋 𝑟𝑒 𝑓 (𝑦 𝑙 |𝑥 ) )] 
+
+(12) where 𝜋 𝜃 denotes the policy model, 𝜋 𝑟𝑒 𝑓 denotes the reference model, and 𝛽 is the temperature coefficient used to control the degree of deviation from the reference model. During training, we observed that the preference margin be-tween positive and negative samples was not sufficiently signif-icant. To further enhance discriminability, we applied a simple preference-pair filtering strategy. Specifically, we compute the se-mantic similarity for each positive-negative sample pair and remove the top 30% most semantically similar pairs to alleviate the issue of ’ineffective training’. Offline experimental results demonstrate that this preference-pair filtering strategy can improve the effectiveness of DPO training. 
+
+4.5 Online Deployment 
+
+To satisfy the high-throughput and low-latency requirements of online environments, we design both online and nearline serving pipelines to balance accuracy and responsiveness. The nearline pipeline is responsible for dynamically generating candidate guid-ance queries using the LLM4AIGQ framework and storing them in the mapping table, while the online pipeline handles real-time re-quest processing through lightweight matching and ranking mech-anisms to achieve fast response times. 
+
+4.5.1 Nearline Recall. The nearline pipeline is not responsible for real-time guidance queries generation. Instead, the model is in-voked after every 𝑁 accumulated user interactions, such as clicks or favorites, to generate guidance queries. The generated guidance queries are directly written back into the mapping table for subse-quent online retrieval. The model operates in non-thinking mode, directly outputting multiple interest labels along with their corre-sponding guidance queries. Meanwhile, the user historical behavior sequence is continuously updated as new interactions are triggered. 
+
+4.5.2 Online Recall. The online pipeline is responsible for real-time query serving. We construct an offline mapping table from user_id to guidance queries, which dynamically receives the generated results from the nearline pipeline. Whenever a user enters the shopping-guide interface, the online pipeline employs an efficient vector retrieval algorithm to locate the corresponding index in the table and retrieve personalized candidate guidance queries for real-time recall. 
+
+5 Experiment 
+
+In this section, we conduct extensive offline experiments and rigor-ous online A/B tests on real-world industrial datasets to validate the effectiveness of LLM4AIGQ. 
+
+5.1 Experiment Settings 
+
+5.1.1 Dataset. Our datasets are sampled from multi-behavior user interaction logs on the Taobao and Tmall e-commerce platforms, covering the period from June to July 2026. The training data for the short-title fine-tuning task is collected from the Taobao item CPV table, with 8,000 sampled instances. For SFT training, we sam-ple 5,000 single-day interaction records from highly active users. To support single-interest fine-tuning, each sample is decomposed into multiple single-interest samples using a strong teacher model (DeepSeek-V4-Pro [30]), resulting in 11,259 training instances in total. For RL training, 3,000 samples are collected. For DPO train-ing, we collect 5,000 samples, yielding 3,500 valid samples after preference-pair filtering. In addition, 1,000 test samples are col-lected for offline evaluation. To ensure data isolation, interaction data for different stages are sampled from different time partitions. 
+
+5.1.2 Evaluation Metrics. Given the lack of universal evaluation metrics for AI-generated guidance queries, we mainly evaluate two aspects: relevance and shopping guidance value. For shopping guidance value, we report the proportions of S/A/B ratings for the generated queries on the test set. For relevance, we expect the generated queries to accurately match items that users are likely to interact with in the future. Specifically, for each test sample, we collect and mask the most recent 10 interacted items as posi-tive samples 𝑃 𝑖 , and randomly sample 500 items from the whole item pool as negative samples 𝑁 𝑖 . For each generated query 𝑞 𝑖 ,semantic similarities are computed against all samples (𝑃 𝑖 , 𝑁 𝑖 ). We then examine whether the positive samples 𝑃 𝑖 appear in the top-k ranked results. Recall@k and NDCG@k are adopted to measure the relevance of the generated queries. In addition, considering that user interests may be complex and diverse, the sampled positive items may exhibit substantial interest discrepancies from the historical behaviors. To improve evaluation reliability, we compute a semantic similarity matrix 𝑆 ℎ𝑝 between the interaction history 𝐻 𝑖 and the positive samples 𝑃 𝑖 , and use the average pooling result of 𝑆 ℎ𝑝 as a confidence score 𝑐 . Assume there are 𝑅 test samples, each associated with 𝑇 generated queries, with 𝐿 
+
+history behaviors, with 𝑀 positive samples and 𝑁 negative samples. The formula for confidence score 𝑐 𝑖 is defined as follows: 
+
+𝑐 𝑖 = 1
+
+𝐿 𝑖 𝑀 
+
+> 𝐿 𝑖
+
+∑︁ 
+
+> 𝑎 =1
+> 𝑀
+
+∑︁ 
+
+> 𝑏 =1
+
+𝑆 (𝑖 ) 
+
+> ℎ𝑝
+
+(𝑎, 𝑏 ) (13) The formula for Recall@k is defined as follows: Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, Jiayi Xu, Jing Wang, Xing Fang, and Lingyun Zhu 
+
+𝑅𝑒𝑐𝑎𝑙𝑙 @𝑘 =
+
+Í𝑅 𝑖 =1 𝑐 𝑖 
+
+Í𝑇 𝑡 =1
+
+Í𝑀 𝑗 =1 1(𝑟𝑎𝑛𝑘 𝑡 𝑖 ( 𝑗 ) ≤ 𝑘 )
+
+Í𝑅 𝑖 =1 𝑐 𝑖 · 𝑇 · 𝑀 (14) Here, 𝑟𝑎𝑛𝑘 𝑡 𝑖 ( 𝑗 ) denotes the ranking position of the positive sam-ple 𝑝 𝑗 𝑖 in the retrieved results, and 1 (·) is the indicator function, which equals 1 if the condition holds and 0 otherwise. The formula for NDCG@k is defined as follows: 
+
+𝑁 𝐷𝐶𝐺 @𝑘 =
+
+Í𝑅 𝑖 =1 𝑐 𝑖 
+
+Í𝑇 𝑡 =1 
+
+> 𝐷𝐶𝐺 𝑡 𝑖 @𝑘 𝐼 𝐷𝐶𝐺 @𝑘
+
+Í𝑅 𝑖 =1 𝑐 𝑖 · 𝑇 𝐷𝐶𝐺 𝑡 𝑖 @𝑘 =
+
+> 𝑀
+
+∑︁ 
+
+> 𝑗 =1
+
+1(𝑟𝑎𝑛𝑘 𝑡 𝑖 ( 𝑗 ) ≤ 𝑘 )
+
+𝑙𝑜𝑔 2(𝑟𝑎𝑛𝑘 𝑡 𝑖 ( 𝑗 ) + 1)
+
+𝐼𝐷𝐶𝐺 @𝑘 =  
+
+> 𝑚𝑖𝑛 (𝑀,𝑘 )
+
+∑︁ 
+
+> 𝑗 =1
+
+1
+
+𝑙𝑜𝑔 2 ( 𝑗 + 1)
+
+(15) 
+
+5.1.3 Baseline Methods. We compare LLM4AIGQ with two major types of baselines: (1) zero-shot LLMs, including several advanced models and larger variants from the same model family, all evalu-ated without any domain adaptation; and (2) variants of LLM4AIGQ. Specifically, we report the performance of model checkpoints from different training stages based on the single-interest SFT branch (ONE) and the multi-interest SFT branch (MULTI). 
+
+5.1.4 Implementation Details. LLM4AIGQ adopts Qwen3-30B-A3B as the backbone model and is trained on NVIDIA H20 GPUs. The maximum input and output lengths are set to 8192 and 2048, re-spectively. During SFT training, the model is trained for 500 steps using 4 H20 GPUs, with a per-device batch size of 2, gradient ac-cumulation steps of 8, LoRA [7] rank of 16, and learning rate of 1e-5. During the reinforcement learning stage, we use the ROLL framework [26] training for 100 steps on 16 H20 GPUs, with a group size of 8, learning rate of 1e-6, and vLLM [8] as the inference engine. DPO training is conducted with LoRA fine-tuning for 500 steps us-ing 4 H20 GPUs and gradient accumulation steps of 4. The reward weights in RL training are configured as follows: 𝑤 𝑡ℎ𝑖𝑛𝑘 𝑓 𝑜𝑟𝑚𝑎𝑡 is 0.5, 𝑤 𝑚𝑎𝑡𝑐ℎ is 2.0, 𝑤 𝑙𝑒𝑛𝑔𝑡ℎ is 0.2, 𝑤 𝑣𝑎𝑙𝑢𝑒 is 0.8, 𝑤 𝑠𝑒𝑚 is 0.5, 𝑤 𝑠𝑡 𝑦𝑙𝑒 is 0.3, 𝑤 𝑓 𝑜𝑟𝑚𝑎𝑡 is 0.2, and 𝑤 𝑐𝑜𝑛𝑡𝑒𝑛𝑡 is 0.5.All offline experiments are conducted in non-think mode using the same instruction settings and the same testset. 
+
+5.2 Model Performance 
+
+As shown in Table 1, we compare various baseline models and different variants of our method on the Taobao test set, from which the following conclusions can be drawn: 
+
+• Our method outperforms zero-shot state-of-the-art models in both relevance and shopping guidance value, and also surpasses larger models from the same family, demonstrating the effec-tiveness of LLM4AIGQ. The three-stage training paradigm of “SFT + RL + DPO” significantly improves interest mining and shopping guidance quality assessment. Notably, larger state-of-the-art models show worse relevance performance than the 30B backbone model, possibly because they tend to generate more novel queries, while smaller models rely more on high-frequency contextual terms. In e-commerce scenarios, such novelty is more prone to hallucination, which is harmful to shopping guidance tasks. 
+
+• Comparisons among LLM4AIGQ variants show that instruction tuning on single-interest sequences consistently outperforms tuning on mixed-interest sequences, and this advantage remains throughout later training stages. We attribute this to the higher noise and information dilution in mixed-interest scenarios, where the model spends more effort identifying dominant interests in-stead of learning high-quality shopping guidance query patterns. 
+
+• Each training stage significantly improves model performance. In the SFT stage, style learning rapidly enhances the value and relevance of generated AIGQ. In the RL stage, multi-level reward functions help the model disentangle user interests and improve relevance, while a judge model further enhances query value by supervising quality. The DPO stage improves reasoning in non-thinking mode by distilling reasoning ability from think mode, indirectly confirming weaker reasoning performance under non-thinking settings. 
+
+5.3 Ablation Study 
+
+5.3.1 The Effectiveness of Context Compression. We extracted 100 samples from test set and used item short titles and original titles to construct user context. We conducted stress tests online and collected the response of the model. From Table 2, it can be seen that when using short titles, the average length of the input token in the model will be reduced by 26.8%, the response delay (RT) will be reduced by 10.7%, and the model inference will be significantly faster. And the output token quantity will also slightly decrease. After case analysis, we found that the length and style of the model’s inference of the guidance query will also imitate the item title. Therefore, when the item title becomes shorter, the model output will be more concise. 
+
+5.3.2 The Effectiveness of Multi-Level Rewards in GRPO. As shown in Table 3, removing any reward component leads to declines in both relevance and shopping guidance value. In particular, removing the think-level reward causes a significant drop in relevance metrics, indicating that supervising interest disentanglement during the reasoning process helps the model more accurately capture users’ multiple interests and generate queries better aligned with user intent. Removing the query-level reward significantly degrades the value metrics, showing that the length constraint and the judge model’s quality assessment effectively guide the model toward generating more compliant and higher-quality shopping guidance queries. When the interest-level reward is removed, both relevance and value metrics decrease. This is because the absence of semantic correctness constraints weakens the model’s relevance judgment, while the lack of diversity guidance causes generated queries within the same interest cluster to become overly homogeneous in form, thereby reducing their value. Removing the global-level reward makes queries from different interests semantically similar to each other, which further harms the overall shopping guidance value. 
+
+5.3.3 The Effectiveness of Data Filtering in DPO. As shown in Ta-ble 3, removing the preference-pair filtering strategy in DPO train-ing leads to significant declines in both relevance and shopping guidance value. This is because the unfiltered positive-negative LLM4AIGQ: LLM-based AI Guidance Query Generation Framework for Multi Interest Mining Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+Table 1: Performance comparison among Different Models on Taobao Dataset with Relation and Value Metrics 
+
+Model Relation Metric Value Metric Recall@10 NDCG@10 Recall@20 NDCG@20 Recall@50 NDCG@50 S ratio A ratio B ratio Qwen3-30B-A3B 0.1513 0.1754 0.1982 0.1980 0.2909 0.2331 0.6405 0.1043 0.2551 Qwen3.5-122B-A10B 0.1366 0.1580 0.1807 0.1792 0.2748 0.2146 0.8251 0.0401 0.1348 Qwen3-235B-A22B 0.1412 0.1641 0.1872 0.1862 0.2826 0.2222 0.7940 0.0461 0.1599 GPT-oss-120B 0.1227 0.1420 0.1658 0.1627 0.2563 0.1967 0.7177 0.0729 0.2093 Deepseek-V4-Pro 0.1363 0.1582 0.1805 0.1794 0.2708 0.2135 0.8152 0.0718 0.1130 LLM4AIGQ-MULTI SFT 0.1674 0.1914 0.2183 0.2159 0.3125 0.2515 0.8044 0.0559 0.1396 LLM4AIGQ-ONE SFT 0.1709 0.1956 0.2189 0.2187 0.3127 0.2541 0.8119 0.0562 0.1318 LLM4AIGQ-MULTI SFT+RL 0.1719 0.1963 0.2221 0.2204 0.3179 0.2567 0.8138 0.0555 0.1307 LLM4AIGQ-ONE SFT+RL 0.1771 0.2034 0.2256 0.2267 0.3201 0.2625 0.8360 0.0520 0.1119 LLM4AIGQ-MULTI SFT+RL+DPO 0.2075 0.2364 0.2637 0.2635 0.3604 0.3002 0.8555 0.0296 0.1149 LLM4AIGQ-ONE SFT+RL+DPO 0.2101 0.2377 0.2684 0.2658 0.3709 0.3047 0.8616 0.0274 0.1109 
+
+Table 2: Analysis of the Response Performance of Item Short Titles to LLM4ALGQ 
+
+Ablation Input Tokens Output Tokens TTFT RT short_title 2.35k 146 110ms 2.84s long_title 3.21k 153 114ms 3.18s 
+
+Table 3: The Experimental Results of Ablation Study about GRPO-Training and DPO-Training. 
+
+Model Recall@10 NDCG@10 S ratio LLM4AIGQ-ONE SFT+RL 0.1771 0.2034 0.8360 w_o_think_reward 0.1696 0.1942 0.8332 w_o_query_reward 0.1727 0.1980 0.8168 w_o_interest_reward 0.1713 0.1972 0.8207 w_o_global_reward 0.1744 0.2001 0.8195 LLM4AIGQ-ONE SFT+RL+DPO 0.2101 0.2377 0.8616 w_o_pair_filter 0.1959 0.2182 0.8426 LLM4AIGQ-MULTI SFT+RL+DPO 0.2075 0.2364 0.8555 w_o_pair_filter 0.1922 0.2127 0.8297 sample pairs contain many semantically similar cases. Training on such hard-to-distinguish data makes the optimization process more unstable and causes the model to produce more templated and stylistically homogeneous outputs, resulting in “ineffective learning” and ultimately weakening the effectiveness of distillation. 
+
+5.4 A/B Pairwise Evaluation 
+
+To further evaluate the overall quality of generated AIGQ beyond retrieval-oriented automatic metrics, we conduct an LLM-as-Judge pairwise evaluation by Gemini-3.5-Flash. Given the same user con-text, the judge compares the AIGQ generated by each LLM4AIGQ variant against those generated by the teacher model(deepseek-V4-Pro), considering their consistency with users’ consumption intent 
+
+Table 4: Pairwise Evaluation Result between LLMAIGQ vari-ants and Teacher Model. The experiment adopts A/B random-ization to prevent positional bias in the experimental results. 
+
+model Win Rate Lose Rate base model 34.63% 65.37% 
+
+𝐿𝐿𝑀 4𝐴𝐼𝐺𝑄 𝑆𝐹𝑇 50.25% 49.75% 
+
+𝐿𝐿𝑀 4𝐴𝐼𝐺𝑄 𝑆𝐹𝑇 +𝑅𝐿 57.53% 42.47% 
+
+𝐿𝐿𝑀 4𝐴𝐼𝐺𝑄 𝑆𝐹𝑇 +𝑅𝐿 +𝐷𝑃𝑂 54.95% 45.05% and preferences, shopping-guidance value, content rationality, and linguistic quality. As shown in Table 4, the base model achieves only a 34.63% win rate against the teacher model, indicating a large gap in domain-specific AIGQ generation. After SFT, the win rate rises to 50.25%, showing that supervised learning effectively transfers the teacher’s domain knowledge and generation patterns to the student model. After RL, the win rate further increases to 57.53%, allowing the student model to surpass the teacher. This suggests that the per-formance gain comes not only from imitating the teacher, but also from optimizing interest understanding, query quality, and content diversity. After DPO, the win rate slightly drops from 57.53% to 54.95%, but still remains above the teacher model. This is consistent with the goal of DPO, which focuses on transferring reasoning capability from RL to efficient non-thinking inference rather than further improving generation quality. The small decline reflects a trade-off between reasoning quality and inference efficiency, while most RL-acquired capability is preserved. 
+
+5.5 Online A/B Test 
+
+We conducted online A/B tests across multiple business scenar-ios in Tmall, including shopping guidance, search, and item detail pages. Experimental results show that introducing AIGQ consis-tently improves user click performance in the query recommenda-tion pipeline. In the initial 10% traffic experiment, the experimental Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiangchen Pan, Jiayi Xu, Jing Wang, Xing Fang, and Lingyun Zhu 
+
+group achieved a 4.46% improvement in uCTR compared with the baseline bucket. After scaling the traffic to 40%, the overall uCTR still maintained a positive gain of 2.53% over six days of online val-idation, demonstrating strong generalization capability and online stability under larger-scale deployment. 
+
+6 Conclusion 
+
+In this work, to address issues in traditional shopping guidance query generation pipelines, such as semantic drift and the inability to capture personalized user intent, we propose an LLM-based AI guidance query generation framework for multi-interest users. The framework can autonomously disentangle user interests and generate high-quality shopping guidance queries tailored to users’ consumption intentions, and capabilities. Our approach has already been deployed online and has achieved significant results at the scale of hundreds of millions of users. 
+
+References 
+
+[1] Qingyao Ai, Daniel N Hill, SVN Vishwanathan, and W Bruce Croft. 2019. A zero attention model for personalized product search. In Proceedings of the 28th ACM International Conference on Information and Knowledge Management . 379–388. [2] Qingyao Ai, Yongfeng Zhang, Keping Bi, Xu Chen, and W Bruce Croft. 2017. Learning a hierarchical embedding model for personalized product search. In 
+
+Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval . 645–654. [3] Qingyao Ai, Yongfeng Zhang, Keping Bi, and W Bruce Croft. 2019. Explainable product search with a dynamic relation embedding model. ACM Transactions on Information Systems (TOIS) 38, 1 (2019), 1–29. [4] Keqin Bao, Jizhi Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan He. 2023. Tallrec: An effective and efficient tuning framework to align large language model with recommendation. In Proceedings of the 17th ACM conference on recommender systems . 1007–1014. [5] Yi Fang, Wenjie Wang, Yang Zhang, Fengbin Zhu, Qifan Wang, Fuli Feng, and Xiangnan He. 2025. Reason4rec: Large language models for recommendation with deliberative user preference alignment. arXiv preprint arXiv:2502.02061 
+
+(2025). [6] Zhankui He, Handong Zhao, Zhaowen Wang, Zhe Lin, Ajinkya Kale, and Julian Mcauley. 2022. Query-aware sequential recommendation. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management .4019–4023. [7] Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen. 2021. Lora: Low-rank adaptation of large language models. arXiv preprint arXiv:2106.09685 (2021). [8] Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph Gonzalez, Hao Zhang, and Ion Stoica. 2023. Efficient memory management for large language model serving with pagedattention. In 
+
+Proceedings of the 29th symposium on operating systems principles . 611–626. [9] Ruirui Li, Liangda Li, Xian Wu, Yunhong Zhou, and Wei Wang. 2019. Click Feedback-Aware Query Recommendation Using Adversarial Examples. In The World Wide Web Conference . 2978–2984. doi:10.1145/3308558.3313412 [10] Jiacheng Lin, Tian Wang, and Kun Qian. 2025. Rec-r1: Bridging generative large language models and user-centric recommendation systems via reinforcement learning. arXiv preprint arXiv:2503.24289 (2025). [11] Jiongnan Liu, Zhicheng Dou, Qiannan Zhu, and Ji-Rong Wen. 2022. A category-aware multi-interest model for personalized product search. In Proceedings of the acm web conference 2022 . 360–368. [12] Qidong Liu, Xian Wu, Yejing Wang, Zijian Zhang, Feng Tian, Yefeng Zheng, and Xiangyu Zhao. 2024. Llm-esr: Large language models enhancement for long-tailed sequential recommendation. Advances in Neural Information Processing Systems 37 (2024), 26701–26727. [13] Shang Liu, Wanli Gu, Gao Cong, and Fuzheng Zhang. 2020. Structural relationship representation learning with graph embedding for personalized product search. In 
+
+Proceedings of the 29th ACM International Conference on Information & Knowledge Management . 915–924. [14] Qiyao Ma, Xubin Ren, and Chao Huang. 2024. Xrec: Large language models for explainable recommendation. In Findings of the association for computational linguistics: EMNLP 2024 . 391–402. [15] Xiangchen Pan and Wei Wei. 2026. Curr-RLCER: Curriculum Reinforcement Learning for Coherence Explainable Recommendation. In International Conference on Database Systems for Advanced Applications . Springer, 471–486. [16] Xiangchen Pan and Wei Wei. 2026. Joint Behavior-guided and Modality-coherence Conditional Graph Diffusion Denoising for Multi Modal Recommendation. arXiv preprint arXiv:2604.03654 (2026). [17] Xiangchen Pan and Wei Wei. 2026. MMP-Refer: Multimodal Path Retrieval-augmented LLMs For Explainable Recommendation. arXiv preprint arXiv:2604.03666 (2026). [18] Xiangchen Pan, Wei Wei, Huakang Niu, and Zhicong Cheng. 2026. Multi Interests for Joint Search-Recommendation Modeling. arXiv preprint arXiv:2608.10535 
+
+(2026). [19] Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, ChristopherD Man-ning, and Chelsea Finn. [n. d.]. Direct Preference Optimization: Your Language Model is Secretly a Reward Model. ([n. d.]). [20] Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Mingchuan Zhang, YK Li, Y Wu, and Daya Guo. [n. d.]. DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models. ([n. d.]). [21] Teng Shi, Zihua Si, Jun Xu, Xiao Zhang, Xiaoxue Zang, Kai Zheng, Dewei Leng, Yanan Niu, and Yang Song. 2024. UniSAR: Modeling User Transition Behaviors between Search and Recommendation. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval .1029–1039. [22] Zihua Si, Zhongxiang Sun, Xiao Zhang, Jun Xu, Xiaoxue Zang, Yang Song, Kun Gai, and Ji-Rong Wen. 2023. When search meets recommendation: Learning disentangled search representation for recommendation. In Proceedings of the 46th international ACM SIGIR conference on research and development in information retrieval . 1313–1323. [23] OneRec Team, Biao Yang, Boyang Ding, Chenglong Chu, Dunju Zang, Fei Pan, Han Li, Hao Jiang, Honghui Bao, Huanjie Wang, et al. 2026. OneReason Technical Report. arXiv preprint arXiv:2606.06260 (2026). [24] Chenyang Wang, Zhefan Wang, Yankai Liu, Yang Ge, Weizhi Ma, Min Zhang, Yiqun Liu, Junlan Feng, Chao Deng, and Shaoping Ma. 2022. Target interest distillation for multi-interest recommendation. In Proceedings of the 31st ACM international conference on information & knowledge management . 2007–2016. [25] Shuyao Wang, Zhi Zheng, Yongduo Sui, and Hui Xiong. 2025. Unleashing the power of large language model for denoising recommendation. In Proceedings of the ACM on Web Conference 2025 . 252–263. [26] Weixun Wang, Shaopan Xiong, Gengru Chen, Wei Gao, Sheng Guo, Yancheng He, Ju Huang, Jiaheng Liu, Zhendong Li, Xiaoyang Li, et al. 2025. Reinforcement learning optimization for large-scale learning: An efficient and user-friendly scaling library. arXiv preprint arXiv:2506.06122 (2025). [27] Wei Wei, Xubin Ren, Jiabin Tang, Qinyong Wang, Lixin Su, Suqi Cheng, Jun-feng Wang, Dawei Yin, and Chao Huang. 2024. Llmrec: Large language models with graph augmentation for recommendation. In Proceedings of the 17th ACM international conference on web search and data mining . 806–815. [28] Zhibo Wu, Yunfan Wu, Quan Liu, Lin Jiang, Ping Yang, and Yao Hu. 2025. GemiRec: Interest Quantization and Generation for Multi-Interest Recommenda-tion. arXiv preprint arXiv:2510.14626 (2025). [29] Xingyuan Xiang, Xiangchen Pan, and Wei Wei. 2026. User Simulator-Guided Multi-Turn Preference Optimization for Reasoning LLM-based Conversational Recommendation. arXiv preprint arXiv:2604.03671 (2026). [30] Anyi Xu, Bangcai Lin, Bing Xue, Bingxuan Wang, Bingzheng Xu, Bochao Wu, Bowei Zhang, Chaofan Lin, Chen Dong, Chenchen Ling, et al. 2026. Deepseek-v4: Towards highly efficient million-token context intelligence. arXiv preprint arXiv:2606.19348 (2026). [31] Guipeng Xv, Xinyu Li, Ruobing Xie, Chen Lin, Chong Liu, Feng Xia, Zhanhui Kang, and Leyu Lin. 2024. Improving multi-modal recommender systems by denoising and aligning multi-modal content and user feedback. In Proceedings of the 30th ACM SIGKDD conference on knowledge discovery and data mining .3645–3656. [32] An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, et al. 2025. Qwen3 technical report. arXiv preprint arXiv:2505.09388 (2025). [33] Ting Yang and Li Chen. 2024. Unleashing the retrieval potential of large language models in conversational recommender systems. In Proceedings of the 18th ACM Conference on Recommender Systems . 43–52. [34] Jing Yao, Zhicheng Dou, Ruobing Xie, Yanxiong Lu, Zhiping Wang, and Ji-Rong Wen. 2021. USER: A unified information search and recommendation model based on integrated behavior sequence. In Proceedings of the 30th ACM International Conference on Information & Knowledge Management . 2373–2382. [35] Zhongchao Yi, Kai Feng, Xiaojian Ma, Yalong Wang, Yongqi Liu, Han Li, Zhengyang Zhou, and Yang Wang. 2026. DualGR: Generative Retrieval with Long and Short-Term Interests Modeling. In Proceedings of the ACM Web Conference 2026 . 8329–8332. [36] Bowen Zheng, Xiaolei Wang, Enze Liu, Xi Wang, Lu Hongyu, Yu Chen, Wayne Xin Zhao, and Ji-Rong Wen. 2025. Deeprec: Towards a deep dive into the item space with large language model based recommendation. arXiv preprint arXiv:2505.16810 (2025).
