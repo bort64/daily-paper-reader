@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-10</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-11</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 5 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 2 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>1</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>4</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-10 22:12:03 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-11 21:39:49 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,10 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日共生成 5 篇推荐（精读 1 篇，速读 4 篇）</p>
-<p>精读：《SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception》（9.0/10）</p>
-<p>速读：《When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization》（6.0/10）, 《UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction》（6.0/10）, 《FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding》（6.0/10）</p>
-<p>这些结果覆盖了当下较热的方向，建议先看精读区论文的关键问题与方法。</p>
+<p>精读零篇、速读两篇：今日日报聚焦6.0分检索与推荐系统新作。</p>
+<p>值得看的方向是稠密检索的局部嵌入更新/排序校正，以及自主研究代理在工业级推荐系统中的应用。</p>
+<p>普通读者可先读这两篇摘要，再决定是否深入方法或等待精读验证</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -81,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">1 篇</strong>
+    <strong class="dpr-home-dashboard-count">0 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception">SPAR: Enhancing Industrial-Scale Generative POI Recommendation via Real-World Spatial Perception</span></li></ul>
+<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
+
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,12 +93,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">4 篇</strong>
+    <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization">When Optimization Becomes Manipulation: Defending Generative Search against Malicious Generative Engine Optimization</span></li><li><span class="dpr-home-dashboard-paper-title" title="UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction">UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction</span></li><li><span class="dpr-home-dashboard-paper-title" title="FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding">FlowTT: Exploiting Computation Flow Reuse in Irregular Tensor-Train Embedding</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Embedding Surgery: Localized Updates for Adaptive Ranking Correction in Dense Retrieval">Embedding Surgery: Localized Updates for Adaptive Ranking Correction in Dense Retrieval</span></li><li><span class="dpr-home-dashboard-paper-title" title="Auto-RecSys: Harnessing Autonomous Research Agents for Industry-Scale Recommender System">Auto-RecSys: Harnessing Autonomous Research Agents for Industry-Scale Recommender System</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>4</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>2</strong></span></div>
 </section>
 </div>
 

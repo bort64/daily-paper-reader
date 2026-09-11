@@ -1,0 +1,41 @@
+{
+  "date": "20260911",
+  "date_label": "",
+  "generated_at": "2026-09-11 21:39:49 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.05110v1",
+      "route": "202609/11/2609.05110v1-embedding-surgery-localized-updates-for-adaptive-ranking-correction-in-dense-retrieval",
+      "title": "Embedding Surgery: Localized Updates for Adaptive Ranking Correction in Dense Retrieval",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向搜索引擎稠密检索的自适应排序校正",
+      "first_seen_at": "2026-09-11 21:39:49 UTC",
+      "updated_at": "2026-09-11 21:39:49 UTC"
+    },
+    {
+      "paper_id": "2609.10922v1",
+      "route": "202609/11/2609.10922v1-auto-recsys-harnessing-autonomous-research-agents-for-industry-scale-recommender-system",
+      "title": "Auto-RecSys: Harnessing Autonomous Research Agents for Industry-Scale Recommender System",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向工业级推荐系统的自主研究智能体实验",
+      "first_seen_at": "2026-09-11 21:39:49 UTC",
+      "updated_at": "2026-09-11 21:39:49 UTC"
+    }
+  ]
+}
