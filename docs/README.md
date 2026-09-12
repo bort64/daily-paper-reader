@@ -48,7 +48,7 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-11</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-12</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
     <strong class="dpr-home-dashboard-count">共 2 篇</strong>
@@ -58,7 +58,7 @@
     <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-11 21:39:49 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-12 21:51:28 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>精读零篇、速读两篇：今日日报聚焦6.0分检索与推荐系统新作。</p>
-<p>值得看的方向是稠密检索的局部嵌入更新/排序校正，以及自主研究代理在工业级推荐系统中的应用。</p>
-<p>普通读者可先读这两篇摘要，再决定是否深入方法或等待精读验证</p>
+<p>今天速读2篇AI论文，聚焦广告排序智能体与多模态嵌入扩展。最值得看的是《Agentic ML Exploration for Ads Ranking》，探索用智能体自动优化广告排序；《MoEMB》则用混合专家模型高效扩展通用多模态嵌入。普通读者可优先了解智能体如何降低广告ML调参门槛，再关注多模态嵌入的降本增效趋势。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -96,7 +94,7 @@
     <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Embedding Surgery: Localized Updates for Adaptive Ranking Correction in Dense Retrieval">Embedding Surgery: Localized Updates for Adaptive Ranking Correction in Dense Retrieval</span></li><li><span class="dpr-home-dashboard-paper-title" title="Auto-RecSys: Harnessing Autonomous Research Agents for Industry-Scale Recommender System">Auto-RecSys: Harnessing Autonomous Research Agents for Industry-Scale Recommender System</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Agentic ML Exploration (A-MLE) for Ads Ranking">Agentic ML Exploration (A-MLE) for Ads Ranking</span></li><li><span class="dpr-home-dashboard-paper-title" title="MoEMB: Scaling Universal Multimodal Embeddings with Efficient Mixture-of-Experts Models">MoEMB: Scaling Universal Multimodal Embeddings with Efficient Mixture-of-Experts Models</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>2</strong></span></div>
 </section>

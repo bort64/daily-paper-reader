@@ -1,0 +1,39 @@
+{
+  "label": "2026-09-12",
+  "date": "2026-09-12",
+  "generated_at": "2026-09-12T21:51:30",
+  "count": 2,
+  "papers": [
+    {
+      "paper_id": "202609/12/2609.08248v1-agentic-ml-exploration-a-mle-for-ads-ranking",
+      "section": "quick",
+      "title_en": "Agentic ML Exploration (A-MLE) for Ads Ranking",
+      "authors": "Erwin Gao, Vinodh Kumar Sunkara, Jingyi Guan, Qinjin Jia, Hangjun Xu, Xiang Ji, Sherman Wong, Surya Teja Chavali, Pratik Vaishnavi, Aryan Pandhi, Xiaoyu Deng, Zhaodong Wang, Samarth Inani, Fan Yang, Jakob Moberg, Zoe Zu, Nicolas Bievre, Sami Khenissi, Amit Jaspal, Ehsan Fakharizadi, Srinidhi Viswanathan, Dorothy Sun, Abishek Vanam, Sneha Iyer, Sheela Yadawad, Wenjie Chen, Gaby Nahum, Junhua Gu, Peter Chu, Yucheng Liu, Xin Zhao, Vitor Cid, Chaorong Chen, Vijay Pappu, Ashwin Kumar, Wenlin Chen, Ben Schulte, Deepak Chandra, Ritwik Tewari",
+      "date": "2026-09-08",
+      "pdf": "https://arxiv.org/pdf/2609.08248v1",
+      "score": "7.0",
+      "evidence": "面向广告排序模型探索的LLM智能体系统",
+      "tldr": "工业广告排序的瓶颈已从模型容量与训练算力转向人类 ML 迭代吞吐：每个模型一轮研究、实现、训练、调试、评估与上线需资深工程师数天到数周，导致有效技术难以在模型间扩散。本文提出 A-MLE，一个自主 LLM 智能体系统，把 ML 迭代拆成假设生成、探索策略、实验执行、结果分析与共享知识基座五个阶段，由单一智能体调用领域技能与工作流，在沙箱执行层上运行，并在阶段边界设人工检查点。系统在多个大规模排序模型上部署，按工具可用性、自主工作流执行与开放式探索三层能力框架评估，并做了固定智能体循环的跨 LLM 对照研究。结果表明智能体探索可作为 ML 工程师的实用倍增器，尤其利好长期缺少专家关注的模型长尾。",
+      "tags": "query:search-rec",
+      "abstract_en": "Modern industrial ads ranking stacks are increasingly bottlenecked not by model capacity or training compute, but by the throughput of human ML iteration - the cycles of research, implementation, training, debugging, evaluation, and launch required to surface a single statistically significant improvement. A typical ranking stack contains numerous differentiated models with heterogeneous data, architectures, and infrastructure constraints, and each cycle takes days to weeks of senior engineer attention per model. As a result, techniques that have proven effective on one model diffuse into others slowly and unevenly, leaving substantial recoverable signal unexplored. We present Agentic ML Exploration (A-MLE), an autonomous LLM-agent system that systematically explores ML techniques across a portfolio of ads ranking models. A-MLE decomposes ML iteration into five stages involving hypothesis generation, exploration strategy, experiment execution, result analysis and shared knowledge substrate which are orchestrated by a single agent that invokes domain-specific skills and agentic workflows against a sandboxed execution layer, with human-in-the-loop checkpoints at each stage boundary. We deploy A-MLE across a representative set of large-scale ads ranking models and evaluate it along a tiered capability framework (tool availability, autonomous workflow execution, and open-ended exploration). We further report a controlled cross-LLM study using a fixed agent loop, which surfaces qualitative differences in execution reliability and exploration aggressiveness across the Claude Sonnet, Gemini, and GPT families. We discuss failure modes and the design choices that govern reliability. Our findings suggest that agentic exploration is a practical force multiplier for ML engineers in industrial recommenders, especially for the long tail of models that rarely receive expert attention.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202609/12/2609.08663v1-moemb-scaling-universal-multimodal-embeddings-with-efficient-mixture-of-experts-models",
+      "section": "quick",
+      "title_en": "MoEMB: Scaling Universal Multimodal Embeddings with Efficient Mixture-of-Experts Models",
+      "authors": "Xuanming Cui, Shlok Kumar Mishra, Wentao Bao, Aashu Singh, Zihao Wang, Xiangjun Fan, Jun Xiao, Ser-Nam Lim, Jianpeng Cheng",
+      "date": "2026-09-08",
+      "pdf": "https://arxiv.org/pdf/2609.08663v1",
+      "score": "6.0",
+      "evidence": "用混合专家扩展大规模检索的嵌入模型",
+      "tldr": "通用多模态嵌入需处理多任务多模态且复杂度高，但扩大编码器参数会牺牲对比学习所需大 batch，并受检索延迟限制，且不同任务存在大量冗余计算。MoEMB 沿专家轴扩展，用混合专家（MoE）提升容量，同时保持单向量、非自回归编码。系统研究 MoE-UME 设计与训练配方，在 MMEB-V2 和 MRMR 上取得公开 MMEB 数据训练模型中的新 SOTA：仅 3B 激活参数即超越激活参数超 4 倍的 TTE 方法，计算更少。还首次全面研究 MoE 嵌入自适应计算，验证专家扩展是高效方向。",
+      "tags": "query:search-rec",
+      "abstract_en": "Universal multimodal embedding (UME) increasingly demands encoder's capacity for handling a broad range of tasks and modalities with increased complexity. Prior scaling methods either increase the representation size, retrieval effort, or scales the encoder into a heavy multimodal LLM. Recent works, such as Think-Then-Embed (TTE), explore scaling via reasoning tokens. However, embedding models are hard to scale up: increasing parameters directly tradeoffs for the large training batch size that contrastive learning needs, and retrieval has to be served under tight latency. Moreover, UME tasks are diverse in complexity, where scaling up embedders can bring significant redundant computation. In this work, we propose MOEMB, which instead scales UME along the expert axis through mixture-of-experts (MoE), growing encoder capacity while preserving single-vector, non-autoregressive encoding. Through a systematic study of the design space and training recipes for MoE-based UME, MoEMB sets a new state of the art on both MMEB-V2 and MRMR among models trained on public MMEB-family data: with only 3B active parameters, MoEMB surpasses TTE-based methods with >4x active parameters, using significantly less computes. To further improve the scalability and efficiency, we conduct the first comprehensive study of adaptive computation for MoE-based embedding, spanning diverse strategies across training-based and inference-only methods. Together, these results support expert scaling as an effective and efficient direction for UME, with adaptive computation further improving efficiency for MLLM-based embedding models towards large-scale retrieval and recommendation systems.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

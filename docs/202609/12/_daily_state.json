@@ -1,0 +1,41 @@
+{
+  "date": "20260912",
+  "date_label": "",
+  "generated_at": "2026-09-12 21:51:28 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.08248v1",
+      "route": "202609/12/2609.08248v1-agentic-ml-exploration-a-mle-for-ads-ranking",
+      "title": "Agentic ML Exploration (A-MLE) for Ads Ranking",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向广告排序模型探索的LLM智能体系统",
+      "first_seen_at": "2026-09-12 21:51:28 UTC",
+      "updated_at": "2026-09-12 21:51:28 UTC"
+    },
+    {
+      "paper_id": "2609.08663v1",
+      "route": "202609/12/2609.08663v1-moemb-scaling-universal-multimodal-embeddings-with-efficient-mixture-of-experts-models",
+      "title": "MoEMB: Scaling Universal Multimodal Embeddings with Efficient Mixture-of-Experts Models",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用混合专家扩展大规模检索的嵌入模型",
+      "first_seen_at": "2026-09-12 21:51:28 UTC",
+      "updated_at": "2026-09-12 21:51:28 UTC"
+    }
+  ]
+}
