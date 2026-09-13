@@ -1,6 +1,9 @@
 * <a class="dpr-sidebar-root-link" href="#/">首页</a>
 * <a class="dpr-sidebar-root-link dpr-sidebar-noactive-link" href="javascript:void(0)" data-dpr-hash="#/tutorial/README">使用教程</a>
 * Daily Papers
+  * 2026-09-13 <!--dpr-date:20260913-->
+    * 速读区
+      * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202609/13/2609.07175v1-enabling-high-bandwidth-flash-for-generative-recommendation-serving-with-write-aware-kv-cache-policy" data-sidebar-item="{&quot;title&quot;: &quot;Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2609.07175v1-enabling-high-bandwidth-flash-for-generative-recommendation-serving-with-write-aware-kv-cache-policy&quot;, &quot;score&quot;: &quot;7.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;search-rec&quot;}], &quot;evidence&quot;: &quot;生成式推荐服务中的KV缓存复用&quot;}">Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy</a>
   * 2026-09-12 <!--dpr-date:20260912-->
     * 速读区
       * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202609/12/2609.08248v1-agentic-ml-exploration-a-mle-for-ads-ranking" data-sidebar-item="{&quot;title&quot;: &quot;Agentic ML Exploration (A-MLE) for Ads Ranking&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2609.08248v1-agentic-ml-exploration-a-mle-for-ads-ranking&quot;, &quot;score&quot;: &quot;7.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;search-rec&quot;}], &quot;evidence&quot;: &quot;面向广告排序模型探索的LLM智能体系统&quot;}">Agentic ML Exploration (A-MLE) for Ads Ranking</a>

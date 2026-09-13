@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-12</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-13</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 2 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 1 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>1</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-12 21:51:28 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-13 21:09:52 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今天速读2篇AI论文，聚焦广告排序智能体与多模态嵌入扩展。最值得看的是《Agentic ML Exploration for Ads Ranking》，探索用智能体自动优化广告排序；《MoEMB》则用混合专家模型高效扩展通用多模态嵌入。普通读者可优先了解智能体如何降低广告ML调参门槛，再关注多模态嵌入的降本增效趋势。</p>
+<p>今日仅速读 1 篇，聚焦生成式推荐服务中高带宽闪存的写感知 KV Cache 策略（7.0/10）。值得关注的是它把 KV Cache 写入策略与高带宽闪存结合，瞄准生成式推荐在线服务的带宽瓶颈。普通读者可先了解 KV Cache 在推荐系统中的读写开销，再跟进该方案的落地效果。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -91,12 +91,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">2 篇</strong>
+    <strong class="dpr-home-dashboard-count">1 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Agentic ML Exploration (A-MLE) for Ads Ranking">Agentic ML Exploration (A-MLE) for Ads Ranking</span></li><li><span class="dpr-home-dashboard-paper-title" title="MoEMB: Scaling Universal Multimodal Embeddings with Efficient Mixture-of-Experts Models">MoEMB: Scaling Universal Multimodal Embeddings with Efficient Mixture-of-Experts Models</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy">Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>2</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
 </section>
 </div>
 

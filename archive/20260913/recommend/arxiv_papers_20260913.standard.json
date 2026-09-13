@@ -1,0 +1,56 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-13T21:09:22.754562+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 1,
+    "quick_skim_target": 11,
+    "quick_selected": 1
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.07175v1",
+      "source": "arxiv",
+      "title": "Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy",
+      "abstract": "Generative recommendation (GR) systems increasingly leverage user-level KV cache reuse to avoid recomputing long user histories. However, the growing KV cache capacity and bandwidth requirements introduce new challenges for memory system. High-Bandwidth Flash (HBF) provides a promising solution by offering substantially higher capacity than HBM while approaching HBM-class read bandwidth, enabling larger scale KV cache retention and improved serving throughput. Yet conventional Least-Recently-Used (LRU) KV cache management tightly couples KV cache writes with cache misses, generating excessive write traffic that rapidly exhausts flash endurance. In this work, we evaluate a write-aware KV cache policy based on admission-controlled LRU-K for HBF-based GR serving. By filtering low-reuse users before cache admission, LRU-K decouples KV cache writes from misses and significantly reduces unnecessary writes. We develop an analytical model to characterize GR serving performance, KV cache write traffic, and HBF lifetime, and evaluate performance across diverse memory systems and GR workloads. Our results show that HBF-based systems achieve 3.8 to 4.7 times higher throughput than HBM-only systems. Moreover, LRU-K extends HBF lifetime from about one year under conventional LRU to over six years with a moderate K=10, while maintaining comparable or even slightly improved throughput. These results highlight the importance of write aware KV cache policy for sustainable HBF-based GR serving.",
+      "authors": [
+        "Danni Peng",
+        "Kai Wu",
+        "Tianyu Zuo",
+        "Pengfei Xia",
+        "Hui Zang"
+      ],
+      "primary_category": "cs.AR",
+      "categories": [
+        "cs.AR"
+      ],
+      "published": "2026-09-07T08:07:14+00:00",
+      "link": "https://arxiv.org/pdf/2609.07175v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "generative recommendation serving with KV cache reuse",
+      "llm_evidence_cn": "生成式推荐服务中的KV缓存复用",
+      "llm_evidence": "生成式推荐服务中的KV缓存复用",
+      "canonical_evidence": "生成式推荐服务中的KV缓存复用",
+      "llm_tldr_en": "This paper evaluates a write-aware KV cache policy on high-bandwidth flash to reduce write traffic and extend flash endurance for generative recommendation serving.",
+      "llm_tldr_cn": "生成式推荐系统通过复用用户级KV缓存避免重复计算长用户历史，但缓存容量与带宽需求激增。传统LRU管理将缓存写入与未命中强耦合，产生大量写流量并快速耗尽闪存寿命。本文评估基于准入控制的高带宽闪存写感知KV缓存策略，将写入与未命中解耦。结果表明该策略在保持服务吞吐的同时显著降低写入开销与闪存磨损。该工作为生成式推荐的大规模服务提供了存储层面的可行方案。",
+      "llm_tldr": "生成式推荐系统通过复用用户级KV缓存避免重复计算长用户历史，但缓存容量与带宽需求激增。传统LRU管理将缓存写入与未命中强耦合，产生大量写流量并快速耗尽闪存寿命。本文评估基于准入控制的高带宽闪存写感知KV缓存策略，将写入与未命中解耦。结果表明该策略在保持服务吞吐的同时显著降低写入开销与闪存磨损。该工作为生成式推荐的大规模服务提供了存储层面的可行方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

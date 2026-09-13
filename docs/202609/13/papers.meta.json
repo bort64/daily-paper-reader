@@ -1,0 +1,24 @@
+{
+  "label": "2026-09-13",
+  "date": "2026-09-13",
+  "generated_at": "2026-09-13T21:09:53",
+  "count": 1,
+  "papers": [
+    {
+      "paper_id": "202609/13/2609.07175v1-enabling-high-bandwidth-flash-for-generative-recommendation-serving-with-write-aware-kv-cache-policy",
+      "section": "quick",
+      "title_en": "Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy",
+      "authors": "Danni Peng, Kai Wu, Tianyu Zuo, Pengfei Xia, Hui Zang",
+      "date": "2026-09-07",
+      "pdf": "https://arxiv.org/pdf/2609.07175v1",
+      "score": "7.0",
+      "evidence": "生成式推荐服务中的KV缓存复用",
+      "tldr": "生成式推荐依赖用户级 KV cache 复用避免重算长历史，但容量与带宽压力大。HBF 容量高于 HBM 且读带宽接近 HBM，适合扩展 KV cache，但传统 LRU 将写入与缺失耦合，写流量耗尽闪存寿命。本文评估基于准入控制 LRU-K 的写感知 KV cache 策略，过滤低复用用户以解耦写入与缺失。结果表明 HBF 系统吞吐达纯 HBM 的 3.8–4.7 倍，K=10 时寿命从约一年延至六年以上，吞吐相当或略优。",
+      "tags": "query:search-rec",
+      "abstract_en": "Generative recommendation (GR) systems increasingly leverage user-level KV cache reuse to avoid recomputing long user histories. However, the growing KV cache capacity and bandwidth requirements introduce new challenges for memory system. High-Bandwidth Flash (HBF) provides a promising solution by offering substantially higher capacity than HBM while approaching HBM-class read bandwidth, enabling larger scale KV cache retention and improved serving throughput. Yet conventional Least-Recently-Used (LRU) KV cache management tightly couples KV cache writes with cache misses, generating excessive write traffic that rapidly exhausts flash endurance. In this work, we evaluate a write-aware KV cache policy based on admission-controlled LRU-K for HBF-based GR serving. By filtering low-reuse users before cache admission, LRU-K decouples KV cache writes from misses and significantly reduces unnecessary writes. We develop an analytical model to characterize GR serving performance, KV cache write traffic, and HBF lifetime, and evaluate performance across diverse memory systems and GR workloads. Our results show that HBF-based systems achieve 3.8 to 4.7 times higher throughput than HBM-only systems. Moreover, LRU-K extends HBF lifetime from about one year under conventional LRU to over six years with a moderate K=10, while maintaining comparable or even slightly improved throughput. These results highlight the importance of write aware KV cache policy for sustainable HBF-based GR serving.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}
