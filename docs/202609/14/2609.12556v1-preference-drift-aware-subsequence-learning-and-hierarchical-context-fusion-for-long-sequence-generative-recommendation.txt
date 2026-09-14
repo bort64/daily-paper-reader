@@ -1,0 +1,786 @@
+Title: Preference-Drift-Aware Subsequence Learning and Hierarchical Context Fusion for Long-Sequence Generative Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.12556v1
+
+Published Time: Mon, 14 Sep 2026 00:56:21 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# Preference-Drift-Aware Subsequence Learning and Hierarchical Context Fusion for Long-Sequence Generative Recommendation 
+
+# Fei Li 1, Qingyun Gao 1, Jianzhe Zhao 1†, Guibing Guo 1†, Beibei Kong 2†, Lei Cheng 2, Chengxiang Zhuo 2, Zang Li 2
+
+> 1
+
+Software College, Northeastern University, Shenyang, China  
+
+> 2
+
+Platform and Content Group, Tencent, Shenzhen,China {neulifei,qingyungao}@stumail.neu.edu.cn, {zhaojz,guogb}@swc.neu.edu.cn, {echokong,raycheng,felixzhuo,gavinzli}@tencent.com 
+
+Abstract 
+
+Long-sequence generative recommendation methods autore-gressively model the user’s interaction sequence to gener-ate the next-item representation. Existing methods generally fall into two categories: efficient full-sequence modeling and target-aware context retrieval. Our experiments reveal that as the sequence length increases, the former incurs steadily growing computational cost while its accuracy gains quickly saturate and even degrade due to noise; the latter, though shortening the input sequence, is susceptible to noise that is semantically consistent yet preference-inconsistent, as well as to incomplete contexts. Both paradigms ignore the dy-namic changes of user preferences and the cross-subsequence dependencies when handling historical information, thereby limiting accuracy and efficiency. To address these issues, we propose a preference-drift-aware subsequence learning and hierarchical context fusion for long-sequence generative rec-ommendation. Specifically, we learn differentiable soft sub-sequence boundaries using multidimensional preference-drift information and aggregate items within each subsequence into preference-coherent representations via linear attention with soft assignment weights, thereby circumventing the expense of full-sequence attention. A cross-attention mechanism is then employed to capture dependencies between recent inter-actions and relevant subsequence contexts, mitigating noise in learning recent-item representations. Finally, a gated fu-sion mechanism adaptively combines the recent-item repre-sentation with the global subsequence context, allowing the resulting target representation to encode both recent and long-term preferences. Extensive experiments demonstrate that our method consistently outperforms existing baselines in both recommendation accuracy and computational efficiency. 
+
+# Introduction 
+
+Recommender systems are shifting from conventional multi-stage discriminative paradigms to generative recommenda-tion systems (Bai et al. 2026). While discriminative methods rely on query–candidate matching for next-item prediction, generative methods cast recommendation as sequence gen-eration, autoregressively producing the next-item represen-tation conditioned on a user’s interaction history. P5 (Geng et al. 2022) first unified diverse recommendation tasks as conditional text generation under a single language-modeling 
+
+> †
+
+Guibing Guo, Jianzhe Zhao, and Beibei Kong are correspond-ing authors. 
+
+objective. To improve the semantic structure and generation efficiency of item identifiers, TIGER (Rajput et al. 2023) as-signs each item a discrete semantic identifier (SID) via resid-ual quantization and trains a sequence-to-sequence Trans-former to generate the next item’s SID. However, this two-stage design decouples tokenization from the downstream objective, leaving the tokenizer unsupervised and potentially yielding suboptimal identifiers. DIGER (Fu et al. 2026) en-ables recommendation-aware codebook updates via differ-entiable indexing and mitigates codebook collapse through annealed Gumbel noise. Nevertheless, these methods incur quadratic time and memory costs with respect to sequence length, limiting their ability to model complete user histories. To address the high computational complexity of full-sequence modeling, existing long-sequence generative rec-ommendation methods can be broadly categorized into two lines of work. (1) Efficient full-sequence modeling methods improve scalability through optimized interaction operators and attention mechanisms while preserving broad historical coverage. For example, HSTU (Zhai et al. 2024) achieves effi-cient sequence modeling by replacing softmax attention with point-wise activation and temporal gating. RankMixer (Zhu et al. 2025) improves the efficient modeling of feature in-teractions. However, coupling temporal signals with item semantics may cause interference. FuXi-Linear (Ye et al. 2026) addresses this by decoupling temporal dynamics and positional information into dedicated channels. (2) Target-aware context retrieval methods reduce the input sequence length via interest compression or item semantic retrieval. For example, CAUSE (Liu et al. 2026) and DualGR (Yi et al. 2026) compress long-term historical behaviors into a small set of interest representations based on item categories and interest disentanglement, respectively. To avoid discard-ing fine-grained information relevant to the current target, GLASS (Cao et al. 2026) performs coarse-grained predic-tion on recent items via a hierarchical SID mechanism. Then it uses the resulting prediction as a dynamic key to retrieve a semantically related subset of items. However, our assumption-validation experiments reveal that both categories of methods struggle to balance accuracy and efficiency. (1) Efficient full-sequence modeling methods incur costs that scale with sequence length but yield limited or even negative accuracy gains (Table1). (2) The performance of target-aware retrieval methods declines as sequence length arXiv:2609.12556v1 [cs.IR] 11 Sep 2026 increases. Although increasing the retrieval size initially im-proves performance, further expansion beyond a certain point degrades performance (Figure1). Overall, their performance limitations can be attributed to the former’s homogeneous treatment of historical interactions and the latter’s reliance on retrieval based on a single similarity measure. Consequently, neither can effectively model the stage-wise evolution of user interests or the dependencies among subsequences. To address these problems, we propose DRIFT, apreference-Drift-awaRe subsequence learning and hIerarchi-cal context Fusion meThod for long-sequence generative rec-ommendation. Unlike efficient full-sequence modeling with uniform aggregation and target-aware context retrieval rely-ing on single-similarity filtering, our core idea is twofold. (1) We adaptively partition the long history into preference-consistent subsequences using preference drift information. (2) We model local- global contextual dependencies with lin-ear complexity, thereby balancing accuracy and efficiency. Specifically, we first leverage multidimensional preference-drift information—including semantic shifts, temporal inter-vals, and interest distributions—to learn differentiable soft boundaries that partition a long interaction history into a few preference subsequences. Items are aggregated via lin-ear attention weighted by item soft memberships, yielding preference-consistent subsequence representations that ef-fectively filter historical noise irrelevant to the corresponding subsequence preference. Secondly, we devise a hierarchi-cal context fusion mechanism. Recent items interact with the subsequence representations through cross-attention, which incorporates context from preference-consistent sub-sequences while filtering out preference-inconsistent noise. A gating mechanism then adaptively fuses the local recent context with the global subsequence context, enabling the target-item representation to capture both recent and long-term preferences. Across three public datasets, DRIFT im-proves the performance of three backbones, achieving up to a 21.6% gain in Recall@20 and a 97.4% reduction in train-ing time, demonstrating superior accuracy and efficiency in long-sequence generative recommendation. 
+
+# Assumption Validation 
+
+In this section, we study how sequence length affects long-sequence generative recommendation through two experi-ments: (1) the impact on efficient full-sequence modeling’s accuracy and efficiency; and (2) the impact of sequence lengths and retrieval sizes on target-aware context retrieval. Dataset Len. HSTU Fuxi-Linear N@5 Time (s) #P (M) N@5 Time (s) #P (M) KuaiRec 50 0.0676 1.62 1.04 0.0541 1.55 1.08                                           
+
+> 100 0.0695 1.60 1.05 0.0526 1.58 1.09 500 0.0652 2.05 1.09 0.0498 3.87 1.14 1,000 0.0689 3.06 1.14 0.0536 16.02 1.20 Taobao MM 50 0.1338 3.09 201.34 0.1340 17.98 100.71
+> 100 0.1337 3.99 201.34 0.1340 16.52 100.72 500 0.1338 10.95 201.38 0.1339 36.56 100.77 1,000 0.1338 21.44 201.43 0.1339 609.47 100.84
+
+Table 1: Performance comparison between HSTU and Fuxi-Linear across different sequence lengths. To assess the accuracy and efficiency of efficient full-sequence modeling methods , we evaluate HSTU(Zhai et al. 2024) and FuXi-Linear(Ye et al. 2026) on the KuaiRec and Taobao MM datasets across input sequence lengths of 
+
+{50 , 100 , 500 , 1000 }, while keeping other experimental set-tings identical to ensure a fair comparison. As shown in Ta-ble 1, increasing the sequence length yields diminishing or even negative accuracy gains while substantially increasing training time. On KuaiRec, both methods achieve their best or near-best NDCG@5 with short sequences, whereas longer histories introduce fluctuations or degradation; on Taobao MM, NDCG@5 remains nearly unchanged across sequence lengths. In contrast, when the sequence length increases from 50 to 1,000, HSTU’s training time grows by up to 6.9 ×, while that of Fuxi-Linear increases by up to 33.9 ×. Experimental results show that, as sequence length increases, the growing number of target-irrelevant interactions degrades recommen-dation accuracy and computational efficiency. 
+
+Figure 1: Performance of GLASS Across Different Sequence Lengths and Retrieval Scales. To assess how sequence length and retrieval size influence target-aware context retrieval , we evalu-ate GLASS (Cao et al. 2026) under sequence lengths 
+
+{100 , 500 , 1000 } and retrieval sizes {0, 10 , 30 , 50 , 70 , 90 }.Appendix details experimental settings. As shown in Fig-ure 1, both factors affect performance, though their impact varies across datasets. For sequence length, GLASS attains its best Recall@5 at length 100 (0.0831 on KuaiRec, 0.0931 on Taobao MM); increasing the length to 1,000 reduces Recall@5 by 7.3% and 33.7%, respectively. These results suggest that excessively long sequences introduce outdated or target-irrelevant interactions, thereby degrading perfor-mance. For retrieval size, without item retrieval, Recall@5 is 0.0761 (KuaiRec) and 0.0442 (Taobao MM). On KuaiRec, performance peaks at 0.0777 with 30 items—only a marginal gain over no retrieval—while 10 items lower Recall@5 to 0.0674. On Taobao MM, retrieval yields substantial gains: Recall@5 reaches 0.1415 with 10 items, up from 0.0442 without retrieval; further increasing the retrieval size leads to a slight decline (0.1344–0.1349). These results indicate that retrieving too few items may omit useful contextual information, whereas retrieving too many may introduce se-mantically similar but target-misaligned noise. Overall, re-lying on a single similarity metric prevents GLASS from effectively filtering such preference-inconsistent noise. Figure 2: The overall framework diagram of DRIFT. 
+
+# Methodology 
+
+We first introduce the notation and formally define generative recommendation. We then present DRIFT, which consists of a preference-drift-aware subsequence learning module and a hierarchical context fusion module, followed by the train-ing procedure and computational complexity analysis. The overall framework is illustrated in Figure 2. 
+
+Preliminaries 
+
+Let the chronologically ordered interaction sequence of user 
+
+u be Iu = {(i1, t 1), (i2, t 2), . . . , (iL, t L)} , where ij denotes the item involved in the j-th interaction and tj is the corre-sponding timestamp. In generative recommendation, each item i is represented as a sequence of M discrete tokens: 
+
+zi =
+
+
+
+z(1)  
+
+> i
+
+, . . . , z (M )
+
+> i
+
+
+
+, where z(m) 
+
+> i
+
+∈ V and V denotes the shared token vocabulary. Here, M is the number of to-kens used to represent an item. These tokens can be learned by embedding models such as BGE (Chen et al. 2024) and Qwen3 (Zhang et al. 2025). Generative recommendation for-mulates next-item prediction as the autoregressive generation of the target item’s token sequence: 
+
+P (iL+1 | I u) = 
+
+> M
+
+Y
+
+> m=1
+
+P
+
+
+
+z(m) 
+
+> iL+1
+
+| z(<m ) 
+
+> iL+1
+
+, Iu
+
+
+
+. (1) We further divide the user interaction sequence Iu into a recent interaction sequence Ru = {iL−r+1 , . . . , i L}, and a historical interaction sequence Hu = {i1, . . . , i L−r } .
+
+Preference-drift-aware Subsequence Learning 
+
+We propose a differentiable subsequence partitioning method driven by multidimensional preference-drift information. It segments each user’s historical interaction sequence into preference-consistent subsequences, with the number of sub-sequences adaptively determined for each user. 
+
+Preference-Drift-Based Boundary Scoring. Given the lim-ited ability of a single drift metric to characterize preference drift, we designed a drift characterization operator ϕ that jointly models drift across three dimensions: semantic, tem-poral, and categorical. For user u’s interaction with item 
+
+ij at time tj , we define ϕij =
+
+h
+
+1 − cos( zij , zij−1 ); zij −
+
+zij−1 ; log(1 + ∆ tj ); JSD( Pj−w:j ∥Pj:j+w)
+
+i
+
+. These four terms capture semantic dissimilarity, feature variation, in-teraction interval, and categorical distribution shift across the local windows around ij , respectively. Subsequently, we employ a lightweight multilayer perceptron (MLP) to map the drift representation to a boundary score: 
+
+bj> 1 = σ MLP b(ϕij ) · 1[j is valid ], b1 = 0 , (2) where σ(·) denotes the sigmoid function, and 1[·] masks invalid positions. The boundary score bj> 1 ∈ [0 , 1] quantifies the likelihood that user u enters a new preference stage at position j. A higher score indicates that the corresponding position is more likely to mark a boundary between two adjacent preference stages. Since the first position in the sequence has no preceding interaction, we set b1 = 0 .To accommodate the heterogeneity of preference-drift tra-jectories across users, we aggregate the position-wise bound-ary scores {bj } into three user-level statistics: the average boundary strength ¯bu, the boundary variance vu, and the normalized history length ℓu. Based on these statistics, we adaptively estimate the number of subsequences: 
+
+κu = 1 + ( K − 1) σ θ0 + du + θL ℓu + θb ¯bu + θv vu
+
+, (3) where θ0 and du are the drift constants. The value κu ∈ [1 , K ]
+
+grows monotonically with boundary density, drift-point con-centration, and history length, enabling personalized adap-tation of the subsequence number. We accumulate boundary scores into monotonically increasing soft coordinates and normalize them to the range [1 , κ u]:
+
+rj = 1 + ( κu − 1) 
+
+P  
+
+> τ≤j
+
+bτ
+
+PL−rτ =1 bτ + ϵ . (4) 
+
+Subsequence Learning with Soft Memberships. We de-sign a soft-membership-based linear attention mechanism to learn preference-consistent subsequence representations. Specifically, each candidate subsequence k is anchored to a fixed center μk = k and equipped with a soft validity gate 
+
+mk = σ (κu − k + 0 .5) /τ m
+
+, which smoothly suppresses stages beyond the user-specific horizon κu. We set τm = 0 .3.The membership of item ij in subsequence k is then defined by a gated Gaussian kernel over the soft coordinate rj :
+
+aj,k = mk exp   − (rj − μk)2/τ a
+
+PKv=1 mv exp   − (rj − μv )2/τ a
+
+ + ϵ . (5) To mitigate over-smoothing while preserving end-to-end dif-ferentiability, we further sharpen the assignments using the Gumbel-Softmax reparameterization: 
+
+yj,k =exp 
+
+  log( aj,k + ε) + gj,k 
+
+/τ g
+
+PKv=1 exp 
+
+  log( aj,v + ε) + gj,v 
+
+/τ g
+
+ , (6) where gj,k , g j,v ∼ Gumbel(0 , 1) , and τa and τg denote the temperature parameters of the Gaussian kernel and the Gumbel-Softmax, respectively. Here, τa = 0 .5, τ g = 1 .0.Building upon the soft membership weights yj,k , we define subsequence linear attention. These weights confine the rep-resentation learning of each subsequence to its own members, thereby avoiding cross-subsequence interference. Each sub-sequence k is associated with a learnable query pk. Through the shared projections qk = WQpk, kj = WK zj , and 
+
+vj = WV zj , we adopt the feature map ϕ(x) = elu( x) + 1
+
+to compute the attention weight for head h:
+
+β(h) 
+
+> j,k
+
+= yj,k ϕ(q(h) 
+
+> k
+
+)⊤ϕ(k(h) 
+
+> j
+
+)
+
+P 
+
+> ℓ
+
+yℓ,k ϕ(q(h) 
+
+> k
+
+)⊤ϕ(k(h) 
+
+> ℓ
+
+) + ϵ . (7) The subsequence representation sk can be calculated as 
+
+sk = LN 
+
+ o(1)  
+
+> k
+
+; . . . ; o(h) 
+
+> k
+
+; . . . ; o(H)
+
+> k
+
+
+
+, (8) where the h-th head output is o(h) 
+
+> k
+
+= PL−rj=1 β(h) 
+
+> j,k
+
+v(h) 
+
+> j
+
+, and 
+
+LN denotes the layer normalization operation. 
+
+Hierarchical Context Fusion 
+
+The historical subsequences S = [ s1; . . . ; sK ] ∈ RK×d en-code the user’s long-term preferences as they evolve, whereas the recent interaction window Ru captures short-term pref-erences. Naively concatenating the two may allow irrelevant historical subsequences to interfere with short-term pref-erences; conversely, focusing solely on recent interactions overlooks important long-term preferences. To address this issue, we propose a hierarchical context fusion mechanism that adaptively integrates recent and long-term preferences. 
+
+Recent Preference Context Fusion. We employ an autore-gressive encoder (e.g., T5 (Raffel et al. 2020) or HSTU (Zhai et al. 2024)) to learn recent item representations, i.e., 
+
+˜R = R(i) + fA
+
+
+
+LN 1
+
+
+
+R(i) 
+
+, (9) where fA represents an attention method. In each encoder block, we use the cross-attention to capture the correlation between recent items and subsequence representations: 
+
+ˆR = ˜R + CrossAttn 
+
+
+
+LN 2
+
+ ˜R
+
+
+
+, K = V = S
+
+
+
+,
+
+R(i+1) = ˆR + FFN 
+
+
+
+LN 3
+
+ ˆR
+
+ 
+
+.
+
+(10) The resulting correlation weights enable each recent item to attend selectively to subsequence contexts that are consis-tent with its underlying preference, thereby mitigating the noise introduced by subsequences that are semantically sim-ilar but preference-inconsistent. Consequently, the hidden state R∗ = LN( R(N )) encodes recent preference context. 
+
+Local-Global Context Fusion. We further perform adap-tive context fusion at the decoder level. The decoder gener-ates the token representations zdec of the target item in an autoregressive manner. At each decoding step, we design a gated cross-attention mechanism to fuse the recent context and global subsequence context. Specifically, this mechanism comprises two cross-attention operations. The first captures local dependencies with the recent context by attending to 
+
+R∗, and the second captures global dependencies across the subsequence context by attending to S, i.e., 
+
+CA 1 = CrossAttn( zdec , R∗) ,
+
+CA 2 = CrossAttn( zdec , S) . (11) The resulting contextual representations are then jointly used to estimate a gate that adaptively combines recent and long-term preferences. The gate g dynamically controls the con-tribution of each context: smaller gate values favor the recent context, whereas larger values assign greater importance to the global subsequence context. Formally, 
+
+g = σ(Wg [zdec ; CA 2] + bg ) ,
+
+z′ 
+
+> dec
+
+= zdec + (1 − g) ⊙ CA 1 + g ⊙ CA 2, (12) where ⊙ denotes element-wise multiplication. 
+
+Model Training 
+
+Our method is applicable to target-aware context retrieval methods (e.g., GLASS) and efficient full-sequence modeling methods (e.g., HSTU), unified by a loss framework: 
+
+L = Ltask + λsub Lsub , (13) where Ltask is the paradigm-specific recommendation loss and Lsub is a generic subsequence structure constraint. 
+
+Lsub = X
+
+> u,k
+
+mu,k 
+
+BK 
+
+
+
+sem u,k + λttime u,k + λc cat u,k 
+
+
+
+, (14) where B is the training batch size, and the validity gate 
+
+mu,k . sem u,k minimizes the cosine distance to the subse-quence centroid. time u,k penalizes large gaps between adja-cent items assigned to the same subsequence. cat u,k encour-ages items within the subsequence to share similar categories. 
+
+λt and λc are weighting coefficients. Take GLASS (Cao et al. 2026) as an example, we design 
+
+Ltask to consist of SID generation loss, recent context recom-mendation loss, and subsequence recommendation loss: 
+
+Ltask = LCE + λrec Lrec + λsub-rec Lsub-rec . (15) SID generation loss is the autoregressive cross-entropy over the target SID tokens, given by LCE =
+
+− P 
+
+> m
+
+log P  z(m) | z(<m ), Su
+
+. Lrec uses InfoNCE to align the enhanced hidden state zu = Pool( R∗) with the target item embedding, while Lsub-rec applies the same objective to the subsequence representation zsub = Pool( Hsub ).
+
+Time Complexity 
+
+Let L denote the sequence length, Lh = L − r the length of the long-term history, r the number of recent items, K the number of subsequences, and d the embed-ding dimension, where K, r ≪ L. Our method comprises two modules: preference-drift-aware subsequence learning and hierarchical Context Fusion. The overall complexity is 
+
+O LhKd + r2d + rKd  ≃ O (LKd ). Hence, our method scales linearly with the historical sequence length L.
+
+# Experiments 
+
+In this section, we conduct extensive experiments to validate our methods. Due to space constraints, additional details and results are in the Appendix .
+
+Experimental Settings 
+
+Description of Datasets and Baselines. We conduct exper-iments on three public datasets: KuaiRec (Gao et al. 2022), ML-20M (Harper and Konstan 2015), and Taobao MM (Wu et al. 2025). For KuaiRec and Taobao MM, the maximum sequence length is set to 1000 with 50 recent items; for ML-20M, it is set to 200 with 10 recent items. We follow the leave-one-out protocol and use the last two interactions of each user for validation and testing. We compare our method with the following baselines: two sequential recommendation methods (GRU4Rec (Hidasi et al. 2016) and SASRec (Kang and McAuley 2018)), two efficient full-sequence modeling methods (HSTU (Zhai et al. 2024) and Fuxi-Linear (Ye et al. 2026)), and three generative recommendation methods based on SIDs (TIGER (Rajput et al. 2023), DIGER (Fu et al. 2026), and GLASS (Cao et al. 2026)), where GLASS also belongs to the target-aware context retrieval methods. 
+
+Implementation Details. All methods are implemented in PyTorch and executed on NVIDIA A100 40GB. We evaluate performance using two widely adopted metrics, Recall@M and NDCG@M, with M ∈ { 5, 20 }. All methods use a hidden dimension of 96, sampled softmax with 500 negatives, and are evaluated by NDCG. SID-based generative recommen-dation methods use a T5-style encoder-decoder backbone with 4 encoder/decoder layers, an FFN dimension of 1024, 8 attention heads, a key/value dimension of 32, and dropout of 0.1. Moreover, for the SID-based generative recommenda-tion methods, items are represented by three-level SIDs, with codebook sizes of [256, 256, 256] on KuaiRec and ML-20M, and [64, 128, 128] on Taobao MM. In our method, the number 
+
+K of subsequences is selected from {10 , 20 , 30 }. The search range of λsub in Eq. (13) is {0.0, 0.02 , 0.05 , 0.1, 0.3}; those of 
+
+λt and λc in Eq. (14) are {0.0, 0.25 , 0.5, 0.75 , 1.0}; and those of λrec and λsub-rec in Eq. (15) are {0.1, 0.3, 0.5, 0.7, 1.0}. We use the AdamW (Loshchilov and Hutter 2019) optimizer to optimize the recommender. Models are trained for at most 100 epochs, with an early-stopping patience of 50. 
+
+Performance Comparison 
+
+Recommendation Accuracy. We compare DRIFT against seven baselines across KuaiRec, ML-20M, and Taobao MM, and integrate it with HSTU, TIGER, and GLASS. The re-sults are presented in Table 2. (1) DRIFT consistently im-proves accuracy across datasets and backbones. Specifically, on KuaiRec, DRIFT-HSTU performs best on all metrics, sig-nificantly improving NDCG@20 and Recall@20 over HSTU by 13.1% and 21.6%, respectively. On ML-20M, despite DI-GER and TIGER leading the baselines, DRIFT variants top all four metrics, substantially improving every backbone with gains of up to 74.3% over TIGER and 90.4% over GLASS. On Taobao MM, DRIFT-GLASS ranks first on three of four metrics. (2) DRIFT outperforms its backbones across HSTU, TIGER, and GLASS in all comparisons. It learns differen-tiable boundaries from preference-drift signals to partition long histories into preference-consistent subsequences, then integrates recent behavior and global preferences through lin-ear attention, cross-attention, and gated fusion. This design filters irrelevant history while preserving cross-subsequence dependencies. Its larger gains on KuaiRec and ML-20M sug-gest greater benefits under stronger preference drift or noisier histories, while the moderate gains on Taobao MM reflect differences in data distributions and backbone strength. 
+
+Computational Efficiency. By adaptively partitioning long interaction histories into a small number of preference-coherent subsequences and applying linear-complexity at-tention to them, DRIFT effectively filters out preference-inconsistent noise, substantially reducing training costs while accommodating much longer input sequences. As shown in Table 3, DRIFT-GLASS supports sequences up to 20 ×
+
+longer than those handled by GLASS (increasing the max-imum sequence length from 50 to 1,000), while achieving 
+
+3.9× and 2.7× faster per-epoch training on KuaiRec and Taobao MM, respectively. DRIFT-Tiger delivers up to 80 .4×
+
+training speedup and 22 .4× inference speedup over Tiger on Taobao MM (and 38 .6× and 7.6× on KuaiRec). Meanwhile, DRIFT-HSTU cuts per-epoch training time by 37.6%–42.1% and GPU memory by 39.6%–61.1% compared with HSTU. These results confirm that modeling compact, preference-Method KuaiRec ML-20M Taobao MM N@5 N@20 R@5 R@20 N@5 N@20 R@5 R@20 N@5 N@20 R@5 R@20 GRU4Rec 0.0687 0.0888 0.0892 0.1603 0.0089 0.0194 0.0155 0.0534 0.1344 0.1348 0.1350 0.1364 SASRec 0.0709 0.0924 0.0939 0.1703 0.0073 0.0155 0.0121 0.0419 0.1446 0.1453 0.1455 0.1477 HSTU 0.0689 0.0878 0.0865 0.1540 0.0027 0.0059 0.0044 0.0158 0.1338 0.1440 0.1439 0.1443 Fuxi-Linear 0.0536 0.0670 0.0680 0.1342 0.0042 0.0110 0.0083 0.0327 0.1339 0.1341 0.1341 0.1346 TIGER 0.0568 0.0716 0.0735 0.1239 0.0207 0.0396 0.0319 0.1004 0.0012 0.0016 0.0012 0.0025 DIGER 0.0208 0.0229 0.0537 0.0631 0.0233 0.0353 0.0356 0.0778 0.0285 0.0517 0.0456 0.1286 GLASS 0.0573 0.0737 0.0777 0.1346 0.0189 0.0359 0.0303 0.0922 0.1249 0.1288 0.1365 0.1500 DRIFT-HSTU 0.0753 † 0.0993 † 0.1006 † 0.1872 † 0.0275 0.0480 0.0391 0.1092 0.1442 0.1445 0.1447 0.1457 DRIFT-TIGER 0.0618 0.0800 0.0848 0.1493 0.0349 † 0.0615 0.0556 0.1504 0.1136 0.1184 0.1261 0.1425 DRIFT-GLASS 0.0639 0.0798 0.0881 0.1532 0.0345 0.0638 † 0.0577 † 0.1608 † 0.1439 0.1454 † 0.1472 † 0.1524 †
+
+Table 2: Experimental results of 10 methods on four evaluation metrics. The best overall results are highlighted in bold, while the best results among baselines are underlined. The symbol † indicates that our method significantly outperforms the optimal baseline at the 0.05 level based on the paired t-test. KuaiRec Taobao MM Method Train. Infer. VRAM Train. Infer. VRAM TIGER 301.30 221.40 23.10 2743.10 1871.50 23.10 +DRIFT 7.80 29.20 17.66 34.10 83.40 16.95                                              
+
+> ∆(%) -97.41 -86.81 -23.55 -98.76 -95.54 -26.62 GLASS 33.60 31.30 9.13 95.50 60.90 9.13
+> +DRIFT 8.70 31.10 17.75 34.90 84.80 17.04
+> ∆(%) -74.11 -0.64 +94.41 -63.46 +39.24 +86.64 HSTU 3.06 6.80 3.50 21.44 13.13 12.07 +DRIFT 1.91 6.70 1.36 12.41 7.41 7.29
+> ∆(%) -37.58 -1.47 -61.14 -42.12 -43.56 -39.60
+
+Table 3: Efficiency comparison across datasets. Train.: av-erage training time per epoch (s); Infer.: inference time (s);VRAM: GPU memory usage (GB). consistent subsequences effectively mitigates the efficiency bottleneck in long-sequence recommendation. 
+
+Ablation Experiments 
+
+Figure 3: Performance comparison of subsequence learning. 
+
+Effectiveness of Preference-drift-aware Subsequence Learning. To validate the preference drift-aware subse-quence learning module, we compare DRIFT with GLASS and two DRIFT variants: DRIFT-Uni, which uses uniform segmentation, and DRIFT-KM, which employs K-means-based segmentation. As shown in Figure 3, all subsequence compression-based methods outperform the retrieval-based GLASS method, indicating that compressing long sequences preserves broader historical information while mitigating context loss and noise. Among these methods, DRIFT achieves the best performance, with Recall@5 scores of 0.0881 on KuaiRec and 0.0577 on ML-20M. Unlike uni-form segmentation, which overlooks the irregular evolution of user preferences, and K-means segmentation, which re-lies solely on representational similarity, DRIFT adaptively learns soft boundaries based on preference drift signals. This enables the construction of subsequences with greater pref-erence consistency and effectively reduces noise in user his-tories, thereby demonstrating the effectiveness of preference drift-aware subsequence learning. Method KuaiRec Taobao MM N@5 R@5 N@5 R@5 Ours 0.0639 0.0881 0.1439 0.1472 
+
+w/o Recent-CA -5.32% -3.86% -2.08% -0.75% Subseq-Prefix -5.79% -5.22% -99.31% -99.12% w/o Global-CA -4.38% -5.45% -2.02% -1.29% Concat-Fuse -7.82% -5.45% -99.79% -99.66% Table 4: Ablation comparison of hierarchical context fusion. 
+
+Effectiveness of Hierarchical Context Fusion. As shown in Table 4, DRIFT consistently outperforms all variants on both datasets, validating the effectiveness of our hierarchi-cal context fusion mechanism. Specifically, (1) removing ei-ther w/o Recent-CA or w/o Global-CA consistently degrades performance, demonstrating that both local enhancement of recent preferences and long-term global context are essen-tial; (2) directly concatenating subsequence representations, as in Subseq-Prefix and Concat-Fuse , leads to a catastrophic performance collapse on Taobao MM, with N@5 dropping to approximately 10 −3 or lower, and also causes substan-tial degradation on KuaiRec. These results suggest that sub-sequence representations (encoding long-term preferences) and recent-item representations (capturing short-term tran-sitions) are inherently heterogeneous. Naive concatenation introduces noise arising from semantic-space misalignment, severely disrupting the decoder representations. In contrast, our gated fusion mechanism aligns contextual information through cross-attention and mitigates conflicts between het-erogeneous representations via adaptive weighting. It there-fore effectively captures both recent and long-term prefer-ences, achieving the best performance on both datasets. 
+
+Figure 4: Performance comparison of different loss weights. 
+
+Sensitivity Analysis 
+
+Impact of Training Losses. We investigate the impact of 
+
+λrec , λsub-rec , and λsub on the performance of our methods using the KuaiRec dataset. As shown in Figure 4, DRIFT-TIGER achieves the best performance with λrec = 0.1,
+
+λsub-rec ≈ 0.3, and λsub ≈ 0.02 , while DRIFT-GLASS fa-vors approximately 0.5, 0.1, and 0.1, respectively. Excessive structural regularization degrades performance. Moreover, all three losses are beneficial. Removing Lrec causes the largest performance drop, while excluding Lsub-rec or Lsub 
+
+also consistently reduces Recall@5. Overall, jointly opti-mizing these losses yields the best performance. 
+
+Figure 5: Performance comparison of different sequence lengths and subsequence numbers for our DRIFT-GLASS. 
+
+Impact of Sequence Length and Subsequence Number. 
+
+As shown in Figure 5, increasing the sequence length im-proves Recall@5 on KuaiRec while maintaining stable per-formance on Taobao MM, indicating that our method cap-tures long-term preferences and suppresses historical noise. Both datasets peak at 20 subsequences and vary only slightly across settings. Too few subsequences may mix distinct pref-erences, whereas too many may fragment coherent behaviors. Overall, our method is robust to both hyperparameters. 
+
+# Related Work 
+
+Generative Recommendation. SID-based recommenders represent items as discrete token sequences for constrained generation. TIGER (Rajput et al. 2023) first quantizes item representations and then trains a Transformer to generate SIDs. To address the mismatch caused by this separate train-ing, ETEGRec (Liu et al. 2025) and UniSID (Jiang et al. 2026) jointly optimize tokenization and recommendation, DIGER (Fu et al. 2026) further propagates recommenda-tion gradients to the codebook, and BLOGER (Bai et al. 2026) uses bilevel optimization to balance the two objec-tives. This line thus evolves from content-based tokeniza-tion to recommendation-aware SID learning. Another line of research redesigns identifier generation for efficiency. SE-TRec (Lin et al. 2025) and RPG (Hou et al. 2025) replace ordered SIDs with unordered tokens, enabling parallel pre-diction and constrained decoding. Despite advances in tok-enization and generation, these methods largely rely on dense self-attention over user histories, whose quadratic cost neces-sitates truncation and limits long-term preference modeling. 
+
+Long-sequence Generative Recommendation. Existing methods mainly fall into two categories: efficient full-sequence modeling and context reduction. The former re-designs interaction operators to preserve complete histories. HSTU (Zhai et al. 2024), RankMixer (Zhu et al. 2025), OneTrans (Zhang et al. 2026), and Make It Long, Keep It Fast (Guan et al. 2026) improve the scalability of long-sequence encoding through efficient architectures and train-ing strategies. FuXi-Linear (Ye et al. 2026) further decouples temporal dynamics from semantic interactions to reduce their interference. Although these methods retain broad behavioral coverage, they still process every event, including substan-tial irrelevant or redundant information. Context-reduction methods instead compress or retrieve historical behaviors. CAUSE (Liu et al. 2026), GEMs (Zhou et al. 2026), Du-alGR (Yi et al. 2026), and HiCoGen (Li et al. 2025) sum-marize histories using categories, temporal windows, disen-tangled interests, or hierarchical clustering. While efficient, such target-agnostic compression may discard infrequent but decisive behaviors. GLASS (Cao et al. 2026) alleviates this issue by using a predicted SID to retrieve intent-relevant his-torical items, but inaccurate coarse predictions can exclude useful evidence. Thus, full-sequence methods preserve infor-mation at the cost of redundant computation, whereas context reduction improves efficiency at the risk of information loss. 
+
+# Conclusions 
+
+We propose DRIFT to address the accuracy–efficiency trade-off and the ignore of preference drift modeling in long-sequence generative recommendation. Its core innovations include: (1) preference-drift-aware subsequence learning, which leverages multidimensional drift information to adap-tively segment user histories into preference-consistent sub-sequences, enabling contextual aggregation and noise filter-ing with linear computational complexity; (2) hierarchical context fusion, which enriches recent-interaction representa-tions through cross-attention and adaptively integrates local-global subsequence information via a gating mechanism, thereby effectively capturing both short- and long-term user preferences. Extensive experimental results demonstrate that our method outperforms existing baselines in computational efficiency and recommendation accuracy. References 
+
+Bai, Y.; Liu, C.; Zhang, Y.; Wang, D.; Yang, F.; Rabinovich, A.; Rong, W.; and Feng, F. 2026. Bi-Level Optimization for Generative Recommendation: Bridging Tokenization and Generation. In SIGIR , 53–64. Cao, S.; She, J.; Liu, J.; Zeng, B.; Guo, C.; Cai, K.; Luo, Q.; Tang, R.; Li, H.; Gai, K.; Li, Z.; and Yang, C. 2026. GLASS: A Generative Recommender for Long-sequence Modeling via SID-Tier and Semantic Search. arXiv:2602.05663. Chen, J.; Xiao, S.; Zhang, P.; Luo, K.; Lian, D.; and Liu, Z. 2024. M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation. In Findings of ACL 2024 ,2318–2335. Fu, J.; Ge, X.; Karatzoglou, A.; Arapakis, I.; Verberne, S.; Jose, J. M.; and Ren, Z. 2026. Differentiable Semantic ID for Generative Recommendation. In SIGIR , 369–379. Gao, C.; Li, S.; Lei, W.; Chen, J.; Li, B.; Jiang, P.; He, X.; Mao, J.; and Chua, T.-S. 2022. KuaiRec: A Fully-observed Dataset and Insights for Evaluating Recommender Systems. In CIKM , 540–550. Geng, S.; Liu, S.; Fu, Z.; Ge, Y.; and Zhang, Y. 2022. Rec-ommendation as Language Processing (RLP): A Unified Pre-train, Personalized Prompt & Predict Paradigm (P5). In Rec-Sys , 299–315. Guan, L.; Yang, J.-Q.; Zhao, Z.; Zhang, B.; Sun, B.; Luo, X.; Ni, J.; Li, X.; Qi, Y.; Fan, Z.; Wang, H.; Chen, Q.; Cheng, Y.; Zhang, F.; and Yang, X. 2026. Make It Long, Keep It Fast: End-to-End 10k-Sequence Modeling at Billion Scale on Douyin. In WWW , 7989–7998. Harper, F. M.; and Konstan, J. A. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Inter-active Intelligent Systems , 5(4). Hidasi, B.; Karatzoglou, A.; Baltrunas, L.; and Tikk, D. 2016. Session-based recommendations with recurrent neural net-works. In International Conference on Learning Represen-tations .Hou, Y.; Li, J.; Shin, A.; Jeon, J.; Santhanam, A.; Shao, W.; Hassani, K.; Yao, N.; and McAuley, J. 2025. Generating Long Semantic IDs in Parallel for Recommendation. In KDD ,956–966. Jiang, J.; Zhang, X.; Zhang, E.; Xiong, Y.; Zhang, J.; Wang, J.; Yu, H.; Wang, Y.; Wang, H.; Yan, X.; and Jiang, J. 2026. End-to-End Semantic ID Generation for Generative Adver-tisement Recommendation. arXiv:2602.10445. Kang, W.-C.; and McAuley, J. 2018. Self-attentive sequential recommendation. In ICDM , 197–206. IEEE. Kingma, D. P.; and Ba, J. 2015. Adam: A Method for Stochas-tic Optimization. In ICLR .Li, W.; Wang, S.; Cai, K.; Deng, J.; Wang, X.; Hu, Q.; Lian, D.; and Zhou, G. 2025. Taming Ultra-Long Behavior Se-quence in Session-wise Generative Recommendation. In 
+
+CIKM .Lin, X.; Shi, H.; Wang, W.; Feng, F.; Wang, Q.; Ng, S.-K.; and Chua, T.-S. 2025. Order-agnostic Identifier for Large Language Model-based Generative Recommendation. In SI-GIR , 1923–1933. Liu, E.; Zheng, B.; Ling, C.; Hu, L.; Li, H.; and Zhao, W. X. 2025. Generative Recommender with End-to-End Learnable Item Tokenization. In SIGIR , 729–739. Liu, Q.; Fan, L.; Liu, Z.; Dong, X.; Luo, Y.; An, G.; Chen, N.; Guo, W.; Liu, Y.; and Wu, X.-M. 2026. Accelerating Generative Recommendation via Simple Categorical User Sequence Compression. In WSDM , 1195–1199. Loshchilov, I.; and Hutter, F. 2019. Decoupled Weight Decay Regularization. In ICLR .Raffel, C.; Shazeer, N.; Roberts, A.; Lee, K.; Narang, S.; Matena, M.; Zhou, Y.; Li, W.; and Liu, P. J. 2020. Explor-ing the limits of transfer learning with a unified text-to-text transformer. Journal of Machine Learning Research , 21(1). Rajput, S.; Mehta, N.; Singh, A.; Keshavan, R. H.; Vu, T.; Heldt, L.; Hong, L.; Tay, Y.; Tran, V. Q.; Samost, J.; Kula, M.; Chi, E. H.; and Sathiamoorthy, M. 2023. Recommender Systems with Generative Retrieval. In NeurIPS .Sun, F.; Liu, J.; Wu, J.; Pei, C.; Lin, X.; Ou, W.; and Jiang, P. 2019. BERT4Rec: Sequential Recommendation with Bidi-rectional Encoder Representations from Transformer. In 
+
+CIKM , 1441–1450. Wu, B.; Yang, F.; Chan, Z.; Gu, Y.-R.; Feng, J.; Yi, C.; Sheng, X.-R.; Zhu, H.; Xu, J.; Ye, M.; and Zheng, B. 2025. MUSE: A Simple Yet Effective Multimodal Search-Based Framework for Lifelong User Interest Modeling. arXiv:2512.07216. Ye, Y.; Guo, W.; Wang, H.; Zhang, L.; Chang, H.; Zhu, H.; Ye, Y.; Liu, Y.; Lian, D.; and Chen, E. 2026. FuXi-Linear: Un-leashing the Power of Linear Attention in Long-term Time-aware Sequential Recommendation. arXiv:2602.23671. Yi, Z.; Feng, K.; Ma, X.; Wang, Y.; Liu, Y.; Li, H.; Zhou, Z.; and Wang, Y. 2026. DualGR: Generative Retrieval with Long and Short-Term Interests Modeling. In WWW , 8329–8332. Zhai, J.; Liao, L.; Liu, X.; Wang, Y.; Li, R.; Cao, X.; Gao, L.; Gong, Z.; Gu, F.; He, J.; Lu, Y.; and Shi, Y. 2024. Ac-tions Speak Louder than Words: Trillion-Parameter Sequen-tial Transducers for Generative Recommendations. In ICML ,volume 235, 58484–58509. Zhang, Y.; Li, M.; Long, D.; Zhang, X.; Lin, H.; Yang, B.; Xie, P.; Yang, A.; Liu, D.; Lin, J.; Huang, F.; and Zhou, J. 2025. Qwen3 Embedding: Advancing Text Embedding and Reranking Through Foundation Models. arXiv:2506.05176. Zhang, Z.; Pei, H.; Guo, J.; Wang, T.; Feng, Y.; Sun, H.; Liu, S.; and Sun, A. 2026. OneTrans: Unified Feature Interaction and Sequence Modeling with One Transformer in Industrial Recommender. In WWW , 8162–8170. Zhou, Y.; Guo, C.; Cai, K.; Liu, J.; Luo, Q.; Tang, R.; Li, H.; Gai, K.; and Zhou, G. 2026. GEMs: Breaking the Long-Sequence Barrier in Generative Recommendation with a Multi-Stream Decoder. arXiv:2602.13631. Zhu, J.; Fan, Z.; Zhu, X.; Jiang, Y.; Wang, H.; Han, X.; Ding, H.; Wang, X.; Zhao, W.; Gong, Z.; Yang, H.; Chai, Z.; Chen, Z.; Zheng, Y.; Chen, Q.; Zhang, F.; Zhou, X.; Xu, P.; Yang, X.; Wu, D.; and Liu, Z. 2025. RankMixer: Scaling Up Ranking Models in Industrial Recommenders. In CIKM ,6309–6316. Appendix A Dataset Description                   
+
+> Dataset KuaiRec ML-20M Taobao MM #Users 7,176 138,493 34,535 #Items 10,728 26,744 874,417 #Interactions 12,530,806 20,000,263 32,814,555 Sparsity 83.72% 99.46% 99.89% Avg. Seq. Len. 1,746.2 144.4 905.5
+
+Table 5: Statistics of the datasets. We evaluate our method on three public datasets span-ning diverse recommendation domains, scales, and inter-action densities: KuaiRec(Gao et al. 2022), a short-video dataset collected from Kuaishou; ML-20M(Harper and Kon-stan 2015), a widely used MovieLens benchmark; and Taobao MM(Wu et al. 2025), a large-scale multimodal e-commerce dataset. Their statistics are summarized in Table 5. These datasets represent complementary evaluation settings. KuaiRec is relatively dense (83.72% sparsity), with a small item catalog and exceptionally long user histories (1,746 in-teractions per user on average), making it well-suited for evaluating long-range sequential modeling. ML-20M is a medium-scale, sparse dataset (99.46% sparsity) with moder-ate sequence lengths and is a standard benchmark for sequen-tial recommendation. In contrast, Taobao MM is large-scale and highly sparse (99.89% sparsity), with over 870K items and long behavior sequences (an average of 905 interactions). Its rich visual and textual features further enable evaluation at an industrial scale in a multimodal setting. 
+
+Preprocessing. For each dataset, we chronologically or-der user interactions and adopt the standard leave-one-out protocol: the last interaction is used for testing, the penul-timate one for validation, and the remainder for training. Following common practice (Kang and McAuley 2018; Sun et al. 2019), we remove users with fewer than five interac-tions and truncate histories to a predefined maximum length. For Taobao MM, whose raw sequences contain up to 1,000 events, we additionally impose a minimum history length to ensure sufficient context. 
+
+Semantic ID Construction. To construct semantic iden-tifiers (SIDs) for generative retrieval, we encode each item into a dense representation and quantize it using a residual-quantized variational autoencoder (RQ-VAE) (Rajput et al. 2023). For KuaiRec and ML-20M, we encode textual con-tent, including titles, tags, and categorical metadata, with a pretrained text embedding model BGE (Chen et al. 2024). For Taobao MM, we directly use the provided pretrained mul-timodal item embeddings. Three-level residual quantization then maps each item to a compact hierarchical SID. 
+
+# B Assumption Validation 
+
+B.1 Experiment Setting 
+
+To evaluate the impact on efficient full-sequence model-ing’s accuracy and efficiency , we compare HSTU (Zhai et al. 2024) and FuXi-Linear (Ye et al. 2026) on KuaiRec and Taobao MM with sequence lengths in {100 , 500 , 1000 }.Both models use a single layer with a hidden dimension of 96 .HSTU (Zhai et al. 2024) employs one attention head, whereas FuXi-Linear (Ye et al. 2026) comprises a 16 -dimensional linear temporal channel with 8 heads and base 2, a 16 -dimensional attention channel, and a 32 -dimensional posi-tional channel, with a dropout rate of 0.5. These two methods are trained for up to 100 epochs using AdamW (Loshchilov and Hutter 2019), early stopping with a patience of 50 , 500 
+
+sampled negatives, and a softmax temperature of 0.05 . The learning rate is set to 3 × 10 −4 for HSTU on KuaiRec and 
+
+1 × 10 −4 otherwise, with a weight decay of 0.01 on Taobao MM; FuXi-Linear uses a learning rate of 1 × 10 −4. Ex-periments use a fixed random seed of 2025 , and the best checkpoint is selected according to validation NDCG@20. To investigate the effects of sequence length and re-trieval size on target-aware context retrieval , we evaluate GLASS (Cao et al. 2026) on KuaiRec and T ao a bo MM by varying the user-history length L ∈ { 100 , 500 , 1000 }
+
+and the number of retrieved target-similar items N ∈{0, 10 , 30 , 50 , 70 , 90 }. Setting N = 0 turns off the retrieval branch, reducing GLASS to a generator conditioned solely on user history. Three hierarchical codewords represent each item learned by a residual-quantized autoencoder, with code-book sizes of [256 , 256 , 256] for KuaiRec and [64 , 128 , 128] 
+
+for Taobao MM. GLASS adopts a T5-style encoder–decoder architecture (Raffel et al. 2020) with four encoder and four decoder layers, a hidden size of 96 , a feed-forward dimension of 1024 , eight attention heads with a per-head dimension of 
+
+32 , and a dropout rate of 0.1. The model is trained using AdamW with a learning rate of 1 × 10 −4 and a weight decay of 0.01 for up to 100 epochs. Early stopping is applied based on validation NDCG@20 with a patience of 50 epochs, and predictions are generated autoregressively using beam search with a beam width of 20 . All other components and hyper-parameters are fixed across experimental settings. 
+
+# C Interest Drift Analysis in Long Behavior Sequences 
+
+We investigate whether long user behavior sequences com-prise locally coherent, yet temporally evolving, interest sub-sequences in the Taobao MM dataset. As shown in Figure 6, both Layer-1 SID and RQVAE representations exhibit pro-nounced high-similarity bands along the diagonal and dis-tinct blockwise patterns, indicating strong within-stage conti-nuity and clear transitions across stages. For instance, User 7 demonstrates stronger continuity between adjacent interac-tions, whereas User 15 shows greater alignment between the target item and historical interactions. The aggregate results in Table 6 further corroborate these observations. Across 4,997 valid users, adjacent items in the original sequences achieve a mean similarity of 0.630 , exceeding those in shuf-fled sequences and randomly sampled item pairs by 0.392 
+
+and 0.518 , respectively. Moreover, local coherence gradually weakens as the temporal span increases: the within-window similarity decreases from 0.630 at w = 2 to 0.444 at w = 20 ,while the diagonal-band gap narrows from 0.355 at d = 1 
+
+to 0.145 at d = 20 . A similar pattern emerges at the subse-Figure 6: Heatmap of item similarity within the sequence. quence level, where adjacent subsequences are consistently more similar than non-adjacent ones; for example, their sim-ilarities are 0.684 and 0.373 , respectively, when L = 5 . In addition, the target item is more closely aligned with recent interactions than with earlier ones, yielding similarities of 
+
+0.275 and 0.197 , respectively. Collectively, these findings suggest that long behavior sequences consist of coherent in-terest stages, undergo semantic transitions across stages, and exhibit a pronounced recency effect. This observation moti-vates the explicit modeling of dynamic interest subsequences and their contextual dependencies.                                                             
+
+> Metric Observed Reference Diff.
+> Adjacent-item similarity
+> Adjacent vs. shuffled 0.630 0.238 +0.392
+> Adjacent vs. random pairs 0.630 0.112 +0.518
+> Within-window similarity
+> w= 2 0.630 0.238 +0.392
+> w= 5 0.561 0.238 +0.323
+> w= 20 0.444 0.238 +0.206
+> Subsequence similarity
+> Adjacent vs. non-adjacent, L= 5 0.684 0.373 +0.311
+> Adjacent vs. non-adjacent, L= 10 0.697 0.436 +0.261
+> Adjacent vs. non-adjacent, L= 20 0.711 0.502 +0.209
+> Diagonal-band structure
+> Band gap, d= 1 0.355 ≈0+0.355
+> Band gap, d= 5 0.245 ≈0+0.245
+> Band gap, d= 20 0.145 ≈0+0.145
+> Target–history association
+> Target vs. complete history 0.218 0.114 +0.104
+> Target vs. recent/earliest five 0.275 0.197 +0.078
+
+Table 6: Sampled statistics of local semantic structure in Taobao MM behavior sequences. 
+
+# D Model Training 
+
+The training loss of our method consists of Ltask and Lsub :
+
+L = Ltask + λsub Lsub , (16) where Ltask is the paradigm-specific recommendation loss and Lsub is a generic subsequence structure loss. 
+
+D.1 Recommendation Loss 
+
+Our method is applicable to target-aware context retrieval methods and efficient full-sequence modeling methods. Be-cause these paradigms employ different recommendation ob-jectives, we denote their backbone-specific loss by Ltask . For DRIFT-GLASS, the recommendation loss consists of an SID generation objective and two complementary sequence-level recommendation objectives: 
+
+Ltask = LCE + λrec Lrec + λsub-rec Lsub-rec . (17) where λrec and λsub -rec balance the two auxiliary objectives. 
+
+SID Generation Loss. The primary objective LCE is the autoregressive cross-entropy over the target SID tokens. Let 
+
+qi,m ∈ { 0, 1} indicate whether the m-th target token of training instance i is a non-padding token, and let Ntok =
+
+PBi=1 
+
+PMm=1 qi,m . The loss is defined as 
+
+LCE = − 1
+
+Ntok 
+
+> B
+
+X
+
+> i=1
+> M
+
+X
+
+> m=1
+
+qi,m 
+
+× log P
+
+
+
+z(m) 
+
+> i
+
+| z(<m ) 
+
+> i
+
+, R∗ 
+
+> i
+
+, Si
+
+
+
+.
+
+(18) where R∗ 
+
+> i
+
+denotes the hidden state with recent context and Si
+
+contains the learned historical subsequence representations. This loss carries unit weight and provides the primary token-level supervision for SID generation. 
+
+Sequence-Level Recommendation Losses. Although LCE 
+
+supervises individual SID tokens, It does not directly en-force sequence-level alignment between a user representation and the corresponding target item. We therefore introduce two in-batch softmax objectives that provide complementary sequence-level discriminative supervision. Let ˜zui = zui /∥zui ∥2 and ˜ei = ei/∥ei∥2 denote the nor-malized user and target-item representations, respectively. The recent-context recommendation loss is 
+
+Lrec = − 1
+
+B
+
+> B
+
+X
+
+> i=1
+
+log exp  ˜z⊤ 
+
+> ui
+
+˜ei/τ PBj=1 exp  ˜z⊤ 
+
+> ui
+
+˜ej /τ  , (19) where zui = Pool( R∗ 
+
+> i
+
+) is the pooled enhanced encoder rep-resentation, ei is the representation of the target item, and τ is the temperature. The remaining B − 1 target representations in the mini-batch serve as in-batch negatives. Similarly, let zsub ,i = Pool ( Si) denote the representation obtained by pooling only the valid subsequence slots. Its nor-malized form is ˜zsub ,i = zsub ,i /∥zsub ,i ∥2. The subsequence recommendation loss is 
+
+Lsub -rec = − 1
+
+B
+
+> B
+
+X
+
+> i=1
+
+log exp 
+
+
+
+˜z⊤
+
+> sub ,i
+
+˜ei/τ 
+
+PBj=1 exp 
+
+
+
+˜z⊤
+
+> sub ,i
+
+˜ej /τ 
+
+ . (20) Both auxiliary objectives share the same temperature and target item representation. In our implementation, the target representation is retrieved from the shared SID embedding ta-ble using the first-tier SID code, i.e., ei = Embed( z(1)  
+
+> i
+
+). By requiring the aggregated subsequence representation to pre-dict the target independently, Lsub -rec discourages the subse-quence branch from degenerating into an inactive pathway. 
+
+D.2 Subsequence Structure Loss 
+
+The recommendation objectives supervise next-item predic-tion, but do not explicitly constrain the internal coherence of the learned subsequences. We therefore introduce Lsub to encourage each subsequence to contain semantically, tempo-rally, and categorically consistent interactions. Let au,j,k ∈ [0 , 1] denote the gated soft assignment of the 
+
+j-th historical interaction of user u to subsequence k, where 
+
+PKk=1 au,j,k = 1 . We use 
+
+mu,k = σ
+
+ κu − k + 12
+
+τm
+
+
+
+(21) as the validity gate that softly suppresses slots beyond the user-adaptive subsequence budget κu. Let Au,k = P 
+
+> j
+
+au,j,k 
+
+denote the soft mass assigned to subsequence k. The structure constraint is 
+
+Lsub = 1
+
+B
+
+> B
+
+X
+
+> u=1
+> K
+
+X
+
+> k=1
+
+mu,k 
+
+
+
+sem u,k 
+
++ λt time u,k + λc cat u,k 
+
+
+
+.
+
+(22) where K is the maximum number of candidate subsequences, while λt and λc control the temporal and categorical con-straints. Importantly, Eq. (22) averages over users but sums over subsequence slots. Because P 
+
+> k
+
+mu,k ≈ κu, the effec-tive regularization budget adapts to the number of subse-quences required by each user. 
+
+Semantic Coherence. We first define the assignment-weighted semantic centroid as 
+
+¯xu,k = 1
+
+Au,k 
+
+X
+
+> j
+
+au,j,k xu,j , (23) where xu,j is the semantic representation of the j-th histori-cal item. The semantic constraint is 
+
+sem u,k = 1
+
+Au,k 
+
+X
+
+> j
+
+au,j,k (1 − cos( xu,j , ¯xu,k )) . (24) Minimizing this term pulls co-assigned interactions toward a shared semantic prototype, thereby discouraging a subse-quence from mixing unrelated preferences. 
+
+Temporal Coherence. Let ∆tu,j = tu,j − tu,j −1 denote the interval between two chronologically adjacent interactions. We define 
+
+time u,k =
+
+P 
+
+> j≥2
+
+au,j,k au,j −1,k log(1 + ∆ tu,j )
+
+P 
+
+> j≥2
+
+au,j,k au,j −1,k + ϵ . (25) The pairwise weight au,j,k au,j −1,k restricts the penalty to ad-jacent interactions that are jointly assigned to the same subse-quence. Meanwhile, the logarithmic transformation limits the influence of exceptionally long inactivity intervals. Minimiz-ing this term, therefore, encourages preference boundaries to align with genuine temporal discontinuities. 
+
+Category Coherence. Because curated category labels are not consistently available across datasets, we use the first-tier SID code as a learning-free proxy for the item category. Let y(1)  
+
+> u,j
+
+be the one-hot first-tier SID code of the j-th item and define its assignment-weighted distribution within sub-sequence k as 
+
+¯y(1)  
+
+> u,k
+
+= 1
+
+Au,k 
+
+X
+
+> j
+
+au,j,k y(1)  
+
+> u,j
+
+. (26) The corresponding constraint is 
+
+cat u,k = 1
+
+Au,k 
+
+X
+
+> j
+
+au,j,k CE 
+
+
+
+y(1)  
+
+> u,j
+
+, ¯y(1) 
+
+> u,k
+
+
+
+= H
+
+
+
+¯y(1) 
+
+> u,k
+
+
+
+.
+
+(27) Thus, the weighted cross-entropy is exactly the entropy of the first-tier SID distribution within the subsequence. Mini-mizing this entropy encourages each subsequence to exhibit a concentrated coarse-semantic distribution rather than mixing heterogeneous preference categories. All three constraints operate on the differentiable soft assignments au,j,k . Conse-quently, their gradients propagate through the soft partition-ing process to both the boundary predictor and the adaptive subsequence budget κu, enabling end-to-end learning with-out subsequence boundary annotations. 
+
+# E Experiments 
+
+E.1 Implementation Details. 
+
+All models are implemented in PyTorch and trained on four NVIDIA A100 (40GB) GPUs. We use Recall@ M and NDCG@ M with M ∈ { 5, 20 } as the primary evaluation metrics. All methods use a hidden dimension of d = 96 .
+
+Sequence Modeling Baselines. GRU4Rec (Hidasi et al. 2016), SASRec (Kang and McAuley 2018), HSTU (Zhai et al. 2024), and FuXi-Linear (Ye et al. 2026) are trained with sampled softmax using 500 negative items per positive instance. HSTU and FuXi-Linear use a pointwise activation block with 1 block, 1 head, linear and attention dimensions of 16, and a dropout rate of 0.5. FuXi-Linear further decouples a positional channel of dimension 32 and a temporal channel with 8 heads and base 2. SASRec uses 1 Transformer block, 1 head, and a dropout rate of 0.2. GRU4Rec uses a single GRU layer with hidden size 96 and dropout rate 0.2. These four methods take as input the 1,000 most recent interactions from each of the KuaiRec and Taobao-MM datasets, along with the 200 most recent interactions from the ML20M dataset. These methods are optimized with AdamW (Loshchilov and Hutter 2019) at 1 × 10 −4, except GRU4Rec which uses Adam (Kingma and Ba 2015) at 3 × 10 −4. Weight decay is set to 0.01, except for GRU4Rec, where it is 1 × 10 −5.Models are trained for at most 100 epochs with an early stop-ping patience of 50. HSTU and FuXi-Linear use a softmax temperature of 0.05. SID-based Generative Recommendations. TIGER (Ra-jput et al. 2023), DIGER (Fu et al. 2026), and GLASS (Cao et al. 2026) adopt a T5-style encoder–decoder backbone with 4 encoder layers, 4 decoder layers, 8 attention heads, key/-value dimension 32, FFN dimension 1024, ReLU activation, and dropout rate 0.1. Items are encoded by three-level SIDs, with codebook sizes [256 , 256 , 256] for KuaiRec and ML-20M, and [64 , 128 , 128] for Taobao MM. During inference, the next item is generated via beam search with beam size 20 over the SID vocabulary, and the top-k results are evaluated for k ∈ { 5, 20 }. The model context length is fixed to 50 item tokens. The historical retrieval range H is set to 1000 on KuaiRec and Taobao MM, and 200 on ML-20M; the recent window size r is 50 on KuaiRec/Taobao MM and 10 on ML-20M. All models are optimized with AdamW (Loshchilov and Hutter 2019) using a learning rate of 1 × 10 −4, trained for up to 100 epochs with early stopping patience 50. 
+
+Hyperparameters of Our Method. The number of sub-sequences K is selected from {10 , 20 , 30 }. The search space of λsub in Eq. (16) is {0.0, 0.02 , 0.05 , 0.1, 0.3}; those of λt
+
+and λc in Eq. (22) are {0.0, 0.25 , 0.5, 0.75 , 1.0}; and those of 
+
+λrec and λsub-rec in Eq. (17) are {0.1, 0.3, 0.5, 0.7, 1.0}. The in-batch softmax recommendation losses Lrec and Lsub-rec 
+
+share a temperature τrec = 0 .07 . The subsequence structure loss Lsub is normalized only by the batch size B. The de-fault search initialization is λsub = 0 .05 , λt = λc = 0 .5,and λrec = λsub-rec = 0 .5. Our DRIFT is optimized with AdamW (Loshchilov and Hutter 2019) and trained for up to 100 epochs with early stopping patience 50. 
+
+Figure 7: Performance comparison of different sequence lengths and subsequence numbers for our DRIFT-GLASS. 
+
+E.2 Impact of Subsequence Constraint Weights (λt, λc)
+
+We analyze the sensitivity of DRIFT-GLASS to the inter-nal weights λt and λc in Lsub (Eq. (22)). Specifically, we sweep each weight over {0, 0.25 , 0.5, 0.75 , 1.0} while fix-ing the other to the default value of 0.5. As shown in Fig-ure 7, DRIFT-GLASS remains highly robust to both hy-perparameters. On KuaiRec, Recall@20 varies only within 
+
+[0 .147 , 0.154] when tuning λt and within [0 .152 , 0.155] 
+
+when tuning λc. On TaobaoMM, the fluctuation is even smaller, with an absolute variation no greater than 0.003 .The default setting λt = λc = 0 .5 consistently achieves near-optimal performance across datasets. Moreover, com-pletely disabling either constraint term (i.e., setting the cor-responding weight to 0) leads to performance degradation. These results indicate that temporal coherence and category consistency provide complementary but non-critical regular-ization effects. The observed insensitivity further suggests that the semantic coherence term sem , whose implicit weight is 1.0, plays the dominant role in Lsub .

@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-13</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-14</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 1 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 6 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>1</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-13 21:09:52 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-14 22:39:56 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日仅速读 1 篇，聚焦生成式推荐服务中高带宽闪存的写感知 KV Cache 策略（7.0/10）。值得关注的是它把 KV Cache 写入策略与高带宽闪存结合，瞄准生成式推荐在线服务的带宽瓶颈。普通读者可先了解 KV Cache 在推荐系统中的读写开销，再跟进该方案的落地效果。</p>
+<p>今日精读3篇、速读3篇推荐系统论文，重点覆盖长序列生成式推荐与生成式重排。最值得看的是9.0分的偏好漂移感知子序列学习与层次化上下文融合，以及8.0分提出推荐检索器需配验证器的通用生成式重排思路。普通读者可优先读这两篇，把握长序列建模和“先检索后验证”的落地启发。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +78,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">0 篇</strong>
+    <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Preference-Drift-Aware Subsequence Learning and Hierarchical Context Fusion for Long-Sequence Generative Recommendation">Preference-Drift-Aware Subsequence Learning and Hierarchical Context Fusion for Long-Sequence Generative Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Recommendation Retrievers Need Verifiers: Universal Generative Reranking for Sequential Recommendations">Recommendation Retrievers Need Verifiers: Universal Generative Reranking for Sequential Recommendations</span></li><li><span class="dpr-home-dashboard-paper-title" title="OneLA: Scaling Linear-Attention Decoding to Large Beams in Generative Recommendation">OneLA: Scaling Linear-Attention Decoding to Large Beams in Generative Recommendation</span></li></ul>
   </div>
-
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -91,12 +91,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">1 篇</strong>
+    <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy">Enabling High-Bandwidth Flash for Generative Recommendation Serving with Write-Aware KV Cache Policy</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="ChronicleRec: Pre-training Temporally Anchored Tokens for Lifelong User Modeling">ChronicleRec: Pre-training Temporally Anchored Tokens for Lifelong User Modeling</span></li><li><span class="dpr-home-dashboard-paper-title" title="UniRec: Cross-stage Multi-Task Fusion with Preference Alignment for Cascaded Recommender Systems">UniRec: Cross-stage Multi-Task Fusion with Preference Alignment for Cascaded Recommender Systems</span></li><li><span class="dpr-home-dashboard-paper-title" title="I Am AdMan: A Pipeline for Automatic Generation of Personalized Advertising Imagery">I Am AdMan: A Pipeline for Automatic Generation of Personalized Advertising Imagery</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
 </div>
 

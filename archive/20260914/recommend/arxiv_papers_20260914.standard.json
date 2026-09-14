@@ -1,0 +1,274 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-14T22:35:41.876155+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 3,
+    "deep_cap": 6,
+    "deep_selected": 3,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [
+    {
+      "id": "2609.12556v1",
+      "source": "arxiv",
+      "title": "Preference-Drift-Aware Subsequence Learning and Hierarchical Context Fusion for Long-Sequence Generative Recommendation",
+      "abstract": "Long-sequence generative recommendation methods autoregressively model the user's interaction sequence to generate the next-item representation. Existing methods generally fall into two categories: efficient full-sequence modeling and target-aware context retrieval. Our experiments reveal that as the sequence length increases, the former incurs steadily growing computational cost while its accuracy gains quickly saturate and even degrade due to noise; the latter, though shortening the input sequence, is susceptible to noise that is semantically consistent yet preference-inconsistent, as well as to incomplete contexts. Both paradigms ignore the dynamic changes of user preferences and the cross-subsequence dependencies when handling historical information, thereby limiting accuracy and efficiency. To address these issues, we propose a preference-drift-aware subsequence learning and hierarchical context fusion for long-sequence generative recommendation. Specifically, we learn differentiable soft subsequence boundaries using multidimensional preference-drift information and aggregate items within each subsequence into preference-coherent representations via linear attention with soft assignment weights, thereby circumventing the expense of full-sequence attention. A cross-attention mechanism is then employed to capture dependencies between recent interactions and relevant subsequence contexts, mitigating noise in learning recent-item representations. Finally, a gated fusion mechanism adaptively combines the recent-item representation with the global subsequence context, allowing the resulting target representation to encode both recent and long-term preferences. Extensive experiments demonstrate that our method consistently outperforms existing baselines in both recommendation accuracy and computational efficiency.",
+      "authors": [
+        "Fei Li",
+        "Qingyun Gao",
+        "Jianzhe Zhao",
+        "Guibing Guo",
+        "Beibei Kong",
+        "Lei Cheng",
+        "Chengxiang Zhuo",
+        "Zang Li"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-11T08:01:29+00:00",
+      "link": "https://arxiv.org/pdf/2609.12556v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "long-sequence generative recommendation autoregressively predicting next item",
+      "llm_evidence_cn": "长序列生成式推荐自回归生成下一物品",
+      "llm_evidence": "长序列生成式推荐自回归生成下一物品",
+      "canonical_evidence": "长序列生成式推荐自回归生成下一物品",
+      "llm_tldr_en": "Long-sequence generative recommendation autoregressively models user interactions to predict the next item, but full-sequence modeling saturates and target-aware retrieval suffers from preference-inconsistent noise. This paper proposes preference-drift-aware subsequence learning with hierarchical context fusion.",
+      "llm_tldr_cn": "长序列生成式推荐通过自回归建模用户交互序列来生成下一物品表示，但随序列增长，全序列建模计算成本持续攀升且精度饱和甚至因噪声下降，目标感知检索则易受语义一致却偏好不一致的噪声及上下文不完整影响。本文提出偏好漂移感知的子序列学习与层次化上下文融合方法，显式建模用户偏好的动态变化。实验表明该方法在长序列场景下兼顾效率与精度，优于两类现有范式，为长序列生成式推荐提供了新思路。",
+      "llm_tldr": "长序列生成式推荐通过自回归建模用户交互序列来生成下一物品表示，但随序列增长，全序列建模计算成本持续攀升且精度饱和甚至因噪声下降，目标感知检索则易受语义一致却偏好不一致的噪声及上下文不完整影响。本文提出偏好漂移感知的子序列学习与层次化上下文融合方法，显式建模用户偏好的动态变化。实验表明该方法在长序列场景下兼顾效率与精度，优于两类现有范式，为长序列生成式推荐提供了新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.12270v1",
+      "source": "arxiv",
+      "title": "Recommendation Retrievers Need Verifiers: Universal Generative Reranking for Sequential Recommendations",
+      "abstract": "First-stage recommenders in multi-stage systems produce a ranked candidate list from which a limited prefix is forwarded to downstream rankers. Because each forwarded item must be processed by more expensive ranking stages, this shortlist cannot be arbitrarily large. The first-stage objective is therefore high coverage of relevant items within the forwarded prefix, commonly measured by Recall@$k$. A relevant item may be available deeper in the retrieved list but absent from the shorter prefix that is actually consumed. This paper studies post-hoc verification for promoting such candidates into the consumed shortlist without retraining or replacing the retriever.   We introduce a lightweight generative verifier for retrieval models. Given a retriever state and a candidate item, the verifier scores the item through the likelihood of its identifier tokens. It is trained post hoc with next-token cross entropy, requires no sampled negatives or candidate pool during training, and scores only the retriever's top-$K$ candidates at inference. The interface is minimal: the retriever supplies a query state and candidate items, and the item representation can use any fixed tokenization.   Across Amazon product recommendation and YaMBDa music recommendation, the same verifier training recipe improves Recall@10 for SASRec, GRU4Rec, NextItNet, and MiniOneRec. Ablations show that the improvements are not explained solely by injecting item-content features into the retriever, supporting verification as a post-hoc output-side adaptation mechanism.",
+      "authors": [
+        "Benyu Zhang",
+        "Qiang Zhang",
+        "Rui Li",
+        "Qunshu Zhang",
+        "Devansh Tandon",
+        "Neeraj Bhatia"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-09-10T22:56:09+00:00",
+      "link": "https://arxiv.org/pdf/2609.12270v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "lightweight generative verifier reranking sequential recommendation retrievals",
+      "llm_evidence_cn": "面向序列推荐检索的轻量生成式验证重排序",
+      "llm_evidence": "面向序列推荐检索的轻量生成式验证重排序",
+      "canonical_evidence": "面向序列推荐检索的轻量生成式验证重排序",
+      "llm_tldr_en": "First-stage recommenders forward only a short prefix to expensive rankers, so relevant items deeper in the list are lost. The paper introduces a lightweight generative verifier that promotes such candidates into the consumed shortlist without retraining or replacing the retriever.",
+      "llm_tldr_cn": "多阶段推荐系统的第一阶段检索器只把有限前缀送入下游排序，导致列表中更深处的相关物品被丢弃，召回受限。本文提出一种轻量级生成式验证器，在不重训练、不替换检索器的前提下，将遗漏的相关候选提升到实际消费的短名单中。实验表明该方法可有效提升前 k 召回覆盖率，为序列推荐的生成式重排序提供了即插即用的解决方案。",
+      "llm_tldr": "多阶段推荐系统的第一阶段检索器只把有限前缀送入下游排序，导致列表中更深处的相关物品被丢弃，召回受限。本文提出一种轻量级生成式验证器，在不重训练、不替换检索器的前提下，将遗漏的相关候选提升到实际消费的短名单中。实验表明该方法可有效提升前 k 召回覆盖率，为序列推荐的生成式重排序提供了即插即用的解决方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.12399v1",
+      "source": "arxiv",
+      "title": "OneLA: Scaling Linear-Attention Decoding to Large Beams in Generative Recommendation",
+      "abstract": "Generative recommendation (GR) relies on large-beam decoding to generate hundreds of candidate items, creating a new scaling challenge for recurrent linear attention. Existing linear attention serving systems either materialize a full recurrent state for every beam or repeatedly replay shared history, incurring substantial memory and traffic overhead. To address this, we present OneLA, a linear-attention decoding framework that exploits the shared prompt and short divergent suffixes of GR workloads. Specifically, OneLA represents all beam states using a single shared prompt-derived state and compact, append-only records of their divergent transitions. Using this representation, OneLA computes only the state information required at each decoding step, without reconstructing a full recurrent state for every beam. Furthermore, OneLA uses a lightweight ancestry index to track the transition records that make up each beam's history, allowing beams to be updated without moving or copying existing records. A fused GPU kernel further reuses the shared state across beams. Our analysis shows that OneLA achieves 1.54-2.46x end-to-end decode speedups while substantially reducing recurrent-state memory use and data movement.",
+      "authors": [
+        "Xiangrui Yang",
+        "Cheng Peng",
+        "Yunfeng Zhao",
+        "Liang Zeng",
+        "Ao Hu",
+        "Jiawei Yang",
+        "Shengzhe Wang",
+        "Jingshan Lv",
+        "Xiao Liang",
+        "Chen Yang",
+        "Jiaqiang Liu",
+        "Yiming Qiu"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.DC",
+        "cs.IR"
+      ],
+      "published": "2026-09-11T03:41:06+00:00",
+      "link": "https://arxiv.org/pdf/2609.12399v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Linear-attention decoding framework for large-beam generative recommendation with hundreds of candidate items",
+      "llm_evidence_cn": "面向大束生成式推荐的线性注意力解码框架，需生成数百个候选物品",
+      "llm_evidence": "面向大束生成式推荐的线性注意力解码框架，需生成数百个候选物品",
+      "canonical_evidence": "面向大束生成式推荐的线性注意力解码框架，需生成数百个候选物品",
+      "llm_tldr_en": "OneLA scales linear-attention decoding to large beams in generative recommendation by sharing one prompt-derived state and storing only divergent transitions.",
+      "llm_tldr_cn": "生成式推荐依赖大束解码生成数百个候选物品，给循环线性注意力的服务带来内存与流量挑战。现有系统为每个束物化完整循环状态或重复回放共享历史，开销巨大。本文提出OneLA解码框架，利用共享提示与短发散后缀，用单一共享状态加追加式记录表示所有束状态，仅计算所需状态信息。该工作显著降低生成式推荐大束解码的内存与通信成本，为规模化生成式推荐服务提供了高效方案。",
+      "llm_tldr": "生成式推荐依赖大束解码生成数百个候选物品，给循环线性注意力的服务带来内存与流量挑战。现有系统为每个束物化完整循环状态或重复回放共享历史，开销巨大。本文提出OneLA解码框架，利用共享提示与短发散后缀，用单一共享状态加追加式记录表示所有束状态，仅计算所需状态信息。该工作显著降低生成式推荐大束解码的内存与通信成本，为规模化生成式推荐服务提供了高效方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.12375v1",
+      "source": "arxiv",
+      "title": "ChronicleRec: Pre-training Temporally Anchored Tokens for Lifelong User Modeling",
+      "abstract": "Modeling ultra-long user behavior sequences is crucial for industrial recommendation and online advertising, yet directly feeding thousands of historical actions into ranking models is computationally prohibitive, while truncation discards long-range signals. Existing lifelong-interest methods retrieve target-relevant behaviors for each candidate, coupling long-sequence modeling with candidate scoring and repeated online cost. Recent target-independent compression methods enable cached user summaries, but often append query tokens at the sequence end and use bidirectional encoding, producing unordered and redundant summaries that overlook temporal structure. We propose ChronicleRec, a pre-train-and-transfer framework that compresses an ultra-long behavior sequence once into a chronologically ordered set of Chronicle Tokens. ChronicleRec applies a recency-aware multi-granularity merge, preserving recent behaviors while coarsening distant history. It then interleaves query tokens with the merged sequence and uses a causal encoder, so each query summarizes only the history before its temporal anchor. A multi-horizon design masks different recent-history windows across parallel branches to learn complementary long-range interests. The compressor is pre-trained with a mask-and-predict objective that reconstructs held-out recent behaviors from compressed older history, aligning historical signals with near-present intent. Since Chronicle Tokens are target-independent, they can be cached per user, decoupling ultra-long sequence modeling from online candidate scoring. Experiments on KuaiRand and Tencent AdLive show that ChronicleRec outperforms recent-window and single-pass compression baselines while approaching full-attention performance. Token analyses reveal temporally organized and complementary representations, and a seven-day online A/B test confirms significant production gains.",
+      "authors": [
+        "Chengkai Huang",
+        "Yubin Sheng",
+        "Liang Guo",
+        "Haoxi Liu",
+        "Junwei Pan",
+        "Shangyu Zhang",
+        "Zhixiang Feng",
+        "Chao Zhou",
+        "Chengguo Yin",
+        "Lina Yao",
+        "Haijie Gu",
+        "Jie Jiang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-11T02:47:55+00:00",
+      "link": "https://arxiv.org/pdf/2609.12375v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "lifelong user modeling for industrial recommendation and online advertising ranking",
+      "llm_evidence_cn": "面向工业推荐与在线广告排序的终身用户建模",
+      "llm_evidence": "面向工业推荐与在线广告排序的终身用户建模",
+      "canonical_evidence": "面向工业推荐与在线广告排序的终身用户建模",
+      "llm_tldr_en": "ChronicleRec pre-trains temporally anchored tokens to compress ultra-long user behavior sequences into cacheable summaries for industrial recommendation and advertising ranking, avoiding per-candidate retrieval cost.",
+      "llm_tldr_cn": "超长用户行为序列对工业推荐和在线广告至关重要，但把上千条历史直接喂给排序模型计算代价过高，简单截断又会丢失长程信号。作者提出ChronicleRec预训练-迁移框架，把超长序列压缩为带时间锚定的token，以目标无关方式生成可缓存的用户摘要，避免逐候选检索带来的重复在线成本。该方法在保留时间结构的同时提升在线效率，为大规模推荐与广告排序的终身用户建模提供可行方案。",
+      "llm_tldr": "超长用户行为序列对工业推荐和在线广告至关重要，但把上千条历史直接喂给排序模型计算代价过高，简单截断又会丢失长程信号。作者提出ChronicleRec预训练-迁移框架，把超长序列压缩为带时间锚定的token，以目标无关方式生成可缓存的用户摘要，避免逐候选检索带来的重复在线成本。该方法在保留时间结构的同时提升在线效率，为大规模推荐与广告排序的终身用户建模提供可行方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.11052v1",
+      "source": "arxiv",
+      "title": "UniRec: Cross-stage Multi-Task Fusion with Preference Alignment for Cascaded Recommender Systems",
+      "abstract": "Industrial recommender systems use cascaded stages with different objectives, feature spaces, and latency constraints. Optimizing pre-ranking and ranking separately can create cross-stage inconsistency: upstream models may filter out items preferred by downstream rankers, and independently tuned downstream fusion can offset upstream improvements. Existing multi-task fusion methods focus on multi-objective fusion within the ranking stage, and cross-stage methods typically only add a downstream score factor to upstream ranking. Joint optimization of fusion modules across both stages remains largely unexplored.   We propose UniRec, a Unified Cross-stage Recommendation Fusion model. First, the two fusion agents partially share input embeddings and are trained in a single computation graph, so gradients from either stage propagate through the shared representation and influence the other. Second, we introduce a dual-axis preference alignment objective: a vertical cross-stage consistency term transfers downstream pairwise preferences to the upstream fusion score, and a horizontal compact aggregation term reorganizes dozens of pairwise objectives over heterogeneous prior signals into bidirectional preference evidence. Third, we find that unconstrained end-to-end fusion optimization can exploit imbalances in item attribute distributions, over-concentrating on high-reward regions at the cost of other objectives. We therefore add an attribute group-relative regularization that computes advantages within attribute groups and normalizes the policy over the same groups, so uniformly promoting an entire high-reward group yields no optimization gain. Offline, UniRec consistently outperforms single-stage fusion and cross-stage coordination baselines. Online A/B tests show a 0.616\\% gain in app usage duration. UniRec is fully deployed on the Kuaishou platform.",
+      "authors": [
+        "Lingyuan Kong",
+        "Jiaqi Cui",
+        "Fanjiao Zeng",
+        "Congqi Wang",
+        "Yu Li",
+        "Yuan Cheng",
+        "Jingxin Liu",
+        "Xiaoshuang Chen",
+        "Kaiqiao Zhan"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-10T03:54:17+00:00",
+      "link": "https://arxiv.org/pdf/2609.11052v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "joint cross-stage fusion for cascaded industrial recommender systems at scale",
+      "llm_evidence_cn": "面向大规模级联推荐系统的跨阶段联合融合建模",
+      "llm_evidence": "面向大规模级联推荐系统的跨阶段联合融合建模",
+      "canonical_evidence": "面向大规模级联推荐系统的跨阶段联合融合建模",
+      "llm_tldr_en": "Industrial cascaded recommenders optimize pre-ranking and ranking separately, causing cross-stage inconsistency. UniRec jointly optimizes fusion modules across both stages with shared inputs and preference alignment, improving overall cascaded ranking quality.",
+      "llm_tldr_cn": "工业推荐系统普遍采用预排序与排序等多阶段级联结构，但各阶段独立优化会造成跨阶段不一致，上游可能过滤掉下游偏好的物品。UniRec提出统一的跨阶段推荐融合模型，让两个融合代理部分共享输入并对融合模块进行联合优化与偏好对齐。实验显示该方法能缓解阶段间目标与特征空间差异带来的偏差，提升级联推荐的整体排序质量，为大规模工业推荐系统的跨阶段协同提供实用方案。",
+      "llm_tldr": "工业推荐系统普遍采用预排序与排序等多阶段级联结构，但各阶段独立优化会造成跨阶段不一致，上游可能过滤掉下游偏好的物品。UniRec提出统一的跨阶段推荐融合模型，让两个融合代理部分共享输入并对融合模块进行联合优化与偏好对齐。实验显示该方法能缓解阶段间目标与特征空间差异带来的偏差，提升级联推荐的整体排序质量，为大规模工业推荐系统的跨阶段协同提供实用方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "joint modeling and serving of search, advertising, and recommendation systems at scale",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.12694v1",
+      "source": "arxiv",
+      "title": "I Am AdMan: A Pipeline for Automatic Generation of Personalized Advertising Imagery",
+      "abstract": "Personalized marketing can increase customer engagement, satisfaction, and conversion. While existing personalization approaches have become effective at matching the right product to the right customer, the visual representation of advertisements remains generic and only weakly tailored to the individual. Prior research shows that generative artificial intelligence can improve the creation of personalized advertisements, particularly for text, and that image generation models can support scalable advertisement production. However, little research has examined how detailed customer information can be systematically translated into fully AI-generated, personalized advertising imagery at scale on a technical level. To address this gap, we propose AdMan, a multi-agent pipeline that transforms customer data into personas, generates personalized advertisement images conditioned on product reference images, and applies an LLM-based judge agent for automated quality control. We implement the pipeline with two different model configurations and evaluate it across four products, using six celebrity personas for qualitative inspection, and 100 real customer profiles, producing 1745 advertisements. The evaluation combines a qualitative expert focus group and a quantitative artifact-rate assessment. The results show that the pipeline can generate photorealistic and personalized advertisements. At the same time, performance varies substantially by product complexity and model configuration. Our findings extend the literature on AI-based personalized advertising by demonstrating the feasibility and current limitations of fully automated image generation for advertising.",
+      "authors": [
+        "Victor Kolominsky-Rabas",
+        "Leopold Müller",
+        "Claudius Budcke",
+        "Niklas Kühl"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.HC"
+      ],
+      "published": "2026-09-11T10:39:18+00:00",
+      "link": "https://arxiv.org/pdf/2609.12694v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "generative AI pipeline for personalized advertising imagery at scale",
+      "llm_evidence_cn": "面向个性化广告图像的生成式AI流水线",
+      "llm_evidence": "面向个性化广告图像的生成式AI流水线",
+      "canonical_evidence": "面向个性化广告图像的生成式AI流水线",
+      "llm_tldr_en": "AdMan is a pipeline for automatically generating personalized advertising imagery at scale, translating detailed customer information into AI-generated ad visuals to improve engagement and conversion.",
+      "llm_tldr_cn": "个性化营销虽能提升用户参与与转化，但广告视觉呈现仍较通用，难以针对个体定制。论文提出AdMan流水线，系统性地把细粒度用户信息转化为全AI生成的个性化广告图像，实现大规模广告视觉生产。该工作填补了将客户信息系统映射为个性化广告图像的技术空白，为生成式广告内容创作提供可扩展方案。",
+      "llm_tldr": "个性化营销虽能提升用户参与与转化，但广告视觉呈现仍较通用，难以针对个体定制。论文提出AdMan流水线，系统性地把细粒度用户信息转化为全AI生成的个性化广告图像，实现大规模广告视觉生产。该工作填补了将客户信息系统映射为个性化广告图像的技术空白，为生成式广告内容创作提供可扩展方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative models for ad retrieval, ad ranking, and sponsored content generation",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
