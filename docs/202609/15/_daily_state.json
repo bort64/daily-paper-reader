@@ -1,0 +1,185 @@
+{
+  "date": "20260915",
+  "date_label": "",
+  "generated_at": "2026-09-15 22:37:16 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.14493v1",
+      "route": "202609/15/2609.14493v1-varg-value-aware-and-ranking-aligned-generative-retrieval-for-dynamic-e-commerce-search",
+      "title": "VARG: Value-Aware and Ranking-Aligned Generative Retrieval for Dynamic E-commerce Search",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向电商搜索直接生成候选物品并送入最终排序器的生成式检索系统",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.14978v1",
+      "route": "202609/15/2609.14978v1-lazformer-scaling-transformers-for-industrial-recommendation-via-transferable-generative-pre-training",
+      "title": "LazFormer: Scaling Transformers for Industrial Recommendation via Transferable Generative Pre-training",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "通过可迁移生成式预训练扩展工业推荐Transformer的规模",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.15598v1",
+      "route": "202609/15/2609.15598v1-self-evolving-memory-for-generative-recommendation",
+      "title": "Self-Evolving Memory for Generative Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向生成式推荐的自演化记忆",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.13678v1",
+      "route": "202609/15/2609.13678v1-addressing-cross-stage-decoupling-of-semantic-and-collaborative-signals-in-generative-recommendation",
+      "title": "Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "基于语义标识与自回归生成的生成式推荐",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.14565v1",
+      "route": "202609/15/2609.14565v1-tatk-triple-aware-top-k-learning-with-knowledge-grounded-verification-for-llm-based-sequential-recommendation",
+      "title": "TATK: Triple-Aware Top-K Learning with Knowledge-Grounded Verification for LLM-based Sequential Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "基于LLM的序列推荐与Top-K生成排序",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.13486v1",
+      "route": "202609/15/2609.13486v1-mixture-of-experts-language-models-can-be-strong-and-efficient-retrievers",
+      "title": "Mixture-of-Experts Language Models Can Be Strong and Efficient Retrievers",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "专家混合LLM作为高效检索器",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.15094v1",
+      "route": "202609/15/2609.15094v1-generate-to-explore-select-to-exploit-aligning-llm-based-headline-generation-with-personalized-recommendation",
+      "title": "Generate to Explore, Select to Exploit: Aligning LLM-based Headline Generation with Personalized Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "对齐个性化推荐的LLM标题生成",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.11808v1",
+      "route": "202609/15/2609.11808v1-generative-late-interaction-embeddings-for-visual-document-retrieval",
+      "title": "Generative Late-Interaction Embeddings For Visual Document Retrieval",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向视觉文档检索的生成式嵌入",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.12965v1",
+      "route": "202609/15/2609.12965v1-generative-retrieval-for-unsupervised-text-based-person-search",
+      "title": "Generative Retrieval for Unsupervised Text-Based Person Search",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "生成式检索的生成再检索框架",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.13657v1",
+      "route": "202609/15/2609.13657v1-safety-as-a-constraint-fine-tuning-a-llm-recommender-to-explain-itself",
+      "title": "Safety as a Constraint: Fine-Tuning a LLM Recommender to Explain Itself",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "生成个性化解释的LLM推荐器",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    },
+    {
+      "paper_id": "2609.13993v1",
+      "route": "202609/15/2609.13993v1-p3rec-distilling-prior--posterior-preference-reasoning-for-llm-based-recommendation",
+      "title": "P3Rec: Distilling Prior--Posterior Preference Reasoning for LLM-based Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向推荐的LLM偏好推理蒸馏",
+      "first_seen_at": "2026-09-15 22:37:16 UTC",
+      "updated_at": "2026-09-15 22:37:16 UTC"
+    }
+  ]
+}

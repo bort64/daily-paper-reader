@@ -1,0 +1,759 @@
+Title: P3Rec: Distilling Prior–Posterior Preference Reasoning for LLM-based Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.13993v1
+
+Published Time: Tue, 15 Sep 2026 00:48:01 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# P3Rec: Distilling Prior–Posterior Preference Reasoning for LLM-based Recommendation 
+
+## Jinfei Chen 
+
+Chongqing University of Technology Chongqing, China htired@stu.cqut.edu.cn 
+
+## Weihai Lu 
+
+Peking University Beijing, China luweihai@pku.edu.cn 
+
+## Jiawei Cheng 
+
+Chongqing University Chongqing, China chengjiawei@stu.cqu.edu.cn 
+
+## Abstract 
+
+Large language models (LLMs) exhibit strong semantic understand-ing and preference reasoning capabilities, offering new opportuni-ties for user modeling in recommender systems. Existing LLM-as-Enhancer methods typically distill LLM-derived preference knowl-edge into lightweight recommenders to avoid costly online LLM inference. However, they often construct distillation knowledge from only one perspective. Prior preference captures users’ stable and consistent interests but provides limited guidance for the cur-rent decision, whereas posterior preference reveals target-relevant fine-grained interests but may rely excessively on target clues. To address these limitations, we propose P 3Rec, a framework that jointly extracts and internalizes complementary prior and posterior preference reasoning knowledge. Specifically, P 3Rec first derives target-agnostic prior preferences and target-conditioned posterior preferences from the user side, while further extracting item-centric preference representations from item semantics and predecessor interactions. It then progressively internalizes prior and posterior knowledge into behavioral representations through prior prefer-ence absorption and posterior-guided preference distillation. Since the resulting comprehensive preference representation may not always provide an equally decisive retrieval direction, P 3Rec further characterizes historical interest dispersion with interest entropy and adaptively calibrates the user representation before contrastive retrieval optimization. In this way, P 3Rec achieves more complete preference reasoning while preserving efficient recommendation. Extensive experiments on multiple public datasets demonstrate its effectiveness. 
+
+## CCS Concepts 
+
+• Do Not Use This Code → Generate the Correct Terms for Your Paper ; Generate the Correct Terms for Your Paper ; Generate the Correct Terms for Your Paper; Generate the Correct Terms for Your Paper. 
+
+## Keywords 
+
+Sequential Recommendation, Large Language Models, Knowledge Distillation, Preference Reasoning 
+
+> Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+> Conference acronym ’XX, Woodstock, NY
+> © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM ISBN 978-1-4503-XXXX-X/2018/06 https://doi.org/XXXXXXX.XXXXXXX
+
+ACM Reference Format: 
+
+Jinfei Chen, Weihai Lu, and Jiawei Cheng. 2018. P 3Rec: Distilling Prior– Posterior Preference Reasoning for LLM-based Recommendation. In Pro-ceedings of Make sure to enter the correct conference title from your rights confirmation email (Conference acronym ’XX). ACM, New York, NY, USA, 12 pages. https://doi.org/XXXXXXX.XXXXXXX 
+
+## 1 Introduction 
+
+As Web content and online services continue to expand rapidly, users face increasing difficulty in identifying relevant information from overwhelming content [30]. Recommender systems allevi-ate this problem by modeling user preferences and selectively presenting items that match their interests [8, 26], and have be-come fundamental components of modern Web platforms such as e-commerce [46], online media [40], and social networks [24]. With the remarkable success of large language models (LLMs) [19, 23, 32], integrating LLMs with recommender systems has emerged as a promising research direction [17, 22, 38, 42, 49]. Existing studies can be broadly categorized into two paradigms according to the role of LLMs: LLM-as-Recommender and LLM-as-Enhancer. The former di-rectly employs LLMs to generate recommendation results [1, 15, 33], typically requiring full-model or parameter-efficient fine-tuning. In contrast, LLM-as-Enhancer uses LLMs offline as knowledge sources to enhance lightweight recommenders [25, 28, 37], avoid-ing costly online LLM inference. In this work, we focus on the LLM-as-Enhancer paradigm. Within the LLM-as-Enhancer paradigm, recent studies increas-ingly transfer LLM-derived preference knowledge into lightweight recommendation models through representation alignment or knowl-edge distillation [7, 21]. Typically, an LLM analyzes user interaction histories to generate preference knowledge, which is then encoded into representations or supervision signals and distilled into the student model. Existing methods mainly construct such knowledge from two perspectives. Target-agnostic methods infer user inter-ests solely from historical interactions [22, 27]. Without access to the next item, the LLM identifies commonalities across historical behaviors and summarizes relatively stable and consistent interests. Such knowledge can be regarded as prior preference , which cap-tures what the user generally prefers but provides limited guidance on which preference will dominate the next decision. In contrast, target-conditioned methods additionally provide the ground-truth next item [5], allowing the LLM to identify target-relevant histori-cal evidence and infer fine-grained preferences associated with the current choice. Such knowledge can be regarded as posterior pref-erence , which explains why the user selects a particular item and provides target-specific supervision. However, reasoning around a known target may overemphasize target-consistent evidence and rely on target clues as a shortcut, limiting independent preference arXiv:2609.13993v1 [cs.IR] 12 Sep 2026 Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Trovato et al. Large Language Model 
+
+> Prior Preference
+> Educational toys Pretend play Vechicles and animals ...
+> Posterior Preference
+> Interest in magnetic and educational toys ...
+> Magnetic Letters Toy Kitchen
+> Animal Puzzle
+> Toy Car
+
+# ... User Behavior History 
+
+> Comprehensive and generalization Fine-grained and discriminative
+> (a) Prior (c) Posterior (b) Prior-Posterior
+
+Figure 1: Three paradigms of preference distillation. 
+
+inference when the target is unavailable. Consequently, existing methods typically capture only one facet of preference reason-ing, rather than transferring its complete capability to the student model. Therefore, prior and posterior preference reasoning capture two complementary facets of a complete reasoning process. Prior pref-erence characterizes what the user generally likes, while posterior preference reveals which factors explain a specific choice. As shown in Figure 1(b), jointly distilling both forms of knowledge can pro-vide the student model with a more comprehensive preference reasoning capability than relying on either perspective alone. To this end, we propose Distilling Prior– Posterior Preference Reasoning for LLM-based Rec ommendation ( P3Rec ), a framework that systematically extracts and internalizes complementary prior and posterior preference knowledge into a lightweight student model. Beyond preference internalization, P 3Rec further adapts the learned comprehensive preference to the retrieval objective. Specif-ically, P 3Rec consists of three key modules: (i) Multi-perspective Preference Reasoning . We perform target-agnostic reasoning over user interaction histories to extract prior preference knowl-edge and target-conditioned reasoning with the ground-truth next item to derive posterior preference knowledge. We further perform item-centric reasoning to infer the preference characteristics of users likely to favor each item, providing semantic preference rep-resentations for downstream retrieval. (ii) Prior–Posterior Pref-erence Internalization . Starting from behavioral representations, we first selectively absorb target-agnostic prior preference knowl-edge through preference internalization. We then leverage target– conditioned posterior preferences to guide the prior preference absorption process. Meanwhile, target-relevant preference knowl-edge is further distilled into the user representations, enabling them to jointly preserve behavioral information and complementary pri-or–posterior preference knowledge. (iii) Preference Retrieval Adaptation . Although the internalized representation comprehen-sively characterizes user preferences, it may not always form an equally decisive retrieval direction, especially when historical in-terests are highly dispersed. We therefore use interest entropy to characterize historical interest dispersion and adaptively control a learnable residual calibration of the user representation. The cali-brated representation is then optimized with a contrastive retrieval objective, effectively adapting comprehensive preference knowl-edge to recommendation. Overall, our main contributions are summarized as follows: (1) We identify that prior and posterior preference reasoning provide complementary supervision for user modeling, while existing methods typically exploit only one perspective, re-sulting in incomplete preference reasoning. (2) We propose P 3Rec, which jointly extracts and internalizes prior and posterior preference knowledge from LLMs and further adapts the resulting comprehensive representation to retrieval according to users’ historical interest dispersion. (3) Extensive experiments on multiple public datasets demon-strate that P 3Rec consistently outperforms state-of-the-art baselines. 
+
+## 2 Related Work 
+
+Large language models (LLMs) have demonstrated strong capa-bilities in semantic understanding and reasoning, providing new opportunities for recommender systems to overcome the limita-tions of purely ID-based collaborative signals. By leveraging rich textual semantics and reasoning over user behaviors, LLMs can provide complementary knowledge for modeling user preferences. According to the role of LLMs, existing LLM-based recommen-dation methods can be broadly categorized into two paradigms: LLM-as-Recommender and LLM-as-Enhancer. 
+
+## 2.1 LLM-as-Recommender 
+
+The LLM-as-Recommender paradigm directly adapts LLMs to per-form recommendation, typically by formulating recommendation as a language modeling or generation task [10, 34, 35, 44]. Early studies mainly focus on aligning general-purpose LLMs with recommen-dation objectives. TALLRec [1] employs recommendation-oriented instruction tuning, while LLaRA [17] and CoLLM [45] further incor-porate collaborative representations into LLMs to bridge semantic and behavioral information. Subsequent methods enhance LLM-based recommendation from different perspectives. ELMRec [33] and AGRec [34] introduce higher-order interaction or graph rea-soning signals; A-LLMRec [12] combines pretrained collaborative recommenders with LLMs; and GRAM [15] improves generative rec-ommendation by modeling item semantics at multiple granularities. Moreover, iLoRA [14] develops instance-wise parameter-efficient adaptation for personalized recommendation, while recent stud-ies such as ISRF [49] and TCA4Rec [18] further enhance semantic preference reasoning and collaborative alignment for generative recommendation. P3Rec: Distilling Prior–Posterior Preference Reasoning for LLM-based Recommendation Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+Despite their effectiveness, these methods usually require full-model or parameter-efficient fine-tuning to adapt LLMs to recom-mendation tasks, introducing considerable training and mainte-nance costs. 
+
+## 2.2 LLM-as-Enhancer 
+
+Compared with LLM-as-Recommender, LLM-as-Enhancer uses LLMs offline as knowledge sources to extract semantic or preference knowledge and transfer it into lightweight recommenders [25, 36, 37, 42]. This paradigm avoids expensive online LLM inference while retaining its semantic and reasoning capabilities. For example, RLM-Rec [27] constructs semantic user and item profiles with LLMs and aligns them with collaborative representations. LLM-ESR [21] leverages LLM-derived semantic representations to improve long-tailed sequential recommendation, while LLMEmb [20] and Alpha-Fuse [7] exploit language embeddings to complement ID-based collaborative representations. Beyond generic semantic represen-tations, LLM4CDSR [22] further employs LLMs to construct cross-domain preference knowledge, while SRA-CL [3] and SEAR [4] use LLM-derived semantic information to improve contrastive learning or multi-source representation fusion. More recently, R2END [5] explicitly distills preference reasoning generated by an LLM into a dense encoder, demonstrating that not only semantic represen-tations but also LLM reasoning capabilities can be transferred to lightweight recommenders. However, existing LLM-enhanced methods typically extract pref-erence knowledge from only a single perspective, focusing on either target-agnostic prior preference or target-conditioned posterior preference. Such partial knowledge limits the student model from fully inheriting the LLM’s preference reasoning capability. In con-trast, our P 3Rec jointly distills complementary prior and posterior preference knowledge into a lightweight recommender, enabling a more complete transfer of LLM-based preference reasoning. 
+
+## 3 Methodology 3.1 Problem Definitions 
+
+We denote the sets of users and items as U and V, respectively, where 𝑢 ∈ U represents a user and 𝑣 ∈ V represents an item. Given a user 𝑢 , we can obtain the corresponding historical inter-action sequence of items: 𝑆 𝑢 = {𝑣 1, 𝑣 2, · · · , 𝑣 𝑛 }, where 𝑣 𝑖 ∈ V and 
+
+𝑛 denotes the length of the interaction history of user 𝑢 . The goal of sequential recommendation is to predict the next item that the user is likely to interact with, denoted as 𝑣 𝑛 +1.
+
+## 3.2 Multi-perspective Preference Reasoning 
+
+To comprehensively capture user preferences, we perform reason-ing from both user and item perspectives. From the user perspective, we design two complementary reasoning forms: target-agnostic reasoning extracts stable and generalizable interests from histori-cal interactions, while target-conditioned reasoning leverages the ground-truth target item to identify target-relevant fine-grained preferences. From the item perspective, we infer the preferences of likely users based on item semantics and predecessor transitions. 
+
+3.2.1 Target-agnostic Prior Preference Reasoning. For each item 𝑣 ,we represent its semantic information as Γ𝑣 = {𝛾 1, . . . , 𝛾 |Γ𝑣 | }, which may include attributes such as title, description, and brand. Using the semantic information of items in 𝑆 𝑢 , we construct a user-specific prompt: 
+
+P𝑢 = 𝑓 𝑃 𝑢 ({ Γ𝑣 | 𝑣 ∈ 𝑆 𝑢 }) , (1) where 𝑓 𝑃 𝑢 (·) formats the historical items and their attributes into a natural language prompt while preserving chronological order. Subsequently, we utilize the LLM to generate the target-agnostic preference reasoning result: 
+
+𝑟 𝑃 𝑢 = LLM 
+
+
+
+S𝑃 𝑢 , P𝑢 
+
+
+
+, (2) where S𝑃 𝑢 is the system prompt, e.g. , “Based on the user’s chrono-logical purchase history, analyze and summarize the user’s prefer-ences.” The detailed example of the system prompt is provided in Appendix D. 
+
+3.2.2 Target-conditioned Posterior Preference Reasoning. Given the ground-truth target item 𝑣 𝑛 +1, we take its semantic information 
+
+Γ𝑣 𝑛 +1 as an oracle and incorporate it with the historical interaction sequence 𝑆 𝑢 to construct the target-conditioned prompt: 
+
+P𝑂 𝑢 = 𝑓 𝑂 𝑢 
+
+ P𝑢 , Γ𝑣 𝑛 +1
+
+ , (3) where 𝑓 𝑂 𝑢 (·) ensures that the historical interactions and the target item are explicitly distinguished in the prompt. The LLM is then prompted to produce the target-conditioned preference reasoning result: 
+
+𝑟 𝑂 𝑢 = LLM 
+
+
+
+S𝑂 𝑢 , P𝑂 𝑢 
+
+
+
+, (4) where S𝑂 𝑢 is the system prompt ( e.g. , “Based on the user’s chrono-logical purchase history and the target item, analyze and summarize target-relevant user preferences”). The two forms of user-side reasoning are complementary: 𝑟 𝑃 𝑢 
+
+summarizes general preferences without target information, while 
+
+𝑟 𝑂 𝑢 extracts target-relevant preferences. Together, they provide a more complete preference characterization. 
+
+3.2.3 Item-centric Preference Reasoning. We further collect the preceding items that users interacted with immediately before 𝑣 ,together with the reviews they provided for those predecessors. These predecessor interactions serve as behavioral evidence of the preferences held by users who subsequently select 𝑣 . Formally, we construct an item-specific prompt as follows: 
+
+P𝑣 = 𝑓 𝑣 (Γ𝑣 , {( Γ𝑢 , 𝑐 𝑢 ) | 𝑢 ∈ U 𝑣 }) , (5) where Γ𝑣 denotes the semantic information of item 𝑣 , Γ𝑢 denotes the item immediately preceding 𝑣 in user 𝑢 ’s historical sequence, and 𝑐 𝑢 is the review written by 𝑢 for that preceding item. U𝑣 is the set of users for whom such a predecessor-to-𝑣 transition is observed. The function 𝑓 𝑣 (·) formats the item attributes and these predecessor signals into a structured prompt, enabling the LLM to infer the historical preferences commonly associated with users who subsequently interact with the item. The LLM is then prompted to produce the item-centric preference reasoning result: 
+
+𝑟 𝑣 = LLM (S 𝑣 , P𝑣 ) , (6) where S𝑣 is the corresponding system prompt ( e.g. , “Based on the item information and user reviews, analyze and summarize the Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Trovato et al. Top-K Items 
+
+... ... 
+
+Item DB 
+
+> Linear
+
+Rank 
+
+User Prompt 
+
+... LLM 
+
+... LLM 
+
+target item 
+
+> The user demonstrates a clear interest in magnetic learning toys, specifically those from Melissa & Doug...
+
+Target-agnostic Prior Preference Reasoning Target-conditioned Posterior Preference Reasoning 
+
+Item Prompt 
+
+Item-centric Preference Reasoning 
+
+LLM 
+
+Multi-Perspective Preference Reasoning 
+
+Text Encoder 
+
+... Behavior Encoder 
+
+Prior–Posterior Preference Internalization 
+
+> The user demonstrates a clear interest in educational toys and pretend play activities for children. Specifically, they have ...
+> The user demonstrates a clear interest in educational toys and pretend play ...
+> Target-agnostic Preference
+
+0 0 11 Gate Loss Student Teacher 
+
+Posterior-guided Gate Distillation Target-agnostic Prior Preference Absorption 
+
+> The user demonstrates a clear interest in educational toys and pretend play ...
+
+... Target-agnostic Prior Preference Absorption ... Retrival  
+
+> Users who prefer imaginative play, specifically involving action figures and vehicles, and who have children ... Title: Dream ... Description: ...
+
+... 
+
+> Review: ...
+
+User Prompt  
+
+> Title: ...
+
+... Title:  ... 
+
+...  
+
+> Title: ...
+
+... Title:  ... ...  
+
+> Title: ...
+
+... 
+
+> Users who prefer imaginative play, specifically involving action figures and vehicles ...
+> ...
+
+User History 
+
+Text Encoder 
+
+Preference Retrieval Adaptation 
+
+Semantic Similarity Graph ... Interest Entropy 
+
+MLP 
+
+Preference Calibration 
+
+> ...
+> Linear
+
+Text Encoder 
+
+Candidate Items 
+
+> InfoNCE Loss
+> Users who prefer imaginative play, specifically involving action figures and vehicles ...
+> ...
+> ...
+> Linear
+> ...
+> anchor Push away Push close
+
+Interest Entropy Calibration Contrastive Retrieval Optimization Gated Prior Absorption 
+
+Linear Layer Sigmoid Linear Layer Text Encoder 
+
+> The user demonstrates a clear interest in magnetic learning toys, specifically those...
+> MSE Loss Teacher Student
+
+Target-conditioned Posterior Preference Distillation 
+
+Interest Entropy Calibration 
+
+Inference 
+
+Figure 2: The overall architecture of our proposed method: P 3Rec. 
+
+preferences and characteristics of users who are likely to favor the item”). 
+
+## 3.3 Prior–Posterior Preference Internalization 
+
+Based on the prior and posterior preference knowledge, we de-sign a preference internalization strategy for the student model. Specifically, we first take the behavioral representation as the basis and absorb the target-agnostic prior preference through a gated prior absorption mechanism. We then use the target-conditioned posterior preference to guide the absorption process and provide target-relevant preference knowledge. 
+
+3.3.1 Target-agnostic Prior Preference Absorption. Based on the previously obtained prior preference reasoning result 𝑟 𝑃 𝑢 , we employ a text encoder Enc (·) to obtain its corresponding prior preference representation: 
+
+𝑝 𝑢 = Enc (𝑟 𝑃 𝑢 ). (7) Although 𝑝 𝑢 ∈ R𝑑 t contains rich semantic information about the user’s target-agnostic preferences, it may not sufficiently reflect the behavioral patterns in the user’s historical interactions. There-fore, we further employ a behavior encoder to obtain the user’s behavioral representation: 
+
+ℎ𝑢 = Enc 𝑏 ({ Γ𝑣 | 𝑣 ∈ 𝑆 𝑢 }) , (8) where Enc 𝑏 (·) denotes a behavior encoder fine-tuned on user–item interaction data. The behavioral representation ℎ𝑢 ∈ R𝑑 b serves as the basis for absorbing the prior preference. We further adopt a prior preference internalization mechanism to selectively introduce the prior preference representation 𝑝 𝑢 into the behavioral representation ℎ𝑢 . Specifically, we first employ a linear layer to learn a absorption coefficient: 
+
+𝛼 𝑢 = 𝜎 (𝑊 𝛼 [ℎ𝑢 ; 𝑝 𝑢 ] + 𝑏 𝛼 ) , (9) where [; ] denotes the concatenation operation, 𝜎 (·) is the sigmoid function, and 𝑊 𝛼 ∈ R(𝑑 t+𝑑 b ) × 1 and 𝑏 𝛼 ∈ R are learnable param-eters. Based on the learned absorption coefficient, we obtain the internalized user representation: 
+
+𝑞 𝑢 = 𝑊 𝑓 [𝛼 𝑢 ℎ𝑢 ; (1 − 𝛼 𝑢 )𝑝 𝑢 ] + 𝑏 𝑓 , (10) where 𝑊 𝑓 ∈ R(𝑑 t+𝑑 b ) × 𝑑 t and 𝑏 ∈ R𝑑 t are learnable parameters, and 
+
+𝛼 𝑢 controls the amount of target-agnostic preference knowledge absorbed from 𝑝 𝑢 .
+
+3.3.2 Target-conditioned Posterior Preference Distillation. To fur-ther introduce target-relevant preference knowledge into 𝑞 𝑢 , we em-ploy the posterior preference representation 𝑝 𝑂 𝑢 = Enc (𝑟 𝑂 𝑢 ) ∈ R𝑑 t
+
+as the teacher mediator and the internalized user representation 𝑞 𝑢 
+
+as the student mediator. We then minimize the mean squared error P3Rec: Distilling Prior–Posterior Preference Reasoning for LLM-based Recommendation Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+between 𝑞 𝑢 and 𝑝 𝑂 𝑢 :
+
+Ldistill = 1
+
+|U| ∑︁ 𝑢 ∈ U 
+
+|| 𝑞 𝑢 − 𝑝 𝑂 𝑢 || 22. (11) This objective enables 𝑞 𝑢 to learn target-relevant preferences from 
+
+𝑝 𝑂 𝑢 while retaining the behavioral information from ℎ𝑢 and the prior knowledge from 𝑝 𝑢 .
+
+3.3.3 Posterior-guided Preference Absorption Distillation. In addi-tion to posterior preference distillation, we introduce a posterior-guided preference absorption distillation objective to guide the prior preference absorption process. Since 𝑝 𝑂 𝑢 contains preference knowl-edge related to the target item, it can provide soft supervision for determining how much prior preference knowledge should be ab-sorbed from 𝑝 𝑢 . Specifically, we first compute the similarities of the behavioral representation and the prior preference representation with 𝑝 𝑂 𝑢 :
+
+𝑠 𝑢,ℎ = cos (ℎ𝑢 , 𝑝 𝑂 𝑢 ), 𝑠 𝑢,𝑝 = cos (𝑝 𝑢 , 𝑝 𝑂 𝑢 ), (12) where cos (· , ·) denotes cosine similarity. We then derive a teacher absorption coefficient by normalizing the two similarity scores: 
+
+𝛼 𝑡 𝑢 = exp  𝑠 𝑢,𝑝 /𝜏 
+
+exp  𝑠 𝑢,ℎ /𝜏  + exp  𝑠 𝑢,𝑝 /𝜏  , (13) where 𝜏 is a temperature hyperparameter. A larger 𝛼 𝑡 𝑢 indicates that the behavioral representation ℎ𝑢 is more aligned with preference Posterior representation 𝑝 𝑂 𝑢 , whereas a smaller value assigns greater importance to the prior preference representation 𝑝 𝑢 .Finally, we align the learned absorption coefficient 𝛼 𝑢 with the teacher coefficient 𝛼 𝑡 𝑢 using a binary cross entropy loss: 
+
+Lgate = − 1
+
+|U| ∑︁ 𝑢 ∈ U 
+
+h
+
+𝛼 𝑇 𝑢 log 𝛼 𝑢 +
+
+
+
+1 − 𝛼 𝑇 𝑢 
+
+
+
+log (1 − 𝛼 𝑢 )
+
+i
+
+. (14) 
+
+## 3.4 Preference Retrieval Adaptation 
+
+Although 𝑞 𝑢 comprehensively internalizes behavioral, prior, and posterior preference knowledge, it is not explicitly optimized for retrieval. Contrastive retrieval requires a single user representation to distinguish the target item from competing candidates, while 
+
+𝑞 𝑢 may contain multiple preference factors from diverse historical interests. When these interests are dispersed, directly optimizing 𝑞 𝑢 
+
+with InfoNCE may lead to an ambiguous retrieval direction. There-fore, we characterize users’ historical interest dispersion through Interest Entropy [39] and use it to adaptively calibrate 𝑞 𝑢 before retrieval optimization. 
+
+3.4.1 Interest Entropy Calibration. To characterize the dispersion of historical interests, we first encode the item-centric preference reasoning result 𝑟 𝑣 along with the item information Γ𝑣 into a unified semantic representation: 
+
+𝑧 𝑣 = Enc ([ Γ𝑣 , 𝑟 𝑣 ]) , (15) where 𝑧 𝑣 captures the preference semantics associated with item 𝑣 ,and [· , ·] denotes concatenation. Building on these representations, we construct an interest graph over the interaction sequence 𝑆 𝑢 .For any two historical items 𝑣 𝑖 , 𝑣 𝑗 ∈ 𝑆 𝑢 , their semantic similarity is computed as 𝑎 𝑖 𝑗 = cos (𝑧 𝑣 𝑖 , 𝑧 𝑣 𝑗 ). We connect two items when their semantic similarity exceeds a threshold 𝜎 :
+
+A𝑖 𝑗 =
+
+(
+
+1, 𝑎 𝑖 𝑗 ≥ 𝜎, 
+
+0, 𝑎 𝑖 𝑗 < 𝜎. (16) Each connected component in the resulting graph is regarded as a latent interest cluster, as semantically related historical items are likely to reflect a common underlying interest. Let G𝑢 = {𝐺 𝑢, 1, 𝐺 𝑢, 2, . . . , 𝐺 𝑢,𝑀 𝑢 } denote the set of latent interest clusters for user 𝑢 , where 𝑀 𝑢 is the number of clusters. We define the Interest Entropy of user 𝑢 as IE (𝑆 𝑢 ) = −
+
+> 𝑀 𝑢
+
+∑︁ 
+
+> 𝑘 =1
+
+𝜋 𝑢,𝑘 log 𝜋 𝑢,𝑘 , (17) where 𝜋 𝑢,𝑘 = |𝐺 𝑢,𝑘 |/ Í𝑀 𝑢  
+
+> 𝑗 =1
+
+|𝐺 𝑢,𝑗 | denotes the proportion of historical interactions associated with the 𝑘 -th latent interest. We further nor-malize IE (𝑆 𝑢 ) according to its empirical distribution on the training set, yielding a normalized entropy score 𝜌 𝑢 ∈ [ 0, 1]. A smaller 𝜌 𝑢 
+
+indicates stronger preference consensus among historical inter-actions, suggesting that 𝑞 𝑢 already provides a relatively reliable retrieval direction. In contrast, a larger 𝜌 𝑢 indicates that the user’s historical interactions are distributed across multiple distinct inter-ests, making the aggregated representation more ambiguous as a single retrieval query. To account for such retrieval ambiguity, we calibrate 𝑞 𝑢 as ¯𝑞 𝑢 = 𝑞 𝑢 + 𝛾𝜌 𝑢 ∥𝑞 𝑢 ∥2
+
+Δ𝑢 
+
+∥Δ𝑢 ∥2
+
+, (18) where Δ𝑢 = MLP ([ 𝑞 𝑢 ; 𝑝 𝑢 ]) is a learnable preference residual. The normalized residual Δ𝑢 /∥ Δ𝑢 ∥2 determines the adjustment direc-tion, while 𝜌 𝑢 controls the adjustment magnitude based on interest dispersion. When historical preferences are concentrated, 𝑞 𝑢 is largely preserved; when they are dispersed, stronger adaptation is allowed to account for ambiguous retrieval signals. The factor 
+
+∥𝑞 𝑢 ∥2 scales the residual to the magnitude of 𝑞 𝑢 , and 𝛾 governs the overall adjustment strength. 
+
+3.4.2 Contrastive Retrieval Optimization. After preference calibra-tion, we project the calibrated user representation ¯ 𝑞 𝑢 and the item representation 𝑧 𝑣 into a shared retrieval space through a projection function 𝑓 (·) : R𝑑 𝑡 → R𝑑 rec :
+
+𝑒 𝑢 = 𝑓 ( ¯𝑞 𝑢 ), 𝑒 𝑣 = 𝑓 (𝑧 𝑣 ). (19) We then optimize the projected representations using the In-foNCE objective: 
+
+Lrec = − 1
+
+|U| ∑︁ 𝑢 ∈ U 
+
+log exp 
+
+
+
+cos (𝑒 𝑢 , 𝑒 𝑣 + 
+
+> 𝑢
+
+)/ 𝜏 𝑟 
+
+Í𝑣 ∈ C 𝑢 exp (cos (𝑒 𝑢 , 𝑒 𝑣 )/ 𝜏 𝑟 ) , (20) where C𝑢 = {𝑣 + 
+
+> 𝑢
+
+} ∪ V − 
+
+> 𝑢
+
+denotes the candidate set consisting of the positive item and sampled negative items, and 𝜏 𝑟 is the contrastive temperature. By optimizing the calibrated representation ¯ 𝑞 𝑢 , the model can better adapt the internalized preference knowledge to user-specific retrieval characteristics. 
+
+## 3.5 Optimization and Inference 
+
+In this section, we detail the optimization and inference procedures of P 3Rec. The corresponding algorithm is provided in Appendix B. Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Trovato et al. 
+
+Method Sports Beauty Toys 
+
+H@5 N@5 H@10 N@10 H@5 N@5 H@10 N@10 H@5 N@5 H@10 N@10 
+
+Traditional Methods 
+
+GRU4Rec (2015) 0.0129 0.0086 0.0204 0.0110 0.0164 0.0099 0.0283 0.0137 0.0097 0.0059 0.0176 0.0084 SASRec (2018) 0.0233 0.0154 0.0350 0.0192 0.0387 0.0249 0.0605 0.0318 0.0463 0.0306 0.0675 0.0374 BERT4Rec (2019) 0.0115 0.0075 0.0191 0.0099 0.0203 0.0124 0.0347 0.0170 0.0116 0.0071 0.0203 0.0099 FDSA (2019) 0.0182 0.0122 0.0288 0.0156 0.0267 0.0163 0.0407 0.0208 0.0228 0.0140 0.0381 0.0189 S3-Rec (2020) 0.0251 0.0161 0.0385 0.0204 0.0387 0.0244 0.0647 0.0327 0.0443 0.0294 0.0700 0.0376 
+
+LLM-based Methods 
+
+AlphaRec (2025) 0.0157 0.0099 0.0268 0.0135 0.0285 0.0183 0.0456 0.0238 0.0258 0.0174 0.0407 0.0221 LLMEmb (2025) 0.0250 0.0160 0.0389 0.0205 0.0482 0.0310 0.0754 0.0398 0.0561 0.0369 0.0838 0.0458 LLM-SRec (2025) 0.0215 0.0101 0.0429 0.0171 0.0384 0.0237 0.0767 0.0358 0.0364 0.0225 0.0682 0.0327 LEARN (2025) 0.0115 0.0075 0.0188 0.0098 0.0157 0.0095 0.0286 0.0136 0.0213 0.0137 0.0349 0.0181 
+
+LLM distillation-based methods 
+
+RDRec (2024) 0.0045 0.0031 0.0067 0.0038 0.0162 0.0117 0.0199 0.0130 0.0053 0.0039 0.0069 0.0044 DLLM2Rec (2024) 0.0169 0.0104 0.0292 0.0143 0.0284 0.0174 0.0496 0.0242 0.0378 0.0248 0.0589 0.0315 RLMRec (2024) 0.0302 0.0215 0.0421 0.0263 0.0357 0.0257 0.0518 0.0309 0.0141 0.0089 0.0239 0.0120 SLMRec (2025) 0.0278 0.0162 0.0425 0.0209 0.0500 0.0308 0.0757 0.0390 0.0518 0.0321 0.0759 0.0399 R2END (2026) 0.0324 0.0208 0.0501 0.0265 0.0610 0.0409 0.0909 0.0506 0.0734 0.0496 0.1061 0.0601 
+
+P3Rec 0.0358 0.0236 0.0540 0.0295 0.0694 0.0472 0.1016 0.0575 0.0792 0.0540 0.1134 0.0650 
+
+Improvement +10.49%* +13.46%* +7.78%* +11.32%* +13.77%* +15.40%* +11.77%* +13.64%* +7.90%* +8.87%* +6.88%* +8.15%* 
+
+Table 1: Performance comparison on Sports, Beauty, and Toys datasets, where “*” indicates that the improvement is statistically significant ( 𝑝 -value < 0.05 ) over baselines. 
+
+3.5.1 Optimization. P3Rec is optimized in two stages: 
+
+• Stage 1: Prior–Posterior Preference Internalization. We jointly optimize the posterior preference distillation loss and the posterior-guided gate distillation loss: 
+
+Lstage1 = Ldistill + 𝛽 Lgate , (21) where 𝛽 controls the contribution of gate distillation. 
+
+• Stage 2: Preference Retrieval Adaptation. Based on the rep-resentations learned in Stage 1, we optimize the calibrated user and item retrieval representations through the contrastive rec-ommendation objective: Lstage2 = Lrec .
+
+3.5.2 Inference. During inference, given the interaction history 𝑆 𝑢 ,we obtain the behavioral representation ℎ𝑢 and encode the target-agnostic preference reasoning result 𝑟 𝑃 𝑢 into the prior preference representation 𝑝 𝑢 . The Target-agnostic Prior Preference Absorp-tion mechanism then combines ℎ𝑢 and 𝑝 𝑢 to produce the fused user representation 𝑞 𝑢 . Next, the Interest Entropy Calibration module calibrates 𝑞 𝑢 to obtain the calibrated user representation ¯ 𝑞 𝑢 , which is projected into the retrieval space as 𝑒 𝑢 . The item representa-tions 𝑒 𝑣 = 𝑓 (𝑧 𝑣 ) are precomputed offline. We rank candidate items according to their similarity with 𝑒 𝑢 and return the top-𝐾 items as the final recommendations. The target-conditioned posterior preference is not required during inference. 
+
+## 4 Experiment 4.1 Experiment Settings 
+
+4.1.1 Datasets. We conduct experiments on three Amazon product categories: Sports & Outdoors, Beauty, and Toys & Games 1. All data preprocessing and splitting follow the protocols established in earlier work [33, 48]. The statistics are provided in Appendix A.1. 
+
+4.1.2 Baselines. To evaluate the effectiveness of P 3Rec, we com-pare P 3Rec with state-of-the-art traditional methods (GRU4Rec [6], SASRec [11], BERT4Rec [29], FDSA [43], S 3-Rec [47]), LLM-based methods (AlphaRec [28], LLMEMb [20], LLM-SRec [13], LEARN [9]) and LLM distillation-based methods (RDRec [35], DLLM2Rec [2], RLMRec [27], SLMRec [41], R2END [5]). Additional details are pro-vided in Appendix A.2. 
+
+4.1.3 Implementation and Metrics. Following prior work [5], we adopt Gemma3-12B [31] and Gemma3-4B for user-side and item-centric preference reasoning, respectively, with mxbai-embed-large-v1 [16] as the text encoder, fine-tuned as the behavior encoder on the training set. For LLM-based methods, Gemma3-4B produces semantic item representations; for LLM distillation-based methods, Gemma3-12B and Gemma3-4B serve as the teacher and student, respectively. To prevent data leakage, ground-truth target items are used only during training and are drawn from the training split. We report Hit Rate (H@ 𝐾 ) and NDCG (N@ 𝐾 ) for 𝐾 ∈ { 5, 10 }. 
+
+> 1https://www.amazon.com P3Rec: Distilling Prior–Posterior Preference Reasoning for LLM-based Recommendation Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+Ablation Sports Beauty Toys H@10 N@10 H@10 N@10 H@10 N@10 
+
+P3Rec 0.0540 0.0295 0.1016 0.0575 0.1134 0.0650 
+
+w/o Pri. & Pos. 0.0491 0.0265 0.0945 0.0537 0.1068 0.0628 w/o Pri. 0.0503 0.0267 0.0935 0.0524 0.1075 0.0615 w/o Pos. 0.0514 0.0281 0.0990 0.0557 0.1094 0.0637 w/o Beh. 0.0387 0.0202 0.0750 0.0387 0.0803 0.0431 w/o L𝑔𝑎𝑡𝑒 0.0539 0.0293 0.0993 0.0564 0.1126 0.0648 w/o IEC 0.0537 0.0291 0.1011 0.0567 0.1120 0.0643 
+
+Table 2: Ablation study of P 3Rec on three datasets. Beh, Pri, and Pos denote behavioral representation, prior preference, and posterior preference, respectively. 
+
+All experiments are implemented in PyTorch and run on a single NVIDIA RTX 5090 GPU. See Appendix A.3 for additional details. 
+
+## 4.2 Overall Performance 
+
+Table 1 reports the overall performance of P 3Rec and the base-line methods on the Sports, Beauty, and Toys datasets. We make the following observations. First, LLM-based methods generally achieve competitive performance compared with traditional se-quential methods, demonstrating the benefit of incorporating se-mantic knowledge from LLMs into recommendation. In particular, LLMEmb performs strongly on Beauty and Toys by enriching item representations with textual semantics. However, the performance of LLM-based methods varies considerably across datasets, sug-gesting that semantic knowledge alone may not sufficiently cap-ture users’ behavioral preferences. Second, LLM distillation-based methods generally outperform both traditional and direct LLM-enhanced approaches. Among them, R2END achieves the strongest overall performance and serves as the most competitive baseline in most settings. This observation indicates that transferring LLM-generated preference reasoning into lightweight representations is more effective than directly relying on LLM-based item semantics. Nevertheless, existing distillation methods mainly exploit a single form of reasoning knowledge and therefore cannot fully capture both users’ general interests. Finally, P 3Rec consistently achieves the best performance across all three datasets and all evaluation metrics. Compared with R2END, P 3Rec yields average relative im-provements of 8.52%, 11.81%, and 7.65% on Sports, Beauty, and Toys, respectively. These improvements demonstrate that jointly model-ing complementary prior and posterior preferences enables P 3Rec to learn more informative and discriminative user representations while preserving behavioral information. 
+
+## 4.3 Ablation study 
+
+To validate the effectiveness of the key components in P 3Rec, we conduct ablation studies on Sports, Beauty, and Toys datasets, with the results reported in Table 2. We evaluate the contribution of different preference components and key modules. As shown in Table 2, P 3Rec achieves the best performance across all datasets. Re-moving both prior and posterior preferences ( 𝑤 /𝑜 Pri.&Pos.) leads H@10 
+
+Figure 3: Hyperparameter sensitivity analysis with respect to 𝛽 and 𝛾 on the Beauty dataset. Source → Target R2END P3Rec 
+
+H@10 N@10 H@10 N@10 
+
+Sports Beauty 0.0593 0.0329 0.0687 0.0370 Toys 0.0758 0.0421 0.0839 0.0472 
+
+Beauty Sports 0.0282 0.0149 0.0316 0.0163 Toys 0.0716 0.0397 0.0784 0.0439 
+
+Toys Sports 0.0319 0.0169 0.0338 0.0183 Beauty 0.0581 0.0313 0.0673 0.0366 
+
+Table 3: Generalization analysis across three datasets. 
+
+to a clear performance degradation, demonstrating the effectiveness of LLM-based preference reasoning beyond behavioral signals. Re-moving prior preference ( 𝑤 /𝑜 Pri.) causes a larger drop than remov-ing posterior preference ( 𝑤 /𝑜 Pos.), indicating that target-agnostic prior preference provides complementary long-term user interest information, while posterior preference further captures target-specific signals. Removing the behavioral representation ( 𝑤 /𝑜 Beh.) results in the largest performance degradation, confirming that collaborative behavioral information remains the foundation of user modeling. Removing the Posterior-guided Gate Distillation loss ( 𝑤 /𝑜 Lgate ) also consistently decreases performance, showing that posterior-guided gate learning helps regulate the absorption of prior preference knowledge. Finally, removing Interest Entropy Cal-ibration ( 𝑤 /𝑜 IEC) leads to consistent performance drops, demon-strating that entropy-based adaptive calibration improves retrieval representations by considering users’ historical interest dispersion. 
+
+## 4.4 Hyperparameter Sensitivity 
+
+We further study the sensitivity of 𝛽 and 𝛾 on Beauty dataset, as shown in Figure 3. The hyperparameter 𝛽 controls the weight of the loss Lgate , while 𝛾 controls the adjustment strength of Interest Entropy Calibration. P 3Rec achieves the best performance at 𝛽 = 0.1and 𝛾 = 0.5. For 𝛽 , either excessive gate supervision or insufficient posterior guidance leads to performance degradation. For 𝛾 , a small value provides limited preference correction, whereas an overly large value may over-adjust the user representation. Overall, the Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Trovato et al. 
+
+Dataset Models Stage 1 /epoch Stage 2 /epoch Inference H@10 
+
+Sports R2END - 3.88s 4.02s 0.1061 P3Rec 0.56s 4.26s 3.72s 0.1134 
+
+Beauty R2END - 2.34s 1.89s 0.0909 P3Rec 0.32s 2.42s 2.09s 0.1016 
+
+Toys R2END - 2.17s 1.92s 0.1061 P3Rec 0.35s1 2.18s 1.85s 0.1134 
+
+Table 4: Efficiency comparison across three datasets. 
+
+results show that moderate values of 𝛽 and 𝛾 enable effective pref-erence internalization and retrieval adaptation. The corresponding results on Sports and Toys are provided in Appendix C.1. 
+
+## 4.5 Generalization Analysis 
+
+To evaluate the cross-domain generalization ability of P 3Rec, we conduct transfer experiments. For each source domain, we evaluate the model on the other two target domains, yielding six transfer set-tings in total. We compare P 3Rec against R2END in terms of H@10 and N@10, with results reported in Table 3. P 3Rec consistently outperforms R2END across all transfer directions and both metrics, demonstrating superior cross-domain generalization. The improve-ments are particularly pronounced when transferring from Sports to Beauty and Toys, as well as in the reverse directions with Beauty or Toys as the source. Notably, P 3Rec achieves H@10 gains of 15 .85% and 15 .83% over R2END for Sports →Beauty and Toys →Beauty, respectively; the N@10 improvement for Toys →Beauty further reaches 16 .93%. These results indicate that the preference knowl-edge internalized by P 3Rec is not restricted to a specific domain. Instead, it captures more transferable preference patterns, enabling consistently stronger performance on unseen target domains. 
+
+## 4.6 Computational Complexity Analysis 
+
+Given the interaction sequence length 𝑛 , semantic representation dimension 𝑑 t, behavioral representation dimension 𝑑 b, and retrieval dimension 𝑑 rec , we analyze the computational complexity of P 3Rec. The Stage 1 mainly involves gated prior absorption and prefer-ence alignment. The computation of user representation fusion and distillation objectives requires 𝑂 (𝑑 t + 𝑑 b) operations. For Stage 2, Interest Entropy Calibration constructs semantic interest graphs based on historical interactions, requiring 𝑂 (𝑛 2𝑑 t) operations. The preference correction and retrieval projection operations require 
+
+𝑂 (𝑑 t) and 𝑂 (𝑑 t𝑑 rec ) operations, respectively. Therefore, the overall complexity of P 3Rec is dominated by Interest Entropy Calibration, resulting in 𝑂 (𝑛 2𝑑 t) complexity. Since LLM-based preference rea-soning is performed offline, it does not introduce additional online inference overhead. We further report the runtime comparison with R2END in Table 4. P 3Rec introduces marginal training overhead and comparable inference cost, while achieving superior recom-mendation performance. ... Target Item 
+
+Prior Preference Posterior  Preference 
+
+Target-agnostic Preference   
+
+> Melissa & Doug Feeding Set Sand Baking Set Doll Diaper Changing Set Learning Pad KidiBeats Drum Set Play-Doh Broom Set Play Food Imaginative Play Educational Play Early Childhood Development Creative Activities Role-playing Learning through Play
+
+Relevant History Target-relevant Preference 
+
+> Time to Eat Feeding Set Fruit & Vegetable Basket Little Helper Broom Set Kitchen-themed Pretend Play Play Food & Tableware Household Role-play Imaginative Role-playing Domestic Scenarios Doll Diaper Changing Set Sand Baking Set
+
+Prior 
+
+0.20 Score: 348 Rank: 
+
+Posterior 
+
+0.24 Score: 200 Rank: 
+
+P3Rec 
+
+0.32 Score: 
+
+39 Rank: 
+
+> Increase Increase
+> Fisher-Price Brilliant Basics Rock-a-Stack Little Helper Broom Set Educational Insights Dishes Set
+
+Relevant History 
+
+Figure 4: Case Study on Toys dataset. 
+
+## 4.7 Case Study 
+
+To provide an intuitive understanding of how prior and posterior preference reasoning complement each other, we present a rep-resentative case from the Toys dataset in Figure 4. User 𝑢 9805 has diverse historical interests, with the target being an Educational Insights Dishes Set . Prior reasoning summarizes general preferences from the interaction history—feeding sets, learning toys, Play-Doh, play food—capturing broad themes such as imaginative play , ed-ucational play , and role-playing . Posterior reasoning, in contrast, focuses on target-relevant interactions (feeding sets, sand baking sets, fruit/vegetable baskets, broom sets), revealing finer-grained preferences toward kitchen-themed pretend play and household role-play . Thus, prior reasoning provides a comprehensive profile, while posterior reasoning identifies target-specific signals. This comple-mentarity directly improves retrieval: prior-only yields score 0 .20 at rank 348; posterior-only improves to 0 .24 at rank 200; with both in-ternalized, P 3Rec achieves 0 .32 at rank 39. These results confirm that the two reasoning forms provide complementary, non-redundant knowledge for accurate target discrimination. The detailed prefer-ence reasoning outputs are provided in Appendix C.2. 
+
+## 5 Conclusion and Future Work 
+
+In this paper, we show that separately distilling either target-agnostic prior preferences or target-conditioned posterior preferences allows student models to acquire only one facet of LLM preference reason-ing, resulting in incomplete preference modeling. To address this limitation, we propose P 3Rec, which jointly extracts and progres-sively internalizes complementary prior and posterior preference knowledge into a lightweight recommender. Specifically, P 3Rec captures complementary user- and item-side preference knowl-edge through multi-perspective reasoning. It then absorbs prior preference knowledge into behavioral representations, while lever-aging posterior preferences to guide the absorption process and provide target-relevant supervision. Moreover, P 3Rec characterizes historical interest dispersion with interest entropy and adaptively P3Rec: Distilling Prior–Posterior Preference Reasoning for LLM-based Recommendation Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+calibrates user representations before contrastive retrieval opti-mization, enabling comprehensive preference knowledge to better serve recommendation. Extensive experiments demonstrate that P3Rec consistently outperforms state-of-the-art baselines. Neverthe-less, P 3Rec relies on LLM-generated preference knowledge, whose quality may affect subsequent internalization and retrieval adapta-tion. In future work, we plan to explore more efficient and robust preference reasoning and internalization strategies across broader recommendation scenarios. 
+
+## References 
+
+[1] Keqin Bao, Jizhi Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan He. 2023. Tallrec: An effective and efficient tuning framework to align large language model with recommendation. In RecSys . 1007–1014. [2] Yu Cui, Feng Liu, Pengbo Wang, Bohao Wang, Heng Tang, Yi Wan, Jun Wang, and Jiawei Chen. 2024. Distillation matters: empowering sequential recommenders to match the performance of large language models. In RecSys . 507–517. [3] Ziqiang Cui, Yunpeng Weng, Xing Tang, Xiaokun Zhang, Shiwei Li, Peiyang Liu, Bowei He, Dugang Liu, Weihong Luo, Chen Ma, et al. 2025. Semantic retrieval augmented contrastive learning for sequential recommendation. In NIPS .[4] Wei Guan, Jian Cao, Qiqi Cai, Jianqi Gao, Jinyu Cai, and See-Kiong Ng. 2026. SEAR: LLM-Powered Sequential Recommendation via Fusion of Collaborative, Semantic, and Rating Information. In WWW . 5731–5740. [5] Donghee Han, Daeyoung Roh, A Young Kim, Hwanjun Song, and Mun Yong Yi. 2026. Distilling LLM Reasoning into Dense Encoders: Bridging the Accuracy-Efficiency Gap in Recommendation. In Findings of the ACL . 22513–22531. [6] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2015. Session-based recommendations with recurrent neural networks. arXiv preprint arXiv:1511.06939 (2015). [7] Guoqing Hu, An Zhang, Shuo Liu, Zhibo Cai, Xun Yang, and Xiang Wang. 2025. Alphafuse: Learn id embeddings for sequential recommendation in null space of language embeddings. In SIGIR . 1614–1623. [8] Dietmar Jannach, Ahtsham Manzoor, Wanling Cai, and Li Chen. 2021. A survey on conversational recommender systems. ACM computing surveys (CSUR) (2021), 1–36. [9] Jian Jia, Yipei Wang, Yan Li, Honggang Chen, Xuehan Bai, Zhaocheng Liu, Jian Liang, Quan Chen, Han Li, Peng Jiang, et al. 2025. LEARN: knowledge adaptation from large language model to recommendation for practical industrial application. In AAAI . 11861–11869. [10] Junguang Jiang, Yanwen Huang, Bin Liu, Xiaoyu Kong, Ziru Xu, Han Zhu, Jian Xu, and Bo Zheng. 2025. Large language models are universal recommendation learners. arXiv preprint arXiv:2502.03041 (2025). [11] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-mendation. In ICDM . 197–206. [12] Sein Kim, Hongseok Kang, Seungyoon Choi, Donghyun Kim, Minchul Yang, and Chanyoung Park. 2024. Large language models meet collaborative filtering: An efficient all-round llm-based recommender system. In SIGKDD . 1395–1406. [13] Sein Kim, Hongseok Kang, Kibum Kim, Jiwan Kim, Donghyun Kim, Minchul Yang, Kwangjin Oh, Julian McAuley, and Chanyoung Park. 2025. Lost in Sequence: Do Large Language Models Understand Sequential Recommendation?. In SIGKDD .1160–1171. [14] Xiaoyu Kong, Jiancan Wu, An Zhang, Leheng Sheng, Hui Lin, Xiang Wang, and Xiangnan He. 2024. Customizing language models with instance-wise lora for sequential recommendation. NIPS (2024), 113072–113095. [15] Sunkyung Lee, Minjin Choi, Eunseong Choi, Hye-young Kim, and Jongwuk Lee. 2025. Gram: Generative recommendation via semantic-aware multi-granular late fusion. In ACL . 33294–33312. [16] Xianming Li and Jing Li. 2024. AoE: Angle-optimized embeddings for semantic textual similarity. In ACL (volume 1: Long papers) . 1825–1839. [17] Jiayi Liao, Sihang Li, Zhengyi Yang, Jiancan Wu, Yancheng Yuan, Xiang Wang, and Xiangnan He. 2024. Llara: Large language-recommendation assistant. In 
+
+SIGIR . 1785–1795. [18] Fake Lin, Binbin Hu, Zhi Zheng, Xi Zhu, Ziqi Liu, Zhiqiang Zhang, Jun Zhou, and Tong Xu. 2026. Token-level Collaborative Alignment for LLM-based Generative Recommendation. In WWW . 6909–6919. [19] Chen Ling, Xujiang Zhao, Jiaying Lu, Chengyuan Deng, Can Zheng, Junxiang Wang, Tanmoy Chowdhury, Yun Li, Hejie Cui, Xuchao Zhang, et al. 2025. Do-main specialization as the key to make large language models disruptive: A comprehensive survey. Comput. Surveys (2025), 1–39. [20] Qidong Liu, Xian Wu, Wanyu Wang, Yejing Wang, Yuanshao Zhu, Xiangyu Zhao, Feng Tian, and Yefeng Zheng. 2025. Llmemb: Large language model can be a good embedding generator for sequential recommendation. In AAAI . 12183–12191. [21] Qidong Liu, Xian Wu, Yejing Wang, Zijian Zhang, Feng Tian, Yefeng Zheng, and Xiangyu Zhao. 2024. Llm-esr: Large language models enhancement for long-tailed sequential recommendation. NIPS (2024), 26701–26727. [22] Qidong Liu, Xiangyu Zhao, Yejing Wang, Zijian Zhang, Howard Zhong, Chong Chen, Xiang Li, Wei Huang, and Feng Tian. 2025. Bridge the domains: Large language models enhanced cross-domain sequential recommendation. In SIGIR .1582–1592. [23] Yiheng Liu, Tianle Han, Siyuan Ma, Jiayue Zhang, Yuanyuan Yang, Jiaming Tian, Hao He, Antong Li, Mengshen He, Zhengliang Liu, et al. 2023. Summary of chatgpt-related research and perspective towards the future of large language models. Meta-radiology (2023), 100017. [24] Hao Ma, Dengyong Zhou, Chao Liu, Michael R Lyu, and Irwin King. 2011. Rec-ommender systems with social regularization. In WSDM . 287–296. [25] Yingtao Peng, Chen Gao, Yu Zhang, Tangpeng Dan, Xiaoyi Du, Hengliang Luo, Yong Li, and Xiaofeng Meng. 2025. Denoising alignment with large language model for recommendation. ACM Transactions on Information Systems (2025), 1–35. [26] Saverio Perugini, Marcos André Gonçalves, and Edward A Fox. 2004. Recom-mender systems research: A connection-centric survey. Journal of Intelligent Information Systems (2004), 107–143. [27] Xubin Ren, Wei Wei, Lianghao Xia, Lixin Su, Suqi Cheng, Junfeng Wang, Dawei Yin, and Chao Huang. 2024. Representation learning with large language models for recommendation. In WWW . 3464–3475. [28] Leheng Sheng, An Zhang, Yi Zhang, Yuxin Chen, Xiang Wang, and Tat-Seng Chua. 2025. Language representations can be what recommenders need: Findings and potentials. In ICLR . 91632–91658. [29] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential Recommendation with Bidirectional Encoder Repre-sentations from Transformer. In CIKM . 1441–1450. [30] Zhu Sun, Qing Guo, Jie Yang, Hui Fang, Guibing Guo, Jie Zhang, and Robin Burke. 2019. Research commentary on recommendations with side information: A survey and research directions. Electronic Commerce Research and Applications 
+
+(2019), 100879. [31] Gemma Team, Aishwarya Kamath, Johan Ferret, Shreya Pathak, Nino Vieillard, Ramona Merhej, Sarah Perrin, Tatiana Matejovicova, Alexandre Ramé, Morgane Rivière, et al. 2025. Gemma 3 technical report. arXiv preprint arXiv:2503.19786 
+
+(2025). [32] Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, et al. 2023. Llama: Open and efficient foundation language models. arXiv preprint arXiv:2302.13971 (2023). [33] Xinfeng Wang, Jin Cui, Fumiyo Fukumoto, and Yoshimi Suzuki. 2024. Enhancing high-order interaction awareness in llm-based recommender model. In EMNLP .11696–11711. [34] Xinfeng Wang, Jin Cui, Fumiyo Fukumoto, and Yoshimi Suzuki. 2025. Agrec: Adapting autoregressive decoders with graph reasoning for llm-based sequential recommendation. In Findings of the ACL . 7076–7090. [35] Xinfeng Wang, Jin Cui, Yoshimi Suzuki, and Fumiyo Fukumoto. 2024. Rdrec: Rationale distillation for llm-based recommendation. In ACL (Volume 2: Short Papers) . 65–74. [36] Yige Wang, Mingming Li, Li Wang, Kaichen Zhao, Wangming Li, Weipeng Jiang, and Xueying Li. 2026. MoMoREC: A Multi-agent Motivation Generation Frame-work for Residual Semantic ID-Aware Recommendation. In AAAI . 15904–15914. [37] Yu Wang, Lei Sang, Yi Zhang, and Yiwen Zhang. 2025. Intent representation learning with large language model for recommendation. In SIGIR . 1870–1879. [38] Wei Wei, Xubin Ren, Jiabin Tang, Qinyong Wang, Lixin Su, Suqi Cheng, Junfeng Wang, Dawei Yin, and Chao Huang. 2024. Llmrec: Large language models with graph augmentation for recommendation. In WWW . 806–815. [39] Binquan Wu, Kun Zeng, Yicheng Luo, Junhao Zheng, and Qianli Ma. 2026. Interest Entropy: Rethinking Contrastive Learning for Sequential Recommendation with Interest Uncertainty. In Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 1 . 1566–1577. [40] Fangzhao Wu, Ying Qiao, Jiun-Hung Chen, Chuhan Wu, Tao Qi, Jianxun Lian, Danyang Liu, Xing Xie, Jianfeng Gao, Winnie Wu, et al. 2020. Mind: A large-scale dataset for news recommendation. In ACL . 3597–3606. [41] Wujiang Xu, Qitian Wu, Zujie Liang, Jiaojiao Han, Xuying Ning, Yunxiao Shi, Wenfang Lin, and Yongfeng Zhang. 2025. SLMRec: Distilling large language models into small for sequential recommendation. In ICLR . 35810–35831. [42] Xihong Yang, Heming Jing, Zixing Zhang, Jindong Wang, Huakang Niu, Shuaiqiang Wang, Yu Lu, Junfeng Wang, Dawei Yin, Xinwang Liu, et al. 2025. Darec: A disentangled alignment framework for large language model and rec-ommender system. In ICDE . 904–917. [43] Tingting Zhang, Pengpeng Zhao, Yanchi Liu, Victor S Sheng, Jiajie Xu, Deqing Wang, Guanfeng Liu, Xiaofang Zhou, et al. 2019. Feature-level deeper self-attention network for sequential recommendation.. In IJCAI . 4320–4326. [44] Xinyu Zhang, Linmei Hu, Luhao Zhang, Wentao Cheng, Yashen Wang, Ge Shi, Chong Feng, and Liqiang Nie. 2025. Bi-Tuning with Collaborative Information for Controllable LLM-based Sequential Recommendation. In ACL . 19340–19351. [45] Yang Zhang, Fuli Feng, Jizhi Zhang, Keqin Bao, Qifan Wang, and Xiangnan He. 2025. Collm: Integrating collaborative embeddings into large language models for Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Trovato et al.       
+
+> recommendation. IEEE Transactions on Knowledge and Data Engineering (2025). [46] Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. 2018. Deep interest network for click-through rate prediction. In SIGKDD . 1059–1068. [47] Kun Zhou, Hui Wang, Wayne Xin Zhao, Yutao Zhu, Sirui Wang, Fuzheng Zhang, Zhongyuan Wang, and Ji-Rong Wen. 2020. S3-rec: Self-supervised learning for sequential recommendation with mutual information maximization. In CIKM .1893–1902. [48] Xin Zhou. 2023. Mmrec: Simplifying multimodal recommendation. In MMAsia .1–2. [49] Xiaofei Zhu, Jinfei Chen, Feiyang Yuan, and Zhou Yang. 2026. Iterative Semantic Reasoning from Individual to Group Interests for Generative Recommendation with LLMs. In WWW . 5753–5763.
+
+## A Experiment Settings A.1 Datasets 
+
+The Amazon Review dataset is a large-scale collection of product reviews and item metadata from Amazon. Each review records a user–item interaction together with information such as the review text, and timestamp. The item metadata contains product attributes such as title, description, brand, and category. The statistics of the processed datasets are summarized in Table 5. 
+
+## A.2 Baselines 
+
+We compare P 3Rec with 14 mainstream baselines across three cate-gories. (1) Traditional Recommendation Methods :
+
+• GRU4Rec [6]: Employs GRUs with a sequence-to-one pairwise ranking objective for temporal dynamics. 
+
+• SASRec [11]: Uses self-attention to capture short- and long-term dependencies, balancing efficiency and expressiveness. 
+
+• BERT4Rec [29]: Applies bidirectional self-attention and Cloze-style masking for full-sequence context modeling. 
+
+• FDSA [43]: Models item- and feature-level transitions via sepa-rate self-attention blocks. 
+
+• S3-Rec [47]: Pretrains with four self-supervised objectives to maximize mutual information and alleviate data sparsity. (2) LLM-based Methods :
+
+• AlphaRec [28]: Builds directly on LLM-generated item embed-dings, challenging ID-based approaches. We evaluate its MLP variant. 
+
+• LLMEmb [20]: Leverages LLMs to generate semantically rich item embeddings for alleviating the long-tail problem in se-quential recommendation. Through supervised contrastive fine-tuning and recommendation adaptation training. 
+
+• LLM-SRec [13]: Enhances the integration of sequential infor-mation into LLMs to improve their understanding of users’ item interaction sequences. Dataset Sports Beauty Toys #Users 35,598 22,363 19,412 #Items 18,357 12,101 11,924 #Reviews 296,337 198,502 167,597 #Sparsity (%) 0.0453 0.0734 0.0724 
+
+Table 5: Statistics of the experimental datasets. Algorithm 1 Optimization and Inference Process of P 3Rec  
+
+> 1:
+
+Obtain the target-agnostic prior preference representation 𝑝 𝑢 
+
+and the target-conditioned posterior preference representation 
+
+𝑝 𝑂 𝑢 for each user through the LLM and text encoder.  
+
+> 2:
+
+Pretrain the behavior encoder and obtain the behavioral repre-sentation ℎ𝑢 for each user.  
+
+> 3:
+
+Obtain the item-centric preference representation 𝑧 𝑣 for each item through the LLM and text encoder. 
+
+Stage 1: Prior–Posterior Preference Internalization  
+
+> 4:
+
+while not converged do  
+
+> 5:
+
+Compute the gating coefficient 𝛼 𝑢 and obtain the fused user representation 𝑞 𝑢 from ℎ𝑢 and 𝑝 𝑢 using Equations (9) and (10).  
+
+> 6:
+
+Compute the Target-conditioned Posterior Preference Dis-tillation loss Ldistill using Equation (11).  
+
+> 7:
+
+Compute the Posterior-guided Gate Distillation loss Lgate 
+
+using Equation (14).  
+
+> 8:
+
+Compute the Stage 1 objective Lstage1 using Equation (21) and update the model parameters.  
+
+> 9:
+
+end while Stage 2: Preference Retrieval Adaptation  
+
+> 10:
+
+Compute the normalized Interest Entropy score 𝜌 𝑢 from the interaction history 𝑆 𝑢 . 
+
+> 11:
+
+while not converged do  
+
+> 12:
+
+Obtain the calibrated user representation ¯ 𝑞 𝑢 using Equa-tion (18).  
+
+> 13:
+
+Map ¯ 𝑞 𝑢 and 𝑧 𝑣 into the shared retrieval space using Equa-tion (19).  
+
+> 14:
+
+Compute the recommendation loss Lstage2 using Equa-tion (20) and update the model parameters.  
+
+> 15:
+
+end while  
+
+> 16:
+
+Precompute the projected item representations and store them in the item database. 
+
+Inference  
+
+> 17:
+
+Obtain the fused user representation 𝑞 𝑢 . 
+
+> 18:
+
+Compute the normalized Interest Entropy score 𝜌 𝑢 from 𝑆 𝑢 . 
+
+> 19:
+
+Obtain the calibrated user representation ¯𝑞 𝑢 using Equa-tion (18).  
+
+> 20:
+
+Map ¯ 𝑞 𝑢 into the retrieval space to obtain 𝑒 𝑢 . 
+
+> 21:
+
+Compute the similarities between 𝑒 𝑢 and the precomputed item representations.  
+
+> 22:
+
+Rank all candidate items according to their similarity scores and retrieve the top-𝐾 items.  
+
+> 23:
+
+return the recommendation list R𝑢 .
+
+• LEARN [9]: Transfers open-world knowledge from frozen LLMs to recommendation systems by extracting item content and align-ing it with collaborative knowledge. (3) LLM Distillation-based Methods :
+
+• RDRec [35]: Distills rationales from a teacher LLM to a smaller student using reviews. In our implementation, we use Gemma3-12B as the teacher and T5-Large as the student. 
+
+• DLLM2Rec [2]: Transfers LLM knowledge via importance-aware ranking distillation and collaborative embedding distillation. P3Rec: Distilling Prior–Posterior Preference Reasoning for LLM-based Recommendation Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+• RLMRec [27]: Aligns LLM-derived semantic representations with collaborative signals to enhance representation learning in existing recommendation systems. 
+
+• SLMRec [41]: Distills by exploiting redundant LLM layers and injecting collaborative embeddings via an adapter. In our imple-mentation, we use 8-layer Gemma3-12B as teacher and 4-layer as student with SASRec embedding. 
+
+• R2END [5]: Distills oracle-guided LLM reasoning into a light-weight text encoder through dense semantic alignment, enabling LLM-free retrieval at inference. In our implementation, we use Gemma3-12B as the teacher and mxbai-embed-large (335M) as the student encoder. 
+
+## A.3 Implementation Details 
+
+In this section, we provide additional implementation details for reproducibility. Unless otherwise specified, the model and encoder configurations follow those described in the main text. The behav-ior encoder is initialized from mxbai-embed-large-v1 and fine-tuned exclusively on the training interactions. For the Prior–Posterior Preference Internalization (PPI) stage, we train the model for up to 100 epochs with an early-stopping patience of 10. The learning rate is set to 1 × 10 −3 and the batch size to 512. The temperature param-eter 𝜏 used in posterior-guided gate distillation is set to 0.1. The loss weight 𝛽 is selected based on validation performance. For the Preference Retrieval Adaptation (PRA) stage, we train the model for 10 epochs and sample 99 negative items for each positive instance. We use a learning rate of 1 × 10 −4, a batch size of 128, and a con-trastive temperature 𝜏 𝑟 = 0.07. The retrieval embedding dimension 
+
+𝑑 rec is set to 512, with the retrieval threshold 𝜎 set to 0.9. All model selection and hyperparameter tuning are performed using the vali-dation split. Ground-truth target information is unavailable during validation and test-time preference reasoning. All experiments are implemented in PyTorch and conducted on a single NVIDIA RTX 5090 GPU. 
+
+## B Algorithm for P 3Rec 
+
+Algorithm 1 summarizes the optimization and inference process of P3Rec. We first obtain the target-agnostic prior preference repre-sentation 𝑝 𝑢 , the target-conditioned posterior preference represen-tation 𝑝 𝑂 𝑢 , the behavioral representation ℎ𝑢 , and the item-centric preference representation 𝑧 𝑣 (lines 1–3). In Stage 1 , P 3Rec performs Prior–Posterior Preference Internalization (lines 4–9). The behav-ioral representation ℎ𝑢 and prior preference 𝑝 𝑢 are fused through the gated prior absorption mechanism to obtain the user repre-sentation 𝑞 𝑢 (line 5). The posterior preference 𝑝 𝑂 𝑢 then provides supervision through the Target-conditioned Posterior Preference Distillation loss Ldistill and the Posterior-guided Gate Distillation loss Lgate (lines 6–7). Based on these two objectives, the model optimizes the Stage 1 objective Lstage1 until convergence (line 8). In 
+
+Stage 2 , P 3Rec performs Preference Retrieval Adaptation (lines 10– 16). We first compute the normalized Interest Entropy score 𝜌 𝑢 from the interaction history 𝑆 𝑢 (line 10). The user representation 𝑞 𝑢 is then adaptively calibrated to obtain ¯ 𝑞 𝑢 (line 12). Next, ¯ 𝑞 𝑢 and 𝑧 𝑣 are mapped into a shared retrieval space (line 13), and the model is op-timized with the recommendation objective Lstage2 (line 14). After training, the projected item representations are precomputed and stored in the item database for efficient retrieval (line 16). During 
+
+inference (lines 17–23), only the behavioral representation, target-agnostic prior preference, and interaction history are required. We first obtain the fused user representation 𝑞 𝑢 (line 17), compute the normalized Interest Entropy score 𝜌 𝑢 (line 18), and calibrate the user representation to obtain ¯ 𝑞 𝑢 (line 19). The calibrated represen-tation is then projected into the retrieval space to obtain 𝑒 𝑢 (line 20), which is compared with the precomputed item representations (line 21). Finally, all candidate items are ranked according to their similarity scores, and the top-𝐾 items are returned as the recom-mendation results (lines 22–23). Notably, the target-conditioned posterior preference 𝑝 𝑂 𝑢 is only used during training and is not required at inference time. 
+
+## C Additional Experimental Results C.1 Hyperparameter Sensitivity 
+
+We further report the sensitivity of 𝛽 and 𝛾 on Sports and Toys in Figure 5. For 𝛽 , the performance remains relatively stable across a broad range on both datasets. Sports performs best with relatively large values of 𝛽 , while Toys reaches its peak around 𝛽 = 1𝑒 −2, indi-cating that the optimal strength of gate distillation may vary across datasets. For 𝛾 , moderate adjustment consistently performs better. Sports achieves the best result around 𝛾 = 0.5, while Toys peaks around 𝛾 = 0.3. Increasing 𝛾 beyond the optimal range generally degrades performance, suggesting that excessive preference correc-tion may over-adjust the user representation. Overall, these results are consistent with the observations on Beauty and demonstrate the robustness of P 3Rec to reasonable choices of 𝛽 and 𝛾 .
+
+## C.2 Detailed Case Study 
+
+Figure 6 presents the complete prior and posterior preference rea-soning outputs for user 𝑢 9805 on Toys. Yellow highlights the his-torical evidence supporting the reasoning process, blue highlights target-agnostic preferences inferred from the overall interaction history, and red highlights target-relevant preferences identified with access to the target item. The prior reasoning summarizes rel-atively broad and generalizable interests, such as imaginative play, educational play, creative activities, and role-playing. In contrast, the posterior reasoning places greater emphasis on historical in-teractions related to the current target and identifies finer-grained preferences, including kitchen-themed pretend play, household role-playing, and play food. This example further demonstrates the complementary roles of prior and posterior preference reasoning. 
+
+## D Preference Reasoning System Prompts 
+
+In this section, we provide the detailed system prompts used for LLM-based preference reasoning on the Toys dataset. For user-side preference reasoning, we construct prompts based on users’ chronological interaction histories. Following prior work, we se-lect the eight most recent interactions within the past 60 days. If no interaction is available in this period, we use the user’s most recent interaction instead. The maximum input length of the LLM is limited to 512 words. We design three types of system prompts corresponding to different preference reasoning perspectives: the target-agnostic prior preference reasoning prompt S𝑢 , the target-conditioned posterior preference reasoning prompt S𝑂 𝑢 , and the Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Trovato et al. Sports H@10 Sports Toys Toys 
+
+Figure 5: The hyperparameter study on Sports and Toys datasets. The user's preferences are as follows: Based on their purchase history from November 2013, the user demonstrates a strong interest in toys and games, particularly those geared towards imaginative and educational play for young children. A significant portion of their purchases revolve around the brand Melissa & Doug, indicating a preference for their products. Specifically, they favor playsets and accessories related to doll play, pretend kitchens, and outdoor activities like sand play. Beyond Melissa & Doug, the user also shows an interest in learning and educational toys, as evidenced by the Winfun Learning Pad and VTech KidiBeats Drum Set. This suggests a desire to combine entertainment with developmental learning. Furthermore, the purchase of Play-Doh and a set of play food indicates an appreciation for creative arts and crafts, as well as continued engagement with pretend play scenarios. Finally, the Little Helper Broom Set suggests an interest in toys that encourage role-playing and imitation of household tasks, further reinforcing the focus on imaginative play and early childhood development. Overall, the user appears to be purchasing items for a young child or children, prioritizing toys that foster creativity, learning, and engaging role-playing experiences. 
+
+Prior Preference 
+
+The user's preferences related to the target item (Educational Insights Dishes Set) are as follows: Based on their purchase history, the user demonstrates a strong interest in pretend play, particularly within the realm of kitchen and household scenarios. Several purchases, including the Melissa & Doug Time to Eat Feeding Set, the Melissa & Doug Sunny Patch Seaside Sand Baking Set, the Fruit and Vegetable Basket, and the Little Helper Broom Set, all fall under the \"Dress Up & Pretend Play\" category, with a significant focus on kitchen toys and play food. The user also shows an affinity for toys that encourage role-playing, as evidenced by the Doll Diaper Changing Set. While they've purchased learning-focused toys like the Winfun Kids Learning Pad and VTech KidiBeats Drum Set, and an arts & crafts item (Play-Doh), the recurring theme of imaginative play and domestic role-play is clear. Therefore, the purchase of the Educational Insights Dishes Set aligns perfectly with this established preference for pretend play, specifically kitchen-themed toys, suggesting the user is likely seeking to expand their child's imaginative play opportunities within a domestic setting. The user seems to favor brands like Melissa & Doug, indicating a potential preference for quality and engaging toys within this category. 
+
+Posterior Preference 
+
+Figure 6: Case study on the Toys dataset. Blue indicates target-agnostic preferences, while red indicates target-relevant preferences. Yellow highlights the historical items that provide supporting evidence for preference reasoning. Task: 
+
+Analyze the provided metadata and reviews to determine what kinds of users are most likely to prefer the target item. Your response should start with:  "Users who prefer [common themes/preferences] would find this item suitable." Incorporate patterns from the reviews, such as favored features, usage scenarios, or functional benefits. Avoid generic statements and ensure your description is grounded in the review content. 
+
+Target Item Metadata: 
+
+- Target Item Title: {item_title} - Brand: {brand} - Original Description: {description} 
+
+Requirements: 
+
+- Begin with the sentence: "Users who prefer ..." - Respond with a concise and information-dense single paragraph, strictly limited to {max_words} words. Avoid redundancy and ensure clarity. 
+
+System Prompt 
+
+Task: 
+
+Based on the user's chronological purchase history, analyze and summarize user's preferences. Focus on identifying the user's preferences from the user's purchase history. 
+
+User's Purchase History: 
+
+{user_purchase_history} 
+
+Requirements: 
+
+- Start with "The user's preferences are as follows:" - Write a single coherent paragraph (max {max_words} words) summarizing the user’s preferences. 
+
+Task: 
+
+Based on the user's chronological purchase history and the target item, analyze and summarize user's preferences related to the target item. Focus on identifying the user's preferences related to the target item from the user's purchase history. 
+
+User's Purchase History: 
+
+{user_purchase_history} 
+
+Target Item: 
+
+{target_item} 
+
+Requirements: 
+
+- Start with "Start with "The user's preferences related to the target item are as follows:" - Write a single coherent paragraph (max {max_words} words) summarizing the user’s preferences related to the target item. 
+
+Previously Purchased Items: 
+
+{previous_item_reviews} 
+
+System Prompt System Prompt 
+
+Figure 7: Examples of system prompts for target-agnostic prior preference reasoning S𝑢 , target-conditioned posterior preference reasoning S𝑂 𝑢 , and item-centric preference reasoning S𝑣 .
+
+item-centric preference reasoning prompt S𝑣 . The detailed prompt templates are presented in Figure 7.

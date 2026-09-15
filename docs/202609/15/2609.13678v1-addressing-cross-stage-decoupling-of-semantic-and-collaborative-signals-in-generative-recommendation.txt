@@ -1,0 +1,692 @@
+Title: Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.13678v1
+
+Published Time: Tue, 15 Sep 2026 00:28:41 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation 
+
+# Jiayi Dan ∗
+
+danjiayi05@kuaishou.com Kuaishou Technology Beijing, China 
+
+## Abstract 
+
+Generative recommendation reformulates sequential recommenda-tion as autoregressive generation by encoding items into semantic tokens, enabling improved scaling capability and cross-domain gen-eralization. However, existing generative recommender systems typically follow a two-stage pipeline, where item tokenization is largely dominated by textual semantics with limited incorpora-tion of collaborative signals and interaction similarity, leading to code assignments that are misaligned with downstream generation. Conversely, the generation stage tends to overlook the original se-mantic information, as the code sequences are re-embedded based on interaction data. This cross-stage information decoupling limits semantic coherence and recommendation accuracy. To address this issue, we propose SCRec, a general framework that enhances cross-stage coherence through bidirectional informa-tion supplementation. Specifically, we introduce (i) collaborative-enhanced tokenization to explicitly inject textualized collaborative signals into semantic tokenization, without introducing additional alignment task, (ii) semantic-guided generation to dynamically recalibrate semantic priors with learnable code embeddings in gen-eration stage, and (iii) manifold alignment to reconcile the geomet-ric mismatch between the embedding space of discrete codebook indices and the dense continuous semantic space. These interre-lated components form a general framework that aligns semantic and collaborative signals and enhances cross-stage information coherence, with minimal additional training and inference costs. Extensive experiments 1 demonstrate the effectiveness, robustness, and generalizability of our proposed framework. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems .
+
+## Keywords 
+
+Recommender Systems, Generative Recommendation, Collaborative-Semantic Integration, Representation Alignment 
+
+ACM Reference Format: 
+
+Jiayi Dan. 2026. Addressing Cross-Stage Decoupling of Semantic and Col-laborative Signals in Generative Recommendation. In 20th ACM Conference 
+
+> ∗Corresponding author.
+> 1Code is available at https://github.com/DanJiayi/SCRec.
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> RecSys ’26, Minneapolis, MN, USA
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2284-4/2026/09 https://doi.org/10.1145/3773078.3831736
+
+on Recommender Systems (RecSys ’26), September 27-October 02, 2026, Min-neapolis, MN, USA. ACM, New York, NY, USA, 11 pages. https://doi.org/10. 1145/3773078.3831736 
+
+## 1 Introduction 
+
+Generative recommendation has emerged as a promising paradigm that reformulates sequential recommendation as autoregressive generation. Prior work shows that representing items as semantic tokens before generation improves recommendation performance and cross-domain generalization through richer semantic abstrac-tion. In the tokenization stage, item textual information is encoded by a pretrained language model (PLM) and quantized into discrete code sequences to capture hierarchical semantics while leveraging the rich knowledge of PLMs. During generative training, these code sequences are re-embedded based on interaction data to capture behavioral and collaborative patterns flexibly. However, as illustrated in Figure 1, this two-stage paradigm in-troduces an information decoupling issue. The tokenization stage is typically dominated by semantic information, making it difficult to coherently inject collaborative signals and interaction similarity, re-sulting in code assignments that are not well suited for downstream generation. In contrast, the generation stage tends to overlook the original semantic information, whereas the next item is expected to be decoded as a semantic code sequence, leading to semantic distortion and reduced generation accuracy. To address this semantic-collaborative decoupling issue, we pro-pose a general and lightweight framework that improves cross-stage coherence via bidirectional information supplementation. On one hand, we introduce collaborative-enhanced tokenization to ex-plicitly inject textualized collaborative signals into code sequences without introducing additional alignment task. On the other hand, we propose semantic-guided generation to dynamically fuse tex-tual priors with codebook embeddings during generation. However, code embeddings and semantic representations differ not only in modality but also in their geometry: the former originates from discrete codebook indices, while the latter are dense continuous hidden states of language models. To address this underlying dis-crepancy, we introduce hyperbolic manifold alignment to enforce geometric consistency. These interconnected components ensure consistent use of semantic and collaborative signals across stages. We also implement the proposed framework as a reusable mod-ule that can be integrated into a wide range of generative recom-menders with minimal training and inference overhead. Our contributions are summarized as follows: 
+
+• We identify the semantic–collaborative decoupling issue in existing two-stage generative recommenders and integrate arXiv:2609.13678v1 [cs.IR] 12 Sep 2026 RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Jiayi Dan 
+
+collaborative-aware tokenization with semantic-guided gen-eration to enhance cross-stage information coherence. 
+
+• We introduce a manifold alignment mechanism to geomet-rically bridge token embedding space and dense semantic representations in a shared hyperbolic latent space. 
+
+• Based on these designs, we develop a reusable module that can be incorporated into existing generative recommenda-tion models with minimal additional overhead. 
+
+• We conduct extensive experiments to validate the effective-ness and generality of the proposed framework. 
+
+Figure 1: Illustration of Semantic ID-Based Two-Stage Gener-ative Recommendation. 
+
+## 2 Related Work 
+
+Sequential recommendation is traditionally formulated as a discrim-inative prediction task with large and sparse item embedding tables [19, 38]. Recent work reframes it as sequence generation, where models autoregressively decode item identifiers or natural language descriptions [2, 9, 22, 35]. Language models are widely used for contextual modeling and generation, including encoder-decoder architectures [4, 5, 9] and decoder-only architectures [2, 17, 61]. Beyond the classic autoregressive paradigm, alternative gen-eration paradigms have been explored to improve efficiency and robustness. RPG [14] and SETRec [27] reformulate item identi-fier prediction as parallel generation, reducing decoding latency and error propagation. CAR [45] introduces chunk-level modeling to capture users’ decision-making processes. Diffusion-based ap-proaches [23, 24, 30, 36, 37, 55] enable parallel refinement of item identifiers while modeling global dependencies. Apart from backbone choice and generation paradigms, a key challenge is how items are represented for generation. Sparse ID-based identifiers assign each item a unique numeric token [9, 49], which is simple but semantically opaque and memory-intensive; tex-tual identifiers improve alignment with language models [5, 20], but are less flexible and may suffer from hallucination [54]. A dominant paradigm derives semantic IDs by discretizing continuous item rep-resentations into sequences of discrete codes [26, 35, 44, 57, 59]. Typ-ically, RQ-VAE constructs coarse-to-fine representations [35, 44]; UTGRec [58] models shared and incremental semantics via tree-structured codebooks; RPG [14] leverages Product Quantization to build ultra-long semantic IDs. To mitigate token collisions, [26] introduces a low-dimensional code representation, while [6] sepa-rates colliding items via a uniqueness loss. GenCDR [15] further extends semantic ID tokenization to cross-domain scenarios by injecting domain-specific signals via LoRA-based adapters into a universal RQ-VAE encoder. However, reconstruction-centric objectives of semantic-ID to-kenization may be misaligned with recommendation tasks [25]. Recent studies address this mismatch through joint optimization of tokenization and generation, including self-improving identifiers [3], end-to-end frameworks with recommendation-oriented signals [28], co-evolution learning [42], and differentiable SID that update codes through gradients of the recommendation loss [7]. Another challenge in tokenization for generative recommenda-tion is integrating multi-source data, including multi-modal and collaborative signals. To incorporate multi-modal information, re-cent work aligns heterogeneous modalities into a unified represen-tation space [41, 50–52, 58, 63]. Typically, MACRec [52] promotes consistency between text and image modality tokens through im-plicit contrastive losses and explicit cross-modal generation tasks. Another line of work focuses on incorporating collaborative signals during tokenization. MMGRec [29] extracts collaborative filter-ing (CF) embeddings using a pretrained model and concatenates them with semantic embeddings before quantization. However, such direct concatenation may disrupt the spatial structure of rep-resentation vectors. PRORec [47] aligns the two embeddings via contrastive learning and introduces an extra next-item prediction task during the tokenization stage. However, the alignment quality is not guaranteed, and it incurs noticeable training overhead since it introduces an additional training stage. Another approach treats CF embeddings as auxiliary supervision rather than direct inputs during quantization. For example, LETTER [44] applies contrastive learning between CF embeddings and reconstructed semantic em-beddings during RQ-VAE training, while COSETTE [21] encourages the quantized space to approximate the item similarity structure derived from the co-occurrence matrix. However, these implicit approaches take only semantic embeddings as inputs, making it difficult to ensure that collaborative signals are effectively injected. Moreover, these methods fail to recover the rich semantic informa-tion encoded in code sequences in the generation stage. 
+
+Research Gap : Overall, existing generative recommendation frameworks typically adopt a two-stage pipeline, where the tok-enization stage lacks explicit and coherent incorporation of collab-orative signals, while the generation stage tends to overlook the original semantic information. Integrating and aligning the two signals to enhance cross-stage information coherence remains a crucial yet underexplored challenge. 
+
+## 3 Method 
+
+In this section, we present SCRec, a general and lightweight frame-work to address the cross-stage decoupling between semantic and collaborative signals in generative recommendation. Given a user interaction sequence 𝑠 = {𝑖 1, 𝑖 2, . . . , 𝑖 𝑡 −1 }, the task is to predict the next item 𝑖 𝑡 by generating its corresponding semantic code sequence. Our proposed method explicitly incorporate textu-alized collaborative signals into the semantic tokenization process, restore the original semantic priors in the generation stage, and further reconcile the intrinsic geometries of the two representations in a shared hyperbolic space. The overall framework is illustrated in Figure 2. 
+
+## 3.1 Collaborative-Enhanced Tokenization 
+
+The primary objective of tokenization is to represent items as dis-crete code sequences for downstream generation while preserving Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+Figure 2: Overview of the proposed framework 
+
+semantic structure and leveraging the rich knowledge of pretrained language models. Prior work has shown the effectiveness of repre-senting items as hierarchical semantic code sequences with quanti-zation techniques, typically RQ-VAE. However, existing frameworks often fail to effectively incorporate collaborative signals and interac-tion similarity during tokenization, leading to a mismatch between code assignment and downstream generation task. Consider the example of running shoes and high-heeled shoes: since they share similar textual semantics, a purely semantic-driven tokenizer will assign them closely related code sequences. However, generative models may struggle to learn optimal code embeddings from interactions, as their collaborative patterns differ significantly while the codes enforce similarity. Conversely, items with strong collaborative similarity, such as running shoes and soccer balls, may receive drastically different code sequences due to textual differences, even though they should be close in the generation embedding space, further complicating the downstream task. To mitigate this issue, recent studies have attempted to incor-porate collaborative signals into the tokenization stage. A typical approach concatenates collaborative embeddings obtained from pretrained models with semantic embeddings before quantization [29], but such direct fusion may distort the representation space due to modality mismatch. Another line of work uses collaborative signals as additional supervision during quantization [21, 44]. How-ever, this implicit strategy cannot guarantee effective learning of auxiliary objectives and sufficient capture of collaborative signals, as the input consists solely of semantic embeddings. To inject collaborative signals explicitly and coherently, we trans-form collaborative signals into textual form, based on the principle that items with similar collaborative and interaction patterns should have similar code assignments. Specifically, we first employ a collab-orative filtering (CF) model to identify the top-𝑘 most similar items for each item 𝑖 . This CF model can be arbitrary, such as a simple Swing algorithm. Alternatively, to further improve alignment with downstream generation, item similarities can be computed directly from the embeddings of a simple sequential recommendation model pretrained on past interaction data: 
+
+{ 𝑗 1, 𝑗 2 . . . , 𝑗 𝑘 } = Top-k  
+
+> 𝑗 ∈ I
+
+sim (e𝑖 , e𝑗 ),
+
+where I denotes the item set, e𝑖 denotes the item embedding ob-tained from the pretrained model, sim (·) denotes cosine similarity. Next, we extract semantic information from both item 𝑖 and its top- 𝑘 most similar items. For item 𝑖 itself, we preserve fine-grained semantic attributes and organize them as follows: Prompt main  
+
+> 𝑖
+
+= “{title 𝑖 }; {brand 𝑖 }; {category 𝑖 }; {description 𝑖 }; . . . ”.
+
+For similar items, we use their titles as the primary semantic cues, concatenate them into a single sequence, and truncate each title to the first 20 words to avoid being dominated by overly long texts: Prompt CF  
+
+> 𝑖
+
+= “{title 𝑗 1 }; {title 𝑗 2 }; . . . ; {title 𝑗 𝑘 }”.
+
+We then encode the two semantic inputs with a pretrained lan-guage model (e.g., T5), obtain their hidden representations, and perform a weighted aggregation to derive a unified embedding: ˜e𝑖 = 𝑎 Encode (Prompt main  
+
+> 𝑖
+
+) + ( 1 − 𝑎 )Encode (Prompt CF  
+
+> 𝑖
+
+),
+
+where 𝑎 is a tunable hyperparameter. Note that both semantic and collaborative representations are extracted from textual descriptions using the same pretrained lan-guage model, so they are naturally aligned in the same space in a simple yet effective manner, while fully leveraging the knowledge of the pretrained language model. Items with similar interaction patterns and shared neighbors are assigned more similar code se-quences, thereby better aligning with the downstream generation task. The procedure can be performed offline (offline extraction of item embeddings using a pretrained recommender model is a RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Jiayi Dan 
+
+common step in prior work [27, 29, 44, 47]), incurring no additional online training or inference cost. Finally, we employ RQ-VAE to quantize ˜ e𝑖 into a unified code sequence that jointly captures semantic and collaborative informa-tion, and compute the quantization loss: 
+
+Lquant =∑︁  
+
+> 𝑖 ∈ I
+
+
+
+∥ ˜e𝑖 − ˆe𝑖 ∥22+ 
+
+> 𝑙 −1
+
+∑︁ 
+
+> 𝑚 =0
+
+  sg (r𝑖,𝑚 ) − q𝑖,𝑚 22+𝛾 r𝑖,𝑚 − sg (q𝑖,𝑚 ) 22
+
+
+
+where ˆ e𝑖 denotes the reconstructed representation, q𝑖,𝑚 and r𝑖,𝑚 
+
+denote the codebook embedding and the residual at stage 𝑚 , sg (·) is the stop-gradient operator, and 𝑙 is the length of the code sequence. 
+
+## 3.2 Semantic-Guided Generation 
+
+Although SID preserves the hierarchical semantic information of items, the downstream generative model re-embeds the code se-quences during training for greater flexibility. Since optimization primarily relies on historical interaction data, the learned embed-dings mainly encode interaction and collaborative patterns, and the original semantic information obtained from pretrained language models will gradually be lost. Since the next item is expected to be decoded in the form of semantic code sequence, this information loss can lead to semantic distortion and reduced generation accu-racy. To address this, we introduce a semantic guidance module that explicitly restores semantic information during generation. Since semantic representations are defined at the item level, we first transform hierarchical code embeddings into an item-level representation via a item-specific learnable vector w ∈ R𝑙 . To prevent the over-dominance of certain code positions and stabi-lize training, we optionally apply a temperature-scaled softmax to 
+
+w to produce a more balanced weight distribution. Formally, let 
+
+c𝑖 = (𝑐 1𝑖 , 𝑐 2𝑖 , . . . , 𝑐 𝑙𝑖 ) denote the code sequence of item 𝑖 . We first construct the learnable embedding matrix E𝑖 ∈ R𝑙 ×𝑑 , where the 
+
+𝑘 -th row is the embedding of 𝑐 𝑘𝑖 . The transformed code embedding 
+
+ecode  
+
+> 𝑖
+
+∈ R𝑑 is then given by: 
+
+w = Wℎ h𝑖 , ˜w = softmax 
+
+ w
+
+𝜏 𝑤 
+
+
+
+, ecode  
+
+> 𝑖
+
+= E⊤ 
+
+> 𝑖
+
+˜w,
+
+where h𝑖 ∈ Rℎ is the frozen original semantic representation, 
+
+Wℎ ∈ R𝑙 ×ℎ , the temperature 𝜏 𝑤 ≥ 1 and is linearly annealed to 1 during training. ecode  
+
+> 𝑖
+
+is primarily determined by the learnable code embedding matrix E, which mainly captures collaborative and interaction patterns during generative model training. At this step, the semantic representation is only used to generate item-specific weights and does not alter the 𝑑 -dimensional embedding space. The hierarchical cues of the code sequences can still be retained through learnable layer-specific weighting that is not globally shared. Following this, we integrate the semantic representation with the learnable code embeddings dynamically: 
+
+esem  
+
+> 𝑖
+
+= W𝑠 h𝑖 , 𝑔 𝑖 = 𝜎 
+
+
+
+W𝑔 [ecode  
+
+> 𝑖
+
+; esem  
+
+> 𝑖
+
+]
+
+
+
+,
+
+efused  
+
+> 𝑖
+
+= 𝑔 𝑖 ecode  
+
+> 𝑖
+
++ ( 1 − 𝑔 𝑖 )esem  
+
+> 𝑖
+
+,
+
+where W𝑠 ∈ R𝑑 ×ℎ , W𝑔 ∈ R1×2𝑑 , 𝜎 is the sigmoid function, and 
+
+[· ; ·] denotes concatenation. This mechanism adaptively integrates collaborative representations with semantic priors according to the expressive capacity of the code embeddings. The computational cost of the whole procedure is approximately 2 (𝑙𝑑 +𝑑ℎ + 𝑙ℎ ) FLOPs up to lower-order terms, which does not introduce a noticeable overhead compared to the cost of the main generative model. The fusion form is interchangeable (e.g., dimension-wise or multi-head gating); here, we adopt the lowest-complexity design to reduce additional computational cost. However, code and semantic embeddings originate from different modalities (behavioral interactions vs. textual semantics), making direct weighted fusion less effective. To capture cross-modal corre-spondence and facilitate downstream optimization, we introduce contrastive alignment between the two representations via the InfoNCE loss: 
+
+L𝑎𝑙𝑖𝑔𝑛 = −∑︁  
+
+> 𝑖 ∈ I
+
+log exp (sim (ecode  
+
+> 𝑖
+
+, esem  
+
+> 𝑖
+
+)/ 𝜏 )
+
+Í𝑁 𝑗 =1 exp (sim (ecode  
+
+> 𝑖
+
+, esem  
+
+> 𝑗
+
+)/ 𝜏 ) .
+
+With the fused representation of historical interaction items, we predict the code sequence of the next item using a backbone generative model and compute the corresponding generation loss 
+
+L𝑔𝑒𝑛 . The backbone model is flexible and compatible with a wide range of existing methods. 
+
+## 3.3 Manifold Alignment 
+
+While contrastive alignment mitigates the modality discrepancy between code and semantic representations at the instance level, a more intrinsic mismatch remains in their underlying geometry. Code embeddings originate from discrete and hierarchical code-book indices, whereas semantic representations correspond to the hidden states of a pretrained language model. As an intuitive anal-ogy, directly fusing a language model’s token embedding matrix with its contextual hidden states, even if both originate from the same textual modality and are optimized under the same training objective, can still be suboptimal due to structural mismatch of representation spaces (e.g., differences in distance metrics and dis-tributional structures). Solely aligning them with a contrastive loss based on inter-instance similarity without resolving this discrep-ancy is therefore insufficient. To address this geometric mismatch, hyperbolic space is a valid shared latent space for aligning heterogeneous representation spaces, since it is a complete and simply connected negatively curved Rie-mannian manifold [40], and prior theoretical studies have shown its ability to better preserve intrinsic structural information compared to Euclidean alignment (e.g. minimizing 𝐿 2 distance or MMD loss) [33]. As a typical example, Guo et al. [10] project knowledge graph representations into hyperbolic space for entity alignment, and find that due to the exponential expansion property, it better pre-serves both hierarchical structure and similarity with less distortion, which are essential for modeling RQ-VAE-based code sequences and semantic representations, respectively. Motivated by the strong cor-respondence between these insights and our challenge, we further introduce hyperbolic manifold alignment to reconcile the underly-ing geometries of the two representation spaces. Concretely, we project the code embedding ecode  
+
+> 𝑖
+
+onto a 𝑑 -dimensional Poincaré ball 
+
+D𝑑 𝑐 = x ∈ R𝑑 : ∥x∥ < 𝑐 ,Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+via the exponential-map-style parametrization (following standard hyperbolic neural network formulations [8]): 
+
+zcode  
+
+> 𝑖
+
+= 𝜙 (ecode  
+
+> 𝑖
+
+) = 𝑐 tanh  ∥ ˜ecode  
+
+> 𝑖
+
+∥/( 2𝑐 )
+
+∥ ˜ecode  
+
+> 𝑖
+
+∥ ˜ecode  
+
+> 𝑖
+
+∈ D𝑑 𝑐 ,
+
+where 𝑐 is the curvature hyperparameter, ˜ ecode  
+
+> 𝑖
+
+denotes the vector obtained by passing ecode  
+
+> 𝑖
+
+through a learnable linear transformation. Similarly, we project the semantic representation esem  
+
+> 𝑖
+
+into the same hyperbolic space through a learnable projector 𝜓 (·) :
+
+zsem  
+
+> 𝑖
+
+= 𝜓 (esem  
+
+> 𝑖
+
+) ∈ D𝑑 𝑐 .
+
+We then minimize the geodesic distance between the two hyper-bolic embeddings to enforce consistency between the two spaces: 
+
+Lgeo =∑︁  
+
+> 𝑖 ∈ I
+
+𝑑 D
+
+
+
+zcode  
+
+> 𝑖
+
+, zsem 
+
+> 𝑖
+
+
+
+=∑︁  
+
+> 𝑖 ∈ I
+
+cosh −1 1 + 2𝑐 2 zcode  
+
+> 𝑖
+
+− zsem 
+
+> 𝑖
+> 2
+
+ 𝑐 2 − ∥ zcode  
+
+> 𝑖
+
+∥2    𝑐 2 − ∥ zsem  
+
+> 𝑖
+
+∥2 !
+
+,
+
+where 𝑑 D (· , ·) is the geodesic distance on the Poincaré ball [8, 40], and 𝑐 is the hyperparameter that controls the curvature of the hyperbolic space. The computations of 𝜙 (·) and 𝑑 D (·) are both linear in the embedding dimension, and the time complexity of computing 
+
+Lgeo is O( 𝑁𝑑 ) for a batch of 𝑁 samples. This is no higher than that of commonly used alignment objectives (e.g., a standard in-batch InfoNCE loss requires complexity O( 𝑁 2𝑑 )). Therefore, this module does not introduce noticeable computational cost. While contrastive alignment facilitates model training by cap-turing cross-modal correspondences, this module further aligns the global geometry of the two representations within a shared latent hyperbolic space, yielding more coherent representations for generation. Moreover, as we will later show empirically, reducing this underlying discrepancy also prevents the model from overly relying on semantic features, which are more easily exploited by the generative model as they correspond to the dense hidden states of the language model, thereby enabling more effective learning of code embeddings. We further provide a supplementary theoretical analysis showing that minimizing 𝐿 geo tightens an upper bound on the excess generation error induced by code embeddings under standard assumptions in Appendix 6.1. The final loss function of the generation stage is given by: 
+
+L = L𝑔𝑒𝑛 + 𝛼 L𝑎𝑙𝑖𝑔𝑛 + 𝛽 L𝑔𝑒𝑜 .
+
+Through the three interconnected modules proposed above, we ensures the consistent utilization of semantic and collaborative signals in both the tokenization and generation stages, mitigating the underlying information decoupling between the two stages. 
+
+## 4 Experiments 
+
+Our experiments address the following questions: 
+
+• RQ1: Does the proposed method consistently outperform baseline models across different datasets? 
+
+• RQ2: Are all proposed modules in both the tokenization and generation stages individually effective and necessary for performance improvement? 
+
+• RQ3: Is the proposed method robust and stable under differ-ent hyperparameter settings? 
+
+• RQ4: Does our method generalize effectively across different backbones with minimal additional overhead? 
+
+• RQ5: Does explicitly injecting textualized collaborative sig-nals during tokenization outperform alternative strategies? 
+
+## 4.1 Setup 
+
+Dataset. Following prior SID-based studies [16, 18, 35], our ex-periments utilize three datasets from the Amazon Reviews [32]: “Beauty”, “Sports and Outdoors” and “Toys and Games”. In align-ment with established methodologies [13, 35, 60], we conceptualize a user’s historical reviews as “interactions.” These interactions are sorted chronologically—from earliest to latest—to construct the input sequences. For our evaluation framework, we apply the stan-dard leave-last-out protocol [19, 35, 56]. Under this setup, the final item in a user’s sequence is designated for testing, the penultimate item is held out for validation, and the remainder forms the training set. This is unified across all baselines to ensure fair comparison. 
+
+Baselines. We include a diverse set of baselines, including re-cent and related representative methods across diverse generative paradigms to ensure a comprehensive evaluation: 
+
+• Caser [39] models sequential item ID patterns with CNNs to capture local dependencies. 
+
+• GRU4Rec [11] uses a recurrent neural network for session-based recommendation. 
+
+• HGN [31] extends RNN-based recommendation with gating mechanisms for improved sequential modeling. 
+
+• BERT4Rec [38] applies a bidirectional Transformer with a Cloze-style objective to model item ID sequences. 
+
+• SASRec [19] employs a self-attention Transformer decoder for sequential recommendation. 
+
+• FDSA [53] encodes item ID and feature sequences separately using self-attention. 
+
+• S3-Rec [60] performs self-supervised pretraining to capture correlations between item attributes and IDs before fine-tuning for next-item prediction. 
+
+• VQRec [13] converts items into semantic IDs via product quantization and represents items using pooled semantic ID embeddings. 
+
+• RecJPQ [34] replaces item embeddings with shared sub-embeddings obtained through joint product quantization. 
+
+• HSTU [49] discretizes raw item features into tokens as gen-erative inputs. 
+
+• TIGER [35] tokenizes items into semantic IDs via RQ-VAE and predicts tokens autoregressively. 
+
+• LIGER [48] extends TIGER by jointly supporting generative and dense retrieval through hybrid training and ranking. 
+
+• CoST [62] introduces contrastive quantization to learn se-mantic tokens while preserving item neighborhood relations. 
+
+• ETEGRec [28] an end-to-end training framework with alter-nating optimization and recommendation-aware objectives. 
+
+• LC-Rec [57] leverages large language models for recommen-dation and enhances collaborative signals during generation. 
+
+• RPG [14] generates unordered token sequences via OPQ and accelerates inference using graph-based search. 
+
+• LLaDA [36] formulates SID generation as a discrete diffusion process with parallel token prediction and adaptive decoding. RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Jiayi Dan 
+
+• CoFiRec [46] adopts a coarse-to-fine tokenization frame-work to hierarchically generate semantic IDs. 
+
+• PIT [42] a very recent work that proposes a dynamic item tokenizer co-evolving with the generative recommender. 
+
+Evaluation. We adopt Recall@ 𝐾 and NDCG@ 𝐾 as evaluation metrics with 𝐾 ∈ { 5, 10 }, following Rajput et al. [35]. The model achieving the best NDCG@10 on the validation set is selected for final evaluation on the test set. 
+
+Implementation details. We train the model for a maximum of 300 epochs with a batch size of 256 and a learning rate of 0.01, and employ early stopping with a patience of 20 based on validation NDCG@10. For the main experiments, we adopt a decoder-only backbone generative model following RPG [14], and further evalu-ate our method on alternative backbone architectures in the sub-sequent section, where all hyperparameters and settings are kept consistent with the corresponding backbone. For the tokenization, we use the pretrained sentence-t5-base, which is commonly adopted in baselines, to extract item embeddings, and train the RQ-VAE for 5000 epochs using a learning rate of 0.001 and a batch size of 4096, the codebook size, latent space dimension, and the coefficient 𝛾 are set to 256, 256, and 0.25, respectively. We tune the loss weights 𝛼 and 
+
+𝛽 , the hyperbolic curvature 𝑐 in {0.2, 0.5, 1}, and 𝑎 in {0.2, 0.5, 0.8}
+
+according to the validation 𝑁 𝐷𝐶𝐺 @10. 𝜏 and 𝑘 are set to 0.1 and 10, respectively. 𝜏 𝑤 is linearly annealed from 2 to 1. Other basic settings (optimizer, configurations for training and evaluation, data preprocessing and splitting, etc.) are kept consistent with RPG [14]. Consistent with [20], the top-10 similar items are identified using SASRec pretrained using the training data. All experiments are conducted on a single RTX 4090 GPU. Baselines including RPG are rerun under the same environment using the official open-source implementation and strictly following the instructions, both TIGER and LIGER are evaluated using LIGER’s open-source codebase. 
+
+## 4.2 Overall Performance 
+
+We compare our method with a diverse set of baselines on three widely used datasets. As shown in Table 1, our method consistently outperforms all baseline methods, achieving 13%–27% gains over the second-best method across four metrics. These results demonstrate strong performance and robustness of our method, providing a clear answer to RQ1. Among the baselines, semantic ID–based methods significantly outperform item ID–based ones, highlighting the importance of semantic tokenization. However, due to the decoupling of semantic and collaborative signals across tokenization and generation, their performance remains suboptimal. 
+
+## 4.3 Ablation Study 
+
+We conduct ablation studies to evaluate each component of our framework. As shown in Table 2, removing collaborative signals in tokenization (i.e., 𝑎 = 1) or removing semantic fusion in generation (i.e., 𝑔 = 1 and excluding additional alignment modules) both lead to clear performance drops, validating the importance of bidirectional information supplementation. Furthermore, removing either con-trastive alignment or manifold alignment in the generation stage consistently degrades performance. Notably, even with optimally 
+
+Figure 3: Hyperparameter Sensitivity Analysis. 
+
+weighted contrastive loss, manifold alignment still yields signifi-cant gains, highlighting the necessity of reconciling the underlying geometries of the two representation spaces. These results are consistent across all datasets and metrics, con-firming the robustness of our findings and providing a comprehen-sive answer to RQ2. 
+
+## 4.4 Sensitivity Analysis 
+
+To examine the robustness of our method, we conduct extensive sweeps over the loss weights 𝛼 , 𝛽 , and the hyperbolic curvature 𝑐 
+
+across all datasets. As shown in Figure 3, the performance of our method remains stable under different settings and consistently outperforms all baselines on all datasets and metrics. These results confirm the stability and effectiveness of our approach, providing a clear answer to RQ3. 
+
+## 4.5 Generalizability and Efficiency 
+
+Our proposed framework is lightweight and agnostic to specific quantization or generation methods. To demonstrate its general-izability, we implement it as a reusable module and evaluate it on different backbones. Specifically, we adopt the representative method TIGER (RQ-VAE + T5), and LIGER (a recent and representa-tive two-stage framework unifying generative and dense retrieval). We compare each backbone with and without our module under identical settings. As shown in Table 3, our module consistently improves performance across all datasets, demonstrating strong generalizability and answering RQ4. Moreover, our module does not significantly increase the cost of online training or inference. On Beauty dataset, after integrating our module, the per-step training time and inference time (averaged over 10 runs) of TIGER increase by only 6.70% and 6.19%, respec-tively, while the corresponding increases for LIGER are merely 1.98% and 0.54%. As demonstrated in Figure 4, this is minimal com-pared to the performance gains, further confirming the strong gen-eralizability and deployment potential of our framework. Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+Table 1: Performance comparison among baselines and the proposed method. The best performance score is denoted in bold. 
+
+Model Beauty Sports and Outdoors Toys and Games R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 
+
+Item ID-based 
+
+Caser 0.0205 0.0131 0.0347 0.0176 0.0116 0.0072 0.0194 0.0097 0.0166 0.0107 0.0270 0.0141 GRU4Rec 0.0164 0.0099 0.0283 0.0137 0.0129 0.0086 0.0204 0.0110 0.0097 0.0059 0.0176 0.0084 HGN 0.0325 0.0206 0.0512 0.0266 0.0189 0.0120 0.0313 0.0159 0.0321 0.0221 0.0497 0.0277 BERT4Rec 0.0203 0.0124 0.0347 0.0170 0.0115 0.0075 0.0191 0.0099 0.0116 0.0071 0.0203 0.0099 SASRec 0.0387 0.0249 0.0605 0.0318 0.0233 0.0154 0.0350 0.0192 0.0463 0.0306 0.0675 0.0374 FDSA 0.0267 0.0163 0.0407 0.0208 0.0182 0.0122 0.0288 0.0156 0.0228 0.0140 0.0381 0.0189 S3-Rec 0.0387 0.0244 0.0647 0.0327 0.0251 0.0161 0.0385 0.0204 0.0443 0.0294 0.0700 0.0376 
+
+Semantic ID-based 
+
+RecJPQ 0.0311 0.0167 0.0482 0.0222 0.0141 0.0076 0.0220 0.0102 0.0331 0.0182 0.0484 0.0231 VQ-Rec 0.0457 0.0317 0.0664 0.0383 0.0208 0.0144 0.0300 0.0173 0.0497 0.0346 0.0737 0.0423 HSTU 0.0469 0.0314 0.0704 0.0389 0.0258 0.0165 0.0414 0.0215 0.0433 0.0281 0.0669 0.0357 Tiger 0.0378 0.0243 0.0592 0.0312 0.0230 0.0146 0.0346 0.0184 0.0381 0.0245 0.0594 0.0313 Liger 0.0456 0.0291 0.0697 0.0368 0.0281 0.0184 0.0419 0.0228 0.0474 0.0296 0.0704 0.0370 CoST 0.0446 0.0298 0.0688 0.0375 0.0246 0.0158 0.0398 0.0207 0.0458 0.0311 0.0683 0.0383 ETEGRec 0.0408 0.0270 0.0657 0.0344 0.0269 0.0164 0.0435 0.0221 0.0391 0.0245 0.0602 0.0321 LC-Rec 0.0433 0.0289 0.0653 0.0360 0.0271 0.0177 0.0428 0.0228 0.0466 0.0323 0.0687 0.0394 RPG 0.0547 0.0380 0.0795 0.0460 0.0299 0.0207 0.0440 0.0252 0.0576 0.0394 0.0857 0.0484 LLaDA 0.0435 0.0306 0.0620 0.0364 0.0269 0.0179 0.0422 0.0228 0.0374 0.0263 0.0543 0.0318 CoFiRec 0.0444 0.0295 0.0679 0.0370 0.0290 0.0180 0.0456 0.0245 0.0480 0.0307 0.0785 0.0405 S2GR 0.0465 0.0301 0.0755 0.0401 0.0282 0.0183 0.0451 0.0238 0.0505 0.0322 0.0821 0.0423 PIT 0.0479 0.0305 0.0783 0.0403 0.0284 0.0186 0.0462 0.0243 0.0516 0.0328 0.0839 0.0432 
+
+Ours 0.0644 0.0454 0.0930 0.0546 0.0380 0.0258 0.0570 0.0319 0.0709 0.0497 0.0973 0.0582 
+
+Rel. Impr. ↑ 17.73% 19.47% 16.98% 18.70% 27.09% 24.64% 23.38% 26.59% 23.09% 26.14% 13.54% 20.25% 
+
+Table 2: Results of ablation study. Rows 2–5 report the evaluation results after ablating collaborative tokenization, semantic guidance, manifold alignment, and contrastive alignment, respectively. When semantic guidance is ablated, the alignment modules in the last two rows are also removed since only one representation remains.                                                                           
+
+> Model Beauty Sports and Outdoors Toys and Games R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 Ours 0.0644 0.0454 0.0930 0.0546 0.0380 0.0258 0.0570 0.0319 0.0709 0.0497 0.0973 0.0582
+> Ours w/o. CT 0.0584 0.0402 0.0896 0.0502 0.0314 0.0229 0.0460 0.0275 0.0621 0.0442 0.0922 0.0538 Ours w/o. SG 0.0524 0.0369 0.0757 0.0444 0.0284 0.0188 0.0439 0.0237 0.0556 0.0386 0.0795 0.0463 Ours w/o. MA 0.0570 0.0402 0.0834 0.0491 0.0351 0.0241 0.0525 0.0297 0.0666 0.0464 0.0926 0.0547 Ours w/o. CA 0.0605 0.0423 0.0870 0.0509 0.0356 0.0248 0.0530 0.0305 0.0664 0.0476 0.0923 0.0558
+
+## 4.6 Further Analysis 
+
+4.6.1 Comparison with Alternative Collaborative Tokenization Strate-gies. As discussed, we enhance consistency between tokenization and downstream generation by explicitly incorporating textualized collaborative signals. While ablation studies verify its necessity, we further compare with representative alternatives of comparable complexity (the model for CF embeddings extraction is unified for fair comparison): 
+
+• Following MMGRec [29], CF embeddings are concatenated with semantic embeddings before quantization. 
+
+• Following LETTER [44], collaborative signals are introduced via contrastive learning between CF embeddings and the reconstructed semantic embeddings in RQ-VAE training. All other components (including the generation model and align-ment module) remain unchanged. As shown in Table 4, replacing our collaborative fusion strategy with these alternatives leads to noticeable performance degradation. The second alternative method underperforms slightly compared to RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Jiayi Dan 
+
+Table 3: The performance of our general module across different backbone models.                                                                                        
+
+> Model Beauty Sports and Outdoors Toys and Games R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 R@5 N@5 R@10 N@10 TIGER 0.0378 0.0243 0.0592 0.0312 0.0230 0.0146 0.0346 0.0184 0.0381 0.0245 0.0594 0.0313 TIGER+Ours 0.0449 0.0292 0.0698 0.0372 0.0259 0.0170 0.0396 0.0213 0.0442 0.0284 0.0697 0.0366
+> Rel. Impr. ↑18.78% 20.16% 17.91% 19.23% 12.61% 16.44% 14.45% 15.76% 16.01% 15.92% 17.34% 16.93% LIGER 0.0456 0.0291 0.0697 0.0368 0.0281 0.0184 0.0419 0.0228 0.0474 0.0296 0.0704 0.0370 LIGER+Ours 0.0507 0.0329 0.0785 0.0418 0.0314 0.0205 0.0460 0.0252 0.0536 0.0336 0.0786 0.0417
+> Rel. Impr. ↑11.18% 13.06% 12.63% 13.59% 11.74% 11.41% 9.79% 10.53% 13.08% 13.51% 11.65% 12.70%
+> (a) Tiger (b) Liger
+
+Figure 4: Effect of our module across different backbones. Table 4: Comparison with alternative strategies for collabo-rative signal fusion in tokenization (NDCG@10).               
+
+> Beauty Sports and Outdoors Toys and Games MMGRec based 0.0512 0.0280 0.0557 LETTER based 0.0523 0.0258 0.0526 Ours 0.0546 0.0319 0.0582
+> w/o. CT 0.0502 0.0275 0.0538
+
+removing collaborative signals on the latter two datasets, which is consistent with the results in [21]. As discussed, the first alternative may distort the representation space due to modality mismatch; the second takes only semantic embeddings as inputs, such an im-plicit fusion mechanism cannot ensure effective optimization of the auxiliary objectives or sufficient capture of collaborative signal, and may interfere with the optimization of the original quantiza-tion reconstruction objective. In contrast, our approach adopts a simple yet effective strategy that explicitly integrates semantic and collaborative signals during tokenization. The two representations are naturally aligned since they are extracted by the same language model. These results further validate the advantage of our design and address RQ5. 
+
+4.6.2 Comparison with Other Alignment Methods. To validate the necessity of the Manifold Alignment module, we replaced it with commonly used Euclidean 𝐿 2 distance minimization and MMD loss, while keeping all other modules unchanged. As shown in Table 5, these alternatives perform noticeably worse than our proposed method (with one result falling below that of the ablation variant). 
+
+Table 5: Comparison with alternative methods for represen-tation alignment (NDCG@10). 
+
+Beauty Sports and Outdoors Toys and Games 
+
+𝐿 2 distance 0.0517 0.0285 0.0551 MMD loss 0.0504 0.0306 0.0573 Ours 0.0546 0.0319 0.0582 
+
+w/o. MA 0.0487 0.0297 0.0547 These results confirm the superiority of aligning the two represen-tations in a shared hyperbolic latent space, which preserves both hierarchical structure and similarity. 
+
+4.6.3 Visualization. For a more fine-grained analysis of the role of manifold alignment, we visualize the code and semantic represen-tations in a two-dimensional space using t-SNE. Taking the Beauty dataset as an example, Figure 5 compares the visualizations before and after manifold alignment. We observe that aligning the two rep-resentations in a shared hyperbolic space brings their distributions significantly closer in the projected space. Note that this visualiza-tion is obtained after incorporating contrastive alignment based on inter-instance similarity; the additional improvement brought by manifold alignment further demonstrates that reconciling the underlying geometries of the two representation spaces is effective for learning coherent representations for generation. Furthermore, we analyze the distribution of the gating weight 
+
+𝑔 with and without manifold alignment. As shown in Figure 6, 𝑔 
+
+is noticeably smaller without alignment, with a substantial por-tion close to 0, while it becomes more symmetric and concentrates around 0 .5 with alignment. This is likely because the semantic rep-resentation corresponds to the dense hidden states of a pretrained language model, which are easier for the generative model to ex-ploit, whereas the code sequences are newly embedded. As a result, the model tends to rely more on the semantic representation and assigns uneven weights during fusion, especially in early training. By reducing the underlying discrepancy between the two spaces, manifold alignment encourages more balanced weight allocation, enabling more effective learning of code embeddings and better preserving the information encoded in the code sequences, thereby strengthening cross-stage information transfer. Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+(a) with manifold alignment (b) without manifold alignment 
+
+Figure 5: 2D visualization of two representations. 
+
+(a) with manifold alignment (b) without manifold alignment 
+
+Figure 6: Distribution of gating weight 𝑔 .
+
+## 5 Conclusion 
+
+In this work, we propose a general framework to address the cross-stage decoupling between semantic and collaborative signals in generative recommendation. Specifically, we inject textualized col-laborative signals into semantic tokenization explicitly, recover semantic priors during the generation stage, and further align the underlying geometries of the two representations in a shared hyper-bolic space. Extensive experiments demonstrate that the proposed method consistently outperforms a diverse set of baseline mod-els across multiple datasets and metrics. Comprehensive ablation studies and hyperparameter analyses further validate the effective-ness of each component and the robustness of our method. We also implement the proposed framework as a reusable module and show that it achieves significant performance improvements across multiple backbone models with marginal additional computational overhead. These results further highlight the broad applicability and practical value of our approach. 
+
+## References 
+
+[1] Cem Anil, James Lucas, and Roger Grosse. 2019. Sorting out Lipschitz function approximation. In International conference on machine learning . PMLR, 291–301. [2] Keqin Bao, Jizhi Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan He. 2023. Tallrec: An effective and efficient tuning framework to align large language model with recommendation. In Proceedings of the 17th ACM conference on recommender systems . 1007–1014. [3] Runjin Chen, Mingxuan Ju, Ngoc Bui, Dimosthenis Antypas, Stanley Cai, Xi-aopeng Wu, Leonardo Neves, Zhangyang Wang, Neil Shah, and Tong Zhao. 2024. Enhancing item tokenization for generative recommendation through self-improvement. arXiv preprint arXiv:2412.17171 (2024). [4] Zhixuan Chu, Hongyan Hao, Xin Ouyang, Simeng Wang, Yan Wang, Yue Shen, Jinjie Gu, Qing Cui, Longfei Li, Siqiao Xue, et al. 2023. Leveraging large language models for pre-trained recommender systems. arXiv preprint arXiv:2308.10837 
+
+(2023). [5] Zeyu Cui, Jianxin Ma, Chang Zhou, Jingren Zhou, and Hongxia Yang. 2022. M6-rec: Generative pretrained language models are open-ended recommender systems. arXiv preprint arXiv:2205.08084 (2022). [6] Dengzhao Fang, Jingtong Gao, Chengcheng Zhu, Yu Li, Xiangyu Zhao, and Yi Chang. 2025. Hid-vae: Interpretable generative recommendation via hierarchical and disentangled semantic ids. arXiv preprint arXiv:2508.04618 (2025). [7] Junchen Fu, Xuri Ge, Alexandros Karatzoglou, Ioannis Arapakis, Suzan Ver-berne, Joemon M Jose, and Zhaochun Ren. 2026. Differentiable Semantic ID for Generative Recommendation. arXiv preprint arXiv:2601.19711 (2026). [8] Octavian Ganea, Gary Bécigneul, and Thomas Hofmann. 2018. Hyperbolic neural networks. Advances in neural information processing systems 31 (2018). [9] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. 2022. Recommendation as language processing (rlp): A unified pretrain, personalized prompt & predict paradigm (p5). In Proceedings of the 16th ACM conference on recommender systems . 299–315. [10] Hao Guo, Jiuyang Tang, Weixin Zeng, Xiang Zhao, and Li Liu. 2021. Multi-modal entity alignment in hyperbolic space. Neurocomputing 461 (2021), 598–607. [11] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2015. Session-based recommendations with recurrent neural networks. arXiv preprint arXiv:1511.06939 (2015). [12] Songyan Hou, Parnian Kassraie, Anastasis Kratsios, Andreas Krause, and Jonas Rothfuss. 2023. Instance-dependent generalization bounds via optimal transport. 
+
+Journal of Machine Learning Research 24, 349 (2023), 1–51. [13] Yupeng Hou, Zhankui He, Julian McAuley, and Wayne Xin Zhao. 2023. Learning vector-quantized item representation for transferable sequential recommenders. In Proceedings of the ACM Web Conference 2023 . 1162–1171. [14] Yupeng Hou, Jiacheng Li, Ashley Shin, Jinsung Jeon, Abhishek Santhanam, Wei Shao, Kaveh Hassani, Ning Yao, and Julian McAuley. 2025. Generating long semantic ids in parallel for recommendation. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 2 . 956–966. [15] Peiyu Hu, Wayne Lu, and Jia Wang. 2026. From ids to semantics: A generative framework for cross-domain recommendation with adaptive semantic tokeniza-tion. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 40. 14874–14882. [16] Wenyue Hua, Shuyuan Xu, Yingqiang Ge, and Yongfeng Zhang. 2023. How to index item ids for recommendation foundation models. In Proceedings of the Annual International ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region . 195–204. [17] Jianchao Ji, Zelong Li, Shuyuan Xu, Wenyue Hua, Yingqiang Ge, Juntao Tan, and Yongfeng Zhang. 2024. Genrec: Large language model for generative recommen-dation. In European Conference on Information Retrieval . Springer, 494–502. [18] Bowen Jin, Hansi Zeng, Guoyin Wang, Xiusi Chen, Tianxin Wei, Ruirui Li, Zhengyang Wang, Zheng Li, Yang Li, Hanqing Lu, et al. 2024. Language models as semantic indexers. In Proceedings of the 41st International Conference on Machine Learning . 22244–22259. [19] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-mendation. In 2018 IEEE international conference on data mining (ICDM) . IEEE, 197–206. [20] Sunkyung Lee, Minjin Choi, Eunseong Choi, Hye-young Kim, and Jongwuk Lee. 2025. Gram: Generative recommendation via semantic-aware multi-granular late fusion. In Proceedings of the 63rd Annual Meeting of the Association for Computa-tional Linguistics (Volume 1: Long Papers) . 33294–33312. [21] Simon Lepage, Jeremie Mary, and David Picard. 2025. Closing the performance gap in generative recommenders with collaborative tokenization and efficient modeling. arXiv preprint arXiv:2508.14910 (2025). [22] Jinming Li, Wentao Zhang, Tian Wang, Guanglei Xiong, Alan Lu, and Gerard Medioni. 2023. GPT4Rec: A generative framework for personalized recommen-dation and user interests interpretation. arXiv preprint arXiv:2304.03879 (2023). [23] Wuchao Li, Rui Huang, Haijun Zhao, Chi Liu, Kai Zheng, Qi Liu, Na Mou, Guorui Zhou, Defu Lian, Yang Song, et al. 2025. DimeRec: a unified framework for enhanced sequential recommendation via generative diffusion models. In Pro-ceedings of the Eighteenth ACM International Conference on Web Search and Data Mining . 726–734. [24] Zongwei Li, Lianghao Xia, and Chao Huang. 2024. Recdiff: Diffusion model for social recommendation. In Proceedings of the 33rd ACM international conference on information and knowledge management . 1346–1355. [25] Yu Liang, Zhongjin Zhang, Yuxuan Zhu, Kerui Zhang, Zhiluohan Guo, Wenhang Zhou, Zonqi Yang, Kangle Wu, Yabo Ni, Anxiang Zeng, et al. 2026. Rethinking Generative Recommender Tokenizer: Recsys-Native Encoding and Semantic Quantization Beyond LLMs. arXiv preprint arXiv:2602.02338 (2026). [26] Guanyu Lin, Zhigang Hua, Tao Feng, Shuang Yang, Bo Long, and Jiaxuan You. 2025. Unified semantic and ID representation learning for deep recommenders. 
+
+arXiv preprint arXiv:2502.16474 (2025). [27] Xinyu Lin, Haihan Shi, Wenjie Wang, Fuli Feng, Qifan Wang, See-Kiong Ng, and Tat-Seng Chua. 2025. Order-agnostic identifier for large language model-based generative recommendation. In Proceedings of the 48th international ACM SIGIR conference on research and development in information retrieval . 1923–1933. [28] Enze Liu, Bowen Zheng, Cheng Ling, Lantao Hu, Han Li, and Wayne Xin Zhao. 2025. Generative recommender with end-to-end learnable item tokenization. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 729–739. RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Jiayi Dan 
+
+[29] Han Liu, Yinwei Wei, Xuemeng Song, Weili Guan, Yuan-Fang Li, and Liqiang Nie. 2024. Mmgrec: Multimodal generative recommendation with transformer model. arXiv preprint arXiv:2404.16555 (2024). [30] Zhao Liu, Yichen Zhu, Yiqing Yang, Guoping Tang, Rui Huang, Qiang Luo, Xiao Lv, Ruiming Tang, Kun Gai, and Guorui Zhou. 2025. Diffgrm: Diffusion-based generative recommendation model. arXiv preprint arXiv:2510.21805 (2025). [31] Chen Ma, Peng Kang, and Xue Liu. 2019. Hierarchical gating networks for sequential recommendation. In Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining . 825–833. [32] Julian McAuley, Christopher Targett, Qinfeng Shi, and Anton Van Den Hengel. 2015. Image-based recommendations on styles and substitutes. In Proceedings of the 38th international ACM SIGIR conference on research and development in information retrieval . 43–52. [33] Maximillian Nickel and Douwe Kiela. 2017. Poincaré embeddings for learning hierarchical representations. Advances in neural information processing systems 
+
+30 (2017). [34] Aleksandr V Petrov and Craig Macdonald. 2024. RecJPQ: training large-catalogue sequential recommenders. In Proceedings of the 17th ACM International Conference on Web Search and Data Mining . 538–547. [35] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, et al. 2023. Recommender systems with generative retrieval. Advances in Neural Information Processing Systems 36 (2023), 10299–10315. [36] Teng Shi, Chenglei Shen, Weijie Yu, Shen Nie, Chongxuan Li, Xiao Zhang, Ming He, Yan Han, and Jun Xu. 2025. Llada-rec: Discrete diffusion for parallel semantic id generation in generative recommendation. arXiv preprint arXiv:2511.06254 
+
+(2025). [37] Qiya Song, Jiajun Hu, Lin Xiao, Bin Sun, Xieping Gao, and Shutao Li. 2025. Diffcl: A diffusion-based contrastive learning framework with semantic alignment for multimodal recommendations. IEEE Transactions on Neural Networks and Learning Systems (2025). [38] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential recommendation with bidirectional encoder rep-resentations from transformer. In Proceedings of the 28th ACM international conference on information and knowledge management . 1441–1450. [39] Jiaxi Tang and Ke Wang. 2018. Personalized top-n sequential recommenda-tion via convolutional sequence embedding. In Proceedings of the eleventh ACM international conference on web search and data mining . 565–573. [40] Lucas Vinh Tran, Yi Tay, Shuai Zhang, Gao Cong, and Xiaoli Li. 2020. Hyperml: A boosting metric learning approach in hyperbolic space for recommender systems. In Proceedings of the 13th international conference on web search and data mining .609–617. [41] Dongsheng Wang, Yuxi Huang, Shen Gao, Yifan Wang, Chengrui Huang, and Shuo Shang. 2025. Generative next poi recommendation with semantic id. In 
+
+Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 2 . 2904–2914. [42] Huanjie Wang, Xinchen Luo, Honghui Bao, Zhang Zixing, Lejian Ren, Yunfan Wu, Hongwei Zhang, Liwei Guan, and Guang Chen. 2026. PIT: A Dynamic Personalized Item Tokenizer for End-to-End Generative Recommendation. arXiv preprint arXiv:2602.08530 (2026). [43] Weiran Wang, Raman Arora, Karen Livescu, and Jeff Bilmes. 2015. On deep multi-view representation learning. In International conference on machine learning .PMLR, 1083–1092. [44] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable item tokenization for generative recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 2400–2409. [45] Yifan Wang, Weinan Gan, Longtao Xiao, Jieming Zhu, Heng Chang, Haozhao Wang, Rui Zhang, Zhenhua Dong, Ruiming Tang, and Ruixuan Li. 2025. Act-With-Think: Chunk Auto-Regressive Modeling for Generative Recommendation. 
+
+arXiv preprint arXiv:2506.23643 (2025). [46] Tianxin Wei, Xuying Ning, Xuxing Chen, Ruizhong Qiu, Yupeng Hou, Yan Xie, Shuang Yang, Zhigang Hua, and Jingrui He. 2025. CoFiRec: Coarse-to-Fine Tokenization for Generative Recommendation. arXiv preprint arXiv:2511.22707 
+
+(2025). [47] Longtao Xiao, Haozhao Wang, Cheng Wang, Linfei Ji, Yifan Wang, Jieming Zhu, Zhenhua Dong, Rui Zhang, and Ruixuan Li. 2025. Progressive Collaborative and Semantic Knowledge Fusion for Generative Recommendation. arXiv preprint arXiv:2502.06269 (2025). [48] Liu Yang, Fabian Paischer, Kaveh Hassani, Jiacheng Li, Shuai Shao, Zhang Gabriel Li, Yun He, Xue Feng, Nima Noorshams, Sem Park, et al. 2024. Unifying gen-erative and dense retrieval for sequential recommendation. arXiv preprint arXiv:2411.18814 (2024). [49] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhao-jie Gong, Fangda Gu, Michael He, et al. 2024. Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations. arXiv preprint arXiv:2402.17152 (2024). [50] Jianyang Zhai, Zi-Feng Mai, Chang-Dong Wang, Feidiao Yang, Xiawu Zheng, Hui Li, and Yonghong Tian. 2025. Multimodal Quantitative Language for Generative Recommendation. arXiv preprint arXiv:2504.05314 (2025). [51] Penglong Zhai, Yifang Yuan, Fanyi Di, Jie Li, Yue Liu, Chen Li, Jie Huang, Sicong Wang, Yao Xu, and Xin Li. 2025. A Simple Contrastive Framework Of Item Tokenization For Generative Recommendation. arXiv preprint arXiv:2506.16683 
+
+(2025). [52] Fuwei Zhang, Xiaoyu Liu, Dongbo Xi, Jishen Yin, Huan Chen, Peng Yan, Fuzhen Zhuang, and Zhao Zhang. 2026. Multi-Aspect Cross-modal Quantization for Generative Recommendation. In Proceedings of the AAAI Conference on Artificial Intelligence .[53] Tingting Zhang, Pengpeng Zhao, Yanchi Liu, Victor S Sheng, Jiajie Xu, Deqing Wang, Guanfeng Liu, Xiaofang Zhou, et al. 2019. Feature-level deeper self-attention network for sequential recommendation.. In IJCAI . 4320–4326. [54] Zhiyang Zhang, Junda She, Kuo Cai, Bo Chen, Shiyao Wang, Xinchen Luo, Qiang Luo, Ruiming Tang, Han Li, Kun Gai, et al. 2026. Unleashing the Native Recom-mendation Potential: LLM-Based Generative Recommendation via Structured Term Identifiers. arXiv preprint arXiv:2601.06798 (2026). [55] Jujia Zhao, Wang Wenjie, Yiyan Xu, Teng Sun, Fuli Feng, and Tat-Seng Chua. 2024. Denoising diffusion recommender model. In Proceedings of the 47th international ACM SIGIR conference on research and development in information retrieval . 1370– 1379. [56] Wayne Xin Zhao, Zihan Lin, Zhichao Feng, Pengfei Wang, and Ji-Rong Wen. 2022. A revisiting study of appropriate offline evaluation for top-N recommendation algorithms. ACM Transactions on Information Systems 41, 2 (2022), 1–41. [57] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. 2024. Adapting large language models by integrating collaborative semantics for recommendation. In 2024 IEEE 40th International Conference on Data Engineering (ICDE) . IEEE, 1435–1448. [58] Bowen Zheng, Hongyu Lu, Yu Chen, Wayne Xin Zhao, and Ji-Rong Wen. 2025. Universal Item Tokenization for Transferable Generative Recommendation. arXiv preprint arXiv:2504.04405 (2025). [59] Qiyong Zhong, Jiajie Su, Yunshan Ma, Julian McAuley, and Yupeng Hou. 2025. Pctx: Tokenizing Personalized Context for Generative Recommendation. arXiv preprint arXiv:2510.21276 (2025). [60] Kun Zhou, Hui Wang, Wayne Xin Zhao, Yutao Zhu, Sirui Wang, Fuzheng Zhang, Zhongyuan Wang, and Ji-Rong Wen. 2020. S3-rec: Self-supervised learning for se-quential recommendation with mutual information maximization. In Proceedings of the 29th ACM international conference on information & knowledge management .1893–1902. [61] Zheli Zhou, Chenxu Zhu, Jianghao Lin, Bo Chen, Ruiming Tang, Weinan Zhang, and Yong Yu. 2025. Generative Representational Learning of Foundation Models for Recommendation. arXiv preprint arXiv:2506.11999 (2025). [62] Jieming Zhu, Mengqun Jin, Qijiong Liu, Zexuan Qiu, Zhenhua Dong, and Xiu Li. 2024. Cost: Contrastive quantization based semantic tokenization for generative recommendation. In Proceedings of the 18th ACM Conference on Recommender Systems . 969–974. [63] Jing Zhu, Mingxuan Ju, Yozen Liu, Danai Koutra, Neil Shah, and Tong Zhao. 2025. Beyond Unimodal Boundaries: Generative Recommendation with Multimodal Semantics. arXiv preprint arXiv:2503.23333 (2025). 
+
+## A Appendix A.1 Theoretical Analysis of Manifold Alignment 
+
+Proposition A.1. Let 𝑒 code 
+
+𝑖 ∈ R𝑑 and 𝑒 sem 
+
+𝑖 ∈ R𝑑 denote the code-induced and semantic representations of item 𝑖 , and let 
+
+𝑧 𝑐 𝑖 = 𝜙 (𝑒 code 
+
+𝑖 ) ∈ D𝑑 𝑐 , 𝑧 𝑠 𝑖 = 𝜓 (𝑒 sem 
+
+𝑖 ) ∈ D𝑑 𝑐 
+
+be their projections in the shared Poincaré ball. Assume there exists an ideal latent representation 𝑧 ★
+
+𝑖 ∈ D𝑑 𝑐 such that the conditional distribution of the target next-item code sequence 𝑦 𝑖 depends on 𝑖 
+
+through 𝑧 ★
+
+𝑖 .Let 𝑓 𝜃 : D𝑑 𝑐 → R𝑚 be the decoder-logit map and let ℓ (· , 𝑦 ) be the token-level generation loss. Suppose that: (i) there exists 𝐿 𝑓 > 0 such that 
+
+∥𝑓 𝜃 (𝑢 ) − 𝑓 𝜃 (𝑣 )∥ 2 ≤ 𝐿 𝑓 𝑑 D (𝑢, 𝑣 ), ∀𝑢, 𝑣 ∈ D𝑑 𝑐 ;
+
+(ii) for any fixed target 𝑦 , ℓ (· , 𝑦 ) is 𝐿 ℓ -Lipschitz, i.e., 
+
+|ℓ (𝑎, 𝑦 ) − ℓ (𝑏, 𝑦 )| ≤ 𝐿 ℓ ∥𝑎 − 𝑏 ∥2, ∀𝑎, 𝑏 ∈ R𝑚 ;Addressing Cross-Stage Decoupling of Semantic and Collaborative Signals in Generative Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+(iii) the semantic representation satisfies E𝑑 D (𝑧 𝑠 𝑖 , 𝑧 ★ 
+
+> 𝑖
+
+) ≤ 𝜀 𝑠 .
+
+Then 
+
+Eℓ (𝑓 𝜃 (𝑧 𝑐 𝑖 ), 𝑦 𝑖 ) − ℓ (𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+), 𝑦 𝑖 ) ≤ 𝐿 ℓ 𝐿 𝑓 
+
+ E[𝑑 D (𝑧 𝑐 𝑖 , 𝑧 𝑠 𝑖 )] + 𝜀 𝑠 
+
+ .
+
+Therefore, minimizing the manifold alignment loss 
+
+𝐿 geo =∑︁  
+
+> 𝑖 ∈ I
+
+𝑑 D (𝑧 𝑐 𝑖 , 𝑧 𝑠 𝑖 )
+
+tightens an upper bound on the excess generation error induced by the re-embedded code representation relative to ideal latent representation. 
+
+Proof. For any item 𝑖 , by the Lipschitz continuity of ℓ (· , 𝑦 𝑖 ),
+
+ℓ (𝑓 𝜃 (𝑧 𝑐 𝑖 ), 𝑦 𝑖 ) − ℓ (𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+), 𝑦 𝑖 ) ≤ ℓ (𝑓 𝜃 (𝑧 𝑐 𝑖 ), 𝑦 𝑖 ) − ℓ (𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+), 𝑦 𝑖 )
+
+≤ 𝐿 ℓ ∥𝑓 𝜃 (𝑧 𝑐 𝑖 ) − 𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+)∥ 2.
+
+By the Lipschitz continuity of 𝑓 𝜃 with respect to the hyperbolic distance, 
+
+∥𝑓 𝜃 (𝑧 𝑐 𝑖 ) − 𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+)∥ 2 ≤ 𝐿 𝑓 𝑑 D (𝑧 𝑐 𝑖 , 𝑧 ★ 
+
+> 𝑖
+
+).
+
+Hence, 
+
+ℓ (𝑓 𝜃 (𝑧 𝑐 𝑖 ), 𝑦 𝑖 ) − ℓ (𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+), 𝑦 𝑖 ) ≤ 𝐿 ℓ 𝐿 𝑓 𝑑 D (𝑧 𝑐 𝑖 , 𝑧 ★ 
+
+> 𝑖
+
+).
+
+Since 𝑑 D is a metric on the Poincaré ball, it satisfies the triangle inequality: 
+
+𝑑 D (𝑧 𝑐 𝑖 , 𝑧 ★ 
+
+> 𝑖
+
+) ≤ 𝑑 D (𝑧 𝑐 𝑖 , 𝑧 𝑠 𝑖 ) + 𝑑 D (𝑧 𝑠 𝑖 , 𝑧 ★ 
+
+> 𝑖
+
+).
+
+Therefore, 
+
+ℓ (𝑓 𝜃 (𝑧 𝑐 𝑖 ), 𝑦 𝑖 ) − ℓ (𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+), 𝑦 𝑖 ) ≤ 𝐿 ℓ 𝐿 𝑓 
+
+
+
+𝑑 D (𝑧 𝑐 𝑖 , 𝑧 𝑠 𝑖 ) + 𝑑 D (𝑧 𝑠 𝑖 , 𝑧 ★ 
+
+> 𝑖
+
+)
+
+
+
+.
+
+Taking expectation on both sides gives 
+
+Eℓ (𝑓 𝜃 (𝑧 𝑐 𝑖 ), 𝑦 𝑖 ) − ℓ (𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+), 𝑦 𝑖 ) ≤ 𝐿 ℓ 𝐿 𝑓 
+
+ E[𝑑 D (𝑧 𝑐 𝑖 , 𝑧 𝑠 𝑖 )] + E[𝑑 D (𝑧 𝑠 𝑖 , 𝑧 ★ 
+
+> 𝑖
+
+)]  .
+
+Applying assumption (iii), we obtain 
+
+Eℓ (𝑓 𝜃 (𝑧 𝑐 𝑖 ), 𝑦 𝑖 ) − ℓ (𝑓 𝜃 (𝑧 ★ 
+
+> 𝑖
+
+), 𝑦 𝑖 ) ≤ 𝐿 ℓ 𝐿 𝑓 
+
+ E[𝑑 D (𝑧 𝑐 𝑖 , 𝑧 𝑠 𝑖 )] + 𝜀 𝑠 
+
+ .
+
+This completes the proof. □
+
+Remark 1. Assumption (i) is a standard smoothness condition on the predictor. Similar Lipschitz assumptions are widely adopted in prior studies [1]. Assumption (ii) is also standard in statistical learning theory where Lipschitz losses are routinely assumed [12]. Assumption (iii) can be viewed as a bounded-error proxy assump-tion, where the semantic representation approximates the ideal latent representation on average, without requiring exact matching. Similar structural assumptions are common in prior studies where representations are assumed to share a common latent cause [43].
