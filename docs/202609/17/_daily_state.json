@@ -1,0 +1,153 @@
+{
+  "date": "20260917",
+  "date_label": "",
+  "generated_at": "2026-09-17 22:33:17 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.18148v1",
+      "route": "202609/17/2609.18148v1-lige-gr-a-smooth-leap-from-ranking-to-generative-recommendation-in-the-llm-era",
+      "title": "LIGE-GR: A Smooth Leap from Ranking to Generative Recommendation in the LLM Era",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "从排序到生成式推荐，工业级序列生成",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.18296v1",
+      "route": "202609/17/2609.18296v1-one-step-retrieval-framework-for-real-time-sponsored-search-ads-using-hierarchical-text-representations",
+      "title": "One-Step Retrieval Framework for Real-Time Sponsored Search Ads Using Hierarchical Text Representations",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向实时赞助搜索广告、基于层次化文本表示的一步式生成式检索",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.16070v1",
+      "route": "202609/17/2609.16070v1-efficient-multimodal-generative-recommendation-with-latent-narrative-reasoning",
+      "title": "Efficient Multimodal Generative Recommendation with Latent Narrative Reasoning",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "将物品预测转化为语义标识符生成的多模态生成式推荐",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.16560v1",
+      "route": "202609/17/2609.16560v1-religrec-reliability-oriented-llm-based-generative-recommendation-via-user-risk-aware-prompt-routing",
+      "title": "ReliGRec: Reliability-Oriented LLM-Based Generative Recommendation via User-Risk-Aware Prompt Routing",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "基于LLM的生成式推荐，按用户风险自适应调整生成",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.16548v1",
+      "route": "202609/17/2609.16548v1-queryformer-winning-solution-for-kdd-cup-2026-tencent-unirec-challenge",
+      "title": "QueryFormer: Winning Solution for KDD Cup 2026 Tencent UniRec Challenge",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向推荐任务的模型宽度、深度、数据与算力的延迟感知扩展研究",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.17639v1",
+      "route": "202609/17/2609.17639v1-scaling-articulated-rationales-for-mllm-based-recommendation",
+      "title": "Scaling Articulated Rationales for MLLM-based Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "基于MLLM推荐的可解释理由规模化",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.13500v1",
+      "route": "202609/17/2609.13500v1-one-spectrum-two-resources-data-memory-scaling-in-autoregressive-prediction",
+      "title": "One Spectrum, Two Resources: Data-Memory Scaling in Autoregressive Prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "自回归预测的数据-记忆缩放规律",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.16850v1",
+      "route": "202609/17/2609.16850v1-efficient-swing-computation-for-retrieval-in-large-scale-recommender-systems",
+      "title": "Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "十亿级用户物品图上的高效i2i检索",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    },
+    {
+      "paper_id": "2609.17391v1",
+      "route": "202609/17/2609.17391v1-flashvector-agent-for-hierarchical-model-serving-stack-optimization",
+      "title": "FlashVector: Agent for Hierarchical Model Serving Stack Optimization",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "生产级推荐模型服务栈优化",
+      "first_seen_at": "2026-09-17 22:33:17 UTC",
+      "updated_at": "2026-09-17 22:33:17 UTC"
+    }
+  ]
+}

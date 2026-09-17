@@ -1,0 +1,3126 @@
+Title: One Spectrum, Two Resources: Data-Memory Scaling in Autoregressive Prediction
+
+URL Source: https://arxiv.org/pdf/2609.13500v1
+
+Published Time: Tue, 15 Sep 2026 00:16:46 GMT
+
+Number of Pages: 66
+
+Markdown Content:
+# One Spectrum, Two Resources: Data–Memory Scaling in Autoregressive Prediction 
+
+Chiwun Yang ∗ Xiaoyu Li †
+
+Abstract 
+
+How much learned memory is needed to benefit from more data? We show that the two resources are governed by one predictive-energy spectrum in a positive-entropy autoregressive retrieval source. Each coordinate contributes its query probability times the squared radius of its unknown logit. Writing μ for the resulting energy spectrum, we prove the minimax law 
+
+R∗
+
+> value
+
+(n, B ) ≍R Φμ(n−1) + Φ μ(τB ), Φμ(t) = ∫ min {x, t } μ(d x), for n prediction blocks and a learned state with at most 2 B values. Data set the resolution 1 /n ; memory sets the level τB
+
+reached by optimal bit allocation. The complete curve also recovers the positive spectrum. Energy– dimension pairing is essential: two causal sources with identical block-energy and block-dimension marginals have different data and memory exponents. A masked query–key attention head learns the route and values, realizing the law with explicit routing, format, and arithmetic errors. Further results give exponent-adaptive allocation, finite-precision realization, and compute–precision laws under two-sided arithmetic assumptions. Experiments recover the data–memory collapse and coupling exponents, explain the routing and allocation mechanisms, and examine weight-only quantization across six pretrained-model scales. 
+
+# 1 Introduction 
+
+More data reveal more predictive structure, but a predictor benefits only from what its learned state can retain. When should we collect more data, and when should we increase learned memory? Empirical scaling laws relate loss to data, model size, and compute (Hoffmann et al., 2022; Kaplan et al., 2020). To understand how these resources work together, we seek a property of the prediction problem that determines both the information available in finite data and the information preserved by a finite learned state. Consider a prediction task with many independently varying pieces of knowledge. A piece that is queried often or strongly changes the next-token probability deserves more learning and storage resources than one that is rarely used or has little predictive effect. Our model expresses each piece as an unknown scalar prediction parameter, called a coordinate . The key quantity is predictive energy per independent coordinate. In our autoregressive source, coordinate i has query probability 
+
+pi and an unknown logit, or log-odds of a binary target, in [ −Ri, R i]. Its predictive energy qi = piR2
+
+> i
+
+measures its potential contribution to prediction error. Collecting these energies, counting repeated values separately, gives the spectrum. At a chosen error resolution, small coordinates contribute their whole energy and larger coordinates contribute only the unresolved portion. Adding these contributions defines a spectral curve. Finite data and finite learned memory read the same spectral curve at different resolutions .
+
+> ∗christiannyang37@gmail.com . City University of Hong Kong.
+> †xiaoyu.li2@unsw.edu.au . University of New South Wales.
+
+1arXiv:2609.13500v1 [cs.LG] 11 Sep 2026 This connection gives a joint resource law. Let n count independent training blocks and let 
+
+B count the bits retained after training, so the learner can finish in at most 2 B different states. We measure excess cross-entropy above the loss of a predictor that knows the true conditional probabilities. First consider value estimation with the relevant coordinate revealed. Data set an error resolution of order 1 /n ; memory allocates bits until retained coordinates reach a common residual-error level. The smallest worst-case expected excess loss is, up to constants, the sum of the spectral curve at these two resolutions. This minimax result allows unrestricted training computation and joint coding across coordinates. Section 3 defines the source, risk, and two resolutions before stating the full formula. The law makes the resource balance explicit. List coordinate energies in decreasing order and suppose q(i) ≍ i−(1+ χ), where χ > 0 is their decay exponent and ≍ denotes equality up to constant factors. The two terms scale as n−χ/ (1+ χ) + B−χ and balance at B ≍ n1/(1+ χ). Below this memory scale, retaining learned information is the bottleneck; above it, observations matter more. More generally, an energy group can spread its total energy across several independent coordinates. Increasing that dimension produces more parameters to learn, each with less predictive energy. The general scaling corollary quantifies this effect through the distribution of coordinate energies. The full spectral curve applies beyond power laws and recovers every positive coordinate energy with its multiplicity. This perspective reveals information that separate scaling descriptors discard. Concentrating energy in one coordinate makes it easier to learn and retain than spreading it across many independent coordinates. We construct two causal sources with exactly the same block-energy and block-dimension multisets at every dyadic level. Pairing high energy with small blocks or large blocks changes the coordinate spectrum and both resource exponents. The pairing, not either marginal alone, determines how predictive information is distributed. The source also makes the learning mechanism explicit. Each regeneration block contains K
+
+candidate tokens, a query, and a stochastic next token. An unknown route selects the relevant candidate, whose bounded Bernoulli logit is also unknown. Calibration blocks reveal the correct candidate; prediction blocks teach its value; evaluation uses independent held-out blocks. Fixed embeddings and projections contain neither unknown object. A fixed-key, trainable-query attention head learns the route, followed by frequency-preconditioned output-parameter learning. Its masked query–key scores and gradients match the construction in the proof, connecting the spectral law to a concrete two-stage learner. The same resource picture organizes representation and computation. A universal allocation schedule adapts to an unknown power-law exponent when coordinate order is known. Finite-precision evaluation quantifies routing, storage, and arithmetic errors. For the specified dense computational graph, operation counts and numerical assumptions connect the precision needed for a target error to bit complexity and conditional compute phases. These results explain how statistical resolution becomes a representational and computational requirement. • One spectrum, two resources. An exact truncated-energy curve expresses both terms of arbitrary-state minimax risk, recovers the positive spectrum, and determines the data and learned-memory exponents. A masked-attention learner realizes the spectral surface with explicit routing, format, and arithmetic errors; adaptive allocation and precision analysis connect this law to implementation. 2• Why separate marginals fail. Same-marginal causal sources have different coordinate spectra and different data and memory exponents. Their energy–dimension pairing identifies the information missing from separate scaling descriptors. Our experiments vary sample and state budgets on a fixed source, test same-marginal separation, and compare learned, known, and frozen routing. Interventions and perturbed energy profiles examine the mechanisms behind the measured curves. Continued training tests the interaction between added data and deployed storage, while weight-only post-training quantization across six pretrained Transformer scales measures the effect of numerical representation at fixed checkpoints. 
+
+# 2 Related Work 
+
+Our question connects scaling laws, finite-rate representation, and distribution-specific learning: which source statistic determines the value of additional observations and additional learned memory? The following literatures provide the statistical and computational ingredients. Table 1 summarizes the closest theorem-level connections. 
+
+Empirical and mechanistic scaling laws. Empirical studies found extended power-law regimes in neural prediction as data, model size, and computation grow (Henighan et al., 2020; Hestness et al., 2017; Kaplan et al., 2020). Compute-optimal work asks how a training budget should be divided between parameters and tokens (Hoffmann et al., 2022), while routed models distinguish total parameters from parameters used per token (Clark et al., 2022). Extrapolation studies, broken-power-law fits, and replications show that fitted exponents depend on the model family, resource definition, and training prescription (Alabdulmohsin et al., 2022; Caballero et al., 2023; Porian et al., 2024). Theoretical accounts derive learning curves from task dimension, spectral decay, or simplified dynamics (Bahri et al., 2024; Bordelon et al., 2020; Sharma and Kaplan, 2020); solvable random-feature and dynamical models separate data-, width-, and time-limited phases (Bordelon et al., 2024; Maloney et al., 2022; Paquette et al., 2024). A discrete-skill model obtains aggregate power laws from decreasing skill frequencies (Michaud et al., 2023). Knowledge-capacity studies instead translate factual prediction loss into retained information and estimate bits per parameter (Allen-Zhu and Li, 2025; Morris et al., 2025). A compression model with frequency-ranked knowledge derives both data and model scaling laws (Pan et al., 2025), while an optimization analysis of multilayer Transformers derives resource-dependent generalization phases (Yang, 2025). We connect the data and learned-memory axes through a common source spectrum. Its tail determines both rates, and its construction identifies the energy–dimension pairing on which those rates depend. 
+
+Finite-rate estimation and memory. Rate–distortion theory characterizes the smallest cod-ing rate compatible with a prescribed distortion, and classical quantization theory develops the geometry of finite codebooks (Gray and Neuhoff, 1998; Shannon, 1959). Quantized Gaussian se-quence estimation gives sharp arbitrary-codebook storage–risk trade-offs, smoothness adaptation over Sobolev classes, and multiple data–communication regimes (Zhu and Lafferty, 2014, 2018a,b). Related theories bound working memory, sequential estimator states, retained sample information, or Bayesian minimum excess risk (Berg et al., 2021; Feldman et al., 2025; Hafez-Kolahi et al., 2021; Steinhardt and Duchi, 2015). Writing B for retained bits, we constrain the final learned state to at most 2 B values while allowing unrestricted training computation. Functional quantization is especially close to our spectrum calculation: regularly varying covariance eigenvalues determine 3Table 1: Closest results and the resource question they answer. Here m is Gaussian sequence dimension, Nc is codebook size, and b is bits per Gaussian coordinate, B is total retained bits, and n is the number of training blocks in our source. CE denotes cross-entropy. The last row identifies the observation model and finite-resource conclusion needed here. Study Observations and parameters Code and risk Conclusion Zhu and Lafferty (2014) Gaussian sequence; deterministic means in a Euclidean ball Arbitrary codebook, mb 
+
+bits; normalized squared error Sharp asymptotic estimation–storage trade-off as m → ∞ .Luschgy and Pagès (2004) Gaussian random element; covariance eigenvalues 
+
+Nc-point quantizer; expected squared Hilbert error High-resolution distortion from eigenvalue decay; 
+
+B = log 2 Nc.Allen-Zhu and Li (2025) Random discrete factual tuples; trained language model weights Finite weight state; factual generation negative log-likelihood Achieved loss lower-bounds the information that the weights must retain. Pan et al. (2025) Hierarchical syntax–knowledge mixture; frequency-ranked knowledge Bayesian/universal code; predictive redundancy under data or model capacity Power-law knowledge frequencies generate data and model scaling laws. Goel et al. (2026) Gaussian linear regression; softmax attention Expected empirical-gradient oracle; squared loss; no bit constraint Geometric optimization with a finite-context statistical term. This work Random coordinate observations; independently bounded scalar logits Any 2 B -state learner; held-out excess Bernoulli CE Uniform ( n, B ) risk through one spectrum; pairing changes both exponents. 
+
+sharp Hilbert-space quantization rates, and product quantizers attain them (Luschgy and Pagès, 2004; Luschgy et al., 2010). Our additional step is a uniform finite-resource risk bound for random coordinate observations: each observation queries one unknown binary prediction parameter, and all logits vary independently within bounded intervals. It accounts for coordinates with few or no visits while allowing any final 2 B -state encoder. The same curve then expresses sample and retained-state error. The same-marginal construction resolves an identification question: separate block-energy and block-dimension distributions do not determine the coordinate spectrum. 
+
+Neural quantization and precision. Mixed-precision training retains high precision where it is numerically useful (Micikevicius et al., 2018). Mean-field, Hessian-aware, and learned-precision methods quantify depth, sensitivity, and heterogeneous allocation effects (Blumenfeld et al., 2019; Dong et al., 2020; Savarese et al., 2022). Per-tensor analyses and integer programs contain the dynamic-range-squared times 4 −b distortion law and resource-constrained bit allocation (Chen et al., 2020; Yao et al., 2021). Practical large language model (LLM) quantization uses outlier handling, second-order rounding, activation rescaling, and data-dependent discrepancy control (Chee et al., 2025; Dettmers et al., 2022; Frantar et al., 2023; Xiao et al., 2023). Precision-aware scaling studies measure how these effects change with model size (Dettmers and Zettlemoyer, 2023; Kumar et al., 2025; Sun et al., 2025; Zhang et al., 2026); kernel-regime analysis establishes width-dependent convergence for 1-bit networks (Daliri et al., 2025). Our finite-precision analysis composes local 4numerical distortion with finite-sample uncertainty and the learned-state budget. For the specified computational graph, it also quantifies the arithmetic cost associated with the required precision. 
+
+Minimax generalization and attention optimization. Worst-case neural-network theory con-trols function classes through Vapnik–Chervonenkis dimension, pseudo-dimension, norms, margins, and covering numbers (Bartlett et al., 2017, 2019). Compression and description-length analyses relate concise predictors to generalization, including probably approximately correct (PAC)–Bayes bounds (Arora et al., 2018; Daniely and Granot, 2019; Lotfi et al., 2022). Distribution-specific minimax theory ties rates to compositional smoothness, Besov regularity, or intrinsic dimension (Nakada and Imaizumi, 2020; Schmidt-Hieber, 2020; Suzuki, 2019). Our statistical result follows this distribution-specific approach, with held-out autoregressive cross-entropy and an arbitrary finite learned state. For sequence models, norm-based Transformer bounds, analyses of Markov next-token prediction, dependent-token pretraining, and nearly tight sample complexity address generalization under architecture or dependence (Li et al., 2025; Trauger and Tewari, 2024; Yang et al., 2026; Yüksel and Flammarion, 2025). Attention optimization studies max-margin token selection, retrieval learning, and frequency-dependent associative memory (Ataee Tarzanagh et al., 2023; Cabannes et al., 2024; Li et al., 2024). Structure-aware preconditioning gives a data–compute law for Gaussian softmax regression under an expected empirical-gradient oracle (Goel et al., 2026); other softmax-regression objectives admit efficient gradient methods with structured output constraints (Chu et al., 2024). Theory for prefix tuning and next-step forecasting identifies how attention training and its generalization depend on the learned representation (Ke et al., 2025; Liang et al., 2025). Complementary work asks which token state can be removed while preserving attention or long-context prediction: sparse approximation controls attention-matrix error, while parallel and value-aware compressors allocate a limited context state (Deng et al., 2024; Xiong et al., 2025; Yang and Li, 2026). We count the samples used to learn the relevant candidate and its prediction parameter, then the bits used to retain the fitted state. Appendix A gives the detailed comparison of the statistical, representational, and computational settings. 
+
+# 3 The Energy-per-Coordinate Spectrum: Minimax Risk and Iden-tifiability 
+
+We first define the source and finite-state value-estimation problem; Section 4 additionally learns the relevant route. 
+
+Problem setup 
+
+Coordinates and unknown knowledge. A coordinate is an independent scalar prediction parameter; mode j groups dj coordinates i = ( j, r ), r ∈ [dj ], where [ m] = {1, . . . , m }. Separating energy from parameter count, the finite/countable set I has public frequencies pi > 0, ∑ 
+
+> i
+
+pi = 1, and radii 0 < R i ≤ R < ∞. Unknown logits θ ∈ Θ := ∏ 
+
+> i∈I
+
+[−Ri, R i] specify binary target probabilities. 
+
+One causal prediction block. Sample candidates C1, . . . , C K independently from p, then an independent query row Q, uniform on [ K], followed by target Y . A fixed unknown matching map 
+
+π : [ K] → [K] selects I = Cπ(Q), with Y | I ∼ Bernoulli( σ(θI )). Here σ(t) = (1 + e−t)−1 is the sigmoid, so θi is the log-odds at I = i, and Pr( I = i) = pi. Delimiters separate independent, causally ordered blocks; n counts blocks, not tokens. Calibration reveals ( Q, π (Q)), prediction 5targets teach logits, and testing uses independent blocks. Revealed routes/coordinates give value data Dn = (( It, Y t)) nt=1 , separating estimation from retrieval. 
+
+Loss and the retained-state constraint. For coordinate predictions f = ( fi), define ℓ(y, z ) = 
+
+−y log σ(z) − (1 − y) log(1 − σ(z)) and Lθ(f ) = Eθ[ℓ(Y, f I )]. Loss is in nats, storage in bits. Bounded logits give positive conditional entropy, Bayes loss L∞ = Lθ(θ) > 0, and excess loss comparable to frequency-weighted squared logit error, with R-dependent constants. A learner encodes Dn
+
+into S = ϕ(Dn) ∈ S , |S| ≤ 2B , and predicts with a fixed decoder g(S, i ) ∈ [−R, R ]. Arbitrary computation and joint coordinate coding are allowed, with all data-dependent output in S. For integer B ≥ 0, minimax excess risk is 
+
+R∗
+
+> value
+
+(n, B ) = inf   
+
+> ϕ,g :|S|≤ 2B
+
+sup 
+
+> θ∈Θ
+
+Eθ
+
+> [
+
+Lθ
+
+> (
+
+g(ϕ(Dn), ·)) − L θ(θ)] .
+
+Expectations average training/learner and independent test randomness. Encoder/decoder side information is fixed and public; learned bits exclude fixed network storage. Constants in ≍R depend only on R.
+
+Predictive energy and its spectrum. Define qi = piR2 
+
+> i
+
+, with ∑ 
+
+> i
+
+qi < ∞. Doubling frequency doubles energy; halving logit radius quarters it. Equal energies can have different frequencies and ranges. With δx a unit point mass, 
+
+μ = ∑
+
+> i
+
+δqi , Nμ(t) = μ(( t, ∞)) , Φμ(t) = 
+
+> ∫
+
+min {x, t } μ(d x) =  
+
+> ∫t
+> 0
+
+Nμ(s) d s. 
+
+Thus Nμ(t) counts energies above t, including repeats; Φ μ(t) = ∑ 
+
+> i
+
+min {qi, t } caps unresolved contributions. For water level τ > 0, let Bμ(τ ) = 12 
+
+> ∫
+
+log 2(x/τ )+μ(d x) and define τB as the generalized solution of Bμ(τB ) = B, with τ0 = max i qi. Here ( x)+ = max {x, 0} applies after the logarithm: coordinates above τ receive 12 log 2(qi/τ ) bits, others zero. Bμ counts continuous bits needed to reach τ ; finitely many energies exceed each positive level, even in countable sets. 
+
+Energy groups and scaling profiles. An energy block is a coordinate group, distinct from a sampled token block. For total energy aj , dimension dj , and equal-energy coordinates, qjr = aj /d j
+
+and μ = ∑ 
+
+> j
+
+dj δaj /d j : dimension sets both atom count and size. Profiles aj ≍ j−(1+ χ), dj ≍ jγ , with 
+
+χ > 0, γ ≥ 0, describe energy decay and dimension growth; the theorem itself needs no power law. 
+
+3.1 One Spectrum Controls Data and Learned State 
+
+Theorem 3.1 (One spectrum controls data and memory; informal version of Theorem C.1) . Let 
+
+qi > 0, ∑ 
+
+> i
+
+qi < ∞, and let μ, Φμ, and τB be defined above. Then 
+
+Sq(n) := ∑
+
+> i
+
+min {qi, n −1} = Φ μ(n−1), (3.1) 
+
+Dq(B) := inf  
+
+> bi≥0∑
+> ibi≤B
+> ∑
+> i
+
+qi2−2bi = Φ μ(τB ). (3.2) 
+
+For the bounded-logit value experiment, 
+
+R∗
+
+> value
+
+(n, B ) ≍R Φμ(n−1) + Φ μ(τB ). (3.3) 6Moreover, for every t > 0,
+
+Φ′
+
+> μ, +
+
+(t) = μ(( t, ∞)) , Φ′
+
+> μ, −
+
+(t) = μ([ t, ∞)) . (3.4) 
+
+Hence the exact curve Φμ recovers the positive spectrum, including atom multiplicities, up to coordinate relabeling. 
+
+The statistical term limits what observations resolve; the representation term limits what any final state can preserve. The latter is a continuous allocation problem; the finite-state minimax comparison accounts for the rounding needed to implement an integer-bit code. Binary testing lower-bounds the sample error min {qi, 1/n }; an entropy argument lower-bounds representation error even for joint codes. Estimation followed by quantization attains their sum up to constants. Geometrically, Nμ(t) counts coordinates whose energy exceeds resolution t, while Φ μ(t) accumu-lates the unresolved energy. Data read this curve at t = 1 /n . Storage pays 12 log 2(qi/τ B ) bits for every coordinate above its water level and reads the same curve at t = τB . For one coordinate, the two spectral terms are min {q, 1/n } and q2−2B . Water filling equalizes remaining error on coordinates receiving bits. The derivatives recover every positive energy and its multiplicity. 
+
+Corollary 3.2 (Spectral scaling exponents; informal version of Corollary C.2) . If Nμ(t) ∼ t−ρL(1 /t )
+
+for 0 < ρ < 1, where L is slowly varying, then 
+
+Φμ(n−1) ∈ RV −(1 −ρ), Φμ(τB ) ∈ RV −(1 −ρ)/ρ .
+
+For aj ≍ j−(1+ χ) and dj ≍ jγ , ρ = (1 + γ)/(1 + χ + γ), giving rates n−χ/ (1+ χ+γ) and B−χ/ (1+ γ), up to slowly varying factors. 
+
+Here RV α denotes regular variation with index α: a function g satisfies g(cx )/g (x) → cα as 
+
+x → ∞ , for every c > 0. Thus the density of small spectral atoms determines both exponents and relates them through one tail index. 
+
+3.2 Why Separate Marginals Cannot Identify Scaling 
+
+A fixed amount of predictive energy is harder to learn and retain when it is spread across more independent coordinates. Imagine two lists: the total energy assigned to each group and the number of independent coordinates in each group. A marginal descriptor retains these lists but forgets which energy goes with which dimension. We compare two assignments of the same lists: concentrate the high energies in one-coordinate groups, or spread them across the larger groups. The next theorem makes this comparison exact at every dyadic level, a level indexed by an integer ℓ with group counts proportional to 2 ℓ.
+
+Theorem 3.3 (Same block marginals, different scaling laws; informal version of Theorem C.6) .
+
+For every χ, γ > 0, there are two positive-conditional-entropy causal-retrieval sources with exactly the same block-energy multiset and the same block-dimension multiset at every dyadic level. They differ only in the pairing. All displayed dimensions in this construction are rounded upward to integers. With the common fixed-K route revealed, 
+
+Reasy (n, B ) ≍ n−χ/ (1+ χ) + B−χ,
+
+whereas 
+
+Rhard (n, B ) ≍ n−χ/ (1+ χ+γ) + B−χ/ (1+ γ).
+
+7At dyadic level ℓ, both sources have 2 ℓ high- and low-energy blocks with energies proportional to 2 −(1+ χ)ℓ and 2 −(1+ χ+δ)ℓ, and 2 ℓ copies each of dimensions 1 and 2 γℓ . Choose δ > γχ . The easy source pairs high energy with dimension one; the hard source pairs it with dimension 2 γℓ . Thus both block marginals agree exactly, not merely asymptotically. A component with block-energy exponent s and dimension exponent g has spectral tail index (1 + g)/(1 + s + g). The high-energy component therefore has index 1 /(1 + χ) in the easy source and (1 + γ)/(1 + χ + γ) in the hard source; the condition on δ makes the low-energy component lower order. Applying Corollary 3.2 yields all four exponents. The full construction and converse are in Appendix I. Pairing changes the coordinate-energy distribution while preserving both block marginals. This is the information a scaling descriptor must retain; Equation (3.4) recovers it from the integrated tail. 
+
+# 4 Learning the Causal Self-Attention Predictor 
+
+The value theorem reveals the relevant coordinate. We now learn how to select it from the candidate tokens, then learn its prediction parameter. Training has two stages: route calibration (Stage A) followed by value learning (Stage V). Both use exact-arithmetic stochastic gradient descent (SGD); their sample and state costs are accounted for separately. 
+
+From a route table to query–key attention. Let xq, x s ∈ Rd be the query token and candidate token at position s. Their fixed embeddings include orthogonal address blocks: PQ ∈ RK×d extracts the query row and PC ∈ RK×d extracts the candidate position, so PQxq = eq and PC xs = es, where 
+
+es is the s-th standard basis vector. Write dh ≥ K for the attention-head dimension. An isometric embedding J ∈ Rdh×K , satisfying J⊤J = IK , places these addresses in the head. The trainable matrix A ∈ RK×K stores one score for each query–position pair. Define the fixed key map and trainable query map by 
+
+WK = √dhJP C , WQ(A) = JA ⊤PQ, ⟨WQ(A)xq, W K xs⟩√dh
+
+= Aqs . (4.1) 
+
+Proposition 4.1 (Exact query–key realization; informal version of Proposition C.3) . With a strict causal mask over the K preceding candidates, Equation (4.1) exactly realizes the route scores and attention. Fix WK and train only WQ’s query-address block. Euclidean SGD then gives the same A
+
+update, attended feature, and output-vector gradient. 
+
+The fixed embedding, key projection, and value extraction contain neither the unknown route nor the unknown logits. Those quantities enter only the trained query-address block and output coordinates. 
+
+Learning the route. For a fixed query row, calibration increases the matching score relative to its distractors. Zero initialization keeps the distractor scores equal. Their common gap from the matching score is the margin βt after t visits to that row; δt is the total attention probability on incorrect candidates. The following result quantifies how calibration reduces this leakage. 8Proposition 4.2 (Online routing dynamics; informal version of Proposition C.4) . For K ≥ 2,zero initialization and softmax cross-entropy steps of size 0 < η ≤ 1 give the margin and distractor mass after t row visits: 
+
+βt+1 = βt + η Keβt + K − 1 , δt = K − 1
+
+eβt + K − 1 .
+
+After bK = Θ η(log( eK )) visits, δt ≍η [1 + ( t − bK )+]−1. For SA independent calibration blocks and a held-out row, 
+
+rK (SA) = E[δ2 
+
+> N
+
+], N ∼ Binomial( SA, 1/K ).
+
+For 0 < ε ≤ 1/16 , the time to rK ≤ ε is Θη(K{ε−1/2 + log( eK )}); at K = 1 , leakage and calibration cost vanish. 
+
+Learning and storing the values. After calibration, we freeze the route and fit an output vector on An = {i : qi ≥ n−1}. This active set contains coordinates whose energy is large enough to resolve at sample size n. The natural box is W = ∏ 
+
+> i∈An
+
+[−Ri, R i]; output-vector entries outside An
+
+are fixed at zero. The attended feature ht contains the attention-weighted coordinate indicators restricted to An. Let μsgd = 916 min |z|≤ R σ′(z) > 0 be the step-size constant used in the formal theorem. Starting from w1 = 0, use ηt = 2 /[μsgd (t + 1)] and return ¯ wn = 2 ∑nt=1 tw t/[n(n + 1)]. If 
+
+An is empty, return zero. Projection Π D 
+
+> W
+
+uses the frequency-weighted norm ∥v∥2 
+
+> D
+
+= ∑ 
+
+> i∈An
+
+piv2 
+
+> i
+
+. On the active coordinates, D is restricted to An, and the update is 
+
+wt+1 = Π D
+
+> W
+
+[
+
+wt − ηtD−1{σ(w⊤ 
+
+> t
+
+ht) − Yt}ht
+
+]
+
+, D = diag( p). (4.2) The final vector is encoded in coordinatewise scalar formats using BV value-state bits. The format-range ratio κi compares its stored range with the logit radius Ri; unit ratios recover the representation problem of Section 3. We write ̂ F for the resulting causal predictor and Rθ(̂ F )for its population cross-entropy on a complete prediction block. The term Earithmetic accounts for deployment arithmetic error under the formal theorem’s numerical assumptions. 
+
+Theorem 4.3 (Causal self-attention realization; informal version of Theorem C.5) . The weighted-average SGD with scalar formats in Theorem C.5 satisfies 
+
+E[Rθ(̂F ) − L ∞] ≲R,K,η Φμ(n−1) + Dfmt  
+
+> q,κ
+
+(BV ) + rK (SA) + Earithmetic , (4.3) 
+
+where BV is the value-state budget and κi ≥ 1 the public format-range ratio, with 
+
+Dfmt  
+
+> q,κ
+
+(BV ) = inf  
+
+> bi≥0,
+
+∑ 
+
+> ibi≤BV
+
+∑
+
+> i
+
+qi min {1, κ 2 
+
+> i
+
+2−2bi }.
+
+For κi = 1 , this is Φμ(τBV ), and the core surface holds at total budget B for power-law spectra, fixed 
+
+K, o(B) routing bits and lower-order routing/arithmetic errors. 
+
+Conditioned on the route, output risk is strongly convex on fitted coordinates in the frequency-weighted norm; preconditioning balances their learning rates. Appendix B gives gradient, state, and format details. 9The total resources. Write BA for the bits encoding the route, so total learned state is B =
+
+BV + BA, and total training blocks are N = n + SA. Let q(r) list coordinate energies in decreasing order, with decay exponent ξ > 0. Charging both stages preserves the leading resource exponents: for 
+
+q(r) ≍ r−(1+ ξ), fixed K, unit midpoint formats and the deployment-error condition in Proposition S.1, risk ε is achieved with N = n + SA = O(ε−(1+ ξ)/ξ ) total blocks and B = BV + BA = O(ε−1/ξ ) total learned bits. Calibration blocks and route-state bits are lower-order terms. 
+
+# 5 Adaptive Representation and Finite-Precision Realization 
+
+Two representation questions remain after the resource law. How should bits be allocated when the energy decay is unknown? How accurately does a finite-precision attention network evaluate the retained parameters? The first result constructs an estimator and a storage schedule; the second maps supplied parameters to prediction error after numerical evaluation. Here scalar coordinates are indexed by j, and ∆ j denotes the radius written Ri in Section 3. The loss Lθ(f ) is the same population cross-entropy. 
+
+Adaptive representation. Theorem 5.1 (Adaptation with a known ordering; informal version of Theorem H.1) . Fix 
+
+0 < χ min ≤ χmax < ∞, and suppose the canonical mode order is known. Assume qj ≍ j−(1+ χ)
+
+with common comparison constants and unknown χ ∈ [χmin , χ max ]. For every n, B ∈ N, one clipped likelihood estimator and one deterministic integer bit schedule, both independent of χ, satisfy simultaneously throughout this interval 
+
+sup    
+
+> θj∈[−∆j,∆j]
+
+Eθ
+
+> [
+
+Lθ(̂ f ) − L θ(θ)
+
+> ]
+
+≲ n−χ/ (1+ χ) + B−χ. (5.1) Choose A > χ max /2 and the largest prefix m satisfying 
+
+bj = ⌊A log 2(m/j )⌋+ (j ≤ m), ∑
+
+> j≤m
+
+bj ≤ B. (5.2) Then m ≍ B, and both quantization and omitted-tail errors are O(m−χ) uniformly over the exponent interval. The logarithmic schedule spends most bits on the leading coordinates while matching the tail error for every allowed decay rate. 
+
+Finite-precision self-attention. We construct a network that evaluates a supplied logit table for the first M coordinates and uses zero for the rest. Here M is the retained prefix length, t⋆ is the matching candidate position, and β ≥ 0 controls the matching attention score. The candidate’s mode label jt identifies its scalar table entry. Use public basis addresses at ∈ RK , mode vectors 
+
+e(M ) 
+
+> j
+
+= ej for j ≤ M and zero otherwise, and d = K + M + 1. Candidate and query tokens are 
+
+xt = ( at, e (M ) 
+
+> jt
+
+, 0) and xq = ( at⋆ , 0, 1). The fixed-key construction in Proposition 4.1 gives 
+
+⟨WQxq, W K xt⟩√dh
+
+= β⟨at⋆ , a t⟩. (5.3) With the value projection onto mode coordinates, a strict causal mask, and an output vector w
+
+supported only on those coordinates, 
+
+hq =
+
+> K∑
+> t=1
+
+αt ¯e(M ) 
+
+> jt
+
+, αt = exp( β1{t = t⋆})
+
+eβ + K − 1 , z = w⊤hq, (5.4) 10 where ¯ e(M ) 
+
+> j
+
+= (0 , e (M ) 
+
+> j
+
+, 0). Write wmode  
+
+> j
+
+= wK+j , and set ϑj = wmode  
+
+> j
+
+for j ≤ M and ϑj = 0 otherwise. The numerical calculation below uses unit roundoff u, an upper bound on the relative error of the listed scalar operations. Its four error terms respectively measure selecting a distractor, arithmetic rounding, storing the retained logits, and predicting omitted coordinates with zero. 
+
+Theorem 5.2 (Finite-precision realization; informal version of Theorem J.1) . Fix K, M ≥ 1,
+
+R < ∞, β ≥ 0, and the construction above. 1. In exact arithmetic, if |wmode  
+
+> j
+
+| ≤ R for every j ∈ [M ], then a query whose matching candidate has any mode j ≥ 1 satisfies 
+
+|z − ϑj | ≤ 2R(K − 1) e−β . (5.5) 
+
+2. Set wmode  
+
+> j
+
+= θj for j ∈ [M ] and store it with bj ∈ N0 bits on [−∆j , ∆j ]. Assume stable max-shifted softmax with exactly representable shifted scores 0, −β and an exponent range containing their exponentials. Exponentials, multiplications, and divisions have relative error at most u;sums use balanced pairwise accumulation. For the resulting predictor ffp , if (⌈log 2 K⌉ + 4) u ≤
+
+1/4, then the held-out excess cross-entropy obeys 
+
+Lθ(ffp ) − L ∞ ≤ CR
+
+> 
+
+(K − 1) 2e−2β + u2(1 + log K)2 +
+
+> M∑
+> j=1
+
+qj 2−2bj + ∑
+
+> j>M
+
+qj 
+
+> 
+
+. (5.6) 
+
+3. Within the separable scalar-table representation in which coordinate j has at most 2bj values, the bit-dependent term in Equation (5.6) is tight up to constants. Here and below, CR depends only on the logit bound R.
+
+The bound separates routing, arithmetic, quantization, and omitted energy. Pairwise summation gives logarithmic dependence on K in arithmetic error before squaring. This result evaluates supplied logits; Theorem 4.3 controls their learning. Dense storage accounting and proofs appear in Appendices B, H, and J. 
+
+# 6 Bit Complexity and Compute–Precision Scaling 
+
+Representation accuracy is useful only if the chosen arithmetic can preserve it. This section separates the precision needed as the represented prefix grows, the work of a specified dense graph, and the savings from lowering precision at a fixed shape. 
+
+Error and cost as model size grows. Here M is the number of represented scalar modes, 
+
+b is arithmetic precision, and χ > 0 is the model-error decay exponent. The operation exponent 
+
+f ≥ 0 describes per-block work; ν ≥ 0 describes how scalar-operation cost grows with bit width. The function κ(M ) amplifies stored perturbations into prediction error. Suppose representing M
+
+modes has error Θ( M −χ), each processed block costs Θ( M f ) scalar operations, Θ( M 1+ χ) blocks are necessary and sufficient, a b-bit operation costs Θ( bν ), and stored perturbation 2 −b produces error Θ( κ(M )22−2b). Under these two-sided assumptions, R(C) is the best held-out risk at arithmetic budget C.11 2 4 8 12 16 
+
+Matrix precision b
+
+020 40 60 
+
+> Bit-op speedup
+
+0% FP32 share 25% FP32 share 50% FP32 share 75% FP32 share 
+
+10 4 10 6 10 8 10 10 10 12 
+
+Bit-operation budget C
+
+10 −2 
+
+10 −1 
+
+> Excess risk
+
+Matrix-dominated Softmax-dominated Fixed 8-bit Figure 1: Retained precision sets resource ceilings and error floors. Left: analytic bit-operation ratio with retained high-precision work. Right: risk–cost laws under the stated arithmetic model; fixed softmax precision creates a numerical floor. 
+
+Counting a dense forward–backward pass. To relate these abstract costs to an implementation, fix a conventional Transformer graph. Its matrix arithmetic and softmax arithmetic can use different precisions, denoted bmm and bsm . For a dense Transformer with sequence length ℓ, width d, feed-forward width mff , H heads, and L layers, its conventional forward–backward arithmetic is, up to constants, 
+
+L
+
+> [
+
+(ℓd 2 + ℓdm ff + ℓ2d)M(bmm ) + Hℓ 2S(bsm )
+
+> ]
+
+.
+
+Here M(bmm ) and S(bsm ) are the bit-operation costs of a matrix multiply–accumulate and a softmax scalar operation at their respective precisions. This forward–backward count excludes optimizer updates. Recomputation reduces saved attention state while preserving the dense arithmetic order. 
+
+Theorem 6.1 (Precision-aware compute phases; informal version of Theorem M.1) . For the two-sided risk–cost family of Theorem M.1, with χ > 0, f, ν ≥ 0, and n(M ) ≍ M 1+ χ:1. If 1 ≲ κ(M ) ≲ M ρ, then the least model-error-matching precision is b = Θ(log M ), and 
+
+R(C) − L ∞ ≍ C−χ/ (f +1+ χ)(log C)χν/ (f +1+ χ) (6.1) 
+
+up to other slowly varying factors specified in the assumptions. 2. If κ(M ) = exp(Θ( M λ)) , λ > 0, then b = Θ( M λ), and the loss exponent is χ/ (f + 1 + χ + λν ).3. If qj ≍ j−(1+ χ), adaptive per-mode precision has error Θ( B−χ), whereas a uniform-width prefix has optimal error 
+
+Θ(( B/ log B)−χ). (6.2) 
+
+Each converse uses the representation, operation set, storage layout, and bit-operation cost specified above. 
+
+The polynomial-conditioning exponent ρ in this theorem describes κ(M ), independently of the spectral tail index used in Section 3. Matching numerical error to M −χ requires 
+
+b ≥ log 2 κ(M ) + χ
+
+2 log 2 M − O(1) . (6.3) 12 Savings at a fixed shape. We now hold model dimensions fixed and change only the numerical formats. This compares two implementations of the same graph. Retained high-precision work produces an Amdahl-type ceiling: reducing one part’s cost leaves the other part unchanged. At fixed shape, let G, S count matrix and softmax operations, ν, ν sm their precision-cost exponents, 
+
+Q the quantized scalar count, and Rhp the retained high-precision bits. Lowering the matrix and stored-scalar precision from baseline b0 to b gives BitOpsRatio = Gb ν 
+
+> 0
+
++ Sb νsm 
+
+> sm
+
+Gb ν + Sb νsm 
+
+> sm
+
+, Compression bit = Qb 0 + Rhp 
+
+Qb + Rhp 
+
+.
+
+In this calculation, Q counts quantized scalars rather than query rows, and S counts softmax operations rather than learned states. Ratios larger than one denote reduced bit operations or storage. Thus fixed-precision softmax, master weights, optimizer state, or saved high-precision activations can dominate even when matrix precision falls. Appendix B derives the dense forward–backward count, storage requirements, and precision–risk trade-off. 
+
+# 7 Experiments 
+
+Experimental design. We test spectral risk, coupling, and attention learning. Training and held-out blocks are independent, and comparisons are paired by seed or evaluation item. The fixed-source synthetic studies evaluate excess cross-entropy (CE), the loss above the source’s Bayes predictor and use 95% bias-corrected and accelerated (BCa) bootstrap intervals over paired seeds. Complementary mini-batch and terminal-iterate studies test robustness to the learning implementation. Appendices Q and R specify the algorithms, evaluation units, and uncertainty procedures. 
+
+Data–memory surface and exponent agreement. Does the same source statistic organize both resources in the stated learner? We fix four sources, each with 256 energy groups rather than 256 training examples, and cross five sample budgets with six value-state budgets. Each sample budget restarts the theorem’s weighted-average SGD in FP64; all state budgets encode that same fitted vector. Full-source excess CE follows the resource ordering of Gμ for both SGD and the oracle-coordinate estimator (Figure 2). Unbinned risk-to-Gμ ratios reveal the remaining finite-resource variation (Figure 11). The six-profile exponent grid and candidate-count replication appear in Appendix P, alongside the spectral slopes (Table 4b). 
+
+Same-marginal coupling. Can identical block-energy and block-dimension marginals produce different data laws as well as different memory laws? On the same normalized dyadic source, the fitted easy/hard data exponents are 0 .509 /0.339 for χ = 1 and 0 .681 /0.489 for χ = 2, against predictions 1 /2, 1/3 and 2 /3, 1/2, respectively. Fits use the same last four sample budgets for all 16 seeds. Figure 3(a,d) shows every budget; panels (b,e) and Table 2b retain the complementary storage separation. Pairing changes both resource exponents, not just their constants. 
+
+Learned routing and interventions. Routing experiments train routing and output parameters through the actual network forward map. Its 256 combinations of source profile, represented prefix, candidate count, and seed separately restart each learner at three nominal sample budgets and reuse fitted states across bit budgets. Routing leakage decreases with actual visits, and learned routing 13 0.05 0.1 0.2 0.01 0.02 0.05 
+
+> Excess CE
+
+(a) (χ, γ) = (0.5, 0)   
+
+> 0.2 0.3 0.02 0.05
+
+(b) (χ, γ) = (0.5, 0.5)   
+
+> 0.02 0.05 0.1
+
+Φμ(n−1 ) + Φ μ(τB)
+
+> 0.002 0.01 0.05
+> Excess CE
+
+(c) (χ, γ) = (1, 0)   
+
+> 0.05 0.1 0.2
+
+Φμ(n−1 ) + Φ μ(τB) 
+
+> 0.005 0.02 0.05
+
+(d) (χ, γ) = (1, 0.5)        
+
+> SGD Oracle-coordinate Figure 2: One spectrum organizes data and memory. Four fixed sources, each with 256 energy groups, at K= 32: held-out excess CE versus Gμ(n, B ) = Φ μ(n−1) + Φ μ(τB). Blue circles: weighted-average SGD; orange squares: the oracle-coordinate clipped estimator. Each curve averages 30 budget pairs into six bins chosen only from Gμ, within each seed. Bands: 95% BCa over eight paired seeds.
+
+approaches the known-route learner while a frozen uniform route does not (Figure 3(c,f)). Tables 2c and 2d separates data, tail, routing, and format terms and changes routing, preconditioning, or precision one factor at a time. At the unit-bit-ratio setting in Appendix Table 3, learned and known routing yield 0 .0191 ± 0.0002 and 0 .0192 ± 0.0002 augmented loss, versus 0 .0605 ± 0.0008 with a frozen route; these augmented losses include the common M −χ proxy. Removing preconditioning gives 0 .0230 ± 0.0003. The half-bit-ratio table reveals the uniform-precision penalty at a tighter memory budget, complementing this unit-bit-ratio comparison. 
+
+Stored formats and softmax precision. We compare a shared quantization scale, scales per energy group or per coordinate, and adaptive bit widths. Three conditioning regimes vary the format-range amplification relative to logit radii. A softmax sweep records numerical format, underflow, and matching mass at K ∈ { 8, 32 , 128 , 512 }. At eight bits, adaptive widths reduce format distortion to 7 .82 × 10 −10 , compared with 8 .46 × 10 −6 for uniform block widths and 1 .08 × 10 −5 for a shared scale. Appendix Figure 8 shows the format trade-off and retained high-precision work: bit allocation controls distortion, while the fraction quantized determines resource savings. 
+
+Profile robustness. We test broken-power-law, logarithmically corrected, and perturbed-order profiles using each source’s exact finite spectrum. The empirical allocator uses fitted logits and counts to estimate energies, subtracting a sampling-noise correction. Known-energy allocation instead minimizes representation distortion using the true energies; uniform widths provide a second reference. Comparisons use eight paired seeds. Appendix R gives both objectives, distinct from the 14 28 214 220 
+
+10 −3 
+
+10 −2 
+
+10 −1 
+
+> Excess CE
+
+(a) χ = 1 
+
+26 210 214 
+
+10 −3 
+
+10 −1 
+
+> Excess CE
+
+(b) χ = 1 
+
+20 30 40 
+
+Visits per row 
+
+0.002 0.01 0.02 
+
+> Leakage
+
+(c) 
+
+28 214 220 
+
+Prediction samples 
+
+10 −3 
+
+10 −1 
+
+> Excess CE
+
+(d) χ = 2 
+
+26 210 214 
+
+Value-state bits 
+
+10 −6 
+
+10 −3 
+
+> Excess CE
+
+(e) χ = 2 
+
+8 16 32 64 
+
+Represented modes 
+
+0.005 0.02 0.1 
+
+> Excess CE
+
+(f) 
+
+easy hard K = 8 K = 32 Figure 3: Pairing separates data and memory; routing enables learning. (a,d) Fixed-source data sweeps for χ = 1 , 2; blue/orange denote easy/hard. (b,e) Their complementary storage sweeps, evaluated by population excess CE. (c) Squared leakage versus row visits, K = 8 /32 (blue/green). (f) Finite-source excess CE with learned/known/frozen routes (blue circles/green triangles/orange squares), without an added asymptotic tail. Intervals: 95% BCa over 16 data seeds (a,d), 16 source amplitudes (b,e), or eight paired seeds (c,f). 2 4 BF16 310 100 
+
+> Test CE (nats)
+
+(a) 70M 
+
+2 4 BF16 
+
+(b) 160M 
+
+2 4 BF16 
+
+(c) 410M 
+
+2 4 BF16 
+
+(d) 1B 
+
+2 4 BF16 
+
+(e) 1.4B 
+
+2 4 BF16 
+
+(f) 2.8B 
+
+Measured Stable-format additive fit 
+
+Figure 4: Data and deployed storage in Pythia. (a–f) 70M, 160M, 410M, 1B, 1.4B, 2.8B test CE after 226 extra tokens. Blue: 2/3/4/6/8-bit and BF16 (left to right); dashed orange: additive fits to first-three-budget 4/8-bit/BF16 validation. All points hold out data; 6-bit also holds out format. Shared log-y; bands: 95% BCa, eight paired training seeds. 
+
+deterministic unknown-exponent schedule of Theorem 5.1. It retains the advantage over uniform allocation across the three displayed deviations (Appendix Figure 6). 
+
+Pretrained Transformers. Weight-only post-training quantization (PTQ) tests the deployment effect across six Pythia checkpoints at step143000 . We compare tensor/channel 8-bit integer formats (INT8), 4-bit integer (INT4) round-to-nearest (RTN), and half-quadratic quantization (HQQ) with groups of 128 or 32 weights (g128/g32) against bfloat16 (BF16), using paired WikiText-103 windows and LAMBADA items. The HQQ-g32 penalty generally decreases with scale, except at 1.4B; the 15 Table 2: Deployment, pairing, and learning mechanisms. (a) HQQ-g32 minus BF16 CE: 96 WikiText-103 windows, 512 LAMBADA items. (b) Storage slopes, 16 seeds; E/H: easy/hard. (c,d) SGD decomposi-tion/interventions: 10 −3 nats, eight seeds; (d) has ( χ, γ ) = (1 , . 5), M = 64, K = 32, bit ratio .5 (Table 3: 1). 
+
+±: rounded 95% BCa envelopes (Unif.: constant across seeds). Bold/underline: lowest/second-lowest in (a,d).  
+
+> (a) Pythia weight-only PTQ; lower is better.
+
+## Model WikiText LAMBADA 70M 3.009 ±0.037 3.012 ±0.386 
+
+## 160M 1.325 ±0.020 0.589 ±0.225 
+
+## 410M 0.156 ±0.003 0.319 ±0.082 
+
+## 1B 0.054 ±0.002 0.021 ±0.028 
+
+## 1.4B 0.066 ±0.003 0.149 ±0.045 
+
+## 2.8B 0.048 ±0.003 0.007 ±0.034  
+
+> (b) Same-marginal coupling.
+
+## (χ, E/H) Theory Held-out CE (1 , E ) 1.000 0.972 ±0.0016 
+
+## (1 , H ) 0.500 0.503 ±0.0003 
+
+## (2 , E ) 2.000 2.016 ±0.0011 
+
+## (2 , H ) 1.000 1.002 ±0.0002  
+
+> (c) Signed full-source excess-CE terms.
+
+Data Tail Route Format 3.584 ±.219 1.218 ±.029 .0270 ±.0031 1.491 ±.275  
+
+> (d) Interventions; excess CE, lower is better.
+
+Full Known No pre. Frozen Unif. 
+
+19.01 ±.27 19.06 ±.26 22.47 ±.21 60.50 ±.74 89.65 ±.00 
+
+2.8B LAMBADA interval includes zero (Table 2a). Appendix Figure 9 and Table 4a retain all formats and BF16 baselines. Softmax remains in 32-bit floating point (FP32), so the comparison isolates weight representation. We additionally continue all six checkpoints along four nested WikiText-103 token budgets, using eight training seeds per model, and materialize group-128 2/3/4/6/8-bit and BF16 deployment packages. The complete scan separates model-scale and format effects (Figure 4(a–f)): 2/3-bit quantization causes the largest loss increases at 70M/160M, while the four larger models have substantially smaller penalties. Including 2-bit calibration yields fits within the specified [0 , 20]-nat prediction range at 410M–2.8B. At 70M/160M, the 2-bit losses exceed this range; the fitting procedure does not yield converged, in-range solutions. Each scale is fitted separately. The sensitivity analysis fits 4/8-bit and BF16 validation configurations and holds out 6-bit plus the largest token budget. On untouched test windows, the additive response improves data-extrapolation root-mean-square error (RMSE) relative to the data-only fit at every scale. The reductions are 0 .910 [0 .871 , 0.944] for 70M and 0 .380 [0 .352 , 0.394] for 160M; the four larger models show smaller absolute improvements. For 6-bit interpolation, the additive response has higher RMSE at 70M/160M and lower RMSE at 410M–2.8B. Thus model scale changes both quantization sensitivity and the predictive value of a smooth joint-resource response. Appendix Figure 7 shows every format and budget with seed-level uncertainty; Tables 5 and 6 report the corresponding prediction errors for each model. 
+
+# 8 Conclusion 
+
+Finite data and finite learned memory resolve the same predictive-energy spectrum at different thresholds. For the causal source studied here, this gives minimax risk, scaling exponents, and a data–memory crossover. The complete curve identifies the positive spectrum, retaining information that a fitted exponent alone loses. 16 Energy–dimension pairing determines the spectrum: identical block marginals can conceal different data and memory laws. A masked query–key head learns the relevant route and values, connecting this statistical structure to attention. Adaptive allocation, finite-precision realization, and conditional compute laws quantify how the representation uses resources. Experiments trace these mechanisms through spectral collapse, coupling, routing, and numerical precision. The organizing principle is the distribution of predictive information across independent coordinates: it explains both what data can reveal and what a finite predictor can retain. 
+
+# References 
+
+Ibrahim M. Alabdulmohsin, Behnam Neyshabur, and Xiaohua Zhai. Revisiting neural scaling laws in language and vision. In Advances in Neural Information Processing Systems , volume 35, 2022. Zeyuan Allen-Zhu and Yuanzhi Li. Physics of language models: Part 3.3, knowledge capacity scaling laws. In The Thirteenth International Conference on Learning Representations , 2025. URL 
+
+https://openreview.net/forum?id=FxNNiUgtfa .Sanjeev Arora, Rong Ge, Behnam Neyshabur, and Yi Zhang. Stronger generalization bounds for deep nets via a compression approach. In Proceedings of the 35th International Conference on Machine Learning , volume 80 of Proceedings of Machine Learning Research , pages 254–263, 2018. Davoud Ataee Tarzanagh, Yingcong Li, Xuechen Zhang, and Samet Oymak. Max-margin token se-lection in attention mechanism. In Advances in Neural Information Processing Systems , volume 36, 2023. Yasaman Bahri, Ethan Dyer, Jared Kaplan, Jaehoon Lee, and Utkarsh Sharma. Explaining neural scaling laws. Proceedings of the National Academy of Sciences , 121(27), 2024. doi: 10.1073/pnas.2311878121. Peter L. Bartlett, Dylan J. Foster, and Matus J. Telgarsky. Spectrally-normalized margin bounds for neural networks. In Advances in Neural Information Processing Systems , volume 30, 2017. Peter L. Bartlett, Nick Harvey, Christopher Liaw, and Abbas Mehrabian. Nearly-tight VC-dimension and pseudodimension bounds for piecewise linear neural networks. Journal of Machine Learning Research , 20(63):1–17, 2019. Tomer Berg, Or Ordentlich, and Ofer Shayevitz. Deterministic finite-memory bias estimation. In 
+
+Proceedings of the 34th Conference on Learning Theory , volume 134 of Proceedings of Machine Learning Research , pages 566–585, 2021. Yaniv Blumenfeld, Dar Gilboa, and Daniel Soudry. A mean field theory of quantized deep net-works: The quantization–depth trade-off. In Advances in Neural Information Processing Systems ,volume 32, 2019. Blake Bordelon, Abdulkadir Canatar, and Cengiz Pehlevan. Spectrum dependent learning curves in kernel regression and wide neural networks. In Proceedings of the 37th International Conference on Machine Learning , volume 119 of Proceedings of Machine Learning Research , pages 1024–1034, 2020. 17 Blake Bordelon, Alexander Atanasov, and Cengiz Pehlevan. A dynamical model of neural scaling laws. In Proceedings of the 41st International Conference on Machine Learning , volume 235 of 
+
+Proceedings of Machine Learning Research , pages 4345–4382, 2024. Ethan Caballero, Kshitij Gupta, Irina Rish, and David Krueger. Broken neural scaling laws. In The Eleventh International Conference on Learning Representations , 2023. Vivien Cabannes, Berfin Simsek, and Alberto Bietti. Learning associative memories with gradient descent. In Proceedings of the 41st International Conference on Machine Learning , volume 235 of 
+
+Proceedings of Machine Learning Research , pages 5114–5134, 2024. Jerry Chee, Arturs Backurs, Rainie Heck, Li Zhang, Janardhan Kulkarni, Thomas Rothvoss, and Sivakanth Gopi. DiscQuant: A quantization method for neural networks inspired by discrepancy theory. In Proceedings of Thirty Eighth Conference on Learning Theory , volume 291 of Proceedings of Machine Learning Research , pages 924–951, 2025. Jianfei Chen, Yu Gai, Zhewei Yao, Michael W. Mahoney, and Joseph E. Gonzalez. A statistical framework for low-bitwidth training of deep neural networks. In Advances in Neural Information Processing Systems , volume 33, pages 883–894, 2020. Timothy Chu, Zhao Song, and Chiwun Yang. How to protect copyright data in optimization of large language models? Proceedings of the AAAI Conference on Artificial Intelligence , 38(16): 17871–17879, 2024. doi: 10.1609/aaai.v38i16.29741. URL https://ojs.aaai.org/index.php/ AAAI/article/view/29741 .Aidan Clark, Diego De Las Casas, Aurelia Guy, Arthur Mensch, Michela Paganini, Jordan Hoffmann, Bogdan Damoc, Blake Hechtman, Trevor Cai, Sebastian Borgeaud, George Bm Van Den Driessche, Eliza Rutherford, Tom Hennigan, Matthew J. Johnson, Albin Cassirer, Chris Jones, Elena Buchatskaya, David Budden, Laurent Sifre, Simon Osindero, Oriol Vinyals, Marc’Aurelio Ranzato, Jack Rae, Erich Elsen, Koray Kavukcuoglu, and Karen Simonyan. Unified scaling laws for routed language models. In Proceedings of the 39th International Conference on Machine Learning ,volume 162 of Proceedings of Machine Learning Research , pages 4057–4086, 2022. Majid Daliri, Zhao Song, and Chiwun Yang. Unlock the theory behind scaling 1-bit neural networks. In Conference on Parsimony and Learning , volume 280 of Proceedings of Machine Learning Research , pages 545–598, 2025. URL https://proceedings.mlr.press/v280/daliri25a.html .Amit Daniely and Elad Granot. Generalization bounds for neural networks via approximate description length. In Advances in Neural Information Processing Systems , volume 32, 2019. Tri Dao, Daniel Y. Fu, Stefano Ermon, Atri Rudra, and Christopher Ré. FlashAttention: Fast and memory-efficient exact attention with IO-awareness. In Advances in Neural Information Processing Systems , volume 35, 2022. Yichuan Deng, Zhao Song, Jing Xiong, and Chiwun Yang. How sparse attention approximates exact attention? your attention is naturally nC -sparse, 2024. Tim Dettmers and Luke Zettlemoyer. The case for 4-bit precision: k-bit inference scaling laws. In 
+
+Proceedings of the 40th International Conference on Machine Learning , volume 202 of Proceedings of Machine Learning Research , pages 7750–7774, 2023. 18 Tim Dettmers, Mike Lewis, Younes Belkada, and Luke Zettlemoyer. LLM.int8(): 8-bit matrix multiplication for transformers at scale. In Advances in Neural Information Processing Systems ,volume 35, 2022. Zhen Dong, Zhewei Yao, Daiyaan Arfeen, Amir Gholami, Michael W. Mahoney, and Kurt Keutzer. HAWQ-V2: Hessian aware trace-weighted quantization of neural networks. In Advances in Neural Information Processing Systems , volume 33, 2020. Vitaly Feldman, Guy Kornowski, and Xin Lyu. Trade-offs in data memorization via strong data processing inequalities. In Proceedings of the 38th Conference on Learning Theory , volume 291 of 
+
+Proceedings of Machine Learning Research , pages 1935–1973, 2025. Elias Frantar, Saleh Ashkboos, Torsten Hoefler, and Dan Alistarh. OPTQ: Accurate quantization for generative pre-trained transformers. In The Eleventh International Conference on Learning Representations , 2023. Gautam Goel, Mahdi Soltanolkotabi, and Peter L. Bartlett. Training dynamics of softmax self-attention: Fast global convergence via preconditioning, 2026. Robert M. Gray and David L. Neuhoff. Quantization. IEEE Transactions on Information Theory ,44(6):2325–2383, 1998. doi: 10.1109/18.720541. Hassan Hafez-Kolahi, Behrad Moniri, Shohreh Kasaei, and Mahdieh Soleymani Baghshah. Rate-distortion analysis of minimum excess risk in bayesian learning. In Proceedings of the 38th International Conference on Machine Learning , volume 139 of Proceedings of Machine Learning Research , pages 3998–4007, 2021. Tom Henighan, Jared Kaplan, Mor Katz, Mark Chen, Christopher Hesse, Jacob Jackson, Heewoo Jun, Tom B. Brown, Prafulla Dhariwal, Scott Gray, Chris Hallacy, Benjamin Mann, Alec Rad-ford, Aditya Ramesh, Nick Ryder, Daniel M. Ziegler, John Schulman, Dario Amodei, and Sam McCandlish. Scaling laws for autoregressive generative modeling, 2020. Joel Hestness, Sharan Narang, Newsha Ardalani, Gregory Diamos, Heewoo Jun, Hassan Kianinejad, Md. Mostofa Ali Patwary, Yang Yang, and Yanqi Zhou. Deep learning scaling is predictable, empirically, 2017. Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch, Elena Buchatskaya, Trevor Cai, Eliza Rutherford, Diego de Las Casas, Lisa Anne Hendricks, Johannes Welbl, Aidan Clark, Thomas Hennigan, Eric Noland, Katherine Millican, George van den Driessche, Bogdan Damoc, Aurelia Guy, Simon Osindero, Karén Simonyan, Erich Elsen, Oriol Vinyals, Jack Rae, and Laurent Sifre. An empirical analysis of compute-optimal large language model training. In Advances in Neural Information Processing Systems , volume 35, pages 30016–30030, 2022. doi: 10.52202/068431-2176. Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei. Scaling laws for neural language models, 2020. Yekun Ke, Yingyu Liang, Zhenmei Shi, Zhao Song, and Chiwun Yang. Curse of attention: A kernel-based perspective for why transformers fail to generalize on time series forecasting and beyond. In 
+
+Conference on Parsimony and Learning , volume 280 of Proceedings of Machine Learning Research ,pages 675–738, 2025. URL https://proceedings.mlr.press/v280/ke25a.html .19 Tanishq Kumar, Zachary Ankner, Benjamin Frederick Spector, Blake Bordelon, Niklas Muennighoff, Mansheej Paul, Cengiz Pehlevan, Christopher Ré, and Aditi Raghunathan. Scaling laws for precision. In The Thirteenth International Conference on Learning Representations , 2025. Yingcong Li, Yixiao Huang, Muhammed E. Ildiz, Ankit Singh Rawat, and Samet Oymak. Mechanics of next token prediction with self-attention. In Proceedings of the 27th International Conference on Artificial Intelligence and Statistics , volume 238 of Proceedings of Machine Learning Research ,pages 685–693, 2024. Zhihao Li, Xue Jiang, Liyuan Liu, Xuelin Zhang, Hong Chen, and Feng Zheng. On the generalization ability of next-token-prediction pretraining. In Proceedings of the 42nd International Conference on Machine Learning , volume 267 of Proceedings of Machine Learning Research , pages 34943–34975, 2025. Yingyu Liang, Zhenmei Shi, Zhao Song, and Chiwun Yang. Towards infinite-long prefix in transformer. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing ,pages 11127–11191. Association for Computational Linguistics, 2025. doi: 10.18653/v1/2025. emnlp-main.563. URL https://aclanthology.org/2025.emnlp-main.563/ .Sanae Lotfi, Marc Finzi, Sanyam Kapoor, Andres Potapczynski, Micah Goldblum, and Andrew G. Wilson. PAC-bayes compression bounds so tight that they can explain generalization. In Advances in Neural Information Processing Systems , volume 35, 2022. Harald Luschgy and Gilles Pagès. Sharp asymptotics of the functional quantization problem for gaussian processes. The Annals of Probability , 32(2):1574–1599, 2004. doi: 10.1214/ 009117904000000324. Harald Luschgy, Gilles Pagès, and Benedikt Wilbertz. Asymptotically optimal quantization schemes for gaussian processes on hilbert spaces. ESAIM: Probability and Statistics , 14:93–116, 2010. doi: 10.1051/ps:2008026. Alexander Maloney, Daniel A. Roberts, and James Sully. A solvable model of neural scaling laws, 2022. Eric Michaud, Ziming Liu, Uzay Girit, and Max Tegmark. The quantization model of neural scaling. In Advances in Neural Information Processing Systems , volume 36, 2023. Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, and Hao Wu. Mixed precision training. In International Conference on Learning Representations , 2018. John X. Morris, Chawin Sitawarin, Chuan Guo, Narine Kokhlikyan, G. Edward Suh, Alexander M. Rush, Kamalika Chaudhuri, and Saeed Mahloujifar. How much do language models memorize?, 2025. Ryumei Nakada and Masaaki Imaizumi. Adaptive approximation and generalization of deep neural network with intrinsic dimensionality. Journal of Machine Learning Research , 21(174):1–38, 2020. NVIDIA. Transformer engine 2.18.0: Attention is all you need!, 2026. Software documentation, accessed 2026-08-31. 20 Zhixuan Pan, Shaowen Wang, Liao Pengfei, and Jian Li. Understanding LLM behaviors via compression: Data generation, knowledge acquisition and scaling laws. In Advances in Neural Information Processing Systems , volume 38, pages 168404–168454, 2025. doi: 10.52202/085713-5613. URL https://proceedings.neurips.cc/paper_files/paper/2025/ hash/f61d7778e89b9221d1ea0ce8428b7014-Abstract-Conference.html .Elliot Paquette, Courtney Paquette, Lechao Xiao, and Jeffrey Pennington. 4+3 phases of compute-optimal neural scaling laws. In Advances in Neural Information Processing Systems , volume 37, 2024. Tomer Porian, Mitchell Wortsman, Jenia Jitsev, Ludwig Schmidt, and Yair Carmon. Resolving discrepancies in compute-optimal scaling of language models. In Advances in Neural Information Processing Systems , volume 37, 2024. Pedro Henrique Pamplona Savarese, Xin Yuan, Yanjing Li, and Michael Maire. Not all bits have equal value: Heterogeneous precisions via trainable noise. In Advances in Neural Information Processing Systems , volume 35, 2022. Johannes Schmidt-Hieber. Nonparametric regression using deep neural networks with ReLU activation function. The Annals of Statistics , 48(4):1875–1897, 2020. doi: 10.1214/19-AOS1875. Claude E. Shannon. Coding theorems for a discrete source with a fidelity criterion. In IRE National Convention Record , volume 4, pages 142–163, 1959. Utkarsh Sharma and Jared Kaplan. A neural scaling law from the dimension of the data manifold, 2020. Jacob Steinhardt and John Duchi. Minimax rates for memory-bounded sparse linear regression. In 
+
+Proceedings of the 28th Conference on Learning Theory , volume 40 of Proceedings of Machine Learning Research , pages 1564–1587, 2015. Xingwu Sun, Shuaipeng Li, Ruobing Xie, Weidong Han, Kan Wu, Zhen Yang, Yixing Li, An Wang, Shuai Li, Jinbao Xue, Yu Cheng, Yangyu Tao, Zhanhui Kang, Cheng-Zhong Xu, Di Wang, and Jie Jiang. Scaling laws for floating–point quantization training. In Proceedings of the 42nd International Conference on Machine Learning , volume 267 of Proceedings of Machine Learning Research , pages 57544–57570, 2025. Taiji Suzuki. Adaptivity of deep ReLU network for learning in Besov and mixed smooth Besov spaces: Optimal rate and curse of dimensionality. In International Conference on Learning Representations , 2019. Jacob Trauger and Ambuj Tewari. Sequence length independent norm-based generalization bounds for transformers. In Proceedings of the 27th International Conference on Artificial Intelligence and Statistics , volume 238 of Proceedings of Machine Learning Research , pages 1405–1413, 2024. Guangxuan Xiao, Ji Lin, Mickael Seznec, Hao Wu, Julien Demouth, and Song Han. SmoothQuant: Accurate and efficient post-training quantization for large language models. In Proceedings of the 40th International Conference on Machine Learning , volume 202 of Proceedings of Machine Learning Research , pages 38087–38099, 2023. 21 Jing Xiong, Jianghan Shen, Chuanyang Zheng, Zhongwei Wan, Chenyang Zhao, Chiwun Yang, Fanghua Ye, Hongxia Yang, Lingpeng Kong, and Ngai Wong. ParallelComp: Parallel long-context compressor for length extrapolation. In Proceedings of the 42nd International Conference on Machine Learning , volume 267 of Proceedings of Machine Learning Research , pages 68998–69016, 2025. URL https://proceedings.mlr.press/v267/xiong25b.html .Chenxiao Yang, Nathan Srebro, and Zhiyuan Li. Tight sample complexity of transformers. In 
+
+Proceedings of Thirty Ninth Conference on Learning Theory , volume 336 of Proceedings of Machine Learning Research , pages 6887–6923, 2026. Chiwun Yang. Unifying learning dynamics and generalization in transformers scaling law, 2025. Chiwun Yang and Xiaoyu Li. Beyond sparse weights: When is attention compressible?, 2026. Zhewei Yao, Zhen Dong, Zhangcheng Zheng, Amir Gholami, Jiali Yu, Eric Tan, Leyuan Wang, Qijing Huang, Yida Wang, Michael W. Mahoney, and Kurt Keutzer. HAWQ-V3: Dyadic neural network quantization. In Proceedings of the 38th International Conference on Machine Learning ,volume 139 of Proceedings of Machine Learning Research , pages 11875–11886, 2021. Oğuz Kaan Yüksel and Nicolas Flammarion. On the sample complexity of next-token prediction. In 
+
+Proceedings of the 28th International Conference on Artificial Intelligence and Statistics , volume 258 of Proceedings of Machine Learning Research , pages 694–702, 2025. Dechen Zhang, Xuan Tang, Yingyu Liang, and Difan Zou. Scaling laws for precision in high-dimensional linear regression, 2026. Yuancheng Zhu and John Lafferty. Quantized estimation of gaussian sequence models in euclidean balls. In Advances in Neural Information Processing Systems , volume 27, 2014. Yuancheng Zhu and John Lafferty. Distributed nonparametric regression under communication constraints. In Proceedings of the 35th International Conference on Machine Learning , volume 80 of Proceedings of Machine Learning Research , pages 6009–6017, 2018a. Yuancheng Zhu and John Lafferty. Quantized minimax estimation over sobolev ellipsoids. Information and Inference: A Journal of the IMA , 7(1):31–82, 2018b. doi: 10.1093/imaiai/iax007. 22 APPENDIX 
+
+# A Discussion, Scope, and Closest Precedents 
+
+One curve for two resources. The central object is the spectrum of predictive energy per independent coordinate. Its integrated tail answers both what data cannot resolve and what a finite learned state cannot retain. Data evaluate it at resolution 1 /n ; storage chooses a water level. The same-marginal construction shows why the energy–dimension pairing is indispensable. 
+
+Knowledge capacity as an inverse resource curve. To express the information relation, place a fixed prior on the source parameters Z, including the route when it is unknown. Let S be the learned state formed from training blocks, and let X contain all candidates and the query of an independent held-out block. Conditional on ( X, Z ), the target Y is independent of the training state. Entropy and mutual information, denoted by H and I, are measured in nats. The conditional mutual-information identity and the finite-state constraint give 
+
+H(Y | X, S ) − H(Y | X, Z ) = I(Y ; Z | X, S ), I(Z; S) ≤ H(S) ≤ B log 2 .
+
+The first difference compares the Bayes predictive losses given the learned state and given the source parameters; a particular decoder can incur additional loss. The prior is used for this information comparison, whereas the main minimax theorem takes a worst case over fixed parameters. This identity places knowledge-capacity and prediction-risk laws on opposite directions of the same information path. Allen-Zhu and Li (Allen-Zhu and Li, 2025) turn factual generation loss into a lower bound on the information retained by model weights—a loss-to-bits question. Our minimax law turns n observations and B retained bits into the smallest held-out excess loss—a bits-to-risk question. Deterministic factual recall and positive-entropy prediction yield complementary geometries: the former prices discrete facts, while local KL curvature in the latter produces the coordinate distortion qi2−2bi , reverse water filling, and the common spectrum. Frequency-ranked knowledge also yields data and model scaling under a compression model (Pan et al., 2025); here the paired predictive energies determine the complete finite-( n, B ) curve, and the same-marginal construction isolates the pairing information required for its exponents. Empirical capacity estimates (Allen-Zhu and Li, 2025; Morris et al., 2025) calibrate how efficiently a particular architecture stores information per parameter; the spectrum supplies the source-dependent risk curve to which such an architectural calibration can be attached. Sparse attention, prefix learning, and context compression (Deng et al., 2024; Liang et al., 2025; Xiong et al., 2025; Yang and Li, 2026) then connect the abstract state budget to the practical question of which predictive coordinates a Transformer should retain. 
+
+Learning the routing and value parameters. Public addresses determine where comparisons occur, unknown routing is learned in the query projection, and unknown values are learned in the output coordinates. Fixing the key projection preserves the route-table scores and routing-gradient trajectory. This identifies the trainable parameters through which self-attention acquires the source’s predictive structure. 
+
+A hierarchy of resource laws. The arbitrary-state lower bound applies to every learner with at most 2 B final value states. The routing lower bound belongs to the stated row-symmetric online 23 trajectory; the format lower bound applies to the required stored interface; the bit-operation lower bound concerns the specified dense graph and arithmetic model. Each result identifies the cost of a distinct bottleneck and makes the progression from statistical information to numerical computation explicit. 
+
+From learning to finite-precision prediction. The two-stage learning theorem trains routing and output coordinates using public coordinate frequencies, supervised calibration, and exact-arithmetic updates. The finite-precision theorem starts from supplied mode logits and quantifies their realization by the network; its converse concerns the separable scalar-table representation. The compute theorem studies precision allocation under a two-sided numerical response assumption. Together, these results form a three-step account of acquiring parameters, representing them numerically, and allocating arithmetic resources. A unified low-precision training theorem would complete this chain at the level of the optimization trajectory. 
+
+Precision in practical Transformer stacks. The benefit of a low-bit matrix path depends on the fraction of storage and arithmetic it changes. FP32 softmax, accumulation, master weights, optimizer states, and saved activations contribute retained high-precision work. Streaming attention reduces retained state while preserving the dense arithmetic order. Device-level speedups are governed by the corresponding throughput and memory-traffic costs. 
+
+Open directions. Three extensions would carry the spectrum principle into broader sequence models: jointly learning frequencies, ordering, queries, and keys; analyzing low-precision stochastic updates along the routing and value trajectories; and estimating predictive-energy spectra from unrestricted corpora. These directions turn the present exact source model into a program for predicting resource tradeoffs in learned representations. 
+
+# B Extended Representation and Compute Results 
+
+This appendix gives the complete statements and derivations summarized in Sections 5 and 6. 
+
+B.1 Adaptive Schedule and Information Used 
+
+The schedule in Equation (5.2) knows the canonical index order and the interval [ χmin , χ max ], but not χ. It adapts to the decay rate while treating energy ordering as side information. Data-driven allocation with an unknown ordering is related to adaptive quantized Sobolev estimation (Zhu and Lafferty, 2018b); learning that ordering together with the bit schedule is a separate statistical problem. The full proof and restatement are in Appendix H. 
+
+B.2 Finite-Precision Forward Error and Storage 
+
+The matching attention weight in Equation (5.4) is α⋆ = eβ /(eβ + K − 1). Since the output coordinates lie in [ −R, R ], |z − ϑj⋆ | ≤ 2R(1 − α⋆) ≤ 2R(K − 1) e−β . Uniformly quantizing [ −∆j , ∆j ]with 2 bj values gives 
+
+| ˜wmode  
+
+> j
+
+− wmode  
+
+> j
+
+| ≤ 2∆ j 2−bj . (B.1) For arithmetic error, let u be the unit roundoff of the scalar operations. Max shifting produces unnormalized weights in {1, e −β }. Balanced pairwise summation has depth h = ⌈log 2 K⌉; put 24 γh = hu/ (1 − hu ). Positive pairwise summation incurs relative error at most γh. Composing exponential, denominator, and division errors gives, when ( h + 4) u ≤ 1/4, 
+
+∥̂ α − α∥1 ≤ 8( h + 4) u. (B.2) The final weighted sum can have mixed signs, so an absolute bound is needed: 
+
+|fl( ˜w⊤̂ α) − ˜w⊤α| ≤ CRu(1 + log K). (B.3) The absolute bound also handles cancellation. Combining routing, quantization, and arithmetic errors, squaring and averaging over the mode, and applying bounded log-loss curvature yields Equation (5.6), including the unrepresented tail. The detailed proof and restatement of Theorem 5.2 are in Appendix J. 
+
+Learned state versus physical storage. Here d = K + M + 1 is the token width of the particular realization in Section 5, with M retained scalar output coordinates. If the score matrix, value projection, and output head are dense arrays, their physical scalar-slot count is 
+
+N = 2 d2 + d. (B.4) Only the M output coordinates depend on the source, and their description length is ∑Mj=1 bj . Thus 
+
+N , M , and B are different resources even in this fixed-depth, one-head realization with public orthogonal addresses. The finite-precision theorem initializes those coordinates with supplied logits; Theorem 4.3 separately analyzes gradient training of routing and output values. 
+
+B.3 Forward–Backward Bit Complexity 
+
+Consider eager, non-checkpointed reverse-mode differentiation (standard backpropagation) through a dense Transformer with sequence length ℓ, hidden width d, feed-forward width mff , H attention heads whose widths sum to d, and L layers. Matrix multiplications use a format indexed by bmm ,the stable max-shifted softmax uses compute precision bsm , and a materialized attention probability uses bst storage bits. The index bmm determines all operand, output, and accumulator widths in this format family. Let M(bmm ) be the bit-operation cost of one such multiply–accumulate. Let 
+
+S(bsm ) be the amortized per-attention-entry cost of stable softmax and its reverse-mode Jacobian– vector product, including exponentials, reductions, division, and pointwise arithmetic. We assume normalization, activation, and cast costs per entry do not asymptotically exceed these matrix and softmax costs. We do not count the optimizer update. This conventional query/key/value/output stack is a separate computational graph from the smaller realization in Section 5. Let bw and ba
+
+denote aggregate bits per stored weight and activation slot at peak memory, and let Mem hp denote retained high-precision state. 
+
+Lemma B.1 (Transformer forward–backward bit complexity; informal version of Lemma K.1) .
+
+For the graph above, with positive dimensions and conventional dense matrix multiplication, 
+
+BitOps fb ≍ L
+
+> [(
+
+ℓd 2 + ℓdm ff + ℓ2d)M(bmm ) + Hℓ 2S(bsm )
+
+> ]
+
+. (B.5) Mem fb ≍ bwL(d2 + dm ff ) + baLℓ (d + mff ) + bst LHℓ 2 + Mem hp . (B.6) 25 The memory Mem fb is measured in bits. The values bw, ba, and bst count aggregate bits per logical weight, activation, and saved-attention slot at peak memory; they include any same-shaped gradient or backward-workspace buffer materialized by this eager implementation. The term Mem hp contains master weights, optimizer state, and all other explicitly retained high-precision data. A streaming, recomputing attention implementation replaces the quadratic attention state saved for backward by linear online-softmax state plus temporary tile workspace, while leaving the dense attention arithmetic order unchanged. 
+
+The three matrix terms in Equation (B.5) come respectively from the input/output projections, the two feed-forward projections, and the score–value attention products. Reverse mode performs two matrix products for each forward matrix product, so it changes constants rather than orders. For a softmax row p and incoming vector v, its derivative is applied as (diag( p) − pp ⊤)v = p ⊙ (v − ⟨ p, v ⟩1). Thus the Jacobian–vector product costs Θ( Hℓ 2), without forming an ℓ × ℓ Jacobian for every row. The proof and a shape-by-shape operation count are in Section K. 
+
+B.4 The Compute–Precision Pareto Law 
+
+Let M denote the number of represented modes. Under a specified shape schedule ( ℓ, d, m ff , H, L )( M ), Lemma B.1 gives G(M ) ≍ L(ℓd 2 + ℓdm ff + ℓ2d) and S(M ) ≍ LHℓ 2. We write G(M ) ≍ M g for quantizable matrix work and S(M ) ≍ M s for softmax work, where g, s ≥ 0. Reaching model error 
+
+M −χ requires n(M ) ≍ M 1+ χ independent blocks. Let E denote held-out excess risk, and let κmm 
+
+and κsm measure how matrix and softmax rounding errors are amplified. We assume the following two-sided error and cost relations, which separate effective matrix precision b from effective softmax precision bsm :
+
+E(M, b, b sm ) ≍ M −χ + κmm (M )22−2b + κsm (M )22−2bsm . (B.7) 
+
+C ≍ M 1+ χ [G(M )bν + S(M )bνsm  
+
+> sm
+
+] . (B.8) The exponents ν, ν sm ≥ 0 belong to the stated arithmetic model. The abstract format family has total width proportional to its effective precision, equivalently unit roundoff Θ(2 −b); concrete floating-point formats are discussed separately below. 
+
+Theorem B.2 (Compute–precision Pareto law; informal version of Theorem L.1) . Assume Equations (B.7) and (B.8) , κmm (M ) ≍ M r, and κsm (M ) ≍ M rsm , with all displayed relations two-sided and r, r sm ≥ 0. For the specified dense graph, H ≤ d implies G ≳ S and hence g ≥ s. Item 3 concerns general operation counts satisfying the same two-sided relations; items 1, 2, and 4 apply to both settings. 1. The smallest matrix precision that keeps matrix rounding at the model error is 
+
+bmatch (M ) = 
+
+> (
+
+r + χ
+
+2
+
+> )
+
+log 2 M + O(1) . (B.9) 
+
+2. If the matrix term dominates the bracket in Equation (B.8) at matched precisions—in particular in the case g ≥ s when the remaining precision factors do not reverse that dominance—then 
+
+inf  
+
+> M,b,b sm : cost ≤C
+
+E ≍ C−χ/ (1+ χ+g)(log C)χν/ (1+ χ+g), (B.10) 
+
+up to other declared slowly varying factors. 
+
+26 3. For general operation counts, if s > g , bsm is fixed, and the softmax term dominates computation, then for budgets in the pre-floor range 
+
+C1/(1+ χ+s) ≲ 22bsm /(χ+2 rsm ),
+
+inf  
+
+> M,b : cost ≤C
+
+E ≍ C−χ/ (1+ χ+s). (B.11) 
+
+Reducing matrix precision cannot improve this leading exponent. 4. At fixed matrix precision b, with softmax precision optimized, the model–rounding crossover and the infimum error over model scales are 
+
+Mb ≍ 22b/ (χ+2 r), Efloor (b) ≍ 2−2χb/ (χ+2 r). (B.12) 
+
+A fixed bsm -bit softmax similarly supports the scaling phase only while 
+
+M ≲ 22bsm /(χ+2 rsm ). (B.13) 
+
+The displayed two-sided risk and arithmetic assumptions define the class over which the infima and matching bounds are taken. 
+
+The theorem distinguishes increasing precision from fixed-precision deployment. Polynomial conditioning requires only logarithmically increasing precision, so adaptive precision changes a logarithmic factor, not the power exponent. Conversely, permanently fixing the precision creates a numerical floor. For a concrete 32-bit floating-point (FP32) softmax with unit roundoff usm ,provided the stated exponent-range and relative-error assumptions remain valid, Equation (B.13) reads M ≲ u−2/(χ+2 rsm )sm ; the total format width is not substituted for effective accuracy bits. Exponential conditioning, treated in Theorem 6.1, is the case in which precision itself creates a new power-law phase. 
+
+Limits imposed by high-precision work. At a fixed model shape, lowering a matrix path from baseline precision b0 to b gives the relative bit-operation count BitOpsRatio = Gb ν 
+
+> 0
+
++ Sb νsm 
+
+> sm
+
+Gb ν + Sb νsm 
+
+> sm
+
+. (B.14) If Q stored scalars can be quantized and Rhp bits must remain at high precision, the corresponding storage ratio is Compression bit = Qb 0 + Rhp 
+
+Qb + Rhp 
+
+. (B.15) These formulas expose the ceiling imposed by high-precision normalization, master weights, optimizer states, or saved activations. Actual graphics processor speed also depends on memory traffic, kernel support, and hardware throughput. The two analytic consequences appear in Figure 1: its left panel shows the retained-high-precision ceiling in Equation (B.14), and its right panel compares the three risk–cost regimes above. 27 C Proofs for the Main Results 
+
+The proofs follow the paper’s mechanism order: the spectral identities and their exponents, the query–key realization and online route, the network upper bound, and the same-marginal separation. Throughout this appendix, i indexes the scalar coordinates defined in Section 3. Their energies are qi = piR2 
+
+> i
+
+, the spectrum is μ = ∑ 
+
+> i
+
+δqi , and Φ μ(t) = ∑ 
+
+> i
+
+min {qi, t }. The water level τB is selected by the storage budget in that setup. Each restatement below uses the same objects as its corresponding main-text result. 
+
+Theorem C.1 (One spectrum controls data and memory; formal version of Theorem 3.1) . Let 
+
+qi > 0, ∑ 
+
+> i
+
+qi < ∞, and let μ, Φμ, and τB be defined above. Then 
+
+Sq(n) := ∑
+
+> i
+
+min {qi, n −1} = Φ μ(n−1), (C.1) 
+
+Dq(B) := inf 
+
+> bi≥0
+
+∑ 
+
+> ibi≤B
+
+∑
+
+> i
+
+qi2−2bi = Φ μ(τB ). (C.2) 
+
+For the bounded-logit value experiment, 
+
+R∗
+
+> value
+
+(n, B ) ≍R Φμ(n−1) + Φ μ(τB ). (C.3) 
+
+Moreover, for every t > 0,
+
+Φ′
+
+> μ, +
+
+(t) = μ(( t, ∞)) , Φ′
+
+> μ, −
+
+(t) = μ([ t, ∞)) . (C.4) 
+
+Hence the exact curve Φμ recovers the positive spectrum, including atom multiplicities, up to coordinate relabeling. Proof. Summability gives Nμ(t) < ∞ for every t > 0, and the largest positive energy is attained. Tonelli’s theorem yields Φμ(t) = ∑
+
+> i
+
+∫ t
+
+> 0
+
+1{s < q i} ds = ∑
+
+> i
+
+min {qi, t },
+
+which proves Equation (3.1). For a finite storage budget, reverse water filling has rates 
+
+b∗ 
+
+> i
+
+= 12 log 2(qi/τ B )+.
+
+Here the positive part applies to the logarithm. To justify the optimizer without interchanging a limit and an infimum, write 
+
+B(τ ) = 12 ln 2 
+
+∑
+
+> i
+
+[ln( qi/τ )] +.
+
+On every compact subinterval of (0 , q max ], only finitely many summands can be nonzero. Thus B(τ )is continuous, strictly decreasing below qmax , equals zero at qmax , and tends to infinity as τ ↓ 0. This proves existence and uniqueness of τB for B > 0; for B = 0 take τ0 = qmax . For λ = 2(ln 2) τB ,scalar convexity gives, for every bi ≥ 0, 
+
+qi2−2bi + λb i ≥ qi2−2b∗ 
+
+> i
+
++ λb ∗ 
+
+> i
+
+.
+
+28 All distortion sums are bounded by ∑ 
+
+> i
+
+qi, and the two bit sums are finite. Summing the inequality over all coordinates shows that every feasible allocation has distortion at least ∑ 
+
+> i
+
+qi2−2b∗ 
+
+> i
+
++λ(B −∑ 
+
+> i
+
+bi) ≥
+
+∑ 
+
+> i
+
+qi2−2b∗ 
+
+> i
+
+. This proves optimality directly in the countable problem. Since qi2−2b∗ 
+
+> i
+
+= min {qi, τ B },this proves Equation (3.2). The bounded-logit curvature, Assouad, and arbitrary codebook bounds, proved in Theorem G.2, give R∗
+
+> value
+
+(n, B ) ≍R Sq(n) + Dq(B), proving Equation (3.3). Finally, for 0 < h < t/ 2, both one-sided difference quotients of min {qi, t } lie in [0 , 1] and vanish whenever 
+
+qi < t/ 2. There are only finitely many remaining coordinates. Taking their limits gives respectively 
+
+1{qi > t } and 1{qi ≥ t}, proving Equation (3.4). Their difference is exactly the multiplicity of the atom at t.
+
+Corollary C.2 (Spectral scaling exponents; formal version of Corollary 3.2) . If Nμ(t) ∼ t−ρL(1 /t )
+
+for 0 < ρ < 1, where L is slowly varying, then 
+
+Φμ(n−1) ∈ RV −(1 −ρ), Φμ(τB ) ∈ RV −(1 −ρ)/ρ .
+
+For aj ≍ j−(1+ χ) and dj ≍ jγ , ρ = (1 + γ)/(1 + χ + γ), giving rates n−χ/ (1+ χ+γ) and B−χ/ (1+ γ), up to slowly varying factors. Proof. We first prove the regular-variation assertion under its stated hypothesis, then treat power comparisons separately. Abbreviate N (t) = Nμ(t). For fixed x > 0, N (tx )/N (t) → x−ρ as t ↓ 0. Choose 0 < ϵ < min {ρ, 1 − ρ}. The ratio at x = 1 /2, iterated over dyadic intervals and combined with monotonicity, gives 
+
+N (tx )
+
+N (t) ≤ Cϵx−ρ−ϵ (0 < x ≤ 1) , N (tx )
+
+N (t) ≤ Cϵx−ρ+ϵ (1 ≤ x ≤ t0/t )for a fixed sufficiently small t0. For example, choose t0 so that the ratio N (s/ 2) /N (s) lies between 2ρ−ϵ and 2 ρ+ϵ for all s ≤ t0, and telescope; rounding x to its neighboring powers of two changes only Cϵ. Consequently dominated convergence in Φ μ(t)/(tN (t)) = ∫ 10 N (tx )/N (t) d x gives Φμ(t) ∼ t1−ρL(1 /t )1 − ρ .
+
+Layer integration of the storage budget gives 
+
+Bμ(τ ) = 12 ln 2 
+
+∫ qmax 
+
+> τ
+
+Nμ(t)
+
+t dt ∼ τ −ρL(1 /τ )2ρ ln 2 .
+
+Indeed, after substituting t = τ x , the second domination bound makes the integral converge to 
+
+∫ ∞ 
+
+> 1
+
+x−ρ−1 dx = 1 /ρ . The part above t0 is finite and negligible relative to N (τ ). Thus B(cτ )/B (τ ) →
+
+c−ρ. For a > 0, sandwiching the inverse between ( a−1/ρ −ε)τB and ( a−1/ρ +ε)τB , and then sending ε ↓
+
+0, proves τaB /τ B → a−1/ρ . The same monotone sandwich for Φ μ gives Φ μ(τaB )/Φμ(τB ) → a−(1 −ρ)/ρ .This proves both regular-variation indices without assuming a differentiable slowly varying factor. For the block profile, dimensions are positive integers, so the stipulated comparison dj ≍ jγ has 
+
+γ ≥ 0. Coordinate energy aj /d j ≍ j−(1+ χ+γ) occurs dj ≍ jγ times. Bounds on the two comparison constants show that every index below ct −1/(1+ χ+γ) is active and no index above Ct −1/(1+ χ+γ)
+
+is active. Summing the multiplicities therefore gives N (t) ≍ t−ρ with ρ = (1 + γ)/(1 + χ + γ). Integrating these two-sided bounds directly yields Φμ(t) ≍ t1−ρ, B(τ ) ≍ τ −ρ, Φμ(τB ) ≍ B−(1 −ρ)/ρ .
+
+These power orders do not require regular variation of the individual profile or of an atomic counting tail. 29 Proposition C.3 (Exact query–key realization; formal version of Proposition 4.1) . Under the strict causal mask exposing exactly the K preceding candidates, Equation (4.1) reproduces the route-table scores and attention probabilities exactly. If only the query-address block of WQ is trained and WK is fixed, Euclidean SGD on WQ induces the same update of A; the attended feature and output-vector gradient are unchanged. Proof. Because PQxq = eq, PC xs = es, and J⊤J = IK , direct substitution gives Equation (4.1). If 
+
+G = ∇Aℓ, the physical query-projection gradient is ∇WQ ℓ = JG ⊤PQ. Restricting training to this address block therefore maps one Euclidean step to WQ(A − ηG ). The scores, candidate-only masked softmax, and attended value feature coincide. The output loss sees the same feature, so its gradient with respect to w also coincides. Orthogonality of the residual subspace to w makes the residual logit zero. 
+
+Proposition C.4 (Online routing dynamics; formal version of Proposition 4.2) . For K ≥ 2, zero initialization and softmax cross-entropy steps of size 0 < η ≤ 1 give the margin and distractor mass after t row visits: 
+
+βt+1 = βt + η Keβt + K − 1 , δt = K − 1
+
+eβt + K − 1 .
+
+After bK = Θ η(log( eK )) visits, δt ≍η [1 + ( t − bK )+]−1. For SA independent calibration blocks and a held-out row, 
+
+rK (SA) = E[δ2 
+
+> N
+
+], N ∼ Binomial( SA, 1/K ),
+
+and the hitting time to rK (SA) ≤ ε, 0 < ε ≤ 1/16 , is Θη(K{ε−1/2 + log( eK )}). For K = 1 , leakage and calibration cost are zero. Proof. Zero initialization preserves equality among distractor scores. If ut is the correct score and 
+
+vt a distractor score, one softmax cross-entropy update gives 
+
+ut+1 = ut + η(1 − p⋆), vt+1 = vt − ηp 0,
+
+which proves the margin recurrence. Introduce ΨK (β) = eβ − 1 + ( K − 1) βK .
+
+Put dt = βt+1 − βt. Since βt ≥ 0, 0 < d t ≤ η, and Ψ ′ 
+
+> K
+
+(βt)dt = η. Moreover 1 ≤ Ψ′ 
+
+> K
+
+(βt + v)/Ψ′ 
+
+> K
+
+(βt) ≤
+
+eη for 0 ≤ v ≤ dt. Integrating and summing gives ηt ≤ ΨK (βt) ≤ eηηt . Define the positive burn-in time 
+
+bK = min {t : βt ≥ ln(2 K)}.
+
+The preceding bounds, and the overshoot dt ≤ η, imply bK ≍η ln( eK ), including K = 2. Set 
+
+xt = eβt /(K − 1). Its increment satisfies 
+
+xtdt ≤ xt+1 − xt ≤ eηxtdt, xtdt = ηK K − 1
+
+xt
+
+1 + xt
+
+.
+
+At burn-in 2 ≤ xbK ≤ 4eη, and thereafter each increment is between two positive constants depending only on η. Hence δbK +k = 1 /(1 + xbK +k) ≍η (1 + k)−1. Before burn-in, xt < 4eη, so δt ≍η 1. This proves the shifted reciprocal bound at every integer time. 30 For a held-out row, independence and uniform query addresses give N ∼ Binomial( SA, 1/K ); write m = SA/K . If m ≥ 4bK , the binomial exponential-moment bound gives Pr {N < m/ 2} ≤ e−m/ 8.On the complementary event, δ2 
+
+> N
+
+≤ Cη(1 + m)−2. Thus 
+
+Eδ2 
+
+> N
+
+≤ Cη(1 + m)−2 + e−m/ 8,
+
+which is at most ε when m ≥ Cη{ln( eK ) + ε−1/2}. For the reverse bound, the increment estimate holds globally from x0 ≤ 1, giving xt ≤ 1 + 2 ηe ηt. Convexity of (2 + 2 ηe ηt)−2 and Jensen’s inequality imply Eδ2 
+
+> N
+
+≥ (2 + 2 ηe ηm)−2. Since ε ≤ 1/16, this forces m ≥ cηε−1/2. For the logarithmic term, 
+
+βt ≤ 2ηt . If m ≤ ln( K − 1) /(8 η), Markov’s inequality gives probability at least 1 /2 to N ≤ 2m,where βN ≤ 12 ln( K − 1) and δN ≥ 1/2. Then Eδ2 
+
+> N
+
+≥ 1/8, a contradiction. This forces m ≳η ln K;bounded K, including K = 2, is already covered by the first lower bound. Taking the maximum of the two lower bounds proves the claimed order of the hitting time. With a single candidate routing is exact without calibration. In the following restatement, ∆ i = Ri denotes the same public logit radius as in the main-text setup. 
+
+Theorem C.5 (Causal self-attention realization; formal version of Theorem 4.3) . For the source in Section 3, let Stage A start from zero and use the routing update in Proposition 4.2 on SA
+
+independent calibration blocks. Freeze the route before Stage V, which uses n ≥ 1 independent labeled blocks. With public pi, ∆i, set 
+
+An = {i : qi ≥ n−1}, W = ∏
+
+> i∈An
+
+[−∆i, ∆i], D = diag( pi)i∈An , w1 = 0 .
+
+Apply Equation (4.2) to the attended feature restricted to An, with zero output coordinates elsewhere, and use 
+
+μsgd = 916 min  
+
+> |z|≤ R
+
+σ′(z), ηt = 2
+
+μsgd (t + 1) , ¯wn = 2
+
+n(n + 1) 
+
+> n
+
+∑
+
+> t=1
+
+t w t.
+
+If An is empty, take ¯wn = 0 . For each public format-range ratio κi ≥ 1 and integer width k ≥ 0, the scalar decoder is defined as follows. If κi2−k ≥ 1, its output is zero. Otherwise quantize uniformly with 2k midpoint values on [−κi∆i, κ i∆i], then clip the decoded value to [−∆i, ∆i]. The allocation is public and deterministic; quantize ¯wn with total width at most BV , choosing an allocation within an arbitrarily small error of the infimum below and flooring its widths. Let Earithmetic bound the mean squared difference between the computed and exact logits of this stored network. Then 
+
+E[Rθ(̂F ) − L ∞] ≲R,K,η Φμ(n−1) + Dfmt  
+
+> q,κ
+
+(BV ) + rK (SA) + Earithmetic , (C.5) 
+
+where BV is the value-state bit budget and 
+
+Dfmt  
+
+> q,κ
+
+(BV ) = inf  
+
+> bi≥0,
+
+∑ 
+
+> ibi≤BV
+
+∑
+
+> i
+
+qi min {1, κ 2 
+
+> i
+
+2−2bi }.
+
+For κi = 1 , this equals Φμ(τBV ), and the network attains the core surface at total budget B for power-law spectra, fixed K, o(B) routing bits, and lower-order routing/arithmetic errors. Proof. The finite active set has size m = |An| ≤ n ∑ 
+
+> i
+
+qi. We first analyze the exact output before storage, conditioning on Stage A. 31 Feature covariance and curvature. For K ≥ 2, write I for the matching candidate’s mode and I1, . . . , I K−1 for the distractor modes. They are independent with law p, also conditional on the query row and its calibration history. Restricting the coordinate vectors to An, the feature is 
+
+h = (1 − δq)eI + δq
+
+K − 1
+
+> K−1
+
+∑
+
+> s=1
+
+eIs .
+
+Expanding its second moment separates equal-candidate and distinct-candidate products: 
+
+E[hh ⊤ | Q = q] = cd,q D + (1 − cd,q )pAp⊤
+
+> A
+
+, cd,q = (1 − δq)2 + δ2
+
+> q
+
+K − 1 ,
+
+where pA = ( pi)i∈An . With rcal = K−1 ∑ 
+
+> q
+
+δ2 
+
+> q
+
+and ¯ cd = K−1 ∑ 
+
+> q
+
+cd,q , the event G = {rcal ≤ 1/16 }
+
+gives ¯cd ≥
+
+(
+
+1 − 1
+
+K
+
+∑
+
+> q
+
+δq
+
+)2
+
+≥ 916 .
+
+Let F (w) = E[log(1 + ew⊤h) − Y w ⊤h | Stage A]. Every w ∈ W has |w⊤h| ≤ R. Hence, on G,its Hessian satisfies ∇2F (w) ⪰ μsgd D, with μsgd as in the statement. The stochastic gradient 
+
+gt = ( σ(w⊤ 
+
+> t
+
+ht) − Yt)ht is unbiased conditional on the past, and, for m ≥ 1, 
+
+E[∥gt∥2 
+
+> D−1
+
+| wt, Stage A] ≤ tr( D−1Ehh ⊤) = ¯ cdm + (1 − ¯cd) ∑
+
+> i∈An
+
+pi ≤ m. 
+
+For K = 1, use h = eI , ¯ cd = 1, and rcal = 0; all the same inequalities hold. 
+
+Projected SGD and its output. The compact box has a minimizer w∗ of F . Nonexpansiveness of projection in the D-norm and strong convexity give, conditional on G and the calibration history, 2ηtE[F (wt) − F (w∗)] ≤ (1 − μsgd ηt)Vt − Vt+1 + η2 
+
+> t
+
+m, Vt = E∥wt − w∗∥2
+
+> D
+
+.
+
+Multiply by t/ (2 ηt) and substitute the specified step size: 
+
+tE[F (wt) − F (w∗)] ≤ μsgd 
+
+4 {t(t − 1) Vt − t(t + 1) Vt+1 } + mt μsgd (t + 1) .
+
+The distance terms telescope, with zero initial coefficient and a nonpositive final term. Convexity of 
+
+F therefore yields 
+
+E[F ( ¯ wn) − F (w∗)] ≤ 2mμsgd (n + 1) .
+
+Comparison with the source. Let θAi = θi1{i ∈ An}. It belongs to W, and 
+
+|θI − (θA)⊤h| ≤ | θI |1{I / ∈ An} + 2 Rδ q.
+
+Squaring, averaging, and applying upper logit curvature give 
+
+F (w∗) − L ∞ ≤ F (θA) − L ∞ ≤ CR
+
+ ∑
+
+> i / ∈An
+
+qi + rcal 
+
+ .
+
+32 On Gc, every exact output remains in [ −R, R ], so its excess loss is bounded by a constant depending only on R. Furthermore Pr( Gc) ≤ 16 Ercal , and independence of a held-out query gives Ercal = rK (SA). Combining the events proves 
+
+E[F ( ¯ wn) − L ∞] ≤ CR
+
+> 
+
+mn + ∑
+
+> i / ∈An
+
+qi + rK (SA) 
+
+> 
+
+= CR{Φμ(n−1) + rK (SA)}.
+
+When m = 0, the zero output pays at most CR 
+
+> ∑
+> i
+
+qi = CRΦμ(n−1), so the same bound holds. 
+
+Finite-state representation. For any x ∈ [−∆i, ∆i], the stated k-bit decoder obeys 
+
+|Qi,k (x) − x|2 ≤ ∆2 
+
+> i
+
+min {1, κ 2 
+
+> i
+
+2−2k}.
+
+Indeed, the zero branch has error at most ∆ i; in the grid branch the midpoint error is at most 
+
+κi∆i2−k, and clipping decreases it. Both the branch and the codebook are public. Rounding bi down to ki multiplies this upper bound by at most four. Only finitely many ki are positive, and their product codebook has at most 2   
+
+> ∑
+> iki
+
+≤ 2BV entries. A zero-width coordinate is decoded as zero because κi ≥ 1. Extend ¯ wn by zero outside An, and apply the public scalar decoder on every allocated coordinate. Let ei = Qi,k i ( ¯ wn,i )− ¯wn,i and let H = ∑ 
+
+> s
+
+aQs eCs be the full attended coordinate feature. Conditional on the fitted state, Jensen’s inequality and the iid candidate marginals give 
+
+E[( e⊤H)2 | fitted state] ≤ E
+
+> [∑
+> s
+
+aQs e2 
+
+> Cs
+
+| fitted state 
+
+> ]
+
+= ∑
+
+> i
+
+pie2 
+
+> i
+
+.
+
+It follows that quantizing the average costs at most 4 ∑ 
+
+> i
+
+qi min {1, κ 2 
+
+> i
+
+2−2bi } in mean squared logit error. Lower curvature converts the preceding learning bound to squared logit error; the squared triangle inequality adds storage and arithmetic error, and global upper curvature converts back to cross-entropy. Taking the infimum over allocations proves Equation (4.3). Finally, a calibrated row is determined by its visit count and its matching position, with one additional symbol for an unvisited row. It therefore uses at most 
+
+BA = K{⌈ log 2(SA + 1) ⌉ + ⌈log 2(K + 1) ⌉} 
+
+bits: the fixed decoder reconstructs its scores from the recurrence. The retained value and routing state together use at most BV + BA bits; the stated arithmetic error accounts for numerical reconstruction. For K = 1 the route uses no state. When κi = 1, the format functional is exactly 
+
+Dq(BV ) = Φ μ(τBV ), giving the final claim at value budget BV . For ranked coordinate energies 
+
+q(r) ≍ r−(1+ ξ), Dq(BV ) ≍ B−ξV ; in the equal-energy block profile, ξ = χ/ (1 + γ). If BA = o(B) and 
+
+BV = B − BA, then BV ≍ B, proving the total-budget conclusion. 
+
+Theorem C.6 (Same block marginals, different scaling laws; formal version of Theorem 3.3) . For every χ, γ > 0, there are two positive-conditional-entropy causal-retrieval sources with exactly the same block-energy multiset and the same block-dimension multiset at every dyadic level. They differ only in the pairing. All displayed dimensions in this construction are rounded upward to integers. With the common fixed-K route revealed, 
+
+Reasy (n, B ) ≍ n−χ/ (1+ χ) + B−χ,
+
+whereas 
+
+Rhard (n, B ) ≍ n−χ/ (1+ χ+γ) + B−χ/ (1+ γ).
+
+33 Proof. Fix δ > γχ . At each level ℓ ≥ 1, take 2 ℓ blocks of energy c2−(1+ χ)ℓ and 2 ℓ blocks of energy 
+
+c2−(1+ χ+δ)ℓ. The dimension multiset consists of 2 ℓ copies each of 1 and dℓ = ⌈2γℓ ⌉. In the easy pairing the higher energy has dimension one; in the hard pairing it has dimension dℓ. Divide a block’s energy equally among its coordinates. Both multisets agree exactly at every level, including after the integer rounding of dimensions. To realize these spectra as sources, choose any fixed radius R0 > 0 within the logit bound, and choose c > 0 so that total energy is R20. Give a coordinate of energy qi probability pi = qi/R 20 and radius ∆ i = R0. These probabilities sum to one. Independent candidate draws and the same fixed-K
+
+retrieval map give the source in Section 3; bounded Bernoulli logits give strictly positive conditional entropy. A generic component with exponent s > 0 and dimension exponent g ≥ 0 has Θ(2 (1+ g)ℓ)coordinates of energy Θ(2 −(1+ s+g)ℓ) at level ℓ. The active levels at threshold t lie between two cutoffs differing by a constant number of levels, each of size log 2(1 /t )/(1 + s + g). A geometric sum therefore gives 
+
+Ns,g (t) ≍ t−ρ(s,g ), ρ(s, g ) = 1 + g
+
+1 + s + g .
+
+Use the two-sided integral comparison at the end of the preceding spectral proof, rather than regular variation: dyadic spectra can have log-periodic fluctuations. This gives data and storage exponents 
+
+s/ (1 + s + g) and s/ (1 + g), respectively. The easy components have ( s, g ) = ( χ, 0) , (χ + δ, γ ). The inequality δ > γχ makes the second component’s two exponents strictly larger. The hard components have ( s, g ) = ( χ, γ ), (χ + δ, 0), again with the second faster. For data, component errors add exactly. For storage, each full distortion is at least that of the slower component at budget B,while allocating B/ 2 to each component gives the matching upper bound. Applying Theorem C.1 now proves all four displayed rates. 
+
+# D Preliminaries and Notation 
+
+We begin by specifying what is observed, what is predicted, and which resources are counted. Section D.1 introduces the regenerative autoregressive source. Section D.2 defines held-out loss and learners with finitely many data-dependent states. Section D.3 adds mode-dependent representation costs, and Section D.4 distinguishes learned bits from physical storage and arithmetic cost. 
+
+D.1 A regenerative autoregressive source 
+
+This section writes the revealed-coordinate value problem with scalar index j: ∆ j is the logit radius denoted Ri in the main text, and E∗(n, B ) below is R∗
+
+> value
+
+(n, B ). For a positive integer m, write [m] = {1, . . . , m }, and let N0 = {0, 1, 2, . . . }. We write Ber( p) for the Bernoulli distribution with success probability p.One regeneration block contains K candidate tokens followed by a query and a binary target token. Candidate t ∈ [K] carries a public address at and an observed mode label jt. The query carries one address at⋆ , so its causally relevant mode is 
+
+J := jt⋆ , P(J = j) = pj .
+
+Conditionally on J = j, the next token obeys 
+
+Y | J = j ∼ Ber( σ(θj )) , σ(z) = 11 + e−z .
+
+34 The parameter is θ = ( θj )j≥1 with θj ∈ [−∆j , ∆j ] ⊆ [−R, R ], where R < ∞ is fixed. We define the predictive energy 
+
+qj := pj ∆2
+
+> j
+
+and assume ∑ 
+
+> j
+
+qj < ∞. We write Z = ( {(at, j t)}Kt=1 , a t⋆ , Y ) ∈ Z for the observed training block; the source parameters ( θj )j are unknown. A regeneration delimiter resets the random variables, making distinct blocks independent. Tokens inside a block are causally ordered, but the statistical sample size n counts independent blocks, not tokens. Bounded logits imply 0 < σ (−R) ≤ P(Y = 1 |
+
+J) ≤ σ(R) < 1, so the conditional entropy and Bayes cross-entropy are strictly positive. 
+
+D.2 Held-out risk and finite learned states 
+
+For a logit predictor f = ( fj )j , define held-out cross-entropy 
+
+Lθ(f ) := Eθ[−Y log σ(fJ ) − (1 − Y ) log(1 − σ(fJ ))] .
+
+The Bayes predictor is fj = θj ; its loss is denoted L∞ := Lθ(θ) > 0. Training and evaluation regeneration blocks are independent. For an integer B ≥ 0, a B-bit learner consists of an encoder 
+
+ϕ : Zn −→ [2 B ]and a fixed decoder g : [2 B ] × N → [−R, R ]. The decoder may share arbitrary computation across modes; only its data-dependent state is limited to 2 B possibilities. Randomized learners are allowed, although conditioning on their random seed shows that they do not improve the Bayes lower bounds used below. Because the Bayes loss depends on θ, we define minimax excess risk directly and use the notation 
+
+E∗(n, B ) := inf  
+
+> ϕ,g
+
+sup    
+
+> θj∈[−∆j,∆j]
+
+Eθ[Lθ(g(ϕ(Zn), ·)) − L θ(θ)] .
+
+We use x ≍ y when positive constants bound their ratio in both directions. These constants may depend on R and on stated regular-variation constants, but not on n, B, or the number of active modes. 
+
+D.3 Heterogeneous representation costs 
+
+The statistical theorem uses qj . The structural theorem allows a more general representable energy 
+
+aj > 0, a per-bit difficulty cj > 0, and a numerical amplification κj > 0. Assigning bj ≥ 0 bits to mode j incurs distortion aj 2−2bj and cost cj bj . Its optimal distortion under budget B is 
+
+D(B) := inf     
+
+> bj≥0∑
+> jcjbj≤B
+> ∑
+> j
+
+aj 2−2bj . (D.1) Let vj ≥ 0 record a separately specified statistical residual for mode j. This auxiliary quantity is used in the complete tuple summary below, not in the spectral formula for D(B). For a finite mode collection, the unlabeled joint measure 
+
+η := ∑
+
+> j
+
+δ(vj ,a j ,c j ,κ j ) (D.2) 35 records statistical residual vj , representable energy, difficulty, and amplification together. The cost-weighted difficulty-normalized spectrum is 
+
+μ := ∑
+
+> j
+
+cj δaj /c j . (D.3) For unit costs and aj = qj , this reduces to the coordinate spectrum in Section 3; general costs weight each atom by cj . We will compare unlabeled summaries of these mode-dependent quantities. Such a summary is sufficient for the complete budget–distortion curve if equal summary values imply equal 
+
+D(B) for every B ≥ 0. 
+
+D.4 Neural and arithmetic resources 
+
+In Section 5, X ∈ R(K+1) ×d denotes the matrix of candidate and query token vectors, and U ∈ Rd×d
+
+denotes the bilinear attention score matrix. The symbol N counts physically stored dense scalar parameter slots. It is not identified with B, the number of bits in the data-dependent learned state. The symbol C denotes a non-statistical cost budget: representation cost in Section F and arithmetic computation in Sections B.3 and 6. These meanings occur in separate results and are never equated. When C denotes computation, its arithmetic cost model is stated explicitly. In Section 6, one b-bit scalar operation costs Θ( bν ), where ν ≥ 0 is fixed. In Section B.3, ℓ, d, mff , H,and L denote sequence length, hidden width, feed-forward width, attention-head count, and layer count. The symbol bmm indexes a matrix-arithmetic format family whose operand, output, and accumulator widths are prescribed functions of bmm ; bsm specifies the effective softmax precision; and 
+
+bst is the number of bits used to store an attention probability. Unit roundoff is denoted u. These variables specify arithmetic work and storage; Section A discusses their relation to implementations. 
+
+# E Learning after Data: A Finite-Bit Autoregressive Minimax Law 
+
+Two irreducible losses govern finite-bit prediction. We first lower-bound the distortion of any learned state with at most 2 B possible values, even when its coordinates are decoded jointly. We then combine this bound with statistical uncertainty across regeneration blocks and evaluate the resulting risk law for power-law energies. Full proofs appear in Section G. 
+
+Lemma E.1 (Arbitrary joint finite-state representations; informal version of Lemma G.1) . Let 
+
+Θj be independent and uniform on [−∆j , ∆j ], let pj > 0, and put qj = pj ∆2 
+
+> j
+
+. For B ∈ N0, every encoder–decoder pair with at most 2B reconstruction vectors satisfies 
+
+> ∑
+> j
+
+pj E(Θ j −̂ Θj )2 ≥ 2
+
+πe inf    
+
+> bj≥0∑
+> jbj≤B
+> ∑
+> j
+
+qj 2−2bj . (E.1) 
+
+The reconstruction vectors may couple all coordinates. 
+
+Here the codebook is simply the set of at most 2 B reconstruction vectors available to the decoder. The entropy proof controls total codebook cardinality, so it covers shared representations that compress several modes jointly as well as coordinatewise quantizers. 36 Theorem E.2 (Finite-bit autoregressive minimax law; informal version of Theorem G.2) . Fix 
+
+R < ∞. For every n ∈ N, B ∈ N0, and source family specified by (pj , ∆j )j≥1 as in Section D.1, there are constants 0 < c R ≤ CR < ∞ such that 
+
+cR{Sq(n) + Dq(B)} ≤ E∗(n, B ) ≤ CR{Sq(n) + Dq(B)}, (E.2) 
+
+where 
+
+Sq(n) := ∑
+
+> j
+
+min {qj , n −1}, Dq(B) := inf    
+
+> bj≥0∑
+> jbj≤B
+> ∑
+> j
+
+qj 2−2bj . (E.3) 
+
+The lower bound holds for arbitrary 2B -state joint encoders and arbitrary fixed shared decoding computation. 
+
+Why the two terms add. On bounded logits, excess Bernoulli cross-entropy is equivalent to squared logit error. A clipped modewise likelihood estimate contributes min {qj , 1/n }: a rare or weak mode is no harder to ignore than to estimate. Quantizing the resulting coordinates according to a feasible ( bj ) contributes qj 2−2bj . For the converse, an Assouad hypercube gives the statistical term. Giving the encoder the true parameter can only make representation easier; Lemma E.1 then gives the bit term. The actual risk exceeds the maximum of these two lower bounds, which is at least half their sum. This proves the constant-factor equivalence in Equation (E.2). 
+
+Corollary E.3 (Power-law energies; informal version of Corollary G.3) . Suppose that n, B ≥ 1
+
+and, for some χ > 0 and constants 0 < c − ≤ c+ < ∞,
+
+c−j−(1+ χ) ≤ qj ≤ c+j−(1+ χ) (j ≥ 1) .
+
+Then 
+
+E∗(n, B ) ≍ n−χ/ (1+ χ) + B−χ. (E.4) 
+
+The data–bit crossover occurs at B ≍ n1/(1+ χ).
+
+To see the two exponents, split Sq(n) where qj crosses 1 /n . For Dq(B), reverse water filling equalizes qj 2−2bj on active modes. If m modes are active, Stirling’s formula gives B ≍ m, while active distortion and the inactive tail are both ≍ m−χ.
+
+What the law identifies. The theorem identifies the data and retained-bit dependence for the stated positive-entropy autoregressive source. Its distinctive role is to couple held-out log-loss with arbitrary shared decoding; the next structural results show what additional information determines the resulting exponent. 
+
+# F Why Marginal Summaries Do Not Determine Scaling 
+
+This section asks which information about mode difficulty identifies a scaling law. Here cost is charged directly to selecting or representing a coordinate. The main-text construction instead realizes difficulty through the number of independent coordinates within an energy group. Two problems with identical energy and cost marginals first show what separate summaries lose. The joint spectrum then recovers exactly the complete budget–distortion curve and gives the smallest exact summary for separable allocation. 37 F.1 Same marginals, different exponents 
+
+Consider first a binary selection rule. Selecting mode j pays cj and removes energy qj ; unselected energy remains as error. Under total representation-cost budget C, its optimum is 
+
+A(C) := inf   
+
+> S⊆N∑
+> j∈Scj≤C
+> ∑
+> j / ∈S
+
+qj . (F.1) 
+
+Theorem F.1 (Marginals do not identify scaling; informal version of Theorem I.1) . For every 
+
+χ, γ > 0, there are two instances of Equation (F.1) with identical energy multisets and identical cost multisets at every dyadic level, but 
+
+Aeasy (C) ≍ C−χ, Ahard (C) ≍ C−χ/ (1+ γ). (F.2) 
+
+The same two exponents hold when selection is replaced by continuous bits with distortion qj 2−2bj
+
+and cost cj bj . Hence no summary that retains only the two marginal multisets identifies the optimal exponent in either representation class. 
+
+The construction makes the missing information visible. At level ℓ, create 2 ℓ high-energy modes of size 2 −(1+ χ)ℓ and 2 ℓ lower-energy modes of size 2 −(1+ χ+δ)ℓ, with δ > γχ . The costs are 2 ℓ copies of 1 and 2 ℓ copies of 2 γℓ . The easy instance pairs high energy with unit cost; the hard instance pairs it with the larger cost. All marginals agree level by level. A component with multiplicity 2 ℓ, energy 2−(1+ s)ℓ, and cost 2 gℓ has exponent s/ (1 + g). This yields Equation (F.2); the full lower bound also permits non-prefix selections through a fractional relaxation. The causal-source coupling experiment is shown in Figure 3(b,e), together with analytic distortion; Table 2b compares theoretical and held-out slopes. 
+
+F.2 The joint spectrum 
+
+The full unlabeled joint measure η in Equation (D.2) retains the pairing by construction. For the separable exponential response Equation (D.1), it can be compressed further. 
+
+Theorem F.2 (Joint energy–difficulty characterization; informal version of Theorem I.2) . For a finite collection of modes, η is a maximal invariant under permutations of mode labels: it retains all information except the arbitrary names of the modes. For a finite or countable collection, consider the separable problem Equation (D.1) and assume 
+
+> ∑
+> j
+
+aj < ∞, ∑  
+
+> j:aj/c j>t
+
+cj < ∞ for every t > 0.
+
+Then the spectrum μ = ∑ 
+
+> j
+
+cj δaj /c j determines D(B) for every B ≥ 0. Conversely, the complete curve B 7 → D(B) determines μ on (0 , ∞). Consequently, μ is a minimal exact unlabeled summary of the complete budget–distortion curve for this representation class. 
+
+Put rj = aj /c j . The coordinatewise optimum has a water level τ > 0: 
+
+bj (τ ) = 12 log 2(rj /τ )+. (F.3) 38 Writing the result in terms of μ gives two integral identities, 
+
+B(τ ) = 12 log 2 
+
+> ∫
+
+log( r/τ )+ μ( d r), D(B(τ )) = 
+
+> ∫
+
+min {r, τ } μ( d r). (F.4) These identities prove sufficiency. They also make the inverse result possible. At differentiability points the envelope theorem gives 
+
+D′(B) = −2 log 2 τ (B). (F.5) Thus the curve recovers the water level, hence B(τ ). With s = log τ ,dds B(es) = − 12 log 2 μ(( es, ∞)) (F.6) at every continuity point. The right-continuous tail, including its jumps, determines μ.Minimality now has a precise meaning. If another summary T determines the complete curve, then T (x) = T (y) implies Dx = Dy, which by Equation (F.6) implies μx = μy. Therefore μ is a function of every sufficient summary. It is also strictly coarser than the full unlabeled table η: it retains only the cost-weighted distribution of energy per unit difficulty. 
+
+Corollary F.3 (Joint-tail exponent) . If aj ≍ j−α with α > 1 and cj ≍ jγ with γ > −1, then 
+
+D(B) ≍ B−(α−1) /(1+ γ).
+
+Indeed, the active threshold m obeys B ≍ m1+ γ , while the represented distortion and omitted tail are both ≍ m1−α.
+
+When the ingredients can be measured. Controlled interventions provide a route to estimating the ingredients: counts estimate mode frequency, held-out ablations estimate predictive energy, and deliberate rounding perturbations estimate numerical amplification. The identification theorem specifies how these quantities determine the resource curve; extracting them from passive natural-language observations is an open estimation problem. 
+
+# G Proofs for the Finite-Bit Autoregressive Minimax Law 
+
+This appendix proves the arbitrary-codebook entropy lemma, the statistical upper and lower bounds, and the power-law corollary in that order. 
+
+Lemma G.1 (Arbitrary joint finite-state representations; formal version of Lemma E.1) . Let 
+
+Θj be independent and uniform on [−∆j , ∆j ], let pj > 0, and put qj = pj ∆2 
+
+> j
+
+. For B ∈ N0, every encoder–decoder pair with at most 2B reconstruction vectors satisfies 
+
+> ∑
+> j
+
+pj E(Θ j −̂ Θj )2 ≥ 2
+
+πe inf    
+
+> bj≥0∑
+> jbj≤B
+> ∑
+> j
+
+qj 2−2bj . (G.1) 
+
+The reconstruction vectors may couple all coordinates. 
+
+39 Proof. First restrict to a finite coordinate set A. Write 
+
+dj := pj E(Θ j −̂ Θj )2.
+
+For any S ⊆ A, data processing and the codebook cardinality imply 
+
+B log 2 ≥ I(Θ S ;̂ Θ) . (G.2) Independence gives h(Θ S ) = ∑ 
+
+> j∈S
+
+log(2∆ j ). Moreover, 
+
+h(Θ S |̂ Θ) = h(Θ S −̂ ΘS |̂ Θ) 
+
+≤ h(Θ S −̂ ΘS )
+
+≤ ∑
+
+> j∈S
+
+h(Θ j −̂ Θj )
+
+≤ 12
+
+∑
+
+> j∈S
+
+log 
+
+(
+
+2πe dj
+
+pj
+
+)
+
+,
+
+where the last line is the Gaussian maximum-entropy inequality at fixed second moment. To see it directly, compare the error density to the centered Gaussian of variance dj /p j : nonnegativity of relative entropy gives h(X) ≤ 12 log(2 πd j /p j ) + EX2/(2 dj /p j ). If an entropy is −∞ , the same bound follows by approximation. Zero mean-square error on a nondegenerate uniform coordinate would require infinite information, so it cannot occur for a finite codebook. All information and entropy expressions here use natural logarithms. Therefore 
+
+I(Θ S ;̂ Θ) ≥ 12
+
+∑
+
+> j∈S
+
+log 2qj
+
+πe d j
+
+. (G.3) Choose S = {j : dj < 2qj /(πe )} and define 
+
+bj = 12 log 2 
+
+[
+
+log 2qj
+
+πe d j
+
+]
+
+> +
+
+.
+
+Equations (G.2)–(G.3) give ∑ 
+
+> j
+
+bj ≤ B. On S,
+
+dj = 2
+
+πe qj 2−2bj ,
+
+while off S, bj = 0 and dj ≥ (2 /(πe )) qj . Hence 
+
+∑
+
+> j∈A
+
+dj ≥ 2
+
+πe inf  
+
+> bj≥0
+
+∑  
+
+> j∈Abj≤B
+
+∑
+
+> j∈A
+
+qj 2−2bj .
+
+For countably many coordinates, let Am ↑ N and call the finite variational value DAm (B). Clearly 
+
+DAm (B) ≤ Dq(B). Extending an optimizer on Am by zeros gives 
+
+Dq(B) ≤ DAm (B) + ∑
+
+> j / ∈Am
+
+qj .
+
+Since ∑ 
+
+> j
+
+qj < ∞, DAm (B) ↑ Dq(B). Monotone convergence of the distortion completes the proof. Randomized encoders do not improve the Bayes risk: condition on the encoder seed and average the deterministic bound. 40 Theorem G.2 (Finite-bit autoregressive minimax law; formal version of Theorem E.2) . Fix R < ∞.For every n ∈ N, B ∈ N0, and source family specified by (pj , ∆j )j≥1 as in Section D.1, there are constants 0 < c R ≤ CR < ∞ such that 
+
+cR{Sq(n) + Dq(B)} ≤ E∗(n, B ) ≤ CR{Sq(n) + Dq(B)}, (G.4) 
+
+where 
+
+Sq(n) := ∑
+
+> j
+
+min {qj , n −1}, Dq(B) := inf    
+
+> bj≥0∑
+> jbj≤B
+> ∑
+> j
+
+qj 2−2bj . (G.5) 
+
+The lower bound holds for arbitrary 2B -state joint encoders and arbitrary fixed shared decoding computation. Proof. We proceed in four steps. 
+
+Step 1: loss curvature. The Bernoulli log-partition function A(t) = log(1 + et) satisfies 
+
+A′′ (t) = σ(t)(1 − σ(t)) .
+
+On [ −R, R ], this derivative lies between two positive constants. The excess cross-entropy of logit ̂ θ
+
+is the Bregman divergence of A, or equivalently the Kullback–Leibler (KL) divergence, which we denote by KL. Taylor’s theorem therefore yields 
+
+cR(θ −̂ θ)2 ≤ KL(Ber( σ(θ)) ∥ Ber( σ(̂ θ))) ≤ CR(θ −̂ θ)2. (G.6) Clipping a decoded logit to [ −R, R ] also cannot increase cross-entropy: the derivative with respect to the decoded logit z is σ(z) − σ(θ), which has the sign of z − θ. Clipping preserves the decoder’s cardinality. Thus both minimax bounds can be proved using bounded decoded logits and weighted squared error. 
+
+Step 2: statistical upper bound. Let Nj ∼ Binomial( n, p j ) be the training count of mode j.If Nj ≥ 1, project the empirical Bernoulli mean onto [ σ(−∆j ), σ (∆ j )] and apply the logit map. Projection cannot increase probability error, and the logit is Lipschitz on [ σ(−R), σ (R)]. Thus its conditional mean-square error is at most CR/N j . The zero estimator has error at most ∆ 2 
+
+> j
+
+. Choose between them using the observed count, yielding 
+
+E[( ̂ θj − θj )2 | Nj ] ≤ C′ 
+
+> R
+
+min {∆2 
+
+> j
+
+, (Nj + 1) −1}. (G.7) The identity 
+
+E 1
+
+Nj + 1 = 1 − (1 − pj )n+1 
+
+(n + 1) pj
+
+≤ 1(n + 1) pj
+
+(G.8) follows by integrating the binomial generating function. Therefore 
+
+pj E(̂θj − θj )2 ≤ C′ 
+
+> R
+
+min 
+
+> {
+
+pj ∆2 
+
+> j
+
+, p j E 1
+
+Nj + 1 
+
+> }
+
+≤ C′′  
+
+> R
+
+min {qj , n −1}.
+
+Summing proves the Sq(n) upper bound. Now select an allocation within an arbitrarily small additive error of Dq(B), round each positive bj
+
+down to an integer, and uniformly quantize the clipped estimate on [ −∆j , ∆j ]. Flooring uses at most 
+
+B bits and enlarges 2 −2bj by at most four. By the squared triangle inequality and Equation (G.6), 
+
+E∗(n, B ) ≤ CR{Sq(n) + Dq(B)}. (G.9) 41 Step 3: statistical lower bound. Fix a finite coordinate set A. On coordinate j ∈ A, use the two parameters ±δj , where 
+
+δj = c′ 
+
+> R
+
+min {∆j , (np j )−1/2}
+
+and c′ 
+
+> R
+
+> 0 is sufficiently small. Neighboring hypercube vertices differ only when J = j, and bounded Bernoulli curvature gives KL( P nθ ∥ P nθ(j) ) ≤ CRnp j δ2 
+
+> j
+
+≤ CR(c′
+
+> R
+
+)2.
+
+Here the design distribution is independent of the hypercube signs. The one-block KL is therefore exactly pj times the changed coordinate’s Bernoulli KL, and independence of blocks multiplies it by 
+
+n. Choose c′ 
+
+> R
+
+so that this product KL is at most 1 /8. For completeness, fix all signs except j and test the remaining sign by the sign of ̂ θj . A wrong sign incurs squared error at least δ2 
+
+> j
+
+. The sum of the two testing errors is at least 1 − TV( P+, P −) ≥ 3/4, since TV( P+, P −) ≤ √KL( P+∥P−)/2. This inequality follows by partitioning at the positive part of the density difference, applying the log-sum inequality, and using kl( a, b ) ≥ 2( a − b)2; the latter follows from its second derivative in a,1/[a(1 − a)] ≥ 4. Averaging over the uniform signs and summing the coordinate losses yields inf ̂
+
+> θ
+
+sup 
+
+> θ
+
+E ∑
+
+> j∈A
+
+pj (̂ θj − θj )2 ≥ cR
+
+> ∑
+> j∈A
+
+min {qj , n −1}. (G.10) The resulting constant is independent of the size of A. Since the full risk dominates each finite-coordinate risk, taking the supremum over increasing finite sets gives the Sq(n) lower bound; no interchange of an infinite supremum and a prior integral is needed. 
+
+Step 4: representation lower bound. Give the encoder θ in addition to the data. This enlarges the encoder class and can only reduce its minimax risk. Under the product-uniform prior on the parameter box, Lemma E.1 gives inf  
+
+> |range( ̂θ)|≤ 2B
+
+sup 
+
+> θ
+
+E ∑
+
+> j
+
+pj (̂ θj − θj )2 ≥ cD q(B). (G.11) The original constrained risk is at least both Equations (G.10) and (G.11). Since max {x, y } ≥ 
+
+(x + y)/2, Equation (G.6) proves the matching lower bound in Equation (E.2). 
+
+Corollary G.3 (Power-law energies; formal version of Corollary E.3) . Suppose that n, B ≥ 1 and, for some χ > 0 and constants 0 < c − ≤ c+ < ∞,
+
+c−j−(1+ χ) ≤ qj ≤ c+j−(1+ χ) (j ≥ 1) .
+
+Then 
+
+E∗(n, B ) ≍ n−χ/ (1+ χ) + B−χ. (G.12) 
+
+The data–bit crossover occurs at B ≍ n1/(1+ χ).Proof. The comparison assumption does not require the actual sequence qj to be monotone. Put ¯qj = j−(1+ χ), so that c− ¯qj ≤ qj ≤ c+ ¯qj . Taking infima of the coordinatewise distortion inequalities gives 
+
+c−D¯q(B) ≤ Dq(B) ≤ c+D¯q(B).
+
+42 Similarly, min {cq, t } lies between min {c, 1} min {q, t } and max {c, 1} min {q, t }. It suffices to prove both rates for ¯ q. Let mn = ⌊n1/(1+ χ)⌋. Then 
+
+S¯q(n) ≍ mn
+
+n + ∑
+
+> j>m n
+
+j−(1+ χ) ≍ n−χ/ (1+ χ).
+
+For D¯q(B), the water-filling solution gives 
+
+bj = 12 [log 2(¯ qj /τ )] +.
+
+The comparison profile is monotone, so its active set is a prefix [ m]. For m ≥ 1, ( m + 1) −(1+ χ) ≤
+
+τ ≤ m−(1+ χ). Writing v = τ −1/(1+ χ) ∈ [m, m + 1], 
+
+B = 1 + χ
+
+2 ln 2 {m ln v − ln( m!) } = Θ( m)as m → ∞ , by Stirling’s formula and 0 ≤ m ln( v/m ) ≤ 1. Active distortion is mτ ≍ m−χ, and the inactive tail has the same order. Thus Dq(B) ≍ B−χ. The two terms cross when B−χ ≍ n−χ/ (1+ χ),namely B ≍ n1/(1+ χ).
+
+# H Proof of Adaptation with a Known Ordering 
+
+This appendix verifies that one rounded schedule works uniformly over the specified exponent interval. 
+
+Theorem H.1 (Adaptation with a known ordering; formal version of Theorem 5.1) . Fix 0 < χ min ≤
+
+χmax < ∞, and suppose the canonical mode order is known. Assume qj ≍ j−(1+ χ) with common comparison constants and unknown χ ∈ [χmin , χ max ]. For every n, B ∈ N, one clipped likelihood estimator and one deterministic integer bit schedule, both independent of χ, satisfy simultaneously throughout this interval 
+
+sup    
+
+> θj∈[−∆j,∆j]
+
+Eθ
+
+[
+
+Lθ(̂ f ) − L θ(θ)
+
+]
+
+≲ n−χ/ (1+ χ) + B−χ. (H.1) 
+
+Proof. The estimator in the statistical upper bound of Theorem E.2 uses only Nj , ∆ j , and the observed labels, not χ. It contributes Sq(n) ≍ n−χ/ (1+ χ).Choose A > χ max /2. Before rounding, the schedule in Equation (5.2) uses 
+
+A ∑
+
+> j≤m
+
+log 2(m/j ) = A log 2(mm/m !) = Θ( m).
+
+Flooring cannot increase the budget. It also preserves a linear lower bound: every j ≤ m2−2/A 
+
+receives at least two unrounded bits and therefore at least one rounded bit. Hence the rounded total is Θ( m), and the maximal feasible m satisfies m ≍ B.Flooring enlarges each nonzero distortion by at most four. Consequently, uniformly over χ ≤ χmax ,
+
+∑
+
+> j≤m
+
+qj 2−2bj ≲ m−2A ∑
+
+> j≤m
+
+j2A−1−χ
+
+≲ m−χ,
+
+43 because 2 A − χ ≥ 2A − χmax > 0: integral comparison bounds the power sum by Cm 2A−χ/(2 A − χ), with one constant throughout the interval. Likewise the tail constants are uniform because χ ≥
+
+χmin > 0. For the finitely many budgets before the linear bound on the rounded schedule applies, enlarge the same constant; B ∈ N is positive. The omitted tail is ∑ 
+
+> j>m
+
+qj ≍ m−χ. Since m ≍ B,the representation contribution is O(B−χ), proving Equation (5.1). 
+
+# I Proofs for Joint Difficulty 
+
+This appendix proves the same-marginal separation and then the positive joint-summary theorem. 
+
+Theorem I.1 (Marginals do not identify scaling; formal version of Theorem F.1) . For every 
+
+χ, γ > 0, there are two instances of Equation (F.1) with identical energy multisets and identical cost multisets at every dyadic level, but 
+
+Aeasy (C) ≍ C−χ, Ahard (C) ≍ C−χ/ (1+ γ). (I.1) 
+
+The same two exponents hold when selection is replaced by continuous bits with distortion qj 2−2bj
+
+and cost cj bj . Hence no summary that retains only the two marginal multisets identifies the optimal exponent in either representation class. Proof. Fix δ > γχ . At each level ℓ ≥ 1, create two groups, each of multiplicity 2 ℓ. Their energies are 
+
+qH 
+
+> ℓ
+
+= 2 −(1+ χ)ℓ, qL 
+
+> ℓ
+
+= 2 −(1+ χ+δ)ℓ,
+
+and the level’s cost multiset contains 2 ℓ copies of 1 and 2 ℓ copies of 2 γℓ . The easy instance pairs qH
+
+> ℓ
+
+with unit cost; the hard instance pairs it with 2 γℓ . The energy and cost multisets therefore agree at every level. Consider a generic component of multiplicity 2 ℓ, per-item energy 2 −(1+ s)ℓ, and per-item cost 2 gℓ .Buying the component through level L costs 
+
+> ∑
+> ℓ≤L
+
+2(1+ g)ℓ = Θ(2 (1+ g)L),
+
+and leaves energy ∑
+
+> ℓ>L
+
+2−sℓ = Θ(2 −sL ).
+
+Thus its selection exponent is s/ (1 + g). This prefix is also a matching lower bound: within the component, energy per cost decreases with ℓ, so the fractional relaxation is a threshold policy, and every integral policy is no better. In the easy instance, the high-energy component has exponent χ, while the low-energy component has exponent ( χ + δ)/(1 + γ) > χ . Splitting the budget by fixed fractions therefore gives, and the high-energy relaxation lower-bounds, Aeasy (C) ≍ C−χ. In the hard instance, the high-energy component has exponent χ/ (1 + γ), while the low-energy unit-cost component has exponent χ + δ.Hence Ahard (C) ≍ C−χ/ (1+ γ).For continuous bits, the optimality condition on an active coordinate is 
+
+qj 2−2bj
+
+cj
+
+= τ. 
+
+44 For the generic component above, the active levels form a prefix through L. At level ℓ, bℓ is proportional to L − ℓ; therefore 
+
+> ∑
+> ℓ≤L
+
+2(1+ g)ℓbℓ = Θ(2 (1+ g)L).
+
+Both active distortion and the inactive tail are Θ(2 −sL ). The same exponent s/ (1 + g) follows, and applying it to the four components completes the proof. 
+
+Theorem I.2 (Joint energy–difficulty characterization; formal version of Theorem F.2) . For a finite collection of modes, η is a maximal invariant under permutations of mode labels: it retains all information except the arbitrary names of the modes. For a finite or countable collection, consider the separable problem Equation (D.1) and assume 
+
+> ∑
+> j
+
+aj < ∞, ∑  
+
+> j:aj/c j>t
+
+cj < ∞ for every t > 0.
+
+Then the spectrum μ = ∑ 
+
+> j
+
+cj δaj /c j determines D(B) for every B ≥ 0. Conversely, the complete curve B 7 → D(B) determines μ on (0 , ∞). Consequently, μ is a minimal exact unlabeled summary of the complete budget–distortion curve for this representation class. Proof. For a finite collection, equality of η = ∑ 
+
+> j
+
+δ(vj ,a j ,c j ,κ j ) is equality of the multisets of tuples, including multiplicities. A bijection between equal multisets is a permutation of mode labels, and every permutation preserves η. Thus η is a maximal invariant. For the separable allocation, put rj = aj /c j . The Lagrangian is 
+
+> ∑
+> j
+
+cj rj 2−2bj + λ
+
+> ∑
+> j
+
+cj bj − B 
+
+> 
+
+.
+
+The coordinatewise Karush–Kuhn–Tucker equations give 
+
+bj (τ ) = 12 log 2(rj /τ )+, τ = λ
+
+2 log 2 .
+
+Substitution yields 
+
+B(τ ) = 12 log 2 
+
+> ∑
+> j
+
+cj log( rj /τ )+,
+
+and 
+
+D(B(τ )) = ∑
+
+> j
+
+cj min {rj , τ }.
+
+Here is a direct countable-dimensional justification. Set A = ∑ 
+
+> j
+
+aj < ∞. For every τ > 0,  
+
+> ∑
+> rj>τ
+
+cj ≤ A/τ, B(τ ) ≤ A
+
+2(ln 2) τ ,
+
+where the second inequality uses [ln x]+ ≤ x. On any compact interval of positive water levels, the summands defining B(τ ) have a summable dominating bound proportional to aj . Hence B is continuous. It is strictly decreasing whenever it is positive, tends to zero at the upper end of its 45 support (possibly infinity), and tends to infinity as τ ↓ 0, since even one positive coordinate does. Thus every B > 0 has a unique water level. The scalar convex inequality 
+
+aj 2−2bj + λc j bj ≥ aj 2−2bj (τ ) + λc j bj (τ )can be summed directly: all distortion and feasible cost sums are finite. With λ = 2(ln 2) τ and 
+
+B(τ ) = B, it proves optimality over every feasible countable allocation. Layer integration now gives Equation (F.4), proving sufficiency of μ.To recover the spectrum, let 0 < B 1 < B 2 and put λi = 2(ln 2) τ (Bi). Applying optimality with each of the two Lagrange multipliers to the other’s solution gives 
+
+−λ1 ≤ D(B2) − D(B1)
+
+B2 − B1
+
+≤ − λ2.
+
+The inverse τ (B) is continuous on (0 , ∞). Letting the two budgets coalesce therefore proves, in the countable system itself, 
+
+D′(B) = −λ = −2 log 2 τ (B)at every B > 0. Hence the complete curve determines τ (B) and its inverse B(τ ), with the zero branch above a finite support endpoint. For s = ln τ , difference quotients have a summable dominating bound: only rj > e s−h contribute, whose total cost is finite. Thus the right derivative is d+
+
+ds B(es) = − 12 log 2  
+
+> ∑
+> j:rj>e s
+
+cj = − 12 log 2 μ(( es, ∞)) and the left derivative replaces rj > e s by rj ≥ es. Their difference recovers every atom’s weight; the tail recovers the measure on every positive interval. The endpoint D(0) = A follows by dominated convergence from B ↓ 0. This argument never differentiates a limit of finite-dimensional value functions. Finally, suppose a summary T determines the complete curve. If T (x) = T (y), then Dx(B) = 
+
+Dy(B) for every B, so the inversion above gives μx = μy. Therefore μ is a function of T , proving minimality in the stated sense. 
+
+Proof of Corollary F.3. Put ¯ aj = j−α and ¯ cj = jγ , with a−¯aj ≤ aj ≤ a+¯aj and c−¯cj ≤ cj ≤ c+¯cj .Feasible-set inclusion gives 
+
+a−D¯a, ¯c(B/c −) ≤ Da,c (B) ≤ a+D¯a, ¯c(B/c +).
+
+It suffices to use the monotone ratio ¯ aj /¯cj = j−(α+γ). Since α > 1 and γ > −1, its exponent is positive. If m modes are active, put v = τ −1/(α+γ) ∈ [m, m + 1]. The budget is 
+
+B = α + γ
+
+2 ln 2 
+
+> ∑
+> j≤m
+
+jγ ln( v/j ) ≍ m1+ γ .
+
+For the lower bound restrict to m/ 4 ≤ j ≤ m/ 2; for the upper bound use integral comparison and   
+
+> ∫10
+
+xγ ln(1 /x ) d x = (1 + γ)−2. Replacing m by v in the logarithm adds only O(mγ ). The inactive tail is ≍ m1−α. The active distortion is τ ∑ 
+
+> j≤m
+
+cj , with τ ≍ m−(α+γ), and has the same order. Eliminating m gives 
+
+D(B) ≍ B−(α−1) /(1+ γ).
+
+46 J Proof of the Finite-Precision Realization 
+
+This appendix verifies the exact matrix map, the floating-point perturbation, and the lower bound for the stated separable representation. We use the candidate/query encoding and projections of Section 5 and Equation (5.4). The supplied logit table is ϑj = wmode  
+
+> j
+
+for j ≤ M , extended by zero outside the represented prefix; θj
+
+remains the source parameter. 
+
+Theorem J.1 (Finite-precision realization; formal version of Theorem 5.2) . Fix K, M ≥ 1, R < ∞,
+
+β ≥ 0, and the construction above. 1. In exact arithmetic, if |wmode  
+
+> j
+
+| ≤ R for every j ∈ [M ], then a query whose matching candidate has any mode j ≥ 1 satisfies 
+
+|z − ϑj | ≤ 2R(K − 1) e−β . (J.1) 
+
+2. Set wmode  
+
+> j
+
+= θj for j ∈ [M ] and store it with bj ∈ N0 bits on [−∆j , ∆j ]. Assume stable max-shifted softmax with exactly representable shifted scores 0, −β and an exponent range containing their exponentials. Exponentials, multiplications, and divisions have relative error at most u;sums use balanced pairwise accumulation. For the resulting predictor ffp , if (⌈log 2 K⌉ + 4) u ≤
+
+1/4, then the held-out excess cross-entropy obeys 
+
+Lθ(ffp ) − L ∞ ≤ CR
+
+(K − 1) 2e−2β + u2(1 + log K)2 +
+
+> M
+
+∑
+
+> j=1
+
+qj 2−2bj + ∑
+
+> j>M
+
+qj
+
+ . (J.2) 
+
+3. Within the separable scalar-table representation in which coordinate j has at most 2bj values, the bit-dependent term in Equation (5.6) is tight up to constants. Here and below, CR depends only on the logit bound R.Proof. For the score matrix U = W ⊤ 
+
+> Q
+
+WK /√dh of the stated construction, 
+
+x⊤ 
+
+> q
+
+U x t =
+
+
+
+β, t = t⋆,
+
+0, t̸ = t⋆.
+
+Softmax therefore gives Equation (5.4). Since ∑ 
+
+> t̸=t⋆
+
+αt = 1 − α⋆ and |ϑj | ≤ R,
+
+|z − ϑj⋆ | = | ∑
+
+> t̸=t⋆
+
+αt(ϑjt − ϑj⋆ )|≤ 2R(1 − α⋆)= 2 R K − 1
+
+eβ + K − 1
+
+≤ 2R(K − 1) e−β .
+
+Uniformly quantizing [ −∆j , ∆j ] with 2 bj values gives | ˜wmode  
+
+> j
+
+− wmode  
+
+> j
+
+| ≤ 2∆ j 2−bj for j ∈ [M ]. Write ˜ϑj = ˜wmode  
+
+> j
+
+on [ M ] and ˜ϑj = 0 otherwise. Distractor quantization contributes at most 2R(1 − α⋆), so it is absorbed by the routing term. 47 It remains to justify the arithmetic term. Stable max shifting replaces the scores st ∈ { 0, β }
+
+by ¯ st = st − β ∈ {− β, 0} without changing the exact softmax. Let yt = e¯st and h = ⌈log 2 K⌉. By assumption, the computed unnormalized weight is ̂
+
+yt = yt(1 + δt), |δt| ≤ u. 
+
+Balanced positive summation gives ̂
+
+S =
+
+> (∑
+> t̂
+
+yt
+
+> )
+
+(1 + δS ), |δS | ≤ γh := hu 
+
+1 − hu .
+
+Including the final division, the relative-error factors can be bounded explicitly. Put ¯δ = ∑ 
+
+> t
+
+αtδt, so 
+
+|¯δ| ≤ u, and let |δD,t | ≤ u be the division error. Then ̂
+
+αt
+
+αt
+
+= (1 + δt)(1 + δD,t )(1 + ¯δ)(1 + δS ) .
+
+When ( h + 4) u ≤ 1/4, we have γh ≤ 4hu/ 3, and both denominator factors are bounded away from zero. Subtracting numerator and denominator and bounding the linear and quadratic terms gives 
+
+|̂αt/α t − 1| ≤ 8( h + 4) u. Consequently ̂
+
+αt = αt(1 + εt), |εt| ≤ 8( h + 4) u. 
+
+Summing against αt proves Equation (B.2). For the final dot product, each multiplication has relative error at most u, and balanced signed summation has absolute error at most a γh multiple of the sum of magnitudes. Since 
+
+> ∑
+> t
+
+| ˜ϑjt |̂αt ≤ R{1 + O(u(1 + log K)) },
+
+we obtain Equation (B.3). For every matching mode, represented or not, combining the contributions gives 
+
+|̂z − θj⋆ | ≤ 4R(K − 1) e−β + 2∆ j⋆ 2−bj⋆ 1{j⋆ ≤ M } + |θj⋆ |1{j⋆ > M } + CRu(1 + log K).
+
+The two mode-specific terms are mutually exclusive. The squared sum is therefore bounded by a constant times routing error, arithmetic error, and their squared mode-specific sum. Averaging over the selected coordinate adds ∑ 
+
+> j≤M
+
+qj 2−2bj + ∑ 
+
+> j>M
+
+qj . An unrepresented matching mode can still attend to represented distractors; that contribution is already bounded by the routing term above, rather than being assumed zero. Finally A′′ (z) ≤ 1/4 for every real logit, so the upper KL curvature bound applies even if floating-point error moves ̂ z slightly outside the original box. This proves Equation (5.6). For the converse, restrict to the separable scalar table. Coordinate j has at most 2 bj reconstruc-tion values. Under the same product-uniform prior on the coordinate logits, the one-dimensional specialization of Lemma E.1 gives Bayes weighted squared error at least cq j 2−2bj on each coordinate. Expectations add under this one common prior, so the sum lower-bounds worst-case scalar-table distortion; it is not a pointwise assertion about every parameter. Apply the lower curvature bound to the clipped table decoder to obtain the stated tightness within that representation. The con-struction stores one d × d score matrix, one d × d value matrix, and one d-coordinate head, hence 
+
+N = 2 d2 + d.48 K Proof of the Transformer Bit-Complexity Lemma 
+
+This appendix counts the dense forward–backward graph stated in Section B.3. Its sequence length, hidden width, feed-forward width, head count, and depth are ℓ, d, m ff , H, L , respectively. The precision indices specify the operand, accumulator, and stored-activation formats whose costs are counted. 
+
+Lemma K.1 (Transformer forward–backward bit complexity; formal version of Lemma B.1) . For the graph above, with positive dimensions and conventional dense matrix multiplication, 
+
+BitOps fb ≍ L
+
+> [(
+
+ℓd 2 + ℓdm ff + ℓ2d)M(bmm ) + Hℓ 2S(bsm )
+
+> ]
+
+. (K.1) Mem fb ≍ bwL(d2 + dm ff ) + baLℓ (d + mff ) + bst LHℓ 2 + Mem hp . (K.2) 
+
+The memory Mem fb is measured in bits. The values bw, ba, and bst count aggregate bits per logical weight, activation, and saved-attention slot at peak memory; they include any same-shaped gradient or backward-workspace buffer materialized by this eager implementation. The term Mem hp contains master weights, optimizer state, and all other explicitly retained high-precision data. A streaming, recomputing attention implementation replaces the quadratic attention state saved for backward by linear online-softmax state plus temporary tile workspace, while leaving the dense attention arithmetic order unchanged. Proof. Suppressing constant head reshapes, the four query, key, value, and output projections perform 4 ℓd 2 multiply–accumulates per layer. Let Qmat , Kmat , and Vmat denote the query, key, and value matrices, and let P denote the matrix of attention probabilities. The query–key score product 
+
+Qmat K⊤ 
+
+> mat
+
+and probability–value product P V mat each perform ℓ2d, and the two feed-forward maps perform 2 ℓdm ff . Thus the forward matrix count is 
+
+Fmat = 4 ℓd 2 + 2 ℓ2d + 2 ℓdm ff . (K.3) For any product Y = AB , reverse mode forms ∇A = ∇Y B⊤ and ∇B = A⊤∇Y . Each has the same scalar multiply–accumulate count as the forward product. Consequently the matrix part of one forward–backward pass is exactly three times Equation (K.3), up to additions, transposes, and casts. There are Hℓ softmax rows of length ℓ. Stable max shifting, exponentiation, reduction, division, and the reverse-mode row calculation together cost Θ( Hℓ 2S(bsm )) by the definition of S. Given an incoming row gradient v, the softmax Jacobian is applied by 
+
+p ⊙ (v − ⟨ p, v ⟩1),
+
+which uses a constant number of length-ℓ passes. No explicit ℓ × ℓ Jacobian is formed. Multiplying by L and absorbing fixed projection constants proves Equation (B.5). Normalization, pointwise activation, dropout, and casts have only O(Lℓ (d + mff ) + LHℓ 2) scalar entries and are the stated lower-order terms for this computation. For memory, the dense projection and feed-forward weights contain Θ( L(d2 + dm ff )) scalars. Saved residual, projection, and feed-forward activations contain Θ( Lℓ (d + mff )) scalars. Eager reverse mode also saves LHℓ 2 attention probabilities. Multiplying each collection by its aggregate bits per logical slot (including same-shaped peak gradient or workspace buffers) and adding separately retained high-precision state gives Equation (B.6). A tiled online softmax stores row normalization 49 statistics and tiles rather than the complete probability matrix, so its persistent attention state is linear in Hℓ ; recomputing tiles during backward does not change the dense arithmetic order. These counts also give the two-sided bounds because each named tensor and matrix product is present in the specified graph. 
+
+# L Proof of the Compute–Precision Pareto Law 
+
+The proof distinguishes the precision required to match a target error from the exact precision chosen by a finite-budget optimizer. 
+
+Theorem L.1 (Compute–precision Pareto law; formal version of Theorem B.2) . Assume Equa-tions (B.7) and (B.8) , κmm (M ) ≍ M r, and κsm (M ) ≍ M rsm , with all displayed relations two-sided and r, r sm ≥ 0. For the specified dense graph, H ≤ d implies G ≳ S and hence g ≥ s. Item 3 concerns general operation counts satisfying the same two-sided relations; items 1, 2, and 4 apply to both settings. 1. The smallest matrix precision that keeps matrix rounding at the model error is 
+
+bmatch (M ) = 
+
+(
+
+r + χ
+
+2
+
+)
+
+log 2 M + O(1) . (L.1) 
+
+2. If the matrix term dominates the bracket in Equation (B.8) at matched precisions—in particular in the case g ≥ s when the remaining precision factors do not reverse that dominance—then 
+
+inf  
+
+> M,b,b sm : cost ≤C
+
+E ≍ C−χ/ (1+ χ+g)(log C)χν/ (1+ χ+g), (L.2) 
+
+up to other declared slowly varying factors. 3. For general operation counts, if s > g , bsm is fixed, and the softmax term dominates computation, then for budgets in the pre-floor range 
+
+C1/(1+ χ+s) ≲ 22bsm /(χ+2 rsm ),
+
+inf  
+
+> M,b : cost ≤C
+
+E ≍ C−χ/ (1+ χ+s). (L.3) 
+
+Reducing matrix precision cannot improve this leading exponent. 4. At fixed matrix precision b, with softmax precision optimized, the model–rounding crossover and the infimum error over model scales are 
+
+Mb ≍ 22b/ (χ+2 r), Efloor (b) ≍ 2−2χb/ (χ+2 r). (L.4) 
+
+A fixed bsm -bit softmax similarly supports the scaling phase only while 
+
+M ≲ 22bsm /(χ+2 rsm ). (L.5) 
+
+The displayed two-sided risk and arithmetic assumptions define the class over which the infima and matching bounds are taken. 
+
+50 Proof. The matrix rounding term is at most a constant multiple of the model term exactly when 
+
+M 2r2−2b ≲ M −χ.
+
+Taking base-two logarithms proves Equation (B.9); the two-sided risk assumption gives necessity for matching the model-error scale. For the dense graph, positive head dimensions sum to d, so 
+
+S(M ) ≍ LHℓ 2 ≤ Ldℓ 2 ≲ G(M ).
+
+Hence g ≥ s. The general-count branch uses Equations (B.7) and (B.8) with independent nonnegative exponents g, s .Suppose first that the matrix term dominates the bracket in Equation (B.8). Choose both numerical errors below a constant multiple of M −χ. By Equation (B.9), 
+
+C ≍ M 1+ χ+g(log M )ν .
+
+Let ζ = 1 + χ + g. Substitution into M ζ (log M )ν gives cost within constant factors of C at 
+
+M ≍ C1/ζ (log C)−ν/ζ .
+
+Substituting into M −χ proves the upper bound in Equation (B.10). For the converse, consider any feasible configuration with risk at most ε. The risk relation gives 
+
+M ≳ ε−1/χ , 2−2b ≲ ε, b ≳ log(1 /ε ),
+
+using r ≥ 0. The matrix contribution alone forces 
+
+C ≳ ε−ζ/χ [log(1 /ε )] ν .
+
+Inverting proves the lower rate for every configuration. For ν = 0, the logarithmic factor equals one and the same argument applies. Now use general operation counts with s > g , fixed bsm , and dominating softmax work before its numerical floor. Matching the matrix error still costs only b = Θ(log M ), but the leading cost is 
+
+C ≍ M 1+ χ+sbνsm  
+
+> sm
+
+≍ M 1+ χ+s.
+
+Within the range where M 2rsm 2−2bsm ≲ M −χ, substitution proves Equation (B.11). Conversely, risk at most ε requires M ≳ ε−1/χ , and the softmax cost is at least a constant times M 1+ χ+s. Thus 
+
+C ≳ ε−(1+ χ+s)/χ . Since the leading term contains no b, changing matrix precision cannot change this exponent. Equivalently, substituting M ≍ C1/(1+ χ+s) gives exactly the pre-floor budget condition in the theorem statement. Finally, at fixed b, the model and matrix-rounding terms cross when 
+
+M −χ ≍ M 2r2−2b, M χ+2 r ≍ 22b.
+
+This gives Mb in Equation (B.12). Choose softmax precision so its error is at most the other terms. If M ≤ Mb, the model term is at least a constant times M −χb ; if M ≥ Mb, the matrix-rounding term is, since r ≥ 0. At Mb both have this order. When r = 0, the comparison expression M −χ + 2 −2b
+
+decreases to 2 −2b; its infimum has the displayed order and Mb is the crossover scale. Replacing r, b 
+
+by rsm , b sm proves Equation (B.13). The fixed-share ratios in Equations (B.14) and (B.15) follow by dividing the baseline cost or storage by its quantized counterpart. 51 M Proof of the Compute Phases 
+
+This appendix derives each phase only from the two-sided resource assumptions in Section 6. 
+
+Theorem M.1 (Precision-aware compute phases; formal version of Theorem 6.1) . Let χ > 0 and 
+
+f, ν ≥ 0. Optimize over configurations using n(M ) ≍ M 1+ χ blocks whose total excess risk and cost satisfy, uniformly over M, b ≥ 1,
+
+E(M, b ) ≍ M −χ + κ(M )22−2b, cost( M, b ) ≍ M f +1+ χbν .
+
+Let R(C) − L ∞ = inf cost( M,b )≤C E(M, b ). Then: 1. If 1 ≲ κ(M ) ≲ M ρ, then the least model-error-matching precision is b = Θ(log M ), and 
+
+R(C) − L ∞ ≍ C−χ/ (f +1+ χ)(log C)χν/ (f +1+ χ) (M.1) 
+
+up to other slowly varying factors specified in the assumptions. 2. If κ(M ) = exp(Θ( M λ)) , λ > 0, then b = Θ( M λ), and the loss exponent is χ/ (f + 1 + χ + λν ).3. If qj ≍ j−(1+ χ), adaptive per-mode precision has error Θ( B−χ), whereas a uniform-width prefix has optimal error 
+
+Θ(( B/ log B)−χ). (M.2) 
+
+Each converse uses the representation, operation set, storage layout, and bit-operation cost specified above. Proof. Matching numerical error to approximation error requires 
+
+κ(M )22−2b ≲ M −χ.
+
+Taking base-two logarithms gives Equation (6.3). The two-sided amplification assumption gives the matching necessity. If 1 ≲ κ(M ) ≲ M ρ, then b = Θ(log M ). Multiplying per-block work, number of blocks, and bit-operation cost yields 
+
+C ≍ M f M 1+ χ(log M )ν = M ζ (log M )ν , ζ = f + 1 + χ. 
+
+Substitution into the preceding cost relation gives the budget-matched scale 
+
+M ≍ C1/ζ (log C)−ν/ζ .
+
+Substitution into M −χ proves the upper bound in Equation (6.1). Conversely, risk at most ε and 
+
+κ(M ) ≳ 1 require M ≳ ε−1/χ and b ≳ log(1 /ε ). The necessary block count and per-block work give 
+
+C ≳ ε−(f +1+ χ)/χ [log(1 /ε )] ν .
+
+Inverting proves the lower bound, including ν = 0. If κ(M ) = exp(Θ( M λ)) for λ > 0, then Equation (6.3) gives b = Θ( M λ), so 
+
+C ≍ M f +1+ χ+λν .
+
+52 This gives the claimed upper rate. Conversely, risk at most ε forces M ≳ ε−1/χ and b ≳ M λ +log(1 /ε ), whence 
+
+C ≳ M f +1+ χ+λν ≳ ε−(f +1+ χ+λν )/χ .
+
+This proves the exponent in both directions. For adaptive precision, set aj = qj and cj = 1 in Corollary F.3; then D(B) ≍ B−χ. A uniform-width prefix of length M and width b uses B = M b bits. Its omitted tail is Θ( M −χ), and its represented-coordinate quantization is Θ(2 −2b) because ∑ 
+
+> j≤M
+
+qj = Θ(1). Choose M ≍ B/ log B
+
+with a sufficiently small constant and b = ⌊B/M ⌋ for the upper bound in Equation (6.2). For the converse, set TB = ( B/ log 2 B)−χ and fix L > 2/χ . If M ≤ LB/ log 2 B, the tail is at least 
+
+cL −χTB . Otherwise b ≤ B/M < (log 2 B)/L , so 2 −2b > B −2/L ≳ TB for sufficiently large B. Every uniform-width prefix therefore pays at least a constant times TB , including zero-width prefixes. 
+
+# N Experimental Details 
+
+This appendix describes the 1,024-mode synthetic study. Its five-seed percentile intervals apply to this study; the other experiments use the BCa procedures and seed or item units specified in their respective captions. 
+
+Source families. Each run uses 1024 modes and bounded logits. For each χ ∈ { 0.5, 1, 2}, two different frequency–amplitude decompositions produce the same power qj ≍ j−(1+ χ). Training blocks are independent regenerations. Held-out cross-entropy is evaluated exactly from the population probabilities, so no test-set Monte Carlo error is mixed into the reported training-seed variability. 
+
+Grid and methods. The grid contains four values of n, five values of B, three exponents, two decompositions, four allocation methods, and five seeds, for 4 · 5 · 3 · 2 · 4 · 5 = 2400 configuration–seed pairs. The known-energy method solves the finite energy sequence’s water-filling problem. The universal method uses Equation (5.2). Uniform width assigns a common precision to a prefix, and shuffled allocation breaks the energy–precision pairing. Allocations never spend precision beyond the statistical resolution of a mode. 
+
+Uncertainty. For each of the 480 configurations, we report the mean over five seeds. The plotted interval is the 2.5 and 97.5 percentile envelope from 5000 bootstrap resamples of the seed mean, using bootstrap seed zero and expanding the interval when necessary to contain the observed mean. 
+
+Reproducibility details. The raw rows, summaries, deterministic analytic curves, plotting sources, and experiment code accompany the paper. The experiments use local CPUs, one common exponent specification across configurations, and analytic arithmetic cost as the theoretical resource. 
+
+# O Mixed Precision in Practice 
+
+The resource variables in Section B.3 deliberately separate compute precision from storage precision. In the asymptotic Pareto theorem, b is an effective accuracy parameter with unit roundoff Θ(2 −b), and the modeled format width is proportional to b. For a concrete floating-point format, total width and significand precision must instead be distinguished: the numerical horizon uses the actual unit 53 roundoff, not the total number of stored bits. This distinction is necessary in real mixed-precision systems: • A softmax may compute its maximum, exponential, reduction, and division in 32-bit floating point (FP32) even when the two surrounding attention matrix products use lower precision. NVIDIA Transformer Engine, for example, documents an 8-bit floating-point (FP8) attention path with FP8 matrix multiplications and FP32 softmax (NVIDIA, 2026). • A matrix kernel may accumulate products in a precision wider than its input and output formats. Accumulation precision therefore belongs in the arithmetic model; it does not imply that the complete attention probability tensor is stored at that precision. • The softmax output can be cast back to a lower-precision format before the value product. Conversely, an eager implementation may retain the probability tensor for backward. These are distinct choices represented by softmax effective accuracy and bst , respectively. • Mixed-precision training may retain full-precision master weights and optimizer state even when forward weights, activations, and gradients use a narrower format (Micikevicius et al., 2018). Such residual state is included in Mem hp , not hidden inside an effective average bit width. • Tiled online softmax can avoid materializing the quadratic attention matrix by saving nor-malization statistics and recomputing attention tiles in backward (Dao et al., 2022; NVIDIA, 2026). This changes the storage model and memory traffic, while dense attention still performs a quadratic number of score and value arithmetic operations. These observations explain why Equations (B.14) and (B.15) are operation and storage ratios rather than throughput predictions. Kernel fusion, memory traffic, device-specific integer or floating-point units, communication, and parallel scheduling can make the same bit-operation count run at different wall-clock speeds. Implementations can therefore differ in speed even when these analytic counts agree. 
+
+# P Extended Experimental Results 
+
+This appendix examines robustness to spectral shape and ordering, numerical formats, and pretrained-model scale, and provides detailed slope estimates and reference losses. Captions specify uncertainty for each stochastic quantity. 
+
+P.1 Candidate-Count Replication and Exponent Grid 
+
+The paired K = 8 versus K = 32 comparison in Figure 10 tests how candidate count affects the finite-sample construction and trained learner. The profile-by-budget comparison in Figure 5 tests exponent agreement. Table 4b gives unbinned numerical slope estimates. The two-stage study crosses four profiles and prefixes, three sample and state budgets, K = 8 , 32, and eight paired seeds. Each sample budget restarts the learner, whereas state budgets reuse the fitted weights. Repeated settings at the minimum n = 64 are aggregated within seed before bootstrapping. Display bins depend only on GμM .54 1 2 3 4 5 6
+
+Profile index 
+
+0.0 0.2 0.4 0.6 0.8 
+
+> Exponent
+
+(a) 
+
+1 2 3 4 5 6
+
+Profile index 
+
+012
+
+> Exponent
+
+(b) 
+
+Theory Low Mid High Figure 5: Six-profile exponent agreement. (a) Data-limited and (b) memory-limited fitted exponents for profile indices (0 .5, 0) , (0 .5, 0.5) , (1 , 0) , (1 , 0.5) , (2 , 0) , (2 , 0.5). Green, blue, and orange denote low, middle, and high fixed resource ratios; gray diamonds give the theoretical exponent. Bands are 95% BCa intervals over sixteen paired slopes: eight seeds for each of two frequency–amplitude decompositions (constant and alternating logit radius). 
+
+P.2 Routing, Interventions, and Profile Robustness 
+
+The routing measurements and learned/known/frozen comparison in Figure 3(c,f) relate retrieval quality to prediction error. The decomposition and interventions in Tables 2c and 2d isolate the error sources. Figure 6 tests allocation when the spectrum departs from an exact power law. 20 21 22
+
+B/DM
+
+2.80 3.00 3.20 3.40 
+
+> Excess CE ( ×10 −4 )
+
+Broken power law 
+
+20 21 22
+
+B/DM
+
+1.80 2.00 2.20 
+
+Log correction 
+
+20 21 22
+
+B/DM
+
+4.00 4.50 5.00 
+
+Perturbed order 
+
+Known energy Adaptive Uniform 
+
+Figure 6: Allocation beyond exact power laws. Left, center, and right show a broken power law, logarithmic correction, and perturbed ordering, respectively, at ( χ, γ, M ) = (1 , 0.5, 256). Each panel compares known-energy, adaptive, and uniform allocation. Known-energy uses the true qi; empirical allocation uses the count-corrected scores in Section R. Bands are 95% BCa intervals over eight paired seeds. 
+
+55 Table 3: Routing and precision contributions to prediction loss. At ( χ, γ, M, K ) = (1 , 0.5, 64 , 32), data ratio two and unit bit ratio: augmented loss is Llr ,q + M −χ; Route+ and Format+ are the positive contrasts 
+
+R+ and F+ defined in Appendix R. Lower is better. Construct. denotes the finite-sample construction. Each 
+
+± is the larger deviation to the 95% BCa endpoints. Method Aug. loss Route+ Format+ Two-stage 0.0191 ±0.0002 0.0000 ±0.0000 0.0000 ±0.0000 
+
+Construct. 0.0170 ±0.0002 0.0002 ±0.0000 0.0002 ±0.0001 
+
+Known route 0.0192 ±0.0002 0.0000 ±0.0000 0.0000 ±0.0000 
+
+Frozen route 0.0605 ±0.0008 0.0339 ±0.0017 0.0000 ±0.0000 
+
+No precond. 0.0230 ±0.0003 0.0003 ±0.0000 0.0000 ±0.0000 
+
+Uniform bits 0.0191 ±0.0004 0.0000 ±0.0000 0.0000 ±0.0000 
+
+P.3 Stored Precision and Pretrained Transformers 10 1
+
+10 2
+
+> Test CE
+
+(a) 70M (b) 160M (c) 410M 
+
+1M 16M 67M 
+
+Additional tokens 
+
+10 1
+
+10 2
+
+> Test CE
+
+(d) 1B 
+
+1M 16M 67M 
+
+Additional tokens 
+
+(e) 1.4B 
+
+1M 16M 67M 
+
+Additional tokens 
+
+(f) 2.8B 
+
+2-bit 3-bit 4-bit 6-bit 8-bit BF16 
+
+Figure 7: Complete additional-data and deployment-format scan. (a–f) Pythia 70M, 160M, 410M, 1B, 1.4B, and 2.8B test CE after four nested additional-token budgets. Curves show complete group-128 2/3/4/6/8-bit deployments and BF16; the shared logarithmic CE axis compares absolute loss and keeps low-bit collapse visible. Bands are 95% BCa intervals over eight paired training seeds evaluated on the same 96 test windows. 
+
+At 70M and 160M, the 2-bit calibration CE reaches 114.67 and 97.78 nats, respectively. These losses exceed the pre-specified [0 , 20]-nat prediction range, and the fitting procedure yields no converged, in-range solutions when calibration includes 2-bit weights. At 410M–2.8B, all four response functions yield such solutions. A sensitivity analysis fits 4/8-bit and BF16 separately at every scale and predicts 6-bit loss and the largest data budget. Tables 5 to 8 report both calibration choices; Section R defines the response functions and evaluation sets. 56 5 10 15 
+
+Nominal bits 
+
+10 −11 
+
+10 −6 
+
+10 −1 
+
+> Format distortion
+
+10 11 10 12 
+
+Matrix MACs 
+
+234
+
+> Bit-op ratio
+
+Shared scale Block scale Adaptive bits 8-bit matrices 4-bit matrices Figure 8: Stored precision and retained high-precision work. Left: format distortion versus nominal bits for shared-scale, block-scale, and adaptive-bit representations of the causal source. Right: analytic bit-operation ratios for 8-bit and 4-bit matrix paths with FP32 softmax retained. The source-format curves use paired 95% BCa intervals; the right-hand curves evaluate the analytic operation-count formula. 10 8 10 9
+
+Model parameters 
+
+−10 −1 
+
+−10 −2 
+
+010 −2 
+
+10 −1 
+
+10 0
+
+> Paired change in CE,  Δ
+
+(a) 
+
+10 8 10 9
+
+Model parameters 
+
+(b) 
+
+10 8 10 9
+
+Model parameters 
+
+0.06 0.08 0.10 
+
+> Relative weight error
+
+(c) 
+
+INT8-ch INT8-tensor INT4-RTN-128 INT4-HQQ-128 INT4-HQQ-32 
+
+Figure 9: Finite precision across six Pythia scales. Left and center: paired cross-entropy changes on WikiText-103 (96 paired windows) and LAMBADA (512 paired examples), respectively. Right: parameter-weighted relative Frobenius error for the two HQQ formats, averaging ∥̂W − W ∥F /∥W ∥F over layers with weights proportional to their parameter counts. Blue circles, green triangles, orange squares, gray down-triangles, and magenta diamonds denote INT8-channel, INT8-tensor, INT4-RTN-g128, INT4-HQQ-g128, and INT4-HQQ-g32, respectively. 
+
+57 Table 4: Reference losses and spectral slopes. Left: Pythia BF16 CE over 96 WikiText-103 windows or 512 LAMBADA items; bold/underlined marks the lowest/second-lowest value per dataset. Right: slope against the spectral predictor (reference one), from eight unbinned seed fits. Each ± is the larger deviation to the 95% BCa endpoints.  
+
+> (a) Pythia BF16 baseline; lower is better.
+
+# Model WikiText LAMBADA 70M 6.201 ±0.047 6.781 ±0.323 
+
+# 160M 4.388 ±0.056 4.965 ±0.339 
+
+# 410M 2.971 ±0.059 2.283 ±0.216 
+
+# 1B 2.580 ±0.059 1.504 ±0.179 
+
+# 1.4B 2.548 ±0.061 1.470 ±0.186 
+
+# 2.8B 2.390 ±0.060 1.346 ±0.170  
+
+> (b) Construction and trained-learner slopes.
+
+# Profile Construct. Trained (0 .5, 0) 0.971 ±0.040 0.955 ±0.033 
+
+# (0 .5, 0.5) 0.933 ±0.017 0.855 ±0.028 
+
+# (1 , 0) 0.969 ±0.029 0.859 ±0.018 
+
+# (1 , 0.5) 0.952 ±0.023 0.879 ±0.026 
+
+Predicting unseen data and storage budgets. With 4/8-bit and BF16 calibration, the additive model lowers prediction error at the largest data budget for every scale (Table 5). For 6-bit interpolation, it raises error at 70M/160M and lowers it at the four larger scales (Table 6). Each paired 95% BCa interval for these additive-minus-data differences excludes zero. An interaction further improves extrapolation at 160M, 410M and 1.4B; the corresponding intervals at the other three scales include zero. The benefit of modeling both resources therefore depends on scale and on which resource is extrapolated. Tables 7 and 8 give the predictions when calibration also includes 2-bit weights. 
+
+Table 5: Predicting the largest data budget from 4/8-bit and BF16 calibration. Root-mean-square error (RMSE, nats; lower is better) over 4/6/8-bit and BF16 test CE at 2 26 additional tokens. Each response function in Section R is fitted on validation CE at the first three data budgets. Eight paired training seeds and 96 fixed test windows are used; 5,000 seed-level BCa resamples refit each function. Smaller ± values are rounded-up symmetric envelopes of the 95% intervals. Bold/underline mark the lowest/second-lowest displayed RMSE per row. Model Data only Storage only Additive Interaction 70M 2.060 ± 0.061 1.293 ± 0.023 1.151 ± 0.080 1.149 ± 0.087 
+
+160M 0.805 ± 0.016 0.619 ± 0.034 0.425 ± 0.037 0.392 ± 0.036 
+
+410M 0.086 ± 0.004 0.156 ± 0.005 0.058 ± 0.006 0.054 ± 0.006 
+
+1B 0.061 ± 0.003 0.096 ± 0.002 0.041 ± 0.003 0.041 ± 0.003 
+
+1.4B 0.057 ± 0.003 0.085 ± 0.001 0.033 ± 0.004 0.033 ± 0.004 
+
+2.8B 0.055 ± 0.003 0.074 ± 0.002 0.034 ± 0.004 0.034 ± 0.004 
+
+58 Table 6: Predicting 6-bit loss from 4/8-bit and BF16 calibration. RMSE (nats; lower is better) over the first three data budgets, holding out 6-bit weights from calibration. Response functions, eight paired training seeds, 96 fixed test windows, refitted 95% BCa envelopes, and ranking conventions match Table 5. Model Data only Storage only Additive Interaction 70M 1.304 ± 0.015 1.845 ± 0.021 1.842 ± 0.023 1.842 ± 0.023 
+
+160M 0.649 ± 0.016 0.732 ± 0.017 0.731 ± 0.017 0.731 ± 0.017 
+
+410M 0.093 ± 0.003 0.094 ± 0.003 0.081 ± 0.003 0.081 ± 0.003 
+
+1B 0.054 ± 0.002 0.055 ± 0.002 0.046 ± 0.002 0.046 ± 0.002 
+
+1.4B 0.053 ± 0.002 0.047 ± 0.001 0.041 ± 0.002 0.041 ± 0.002 
+
+2.8B 0.051 ± 0.002 0.043 ± 0.002 0.039 ± 0.002 0.039 ± 0.002 
+
+Table 7: Predicting the largest data budget with 2-bit weights included in calibration. RMSE (nats; lower is better) over all six deployment formats at 2 26 additional tokens, fitted using 2/4/8-bit and BF16 validation CE at the first three budgets. This bounded-response comparison covers 410M–2.8B. The 70M/160M 2-bit calibration losses exceed its [0 , 20]-nat range; Figure 7 shows their measured quantization losses. Eight paired seeds, 96 test windows, 95% BCa envelopes and ranking conventions match Table 5. Model Data only Storage only Additive Interaction 410M 3.776 ± 0.044 1.354 ± 0.008 1.328 ± 0.030 1.327 ± 0.036 
+
+1B 3.426 ± 0.032 1.088 ± 0.010 1.050 ± 0.019 1.045 ± 0.022 
+
+1.4B 3.724 ± 0.031 1.094 ± 0.011 1.063 ± 0.020 1.060 ± 0.028 
+
+2.8B 3.255 ± 0.024 0.797 ± 0.005 0.772 ± 0.006 0.771 ± 0.007 
+
+Table 8: Predicting 3/6-bit loss with 2-bit weights included in calibration. RMSE (nats; lower is better) at the first three data budgets, holding out 3/6-bit weights from 2/4/8-bit/BF16 calibration. This comparison covers 410M–2.8B, with the calibration range and scale coverage described in Table 7. Eight paired training seeds, 96 test windows, 95% BCa envelopes and ranking conventions match Table 5. Model Data only Storage only Additive Interaction 410M 1.976 ± 0.016 1.573 ± 0.032 1.568 ± 0.033 1.569 ± 0.033 
+
+1B 1.870 ± 0.008 1.512 ± 0.014 1.511 ± 0.014 1.511 ± 0.014 
+
+1.4B 2.152 ± 0.014 1.585 ± 0.012 1.584 ± 0.012 1.584 ± 0.012 
+
+2.8B 1.874 ± 0.003 1.145 ± 0.003 1.144 ± 0.003 1.144 ± 0.003 
+
+59 Q Experiment and Reproducibility Details 
+
+We retain the scientific configuration and seed- or item-level measurements for every reported result. This appendix specifies the sampling scheme, numerical formats, software environment, and aggregation procedure; the accompanying code instantiates the complete grids. 
+
+Software and execution framework. The local central-processing-unit (CPU) runs used Python 3.11.15 with NumPy 2.0.2, SciPy 1.13.1, Pandas 2.3.3, PyArrow 21.0.0, and Matplotlib 3.9.4. The graphics-processing-unit (GPU) runs used Python 3.12.3, PyTorch 2.13.0 with CUDA 13.0, TorchAO 0.18.0, Transformers 5.16.1, Datasets 5.0.1, and Hugging Face Hub 1.29.0. The finitebit_exp 0.1.0 package defines the scientific grids in Python. PyTorch automatic differentiation supplies the Stage A and Stage V gradients in the mini-batch implementation. The weighted-average FP64 reference implements the same explicit scalar gradient on its theorem-specified active set. Independent worker processes run the two-stage training jobs. Pythia models are loaded once per model–format bundle and evaluated in inference mode. CPU experiments ran on an Apple M5 system; GPU experiments used an NVIDIA RTX PRO 6000 Blackwell Server Edition. Raw seed- and item-level measurements are stored in Parquet files. 
+
+Pythia items and operation count. Tokenization is performed once per model tokenizer on the raw WikiText-103 test text, after which contiguous 2,049-token windows provide 2,048 next-token losses per item. All numerical formats receive identical item indices. The analytic operation count includes the query, key, value, and output projections; the two attention matrix products; and both feed-forward products. 
+
+Reproducible result generation. Empirical curves are generated from seed- or item-level records using the uncertainty procedure specified in each caption. The data–memory study crosses six energy–dimension profiles, seven model cutoffs from 16 to 1,024, and three normalized data and state budgets. It evaluates population excess CE over each finite source, including coordinates predicted with zero logit. The mini-batch two-stage study additionally uses the analytic tail proxy described in Section R; the fixed-source weighted-SGD study measures its omitted-coordinate loss directly. The pretrained-model comparisons use identical items for every format, including 96 paired WikiText-103 windows per model–format configuration. 
+
+Q.1 Additional coupling, robustness, and pretrained-model experiments 
+
+The additional experiments comprise a dyadic coupling test with 16 paired seeds, a two-stage study with eight paired seeds, robustness tests for three departures from exact power laws, and six Pythia sizes under six deployment formats on two datasets. The two-stage learner differentiates the Bernoulli loss through the attention-weighted network output and updates the stored value parameters; the direct finite-sample parameter construction is included as a separate likelihood-based comparator. 
+
+Six-scale weight-only post-training quantization. All Pythia models use the fixed 
+
+step143000 revision. WikiText-103 uses 96 common non-overlapping 2,048-token windows, and LAMBADA uses 512 common examples with last-token cross-entropy. The formats are bfloat16 (BF16), 8-bit integer (INT8) with one tensor scale, INT8 with one scale per output channel, 4-bit integer (INT4) round-to-nearest with groups of 128 weights, and half-quadratic quantization (HQQ) 60 for INT4 groups of 128 or 32 weights. Every reported difference is paired with the BF16 result on the same item. Eager attention receives BF16 scores and returns FP32 softmax probabilities in the measured software stack. The evaluation microbatch is one for both datasets. The item-level records retain model, format, dataset, item index, cross-entropy, represented weight error, quantized-parameter fraction, and output-logit divergence. Appendix P reports the detailed figures and tables. 
+
+# R Joint Resource Evaluation 
+
+Fixed-source comparisons. We vary data and value-state budgets while holding the generating distribution fixed. The same-marginal experiment samples the infinite dyadic source at χ ∈ { 1, 2},
+
+γ = 1, with a common normalization for both pairings. A sparse clipped Bernoulli estimator uses unbounded storage, isolating the data exponent. Unobserved coordinates contribute their actual probability mass times the zero-prediction excess cross-entropy. The seven sample budgets are 28, 210 , . . . , 220 ; the primary slope uses the last four budgets for every seed and pairing. 
+
+The theorem’s learning algorithm. For ( χ, γ ) = (0 .5, 0) , (0 .5, 0.5) , (1 , 0) , (1 , 0.5), the source contains 256 energy groups, each with dj = ⌈jγ ⌉ scalar coordinates. This source size is distinct from the number of sampled regeneration blocks. We compare K = 8 , 32 candidates with eight independent seeds. At each n ∈ { 28, 210 , . . . , 216 }, we restart the projected, preconditioned SGD algorithm of Theorem C.5 from zero, using its active set, step sizes and weighted average. We implement the numerical reference in FP64. Calibration uses SA = ⌈4K[log( eK ) + √n]⌉ independent blocks. Each fitted state is encoded at BV = 8 , 16 , 32 , 64 , 128 , 256 bits using the theorem’s midpoint scalar format. Inactive fitted coordinates are zero before encoding; positive-width midpoint decoding also acts on those zero entries. An oracle-coordinate clipped estimator uses the same labeled blocks with the selected coordinate revealed. We report both value and routing bits, calibration and prediction samples, and the losses on 65,536 shared independent test contexts. Oracle and learned routes, before and after quantization, define signed counterfactual differences on these identical contexts. 
+
+Additional training and deployed storage. Starting from the Pythia 70M, 160M, 410M, 1B, 1.4B, and 2.8B checkpoints at step143000, each of eight seeds follows one continued-training trajectory with checkpoints after 2 20 , 222 , 224 , 226 additional WikiText-103 tokens. Training uses 2048-token contexts, an effective batch of 32,768 tokens, FP32 parameters and optimizer states, and BF16 computation. AdamW uses learning rate 10 −5, β = (0 .9, 0.95), weight decay 0.1, gradient clipping at 1, and an eight-step warm-up followed by a constant learning rate. Deployment uses BF16 or group-128 symmetric 2/3/4/6/8-bit round-to-nearest linear weights. Integer payloads, scales, padding, retained BF16 parameters and metadata are all counted. Evaluation uses 96 fixed test windows and 96 fixed validation windows. 
+
+Prediction on held-out resource configurations. We fit data-only, storage-only, additive and interacting response models on the first three training budgets at 2/4/8-bit and BF16. The 3/6-bit formats test storage interpolation, while the largest training budget tests data extrapolation. Fits use validation losses; test-window losses remain untouched until evaluation. Comparisons use paired training-seed uncertainty; the common initial pretrained checkpoint is evaluated once and its 61 uncertainty uses windows. Let t = T / 220 denote additional tokens in units of the smallest budget, and let s be deployment-package bytes divided by the BF16 package size. Writing x = t−α and 
+
+y = s−β − 1, the four fitted CE models are 
+
+c + ax ︸ ︷︷ ︸
+
+> data only
+
+, c + dy 
+
+> ︸ ︷︷ ︸
+> storage only
+
+, c + ax + dy   
+
+> ︸︷︷ ︸
+> additive
+
+, c + ax + dy + hxy   
+
+> ︸︷︷ ︸
+> interaction
+
+.
+
+We fit each model scale separately by least squares on validation CE, with c, a, d ∈ [0 , 20], α, β ∈
+
+[0 .01 , 4], and h ∈ [−20 , 20]. The fitting procedure requires convergence and calibration predictions in the pre-specified range [0 , 20] nats; held-out predictions are checked against the same range. After observing the large 2-bit losses at 70M and 160M, we also analyze 4/8-bit and BF16 calibration, with 6-bit interpolation and 4/6/8-bit/BF16 extrapolation. This sensitivity analysis uses the same response functions and parameter bounds. Root-mean-square error (RMSE) compares predicted and measured test CE across the held-out resource configurations, after averaging the 96 windows within each configuration. 
+
+Route-adjusted and complete-source losses. Let Llr ,q , L lr ,u , L or ,u denote finite-source excess CE for learned-route quantized, learned-route unquantized, and known-route unquantized predictions. All subtract the same source Bayes loss. The route-adjusted analysis defines E = Llr ,q + M −χ,
+
+R+ = ( Llr ,u −Lor ,u )+, and F+ = ( Llr ,q −Llr ,u )+. Its spectrum comparison uses E −R+; its component sum is an upper envelope of E. Here M is the energy-group cutoff and M −χ is an analytic tail proxy. Our fixed-source study instead evaluates the generating distribution without adding that proxy and retains all four counterfactual losses. The oracle loss splits over actual held-out targets inside and outside An; adding the signed differences Llr ,u − Lor ,u and Llr ,q − Llr ,u gives exactly the complete-source excess loss Llr ,q . The tail term is the actual zero-prediction KL on omitted targets. This identity holds per test context, before any averaging, by Proposition S.2. 
+
+Empirical and known-energy allocation. The robustness study’s adaptive allocator uses the count-corrected score 
+
+si =
+
+> [
+
+pî θ2 
+
+> i
+
+− pi
+
+max {1, N i}
+
+> ]
+> +
+
+,
+
+where Ni is the observed count and ̂ θi the bounded Bernoulli maximum-likelihood estimate. Both this rule and the known-energy reference water-fill ∑ 
+
+> i
+
+si4−bi , floor widths, and assign remaining bits by marginal gains; the reference substitutes si = qi. The empirical subtraction prioritizes resolved coordinates, whereas the known-energy reference minimizes the true-energy distortion objective. These distinct objectives allow different finite-sample CE even at the same state budget. The unknown-exponent schedule in Theorem 5.1 is a separate, deterministic construction. 
+
+# S Total Resources and Fixed-Source Evaluation 
+
+The following consequence accounts jointly for the value-learning and routing stages. Write q(r) for the decreasing coordinate energies and ξ for their decay exponent. 
+
+Proposition S.1 (Total sample and learned-state requirements) . Fix an integer K ≥ 1, R > 0,and 0 < η ≤ 1. Use the iid-candidate source, public frequencies and calibration supervision of 
+
+62 0.02 0.1 0.5 
+
+Adjusted proxy, K = 32 
+
+0.02 0.1 0.5 
+
+> Adjusted proxy,  K = 8
+
+(a) 
+
+0.02 0.1 0.5 
+
+Adjusted proxy, K = 32 
+
+(b) 
+
+(0.5, 0) (0.5, 0.5) (1, 0) (1, 0.5) Figure 10: Candidate-count replication under route-adjusted loss. (a) Direct finite-sample construc-tion; (b) mini-batch two-stage implementation. Horizontal and vertical axes show E − R+ at K = 32 and 
+
+K = 8, respectively, using identical spectral bins. Legends give ( χ, γ ); the dashed identity line is deterministic. Intervals on both axes are 95% BCa intervals over eight paired seeds. 0.02 0.1 0.2 0.0 0.1 0.2 
+
+> Risk /  Gμ
+
+(a) (χ, γ) = (0.5, 0) 
+
+0.1 0.2 0.5 0.0 0.1 
+
+(b) (χ, γ) = (0.5, 0.5) 
+
+0.01 0.05 0.2 
+
+Gμ(n, B)
+
+0.0 0.2 
+
+> Risk /  Gμ
+
+(c) (χ, γ) = (1, 0) 
+
+0.05 0.1 0.2 
+
+Gμ(n, B)
+
+0.0 0.2 
+
+(d) (χ, γ) = (1, 0.5) 
+
+SGD Oracle-coordinate 
+
+Figure 11: Unbinned risk-to-spectrum ratios on fixed sources. Panels (a)–(d) use the four profiles of Figure 2, at K = 32. The horizontal axis is Gμ; the vertical axis is measured excess CE divided by Gμ. Each point represents a distinct sample–state budget pair; lines connect budget pairs ordered by Gμ, rather than a fitted response. Blue/orange denote weighted SGD and the oracle-coordinate estimator. Bands retain the raw 95% BCa intervals over eight paired seeds. 
+
+63 Theorem C.5, with unit midpoint formats. Suppose cr −(1+ ξ) ≤ q(r) ≤ Cr −(1+ ξ), where ξ > 0 and 
+
+0 < c ≤ C < ∞ are fixed. Let CL ≥ 1 be a constant in its four-term risk upper bound. Set 
+
+CD = 2 + C/ξ, a = max {1, (1 + ξ)/(2 ln 2) }, CB = C(1 + 1 /ξ )(2 a)ξ.
+
+Let CA(η) be an upper-bound constant in the routing hitting-time bound of Proposition C.4 for thresholds at most 1/16 . For 0 < ε ≤ 1, choose 
+
+h = min {1/16 , ε/ (4 CL)},n = max {1, ⌈(4 CLCD/ε )(1+ ξ)/ξ ⌉} ,BV = max {1, ⌈(4 CLCB /ε )1/ξ ⌉} .
+
+For K ≥ 2, take 
+
+SA = ⌈CA(η)K{h−1/2 + ln( eK )}⌉ ,BA = K{⌈ log 2(SA + 1) ⌉ + ⌈log 2(K + 1) ⌉} ;
+
+for K = 1 , take SA = BA = 0 . If deployment arithmetic has mean squared logit error at most 
+
+ε/ (4 CL), the weighted-SGD learner has expected excess risk at most ε, uses N = n + SA blocks and retains at most B = BV + BA learned bits. At fixed source and routing constants, 
+
+N = O(ε−(1+ ξ)/ξ ), B = O(ε−1/ξ ), SA/n → 0, BA/B V → 0.
+
+For χ > 0, γ ≥ 0, block energies aj ≍ j−(1+ χ), dimensions dj ≍ jγ and equal coordinate energies 
+
+qj,ℓ = aj /d j within each block, the coordinate exponent is ξ = χ/ (1 + γ).Proof. For any integer m ≥ 1, the energy envelope and integral comparison give Φμ(n−1) ≤ m/n + C ∑
+
+> r>m
+
+r−1−ξ ≤ m/n + ( C/ξ )m−ξ.
+
+Choose m = ⌈n1/(1+ ξ)⌉. Since n1/(1+ ξ) ≤ m ≤ 2n1/(1+ ξ), this is at most CDn−ξ/ (1+ ξ), including 
+
+n = 1. For a storage budget b ≥ 2a, put m = ⌊b/a ⌋ and allocate br = (1 + ξ) log 2(m/r )/2 for 1 ≤ r ≤ m,with zero widths thereafter. The inequality 
+
+> m
+
+∑
+
+> r=1
+
+ln( m/r ) ≤
+
+∫ m
+
+> 0
+
+ln( m/x ) dx = m
+
+shows that total width is at most (1 + ξ)m/ (2 ln 2) ≤ am ≤ b. Each retained distortion term is at most Cm −1−ξ, and the tail is at most ( C/ξ )m−ξ. Since m ≥ b/ (2 a), 
+
+Dq(b) ≤ C(1 + 1 /ξ )m−ξ ≤ CB b−ξ.
+
+For 1 ≤ b < 2a, zero allocation has distortion at most ∑ 
+
+> r
+
+q(r) ≤ C(1 + 1 /ξ ) ≤ CB b−ξ, proving the same bound for all b ≥ 1. Summability controls every countable tail. The theorem’s scalar implementation floors public continuous widths; this cannot exceed the bit budget and multiplies each distortion term by at most four. Its constant is already included in CL. A public allocation needs no additional learned index code. 64 The ceilings in n, B V can only decrease their nonincreasing error functionals, so each is at most ε/ (4 CL). For K ≥ 2, the positive threshold h ≤ 1/16 lies in the routing theorem’s range. The prescribed SA exceeds its hitting-time bound. Margin increases with row visits, and counts couple monotonically as calibration blocks are added; leakage therefore remains below h ≤ ε/ (4 CL). For K = 1, leakage is zero. The arithmetic premise bounds the fourth term. Substitution in Equation (C.5) now gives risk at most CL · 4ε/ (4 CL) = ε.The independent stages consume distinct blocks, totaling n+SA. Each routing row is reconstructed from its count in {0, . . . , S A} and its destination or unseen symbol. The displayed integer-width fields encode all these possibilities. Concatenating their BA-bit code with the value code gives at most 2 BA+BV retained states. Numerical reconstruction is charged to the arithmetic term. For sufficiently small ε, h = ε/ (4 CL). The explicit resource choices then yield 
+
+SA/n = OK (ε1/2+1 /ξ + ε1+1 /ξ ),BA/B V = OK (ε1/ξ ln(1 /ε )) .
+
+Both tend to zero since ξ > 0. Adding the routing costs gives the two total-resource orders. Finally, every coordinate in block j has energy comparable to j−(1+ χ+γ), uniformly over its 
+
+dj ≍ jγ coordinates. Upper and lower threshold comparisons therefore give #{qi ≥ t} ≍ ∑
+
+> j≤c0t−1/(1+ χ+γ)
+
+jγ ≍ t−(1+ γ)/(1+ χ+γ),
+
+with separate positive c0 for the upper and lower comparisons. Inversion proves q(r) ≍ r−(1+ χ+γ)/(1+ γ)
+
+and the asserted ξ. The argument allows bounded nonmonotonicity in the original block labels. 
+
+Proposition S.2 (Fixed-source loss and paired counterfactuals) . Let p be a fixed probability distribution on a finite or countable coordinate set, |θi| ≤ ∆i ≤ R, qi = pi∆2 
+
+> i
+
+, and d(θ, z ) = 
+
+DKL (Ber( σ(θ)) ∥ Ber( σ(z))) . Conditional on a fitted table |wi| ≤ R supported on S, a fresh oracle-routed example has excess risk 
+
+L(w, oracle) = ∑
+
+> i∈S
+
+pid(θi, w i) + ∑
+
+> i / ∈S
+
+pid(θi, 0) ,
+
+0 ≤ ∑
+
+> i / ∈S
+
+pid(θi, 0) ≤ 18
+
+∑
+
+> i / ∈S
+
+qi.
+
+If all |θi| = a, the omitted term equals p(Sc)d(a, 0) , also for a data-dependent S.On the same full candidate context, let Lrv be excess loss with route r ∈ { 0, 1} (oracle, learned) and value state v ∈ { 0, 1} (unquantized, quantized), with all four predicted logits in [−R, R ]. Pointwise and under every common empirical or population average, 
+
+L11 = L00 + ( L10 − L00 ) + ( L11 − L10 )= L00 + ( L01 − L00 ) + ( L11 − L01 ).
+
+The two format contrasts differ by L11 − L10 − L01 + L00 ; individual contrasts may be negative. If two predictions in [−R, R ] agree outside an event A, their expected CE differs by at most 2R Pr( A).If A is that some candidate lies in T , then Pr( A) ≤ Kp (T ).
+
+65 Proof. For target coordinate i, conditional expected CE minus Bayes CE is exactly d(θi, z ). Con-ditional on training, a fresh target retains law p, giving ∑ 
+
+> i
+
+pid(θi, w i). Nonnegative terms permit countable summation by monotone convergence. Splitting at S, where the fitted table is zero on its complement, proves the oracle identity. Put A(z) = ln(1 + ez ). Direct substitution gives d(θ, z ) = A(z) − A(θ) − A′(θ)( z − θ). Since 0 < A ′′ (z) = σ(z)(1 − σ(z)) ≤ 1/4, Taylor’s integral remainder implies 0 ≤ d(θ, 0) ≤ θ2/8. Multiply by pi, use θ2 
+
+> i
+
+≤ ∆2 
+
+> i
+
+, and sum to obtain the tail bound. Exchanging Bernoulli outcomes gives 
+
+d(−a, 0) = d(a, 0), proving the constant-magnitude formula conditional on each fitted support. For learned routing, ∑ 
+
+> s
+
+aQs wCs can be nonzero even when the target is outside S, because a distractor may lie in S. The four losses therefore evaluate the full context with a common target law. Cancelling intermediate terms proves both identities pointwise; linearity preserves them under averaging. Subtracting the two format contrasts gives their stated interaction. For a concrete sign example, the one-bit midpoint format on [ −1, 1] sends w = 0 .1 to 0 .5. At θ = 0 .5, the contrast is 
+
+−d(0 .5, 0.1) < 0; at θ = 0 .1, it is d(0 .1, 0.5) > 0. Finally, per-label CE ℓy(z) = A(z) − yz has derivative σ(z) − y of absolute value at most one. Hence |ℓy(z) − ℓy(z′)| ≤ | z − z′| ≤ 2R. Multiplying by the indicator of A and averaging proves the approximation bound, also after subtracting the common Bayes risk. The union bound gives Pr( A) ≤ ∑Ks=1 Pr( Cs ∈ T ) = Kp (T ); it needs only the candidate marginals, not independence. 66

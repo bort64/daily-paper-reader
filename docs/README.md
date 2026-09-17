@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-16</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-17</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 0 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 9 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>0</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>4</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>5</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-16 21:59:03 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-17 22:33:17 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日无新推荐，系统未产出可展示论文。</p>
+<p>2026-09-17 完成 9 篇推荐论文筛选，精读 4 篇、速读 5 篇，其中两篇 9.0 分精读聚焦从排序到生成式推荐、以及实时赞助搜索广告的一步检索。</p>
+<p>最值得看的是 LIGE-GR 如何从排序平滑迈向 LLM 时代的生成式推荐，以及用分层文本表示做实时赞助搜索广告检索。</p>
+<p>普通读者可先读这两篇 9.0 分精读，再按兴趣看 QueryFormer 的 KDD Cup 2026 Tencent UniRec 竞赛方案与 MLLM 推荐理由生成等速读。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">0 篇</strong>
+    <strong class="dpr-home-dashboard-count">4 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="LIGE-GR: A Smooth Leap from Ranking to Generative Recommendation in the LLM Era">LIGE-GR: A Smooth Leap from Ranking to Generative Recommendation in the LLM Era</span></li><li><span class="dpr-home-dashboard-paper-title" title="One-Step Retrieval Framework for Real-Time Sponsored Search Ads Using Hierarchical Text Representations">One-Step Retrieval Framework for Real-Time Sponsored Search Ads Using Hierarchical Text Representations</span></li><li><span class="dpr-home-dashboard-paper-title" title="Efficient Multimodal Generative Recommendation with Latent Narrative Reasoning">Efficient Multimodal Generative Recommendation with Latent Narrative Reasoning</span></li></ul>
   </div>
-
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>4</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -91,12 +93,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">0 篇</strong>
+    <strong class="dpr-home-dashboard-count">5 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="QueryFormer: Winning Solution for KDD Cup 2026 Tencent UniRec Challenge">QueryFormer: Winning Solution for KDD Cup 2026 Tencent UniRec Challenge</span></li><li><span class="dpr-home-dashboard-paper-title" title="Scaling Articulated Rationales for MLLM-based Recommendation">Scaling Articulated Rationales for MLLM-based Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="One Spectrum, Two Resources: Data-Memory Scaling in Autoregressive Prediction">One Spectrum, Two Resources: Data-Memory Scaling in Autoregressive Prediction</span></li></ul>
   </div>
-
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>5</strong></span></div>
 </section>
 </div>
 

@@ -1,0 +1,3800 @@
+Title: Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems
+
+URL Source: https://arxiv.org/pdf/2609.16850v1
+
+Published Time: Wed, 16 Sep 2026 01:06:44 GMT
+
+Number of Pages: 23
+
+Markdown Content:
+# Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems 
+
+# Technical Report 
+
+# Runhao Jiang 
+
+Hong Kong Baptist University Hong Kong SAR, China csrhjiang@comp.hkbu.edu.hk 
+
+# Renchi Yang 
+
+Hong Kong Baptist University Hong Kong SAR, China renchi@hkbu.edu.hk 
+
+## Abstract 
+
+Given a user-item graph G, a query item 𝑣 𝑞 and a target item 𝑣 𝑡 ,the Swing score sw (𝑣 𝑞 , 𝑣 𝑡 ) of the item pair (𝑣 𝑞 , 𝑣 𝑡 ) leverages the user-item-user interaction structure to evaluate their similarity. This measure is found to be highly effective in item-to-item (i2i) retrieval task and finds extensive applications in industrial-scale recommender systems. However, existing solutions towards com-puting Swing scores are either prohibitively expensive due to their quadratic time complexity w.r.t. the item degree, or rely on trun-cation heuristics that yield unsatisfactory quality, rendering them impractical particularly on graphs with billions of interactions. In this paper, we present ASC and 𝐾 -ASC , two novel and efficient algorithms for approximate and top-𝐾 Swing queries, to address the aforementioned limitations. Specifically, these algorithms provide rigorous theoretical guarantees in probabilistic relative and additive errors of Swing values. The basic idea of ASC is to combine two randomized algorithms, GNS and USS , in a simple yet non-trivial way to adaptively process high- and low-degree query items with minimal runtime cost. In particular, 𝐾 -ASC offers practical efficiency and effectiveness for top-𝐾 queries through a filter-refinement par-adigm with carefully-designed heuristics. Extensive experiments over eight real datasets demonstrate that ASC and 𝐾 -ASC can achieve orders of magnitude speed-up over competitors in terms of compu-tational time while offering the same approximate and top-𝐾 query result quality, and in particular, 𝐾 -ASC is highly efficient on massive graphs including the billion-edge Yambda and MAG datasets. 
+
+## CCS Concepts 
+
+• Mathematics of computing → Approximation algorithms ;
+
+Graph algorithms ; • Information systems → Top-k retrieval in databases ; Recommender systems .
+
+## Keywords 
+
+Swing, approximation, top-K queries 
+
+> Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+> SIGMOD ’27, Huntington Beach, CA, USA
+> © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM ISBN 978-1-4503-XXXX-X/18/06 https://doi.org/XXXXXXX.XXXXXXX
+
+ACM Reference Format: 
+
+Runhao Jiang and Renchi Yang. 2027. Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems: Technical Report. In Pro-ceedings of ACM SIGMOD/PODS International Conference on Management of Data (SIGMOD ’27). ACM, New York, NY, USA, 23 pages. https://doi.org/ XXXXXXX.XXXXXXX 
+
+## 1 Introduction 
+
+In practice, industrial-scale recommender systems typically adopt a multi-stage pipeline, fundamentally separated into a retrieval (or candidate generation) phase and a subsequent ranking phase [34]. In the retrieval stage, item-to-item (i2i) [25] is arguably one of the most popular and widely deployed retrieval strategies, which seeks to produce a ranked list of items from a massive catalog given a query item. The fundamental premise of i2i retrieval is that users who have interacted (e.g., clicked, liked, or purchased) with a specific item are likely to engage with other items sharing similar collaborative or semantic characteristics [45]. When user-item interactions are represented as a bipartite graph, this task naturally amounts to retrieving items according to a graph-derived proximity measure. In the past two decades, a variety of i2i retrieval approaches have been developed, including collaborative filtering [25, 45, 78], embedding-based paradigms [18, 63, 79], and others [28, 34]. Amid them, Swing [78] has gained considerable traction and seen extensive practical application across industrial platforms [37, 48, 61, 78, 81]. For instance, peer-reviewed studies have documented the use of Swing in Alibaba’s cold-start [5, 9, 73] and multi-scenario [21] recommendations, while Kuaishou integrates Swing into its live streaming gifting prediction [19] and query suggestion [20]. In addi-tion, Shopee constructs high-quality item graphs based on Swing for advertisement recommendation [24]. Beyond these peer-reviewed studies, Swing is also used for query rewriting and personalized search [23, 67], short-video search [6], advertising [71], and other services [28, 64, 68, 69], as well as in building item graphs for GNN-based recommender systems [72]. Unlike traditional item-based collaborative filtering (itemCF) [45] that calculates local similarities between items based on merely user co-actions, Swing leverages the user-item-user interaction structure, referred to as “swing” struc-ture, of the user-item bipartite graph G, and evaluates all user pairs interacted with the given query item 𝑣 𝑞 and target item 𝑣 𝑡 ∈ G .Formally, the Swing similarity between items 𝑣 𝑞 and 𝑣 𝑡 is defined as: 
+
+sw (𝑣 𝑞 , 𝑣 𝑡 ) =∑︁      
+
+> 𝑢 𝑖 ,𝑢 𝑗 ∈U ( 𝑣 𝑞 )∩U ( 𝑣 𝑡 )
+
+1
+
+𝛼 + | I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ) | ,
+
+where U ( 𝑣 𝑞 ) and I ( 𝑢 𝑖 ) denote the sets of neighbors of item 𝑣 𝑞 
+
+and user 𝑢 𝑖 , respectively, and 𝛼 acts as a smoothing coefficient. The similarity contribution of the user pair (𝑢 𝑖 , 𝑢 𝑗 ) to the item pair 
+
+(𝑣 𝑞 , 𝑣 𝑡 ) is inversely proportional to the total number of items that  
+
+> 1arXiv:2609.16850v1 [cs.IR] 15 Sep 2026 SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang
+
+users 𝑢 𝑖 and 𝑢 𝑗 have co-interacted with. Through the consideration of all swing structures and the foregoing weighting scheme, the retrieval algorithm based on Swing effectively filters out noisy casual user-item interactions and neutralizes active user bias in traditional itemCF, and thus, is able to identify deeply correlated item pairs as better results [34, 78]. Despite its superior effectiveness, efficiently processing Swing queries over large graphs is challenging due to the nested formula-tion. As pinpointed in [78], given a query item 𝑣 𝑞 , the exact compu-tation of the Swing scores sw (𝑣 𝑞 , 𝑣 𝑡 ) across all target items 𝑣 𝑡 ∈ G 
+
+needs an average time complexity of 𝑂 (𝑑 (𝑣 𝑞 )2 · 𝑑 ), where 𝑑 (𝑣 𝑞 ) is the degree of 𝑣 𝑞 in G and 𝑑 represents the average user degree. In practical industrial e-commerce recommender systems, item cat-alogs often comprise billions of items, many of which can easily accumulate thousands of user interactions, while popular items have even hundreds of thousands of interacting users (i.e., a large 
+
+𝑑 (𝑣 𝑞 )) due to the power-law distribution of user behavior [41, 74]. Evaluating a single query item thus requires iterating over millions or billions of user pairs due to the 𝑑 (𝑣 𝑞 )2 factor in its time complex-ity, which can take up to hours and is prohibitively expensive. As a workaround, tech giants like Alibaba rely heavily on extensive MapReduce parallelization frameworks and powerful distributed computing centers to process Swing computations [78]. An alter-native solution is to artificially cap the maximum number of users considered for a query item (typically at 600) [1]. However, this truncation heuristic might overlook critical user pairs, inevitably degrading the result quality, as evidenced by our empirical studies in §6.3. 
+
+Present Work. To bridge this technical gap, this paper formulates the Swing computation task as the (𝜖, 𝜆 )-approximate Swing query and top-𝐾 Swing query, and presents two new algorithms ASC 
+
+(Adaptive Swing Computation) and 𝐾 -ASC for answering these queries. Particularly, the (𝜖, 𝜆 )-approximate Swing query requires the approximate Swing fsw (𝑣 𝑞 , 𝑣 𝑡 ) of any target item 𝑣 𝑡 to satisfy: (i) the relative error guarantee of | fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 )| ≤ 𝜖 ·
+
+sw (𝑣 𝑞 , 𝑣 𝑡 ) when sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜆 , and (ii) the additive guarantee of 
+
+| fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 )| ≤ 𝜖 ·𝜆 if sw (𝑣 𝑞 , 𝑣 𝑡 ) is below the threshold 𝜆 .Our preliminary empirical studies of the naïve brute-force method and Monte-Carlo approach for Swing computation reveal that both methods suffer from expensive set intersection operations, and the demand to enumerate or sample substantial user pairs, rendering them rather inefficient, particularly for high-degree items. Inspired by these observations, we first develop a series of non-trivial optimizations ameliorating QFilter [29] for faster computa-tions of the intersection set and its cardinality over user-item graphs. Based thereon, we propose two randomized algorithms Grouped Naïve Sampling (GNS ) and User Subset Sampling (USS ), which judi-ciously reduce set intersections in naïve Monte-Carlo and sidestep costly set intersections of user pairs with large degrees in the brute-force method, while offering rigorous theoretical guarantees in terms of (𝜖, 𝜆 )-approximation. On top of that, we integrate GNS and 
+
+USS into a unified framework ASC for answering (𝜖, 𝜆 )-approximate Swing queries, enabling the adaptive processing of query items of varied neighborhoods with minimal runtime cost. Furthermore, to overcome the inefficiency of ASC in dealing with top-𝐾 Swing queries for high-degree query items over large graphs, we design a filter-refinement framework 𝐾 -ASC . Under the hood, it first derives rough Swing estimations of possible target items using a moiety of the sample budget, whilst efficiently maintaining their lower and upper bounds via our carefully-crafted incremental algorithm, which facilitates the subsequent identification of top-𝐾 candidates and borderline items. Afterwards, we adaptively refine the approx-imate Swing scores of the pinpointed borderline items using the remaining sample budget for an accurate top-𝐾 ranking. Our exten-sive experiments over 8 real datasets exhibit that ASC and 𝐾 -ASC 
+
+are orders of magnitude faster than baseline exact and Monte-Carlo approaches when attaining the same (𝜖, 𝜆 )-approximation guaran-tees or comparable top-𝐾 ranking precisions. In particular, on the largest graph MAG , 𝐾 -ASC is able to achieve an average precision of more than 99.9% for top-100 queries within 1.5 milliseconds, whereas the exact method requires 8.5 seconds. To summarize, our contributions are as follows: 
+
+• First, we introduce the (𝜖, 𝜆 )-approximate Swing formulation combining probabilistic relative and additive error guarantees, and pinpoint the limitations of baseline methods through in-depth empirical studies and analyses. 
+
+• Second, building on standard randomized-estimation principles, we develop two complementary estimators, with GNS removing redundant interactions through grouping and USS avoiding ma-terialization through cardinality-only estimation. We integrate them into ASC using an analytical cost model for query-adaptive estimator selection with approximation and runtime guarantees. 
+
+• Third, we further upgrade ASC to accelerate top-𝐾 Swing queries through 𝐾 -ASC , building on filter-refinement concentrate approx-imation effort on borderline candidates, with empirical bounds and bitmap pruning for efficient refinement. 
+
+• Lastly, we conduct extensive experiments to demonstrate the superiority of ASC and 𝐾 -ASC over the competing methods in terms of both query effectiveness and efficiency. 
+
+## 2 Preliminaries 2.1 Notations and Problem Statement 
+
+Let G = (U ∪I , E) be a user-item interaction graph, where U (resp. 
+
+I) is a set of |U| (resp. |I| ) users (resp. items), and E is a set of |E| 
+
+edges between U and I. For each edge 𝑒 𝑞,𝑖 ∈ E , we say 𝑣 𝑞 and 𝑢 𝑖 are neighbors to each other, and we use U ( 𝑣 𝑞 ) (resp. I ( 𝑢 𝑖 )) to denote the set of neighbors of item 𝑣 𝑞 (resp. user 𝑢 𝑖 ), where the degree is 
+
+𝑑 (𝑣 𝑞 ) = |U ( 𝑣 𝑞 )| (resp. 𝑑 (𝑢 𝑖 ) = |I ( 𝑢 𝑖 )| ). For each item 𝑣 𝑞 , we denote by 𝐷 (𝑣 𝑞 ) the sum of its neighbors’ degrees, i.e., Í𝑢 ∈ U ( 𝑣 𝑞 ) 𝑑 (𝑢 ).Table 1 lists the notations frequently used throughout this paper. User -Item Graph  𝓖    
+
+> 𝒗 𝒒 𝒗 𝟏 𝒗 𝟐 𝒗 𝟑
+
+𝒖 𝟏  𝒖 𝟐  𝒖 𝟑  𝒖 𝟒  𝒖 𝟓           
+
+> swings in 𝓗
+> 𝑢 1− 𝑣 1− 𝑢 2
+> 𝑢 1− 𝑣 1− 𝑢 3
+> 𝑢 2− 𝑣 1− 𝑢 3
+> 𝑢 3− 𝑣 2− 𝑢 4
+> 𝒗 𝟒
+
+𝒖 𝟔  
+
+> Local Graph 𝓗
+
+Figure 1: An Example for Swing Definition of Swing [78]. As exemplified in Figure 1, we consider the local graph H containing all users who interacted with query item 𝑣 𝑞 and all items interacted with by these users, i.e., 𝑢 1-𝑢 4 and  
+
+> 2Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA
+
+Table 1: Frequently used notations.                                    
+
+> Notation Description
+> U,I,EThe user set, item set and edge set.
+> U ( 𝑣 𝑞 ),I ( 𝑢 𝑖 )The sets of neighbors of item 𝑣 𝑞 and user 𝑢 𝑖 , respectively.
+> 𝑑 (𝑣 𝑞 ), 𝐷 (𝑣 𝑞 )The degree of 𝑣 𝑞 and sum of degrees of its neighbors.
+> sw (𝑣 𝑞 , 𝑣 𝑡 ), 𝛼 The exact Swing score of 𝑣 𝑡 w.r.t. 𝑣 𝑞 and smoothing coefficient.
+> fsw (𝑣 𝑞 , 𝑣 𝑡 )The approximate Swing score of 𝑣 𝑡 w.r.t. 𝑣 𝑞 .
+> 𝜖, 𝜆, 𝛿 The relative error threshold, Swing threshold, failure probability.
+> 𝑛, 𝑛 𝑓 , 𝑛 𝑟 The numbers of random samples.
+> 𝜌 The empirical runtime ratio used in Eq. (6).
+
+𝑣 1-𝑣 3. Each “user-item-user” structure in H is referred to as a swing ,i.e., ⟨𝑢 1, 𝑣 1, 𝑢 2⟩, ⟨𝑢 1, 𝑣 1, 𝑢 3⟩, ⟨𝑢 2, 𝑣 1, 𝑢 3⟩, ⟨𝑢 3, 𝑣 2, 𝑢 4⟩. Mathematically, considering all swing structures involving query item 𝑣 𝑞 and target item 𝑣 𝑡 , the standard Swing score of item pair (𝑣 𝑞 , 𝑣 𝑡 ) is defined as 
+
+sw (𝑣 𝑞 , 𝑣 𝑡 ) =∑︁      
+
+> 𝑢 𝑖 ,𝑢 𝑗 ∈U ( 𝑣 𝑞 )∩U ( 𝑣 𝑡 )
+
+1
+
+𝛼 + | I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ) | , (1) 
+
+where 𝛼 stands for the smoothing coefficient, typically 𝛼 = 1. Par-ticularly, a higher Swing sw (𝑣 𝑞 , 𝑣 𝑡 ) indicates a stronger correlation between items 𝑣 𝑞 and 𝑣 𝑡 . Lemma 2.1 1 gives the range of sw (𝑣 𝑞 , 𝑣 𝑡 ).Lemma 2.1. ∀𝑣 𝑡 ∈ I \ { 𝑣 𝑞 }, 0 ≤ sw (𝑣 𝑞 , 𝑣 𝑡 ) ≤ 𝑑 (𝑣 𝑞 )2 −𝑑 (𝑣 𝑞 ) 
+
+> 𝛼 +2
+
+.
+
+Problem Statement. In this paper, we formalize i2i retrieval as a top-𝐾 graph-proximity query, termed the top-𝐾 Swing query . To be precise, given a user-item graph G and a query item 𝑣 𝑞 , the top-𝐾 
+
+Swing query asks for the 𝐾 items Y (typically |Y| = 𝐾 = 20 [44]) with the highest Swing scores w.r.t. 𝑣 𝑞 from the item set I \ { 𝑣 𝑞 }.
+
+Definition 2.2 ( (𝜖, 𝜆 )-Approximate Swing). Let fsw (𝑣 𝑞 , 𝑣 𝑡 ) be an approximation of sw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I . We say {fsw (𝑣 𝑞 , 𝑣 𝑡 )} 𝑣 𝑡 ∈ I are 
+
+(𝜖, 𝜆 )-approximate Swing values if they satisfy the following con-ditions: for any item 𝑣 𝑡 ∈ I with sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜆 ,
+
+| fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 )| ≤ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 ) (2) holds, and for any item 𝑣 𝑡 ∈ I s.t. sw (𝑣 𝑞 , 𝑣 𝑡 ) < 𝜆 , we have 
+
+| fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 )| ≤ 𝜖 · 𝜆. (3) A fundamental problem underlying the top-𝐾 Swing query is thus the accurate computation or estimation of Swing scores for the given query item 𝑣 𝑞 . Instead of computing the exact Swing values, which could be highly costly, this paper studies the computation of 
+
+(𝜖, 𝜆 )-approximate Swing scores formulated in Definition 2.2. The parameters 𝜖 and 𝜆 stand for the relative error threshold and Swing threshold, respectively, whose typical values are 0 .05 and      
+
+> 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+> 100 (𝛼 +2)
+
+. Particularly, this approximate definition offers a stronger relative error guarantee when sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜆 , and a weaker additive error guarantee otherwise. The reason is that ensuring relative error assurance for items with sw (𝑣 𝑞 , 𝑣 𝑡 ) < 𝜆 is expensive and unnecessary as they are less important. 
+
+## 2.2 Set Intersection 
+
+As a fundamental operation in Swing computation, I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 )
+
+aims to find the intersection of two sets I ( 𝑢 𝑖 ) and I ( 𝑢 𝑗 ). One simple and classic way for intersecting ordered sets with compa-rable sizes (i.e., |I ( 𝑢 𝑖 )| ≈ |I ( 𝑢 𝑗 )| ) is to employ a linear merge by scanning both sets in parallel, which requires 𝑂 (|I ( 𝑢 𝑖 )| + |I ( 𝑢 𝑗 )|) 
+
+> 1All missing proofs appear in Appendix D .
+
+Set  𝒮 : 33  35  164  230          
+
+> 11135476
+> state:
+> 157
+
+(base,state ):   
+
+> 𝟐 𝟏 |𝟐 𝟑 𝟐 𝟒 𝟐 𝟔
+> base:
+> w=32
+
+BSR: 
+
+Figure 2: An Example for BSR ( 𝑤 = 32 )
+
+operations [15] and is wasteful when set sizes differ significantly. For different set sizes ( |I ( 𝑢 𝑖 )| < |I ( 𝑢 𝑗 )| ), the complexity can be reduced to 𝑂 (|I ( 𝑢 𝑖 )| + log 2
+
+ | I ( 𝑢 𝑖 ) |+| I ( 𝑢 𝑗 ) | | I ( 𝑢 𝑖 ) | 
+
+) by leveraging the asymmetry [35]. Amid significant subsequent works for set inter-sections [4, 8, 15, 56, 60, 80], recent works [29, 36, 42] capitalize on the two-pointer strategy and Single Instruction Multiple Data 
+
+(SIMD) instructions to perform multiple comparisons in parallel and have achieved remarkable performance improvements. In particular, QFilter [29] encodes sets using the Base and State Representation (BSR), a compact layout, and filters out unnecessary comparisons in a single byte-level check with high probability. As shown in Figure 2, consider an original set S consisting of index values. Each index is first decomposed into a base value and a state value, where the base is obtained by integer division by 𝑤 , and the state is the remainder. We let 𝑤 = 32, e.g., 33 → (⌊ 33 /32 ⌋, 33 mod 32 ) = (1, 1), 35 → (⌊ 35 /32 ⌋, 35 mod 32 ) = (1, 3). Entries sharing the same base are then merged by aggregating state bits via bitwise OR, e.g., (1, 1) and (1, 3) are combined into (1, 21 |23), yielding a 𝑤 ×
+
+compression ratio. The base and state arrays are stored separately, enabling faster SIMD loading of consecutive values. We develop a series of optimizations that tailor QFilter to ac-celerate neighbor set intersections over user-item graphs, referred to as QFilter++ 2. Notably, using QFilter++ , the intersection car-dinality computation can be done more efficiently (up to 3 × faster) through a bitwise AND and a hardware-supported popcount with-out explicitly materializing the intersection set. 
+
+## 2.3 Baseline Methods for Swing Computation 
+
+Below, we discuss baseline algorithms for computing Swing scores. 
+
+Exact Method. In [78], the authors describe a brute-force method (Algorithm 1, henceforth referred to as Exact ) for computing the exact Swing scores of all items in I with a query item 𝑣 𝑞 . Specifi-cally, Exact detects swing structures by enumerating all user pairs in U ( 𝑣 𝑞 ). That is, for each user pair (𝑢 𝑖 , 𝑢 𝑗 ) ∈ U ( 𝑣 𝑞 ) × U ( 𝑣 𝑞 ) with 
+
+𝑢 𝑖 ≠ 𝑢 𝑗 , Exact computes the intersection of their neighbor sets as 
+
+I𝑖,𝑗 ← I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ) (Line 3). For each target item 𝑣 𝑡 in the set intersection I𝑖,𝑗 , its Swing is increased by 1  
+
+> 𝛼 +| I 𝑖,𝑗 |
+
+at Line 5, i.e., the weight for swing structure ⟨𝑢 𝑖 , 𝑣 𝑡 , 𝑢 𝑗 ⟩.Lemma 2.3. Given query item 𝑣 𝑞 , the worst-case time complexity of Algorithm 1 is 𝑂 
+
+ 𝑑 (𝑣 𝑞 ) − 12 · 𝐷 (𝑣 𝑞 )
+
+
+
+.
+
+According to Lemma 2.3, the worst-case time complexity of 
+
+Exact is bounded by 𝑂 
+
+ 𝑑 (𝑣 𝑞 ) − 12 · 𝐷 (𝑣 𝑞 )
+
+
+
+, which can be rewritten as 𝑂 
+
+ 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1) 
+
+> 2
+
+· 𝐷 (𝑣 𝑞 )  
+
+> 𝑑 (𝑣 𝑞 )
+
+
+
+, where 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1) 
+
+> 2
+
+is the number    
+
+> 2The algorithmic details of QFilter++ are deferred to Appendix A . 3SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang
+
+Algorithm 1: Exact Method [78] 
+
+Input: G = ( U ∪ I , E ) and query item 𝑣 𝑞 
+
+Output: sw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I  
+
+> 1
+
+for 𝑢 𝑖 ∈ U ( 𝑣 𝑞 ) do  
+
+> 2
+
+for 𝑢 𝑗 ∈ U ( 𝑣 𝑞 ) \ { 𝑢 𝑖 } do  
+
+> 3
+
+I𝑖,𝑗 ← I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ); 
+
+> 4
+
+for 𝑣 𝑡 ∈ I 𝑖,𝑗 do  
+
+> 5
+
+Increase sw (𝑣 𝑞 , 𝑣 𝑡 ) by 1   
+
+> 𝛼 +|I 𝑖,𝑗 |
+
+;
+
+Algorithm 2: Naïve-MC Method 
+
+Input: G = ( U ∪ I , E ) , query item 𝑣 𝑞 , and sample size 𝑛 
+
+Output: fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I  
+
+> 1
+
+for 𝑟 ← 1 to 𝑛 do  
+
+> 2
+
+Sample two users 𝑢 𝑖 , 𝑢 𝑗 (𝑢 𝑖 ≠ 𝑢 𝑗 ) from U ( 𝑣 𝑞 ); 
+
+> 3
+
+I𝑖,𝑗 ← I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ); 
+
+> 4
+
+for 𝑣 𝑡 ∈ I 𝑖,𝑗 do  
+
+> 5
+
+Increase fsw (𝑣 𝑞 , 𝑣 𝑡 ) by 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)    
+
+> 𝑛 (𝛼 +|I 𝑖,𝑗 |)
+
+;
+
+of all distinct user-pairs, and 𝐷 (𝑣 𝑞 )   
+
+> 𝑑 (𝑣 𝑞 )
+
+is the average degree of 𝑣 𝑞 ’s neighbors, which can be perceived as the average cost of the set intersection. Due to the 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1) 
+
+> 2
+
+factor, the time complexity of Exact is quadratic to 𝑑 (𝑣 𝑞 ), which is rather costly for query items with numerous neighbors. Practical solutions often resort to a truncation strategy [1] that simply limits the number of 𝑣 𝑞 ’s neighbors (e.g., at most 600) for Swing computation. However, this workaround leads to an inaccurate query result. 
+
+Naïve Monte-Carlo Method. Since the Swing score is the summa-tion of weights 1  
+
+> 𝛼 +| I 𝑖,𝑗 |
+
+of all possible swing structures ⟨𝑢 𝑖 , 𝑣 𝑡 , 𝑢 𝑗 ⟩,a simple and straightforward idea is to utilize the Monte-Carlo method for computing approximate Swing scores. Instead of enu-merating all user pairs so as to detect all valid swing structures, the naïve Monte-Carlo approach (referred to as Naïve-MC ) is to sample a fixed number 𝑛 of user pairs from U ( 𝑣 𝑞 ) × U ( 𝑣 𝑞 ) for Swing estimation. As illustrated at Lines 2-5 in Algorithm 2, for 𝑟 -th trial, Naïve-MC picks a user 𝑢 𝑖 from U ( 𝑣 𝑞 ) uniformly at random, followed by another user 𝑢 𝑗 from U ( 𝑣 𝑞 ) \ { 𝑢 𝑖 }. Afterwards, akin to Exact , Naïve-MC obtains the set intersection I𝑖,𝑗 and updates the approximate Swing score fsw (𝑣 𝑞 , 𝑣 𝑡 ) for each target item in I𝑖,𝑗 
+
+by adding an increment 𝜔 𝑟 = 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)  
+
+> 𝛼 +| I 𝑖,𝑗 |
+
+divided by 𝑛 .The probability of drawing a specific user pair is 1     
+
+> 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+.Let 𝑍 𝑟 be the random variable representing the observed score for the 𝑟 -th trial. By the definition, consider any target item 𝑣 𝑡 ,
+
+E[𝑍 𝑟 ] =∑︁       
+
+> 𝑢 𝑖 ,𝑢 𝑗 ∈U ( 𝑣 𝑞 ),𝑢 𝑖 ≠𝑢 𝑗
+
+1
+
+𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1) · 𝜔 𝑟 · 1[𝑣 𝑡 ∈ I 𝑖,𝑗 ]
+
+=∑︁       
+
+> 𝑢 𝑖 ,𝑢 𝑗 ∈U ( 𝑣 𝑞 ),𝑢 𝑖 ≠𝑢 𝑗
+
+1
+
+𝛼 + | I 𝑖,𝑗 | · 1[𝑣 𝑡 ∈ I 𝑖,𝑗 ] = sw (𝑣 𝑞 , 𝑣 𝑡 ),
+
+which indicates that 1 
+
+> 𝑛
+
+·Í𝑛 𝑟 =1 𝑍 𝑟 is an unbiased estimator of sw (𝑣 𝑞 , 𝑣 𝑡 ).Since the set intersection at Line 3 takes 𝑂 (min (𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 ))) 
+
+time, the worst time complexity of Naïve-MC is bounded by 𝑂 (𝑛 ·
+
+max 𝑢 ∈ U ( 𝑣 𝑞 ) 𝑑 (𝑢 )) . On average, its time complexity is 𝑂 
+
+
+
+𝑛 · 𝐷 (𝑣 𝑞 )  
+
+> 𝑑 (𝑣 𝑞 )
+
+
+
+.   
+
+> Exact Naïve-MC Set Intersection Others
+> top 20% items
+> 10 210 310 4
+
+time (ms) 
+
+> bottom 80% items
+> 0.01 10 010 2
+
+time (ms)  
+
+> (a) Twitch
+> top 20% items
+> 10 10 210 310 4
+
+time (ms) 
+
+> bottom 80% items
+> 0.01 10 010 2
+
+time (ms)  
+
+> (b) MAG
+
+Figure 3: Empirical efficiency of Exact and Naïve-MC for dif-ferent query items on Twitch and MAG .
+
+Moreover, by setting the number 𝑛 of samples properly, the esti-mated Swing scores returned by Algorithm 2 can be guaranteed to be (𝜖, 𝜆 )-approximate Swing with a high probability. We defer the detailed analysis to §3.1. 
+
+## 2.4 Empirical Study and Analysis 
+
+To reveal the strengths and weakness of the deterministic method 
+
+Exact and randomized algorithm Naïve-MC in Swing computation, we conduct empirical studies to evaluate the efficiency of these two baselines on two large real datasets, Twitch and MAG . Considering that Exact method outputs exact Swing values whilst Naïve-MC 
+
+is an approximate algorithm, for a fair comparison, we tune the number 𝑛 of random samples used in Naïve-MC so that it achieves at least 99.9% precision in terms of top-𝐾 (𝐾 = 20) ranking accuracy. Note that this empirical study uses the original set intersection im-plementation rather than QFilter++ . Figure 3 reports the average query time (in milliseconds), along with its breakdowns into set intersections and other operations, for Exact and Naïve-MC over two distinct query sets, i.e., the top 20% high-degree items and the remaining 80% of items. From these results, we can make the following observations. First, for popular items (top 20% high-degree items), both Exact 
+
+and Naïve-MC incur high query costs, due to the need for enumer-ating and sampling substantial user-pairs. For instance, on Twitch 
+
+dataset, Exact and Naïve-MC take more than 3.8 and 0.5 seconds, re-spectively, on average to answer a single query, which are far from satisfactory for practical applications. Second, for both methods, the primary computational bottleneck is set intersections, which account for over 80% of the total query time on Twitch and around 50% on MAG . Last but not least, Exact is more efficient for low-degree items but incurs prohibitive cost on popular items, whereas 
+
+Naïve-MC exhibits more stable query performance across all query items. Although it is remarkably faster than Exact on popular ones, its query cost still remains large. In addition, for the remaining 80% of items, the actual cost of Exact can be very cheap, i.e., re-quires less than 1 ms on average, since these items admit a small or highly constrained search space. In contrast, Naïve-MC incurs non-negligible overhead and large sample size to stabilize high vari-ances in estimations and achieve acceptable accuracy [52], whose value can easily outstrip the actual number of distinct user-pairs, i.e., 𝑛 > 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1) 
+
+> 2
+
+, especially for low-degree items. In summary, our above observations suggest that both Exact 
+
+and Naïve-MC suffer from severe deficiencies in Swing computa-tion/approximation. Therefore, it is necessary to optimize both  
+
+> 4Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA
+
+Algorithm 3: Grouped Naïve Sampling ( GNS )
+
+Input: G = ( U ∪ I , E ) , query item 𝑣 𝑞 , error threshold 𝜖 .
+
+Output: fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I  
+
+> 1
+
+Calculate 𝑛 according to Eq. (4);  
+
+> 2
+
+Initialize an empty map 𝑆 ; 
+
+> 3
+
+for 𝑟 ← 1 to 𝑛 do  
+
+> 4
+
+Sample 𝑢 𝑖 , 𝑢 𝑗 ∈ U ( 𝑣 𝑞 ) s.t. 𝑢 𝑖 ≠ 𝑢 𝑗 and 𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 ) ≥ 2;  
+
+> 5
+
+Increase 𝑆 (𝑢 𝑖 , 𝑢 𝑗 ) by 1;  
+
+> 6
+
+for (𝑢 𝑖 , 𝑢 𝑗 ) ∈ 𝑆 do  
+
+> 7
+
+I𝑖,𝑗 ← I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ); 
+
+> 8
+
+for 𝑣 𝑡 ∈ I 𝑖,𝑗 do  
+
+> 9
+
+Increase fsw (𝑣 𝑞 , 𝑣 𝑡 ) by 𝑆 (𝑢 𝑖 ,𝑢 𝑗 ) · 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)    
+
+> 𝑛 (𝛼 +|I 𝑖,𝑗 |)
+
+;
+
+approaches and devise adaptive frameworks combining their mer-its for efficient (𝜖, 𝜆 )-approximate Swing computation as well as top-𝐾 Swing processing. 
+
+## 3 The ASC Algorithm 
+
+This section presents ASC , our solution for (𝜖, 𝜆 )-approximate Swing computation. ASC is motivated by the aforementioned empirical ob-servations of baseline algorithms, including expensive set intersec-tions and their limitations in processing high- and low-degree query items. To curtail the significant number of set intersections required in Naïve-MC , §3.1 introduces an optimized version of Naïve-MC ,i.e., GNS , for computing (𝜖, 𝜆 )-approximate Swing. Subsequently, we develop USS in §3.2 to circumvent costly intersections of large neighbor sets in Exact , while ensuring approximation guarantees. Lastly, we propose to integrate GNS and USS within a hybrid frame-work ASC that dynamically selects the algorithm for fast Swing approximation along with rigorous theoretical analyses in §3.3. Figure 4 provides a figurative illustration of ASC .
+
+## 3.1 Grouped Naïve Sampling 
+
+Since Naïve-MC requires drawing numerous user-pair samples from 
+
+U ( 𝑣 𝑞 ) randomly, many of them are invalid (e.g., I𝑖,𝑗 = ∅) or dupli-cated, leading to significant redundant or repeated computations for set intersection. Following the sampling principle of Naïve-MC , our 
+
+grouped naïve sampling (GNS ) method tackles this issue by grouping repeated user-pair samples so that set intersections are computed only once for each distinct pair, while preserving unbiased esti-mation. Intuitively, GNS replaces repeated set intersections with a cheap counter update whenever a sampled user pair reappears. Algorithm 3 displays the pseudo-code of GNS . At Line 1, given relative error threshold 𝜖 , Swing threshold 𝜆 , and failure probability 
+
+𝛿 (typically 𝛿 = 10 −4), the sample size 𝑛 is calculated by 
+
+𝑛 =
+
+& 2(𝑑 (𝑣 𝑞 )2 − 𝑑 (𝑣 𝑞 ) ) · ( 𝜖 /3 + 1)(𝛼 + 2) · 𝜆𝜖 2 · log 
+
+ 1
+
+𝛿 
+
+'
+
+. (4) 
+
+Instead of computing the set intersection for each sampled user pair separately, GNS maintains an additional map 𝑆 (Line 2) to record the occurrences for distinct user pairs. More specifically, at Lines 3-5, Algorithm 3 first picks 𝑛 user-pairs from U ( 𝑣 𝑞 ) such that the users in each pair are different and have at least 2 neighbors (i.e., interacting items). This requirement is to avoid sampling invalid user pairs since each swing structure derived from a user pair 𝑻 𝐔𝐒𝐒 ≤ 𝑻 𝐆𝐍𝐒               
+
+> User -Item Graph 𝓖
+> GNS (Algorithm 3) USS (Algorithm 4)
+> Yes No
+> 𝓘 ′(𝒖 𝒊 )𝓘 ′(𝒖 𝒋 )
+> ∀𝑣 𝑡 ∈ ℐ 𝑖,𝑗
+> ′update ෦sw(𝑣 𝑞 , 𝑣 𝑡 )
+> 𝓘(𝒖 𝒊 )𝓘(𝒖 𝒋 )
+> ∀𝑣 𝑡 ∈ ℐ 𝑖,𝑗 update ෦sw(𝑣 𝑞 , 𝑣 𝑡 )
+> Sampling 𝑛 user pairs
+
+Figure 4: Illustration of ASC 
+
+(𝑢 𝑖 , 𝑢 𝑗 ) should have at least two common neighboring items with one of them being 𝑣 𝑞 according to Eq. (1). Accordingly, the degrees of sampled users must be greater than or equal to 2. Notice that we can ensure the sampling of such users via a filtering of users in 
+
+U ( 𝑣 𝑞 ) in the preprocessing. Then, for each sampled pair (𝑢 𝑖 , 𝑢 𝑗 ),we increase 𝑆 (𝑢 𝑖 , 𝑢 𝑗 ) by 1. Afterwards, for each distinct user pair 
+
+(𝑢 𝑖 , 𝑢 𝑗 ) in the map 𝑆 , GNS finds the intersection I𝑖,𝑗 of I ( 𝑢 𝑖 ) and 
+
+I ( 𝑢 𝑗 ), efficiently through our QFilter++ algorithm (Line 7). Next, for each common item 𝑣 𝑡 ≠ 𝑣 𝑞 in I𝑖,𝑗 , we increase the approximate Swing fsw (𝑣 𝑞 , 𝑣 𝑡 ) by 𝑆 (𝑢 𝑖 ,𝑢 𝑗 ) · 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)   
+
+> 𝑛 (𝛼 +| I 𝑖,𝑗 | )
+
+as at Lines 8-9. 
+
+Complexity Analysis. By counting repeated user-pairs with the map 𝑆 , GNS ensures that the set intersections are only computed for distinct user pairs, whose count is at most 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1) as in 
+
+Exact . Accordingly, by Lemma 2.3, the computational cost entailed by set intersections in GNS will be bounded by 𝑂 
+
+ 𝑑 (𝑣 𝑞 ) − 12 · 𝐷 (𝑣 𝑞 )
+
+
+
+.Since the number of distinct user pairs in 𝑆 is at most 𝑛 , the set intersection cost can also be estimated by 𝑂 
+
+
+
+𝑛 · 𝐷 (𝑣 𝑞 )  
+
+> 𝑑 (𝑣 𝑞 )
+
+
+
+. Plus the 
+
+𝑂 (𝑛 ) cost for updating the map 𝑆 at Lines 2-4, the overall time complexity of GNS is 𝑂 
+
+
+
+𝑛 + min 
+
+n
+
+𝑛, 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+> 2
+
+o
+
+· 𝐷 (𝑣 𝑞 )  
+
+> 𝑑 (𝑣 𝑞 )
+
+
+
+.
+
+Correctness Analysis. Since each user-pair is still sampled inde-pendently at Lines 3-5 in Algorithm 3, the resulting fsw (𝑣 𝑞 , 𝑣 𝑡 ) is also an unbiased estimator of sw (𝑣 𝑞 , 𝑣 𝑡 ) as analyzed in Naïve-MC .By leveraging the Chernoff bound [12], we can establish the follow-ing accuracy guarantee in Theorem 3.1 for both Naïve-MC and GNS 
+
+when their sample sizes 𝑛 are greater than the value in Eq. (4). Theorem 3.1. Let fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I be the approximate Swing scores output by Algorithms 2 or 3. For any item 𝑣 𝑡 ∈ I , fsw (𝑣 𝑞 , 𝑣 𝑡 ) is the (𝜖, 𝜆 )-approximate Swing with a probability of at least 1 − 𝛿 .
+
+## 3.2 User Subset Sampling 
+
+In what follows, we shift focus to expensive intersections for user pairs with high degrees in Exact , as it requires retrieving all in-teracted items and materializing the full intersection. However, computing only the intersection cardinality is conspicuously faster than set intersection (3 × speedup when using our QFilter++ ) as pinpointed in §2.2, especially when the overlap is large. Motivated by this observation, our user subset sampling (USS ) builds on random-ized subset sampling to estimate Swing from small sampled subsets and intersection cardinality, thereby avoiding explicit intersection materialization. Intuitively, USS targets a different bottleneck from 
+
+GNS by reducing the processing cost of each pair, rather than the number of pairs processed, when pair enumeration is affordable.  
+
+> 5SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang
+
+Algorithm 4: User Subset Sampling ( USS )
+
+Input: G = ( U ∪ I , E ) , query item 𝑣 𝑞 , error threshold 𝜖 .
+
+Output: fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I  
+
+> 1
+
+Calculate 𝛾 according to Eq. (5);  
+
+> 2
+
+for 𝑢 𝑖 ≠ 𝑢 𝑗 ∈ U ( 𝑣 𝑞 ) such that 𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 ) ≥ 2 do  
+
+> 3
+
+I′ (𝑢 𝑖 ) ← Sample ⌈𝛾 · 𝑑 (𝑢 𝑖 ) ⌉ items from I ( 𝑢 𝑖 ); 
+
+> 4
+
+I′ 
+
+> 𝑖,𝑗
+
+← I ′ (𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ); 
+
+> 5
+
+if | I ′ 
+
+> 𝑖,𝑗
+
+| > 0 then Compute | I 𝑖,𝑗 |; 
+
+> 6
+
+for 𝑣 𝑡 ∈ I ′ 
+
+> 𝑖,𝑗
+
+do  
+
+> 7
+
+Increase fsw (𝑣 𝑞 , 𝑣 𝑡 ) by 1      
+
+> |I ′ (𝑢 𝑖 ) |
+> 𝑑 (𝑢 𝑖 )· ( 𝛼 +|I 𝑖,𝑗 |)
+
+;
+
+Algorithm 4 presents the pseudo-code of USS . At Line 1, the sample ratio 𝛾 is computed based on relative error threshold 𝜖 ,Swing threshold 𝜆 , and failure probability 𝛿 as follows 
+
+𝛾 ≤ min 
+
+ 2(𝜖 /3 + 1)(𝛼 + 2) · 𝜆𝜖 2 · log 
+
+ 1
+
+𝛿 
+
+
+
+, 1
+
+
+
+. (5) 
+
+When enumerating all valid user-pairs where each has at least two interacting items, instead of computing the exact intersection of sets I ( 𝑢 𝑖 ) and I ( 𝑢 𝑗 ), USS constructs a sampled subset I′ (𝑢 𝑖 )
+
+from I ( 𝑢 𝑖 ) to enable efficient small-scale set intersection. More specifically, at Line 3, Algorithm 4 first uniformly samples ⌈𝛾 ·
+
+𝑑 (𝑢 𝑖 )⌉ items from I ( 𝑢 𝑖 ) where 𝑑 (𝑢 𝑖 ) ≤ 𝑑 (𝑢 𝑗 ), ensuring that the sampling ratio is no less than 𝛾 and preserving the correctness of the error bound. It then computes the intersection set, denoted as I′ 
+
+> 𝑖,𝑗
+
+, between I′ (𝑢 𝑖 ) and I ( 𝑢 𝑗 ). Notice that |I ′ (𝑢 𝑖 )| is typically small, we only need to check items in I′ (𝑢 𝑖 ) against a preprocessed hash map of I ( 𝑢 𝑗 ), resulting in constant-time lookup per item and avoiding expensive set matching. Afterwards, at Line 5, we filter out user pairs with no overlap and compute the intersection cardinality using our size-only variant of QFilter++ algorithm in Appendix A to yield a mean speedup of 1 .5× and up to 3 .6× speedup compared to the set materialization version. Next, we increase the approximate Swing fsw (𝑣 𝑞 , 𝑣 𝑡 ) for each common item 𝑣 𝑡 ≠ 𝑣 𝑞 in 
+
+I′ 
+
+> 𝑖,𝑗
+
+by 1      
+
+> |I ′ (𝑢 𝑖 ) |
+> 𝑑 (𝑢 𝑖 )· ( 𝛼 +| I 𝑖,𝑗 | )
+
+as at Lines 6-7. 
+
+Complexity Analysis. Since Lines 3-4 process only a 𝛾 fraction of items, their worst-case complexity is 𝑂 
+
+ (𝑑 (𝑣 𝑞 ) − 1)𝐷 (𝑣 𝑞 ) 
+
+> 2
+
+· 𝛾 
+
+
+
+as per Lemma 2.3. For Lines 5-7, the number of user pairs is the same as Exact . Let 𝜂 be the cost of computing an intersection cardinal-ity. This stage takes 𝑂 
+
+ (𝑑 (𝑣 𝑞 ) − 1)𝐷 (𝑣 𝑞 ) 
+
+> 2
+
+· 𝜂 
+
+
+
+time. Therefore, the complexity of USS is 𝑂 
+
+ (𝑑 (𝑣 𝑞 ) − 1)𝐷 (𝑣 𝑞 ) 
+
+> 2
+
+· ( 𝜂 + 𝛾 )
+
+
+
+, which is asymp-totically the same as Exact but with a smaller constant factor. 
+
+Correctness Analysis. Consider the 𝑟 -th update associated with a user pair (𝑢 𝑖 , 𝑢 𝑗 ). Since I′ (𝑢 𝑖 ) is drawn uniformly from I ( 𝑢 𝑖 ) at Line 4, each target item 𝑣 𝑡 ∈ I 𝑖,𝑗 is included in I′ 
+
+> 𝑖,𝑗
+
+with probability      
+
+> | I ′(𝑢 𝑖 ) |
+> 𝑑 (𝑢 𝑖 )
+
+. Line 7 compensates for this sampling probability by scaling its contribution by the reciprocal factor, such that the expected update remains 1  
+
+> 𝛼 +| I 𝑖,𝑗 |
+
+. By the linearity of expectation over all pairs sharing 𝑣 𝑡 , we have E[fsw (𝑣 𝑞 , 𝑣 𝑡 )] = sw (𝑣 𝑞 , 𝑣 𝑡 ), indicating that 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) is strictly unbiased. The detailed derivation is deferred 
+
+Algorithm 5: ASC 
+
+Input: G = ( U ∪ I , E ) , query item 𝑣 𝑞 , error threshold 𝜖 .
+
+Output: fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I  
+
+> 1
+
+Calculate 𝑛 according to Eq. (4);  
+
+> 2
+
+if Eq. (6) holds then  
+
+> 3
+
+Invoke Algorithm 4 with 𝑣 𝑞 and 𝜖 ; 
+
+> 4
+
+else  
+
+> 5
+
+Invoke Algorithm 3 with 𝑣 𝑞 and 𝜖 ;
+
+to Appendix D. Next, we can harness the Chernoff bound [12] to obtain the following approximation guarantee for USS :Theorem 3.2. fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I returned by Algorithm 4 are 
+
+(𝜖, 𝜆 )-approximate Swing scores with a probability of at least 1 − 𝛿 .
+
+## 3.3 Complete Algorithm and Analysis 
+
+As revealed in §2.4, Exact and Naïve-MC excel at processing differ-ent query items. With the foregoing efficiency optimizations, GNS is able to obtain conspicuous speed-ups over Naïve-MC without com-promising result quality on high-degree items, but is still less than efficient on low-degree items, as validated in §6.2. On the other hand, although USS improves upon Exact by averting the time-consuming intersections of large neighbor sets of users through sampling, it remains computationally expensive for high-degree items. This complementarity motivates ASC to perform query-adaptive esti-mator selection through an analytical cost model that selects the lower-cost estimator between GNS and USS for each query item. Al-gorithm 5 illustrates the pseudo-code of ASC . Precisely, ASC invokes 
+
+USS (Algorithm 4) when the following condition holds (Lines 2-3): 
+
+𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2 · 𝜌 ≤ 𝑛 
+
+
+
+1 + 𝑑 (𝑣 𝑞 )
+
+𝐷 (𝑣 𝑞 )
+
+
+
+, (6) 
+
+and runs GNS (Algorithm 3) otherwise (Lines 4-5). The parameter 
+
+𝜌 stands for the empirical runtime ratio of primitive operations in 
+
+USS and GNS . As per our empirical analyses on real datasets, 𝜌 falls into a small interval of [0.22 , 0.67 ] and setting 𝜌 = 0.5 always leads to an effective selection of GNS and USS in ASC .To enable effective selection in ASC , the key is to accurately estimate the empirical runtime of both methods prior to execu-tion, given that the asymptotic complexity is often inaccurate and abstracts away constant factors, memory access patterns, and im-plementation details that dominate actual performance in practice. Specifically, given 𝑣 𝑞 , we quantify the runtime for USS by 
+
+𝑇 USS = 𝜌 USS ·
+
+ 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2 · 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+, (7) 
+
+where (𝑑 (𝑣 𝑞 ) − 1)𝐷 (𝑣 𝑞 ) 
+
+> 2
+
+is the count of primitive operations (i.e., Lines 3-7 in Algorithm 4) involved in USS and 𝜌 USS denotes the constant factor calibrated such that 𝑇 USS matches the observed execution time, i.e., averaged empirical time per primitive operation. Similarly, we can formulate the empirical runtime for GNS as 
+
+𝑇 GNS = 𝜌 GNS ·
+
+
+
+𝑛 + min 
+
+
+
+𝑛, 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2
+
+
+
+· 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+, (8) 
+
+where 𝜌 GNS stands for the averaged empirical time for drawing each user-pair and a single primitive operation as in USS (Lines                   
+
+> 6Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA
+> Recall@ 𝐾 Recall@ (𝐾 +5)
+> 0.1 0.05 0.02 0.01 94% 96% 98% 100%
+> 𝐾 =20
+> 0.1 0.05 0.02 0.01 94% 96% 98% 100%
+> 𝐾 =100
+> (a) SteamGame
+> 0.1 0.05 0.02 0.01 97% 98% 99% 100%
+> 𝐾 =20
+> 0.1 0.05 0.02 0.01 97% 98% 99% 100%
+> 𝐾 =100
+> (b) Twitch
+
+Figure 5: Top-𝐾 recall by GNS when varying 𝜖 𝑟 
+
+3-7 in Algorithm 4 or Lines 7-9 in Algorithm 3). Intuitively, the empirical runtime ratio 𝜌 = 𝜌 USS 
+
+𝜌 GNS < 1. 
+
+Complexity and Correctness Analysis. Our rigorous analysis in Theorem 3.3 indicates that with the selection condition in Eq. (6), 
+
+ASC can achieve the minimal computational cost of GNS and USS .Theorem 3.3. Algorithm 5 runs in min {𝑇 USS ,𝑇 GNS } time. 
+
+Since ASC is a combination of GNS and USS , it offers the same accuracy assurances. According to Theorems 3.1 and 3.2, sw (𝑣 𝑞 , 𝑣 𝑡 )∀𝑣 𝑡 ∈ I returned by Algorithm 5 are (𝜖, 𝜆 )-approximate Swing values with a high probability. 
+
+## 4 The 𝐾 -ASC Algorithm 
+
+Although the efficiency techniques developed in ASC considerably enhance its practical efficiency for accurate Swing estimation, and thus, enable faster top-𝐾 Swing query processing, it is still rather costly for handling popular items over large-scale graphs as shown in §6.3, due to the sheer amount of random samples needed in GNS .To overcome this limitation, this section presents 𝐾 -ASC adapting the filter-refinement paradigm to top-𝐾 Swing queries, concen-trating the sampling budget on borderline candidates rather than uniformly refining all items. We first provide a synoptic overview of 𝐾 -ASC in §4.1, followed by elucidating the secondary algorithms for greedy candidate generation and adaptive pairwise refinement in §4.2 and §4.3, respectively. Subsequently, §4.4 theoretically analyzes the correctness and computational complexities of the proposed algorithms. Lastly, we further extend 𝐾 -ASC to provide a theo-retical guarantee on the correctness of top-𝐾 results, albeit at a higher computational cost. The algorithmic details are deferred to Appendix B in the interest of space. Greedy Candidate Generation  Adaptive Pairwise Refinement 
+
+𝑛𝑛                         
+
+> Sampling 𝑛𝑛𝑓𝑓 user pairs
+> Sample size 𝑛𝑛𝑓𝑓 Sample size 𝑛𝑛𝑟𝑟 =𝑛𝑛 − 𝑛𝑛𝑓𝑓
+> 𝓣𝓣1 𝓣𝓣2 ⋯𝓣𝓣𝐾𝐾 𝓣𝓣 ⋯
+> Ranked by Swing
+> 𝑲𝑲 +1 𝓣𝓣 𝑲𝑲 +𝜅𝜅
+> UB( 𝒯𝒯 1)UB( 𝒯𝒯 2)UB( 𝒯𝒯 𝐾𝐾 )⋯
+> LB( 𝒯𝒯 1)LB( 𝒯𝒯 2)LB( 𝒯𝒯 𝐾𝐾 )⋯
+> ⋯
+> ⋯
+> UB( 𝒯𝒯 𝐾𝐾 )+1 UB( 𝒯𝒯 𝐾𝐾 )+𝜅𝜅
+> LB( 𝒯𝒯 𝐾𝐾 )+1 LB( 𝒯𝒯 𝐾𝐾 )+𝜅𝜅
+
+ℬ 𝒗𝒗𝟏𝟏  𝒗𝒗𝟐𝟐  𝒗𝒗𝒙𝒙 ⋯
+
+##        
+
+> 𝒰𝒰𝑞𝑞 ,ℬ=�𝑣𝑣𝑡𝑡∈ℬ
+> {𝒰𝒰 (𝑣𝑣𝑞𝑞 )∩ 𝒰𝒰 (𝑣𝑣𝑡𝑡 )}
+> Sample 𝒏𝒏𝒓𝒓 pairs Scan all pairs
+
+ℐ𝑖𝑖 ,ℬ ℐ𝑗𝑗 ,ℬ
+
+Figure 6: Illustration of 𝐾 -ASC .
+
+## 4.1 Solution Overview 
+
+Akin to ASC , 𝐾 -ASC also adaptively selects USS or GNS for query processing. The distinction is that, instead of employing GNS for accurate estimation of Swing scores for all target items, 𝐾 -ASC 
+
+Algorithm 6: 𝐾 -ASC 
+
+Input: G = ( U ∪ I , E ) , query item 𝑣 𝑞 , error threshold 𝜖 , and integers 𝐾, 𝜅 
+
+Output: Top-𝐾 items Y
+
+Lines 1–3 are the same as Algorithm 5  
+
+> 4
+
+T ← { 𝑣 𝑡 ∈ I \ { 𝑣 𝑞 } | fsw (𝑣 𝑞 , 𝑣 𝑡 ) > 0}; 
+
+> 5
+
+else  
+
+> 6
+
+𝑛 𝑓 ← ⌈ 𝛽 · 𝑛 ⌉; 𝑛 𝑟 ← 𝑛 − 𝑛 𝑓 ; 
+
+> 7
+
+T, B ← Algorithm 7 with 𝑣 𝑞 , 𝑛 𝑓 ; 
+
+> 8
+
+Invoke Algorithm 8 with B, 𝑛 𝑟 ; 
+
+> 9
+
+Y ← argtop 𝐾 𝑣 𝑡 ∈T fsw (𝑣 𝑞 , 𝑣 𝑡 );
+
+focuses on identifying a subset of items that are most likely to be the top-𝐾 items directly. The high-level idea is inspired by our empirical findings in Fig-ure 5, from which we can observe that, on both SteamGame and 
+
+Twitch datasets, running GNS with a larger relative error thresh-old 𝜖 (and thus fewer random samples) yields a top-(𝐾 + 5) list with recall close to 100%. In contrast, achieving the same recall for the top-𝐾 items returned directly by GNS requires a substantially smaller 𝜖 , and therefore many more samples. For instance, when 
+
+𝐾 = 20, attaining 99 .8% recall requires 𝜖 = 0.1 for the top-25 results, but 𝜖 = 0.01 for the top-20 results, indicating a 100-fold increase in the number of samples in GNS as the sample size 𝑛 scales as 1
+
+𝜖 2
+
+(Theorem 3.1). This suggests that most items in the exact top-𝐾 
+
+set can be identified accurately at a low cost, whereas only a few “borderline items” dominate the sampling overhead. Based on this observation, we propose to identify these borderline items and al-locate additional samples specifically to them for Swing estimation, rather than expending unnecessary samples on easy items that have already been estimated with sufficient confidence. As summarized in Algorithm 6, we invoke USS for Swing com-putation if Eq. (6) is satisfied as in ASC (Lines 1-3), and directly utilize all items with non-zero approximate Swing values as top-𝐾 
+
+candidates T (Line 4). However, when GNS is selected, 𝐾 -ASC first greedily generates a set of candidates T (|T | = 𝐾 + 𝜅 and 𝜅 ≪ 𝐾 )with a subset B ⊂ T containing borderline candidates for being the top-𝐾 using Algorithm 7 by drawing 𝑛 𝑓 = ⌈𝛽 · 𝑛 ⌉ (typically 
+
+𝛽 = 0.1) random samples (Line 7). Subsequently, the remaining sampling budget 𝑛 𝑟 = 𝑛 − 𝑛 𝑓 is allocated to adaptively refine the Swing scores of borderline items in B by Algorithm 8 (Line 8). Par-ticularly, by enforcing 𝑛 𝑓 + 𝑛 𝑟 = 𝑛 , the total number of sampling rounds in 𝐾 -ASC remains bounded by 𝑛 , ensuring its sampling cost under control. Finally, the candidate items in T are sorted based on the latest Swing estimations for obtaining the final ranking and top-𝐾 result Y (Line 9). The basic idea is illustrated in Figure 6. 
+
+## 4.2 Greedy Candidate Generation 
+
+The first task is to find the 𝐾 + 𝜅 candidates T for the final top-𝐾 
+
+items and borderline items B therein, where 𝜅 ≪ 𝐾 specifies the small number of the extra items that are potentially in the exact top-𝐾 . As aforementioned, we can easily generate T with roughly approximate Swing scores from a small number of samples. To identify B from T , our idea is to leverage the empirical Bernstein inequality [3] in Theorem 4.1 to construct tight item-specific confi-dence bounds for the estimated Swing scores using the empirical 
+
+> 7
+
+SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang 
+
+Algorithm 7: Greedy Candidate Generation 
+
+Input: G = ( U ∪ I , E ) , query item 𝑣 𝑞 , and sample size 𝑛 𝑓 
+
+Output: T, B
+
+Lines 1-4 are the same as Lines 2-5 in Algorithm 3;  
+
+> 5
+
+Initialize a counter 𝑟 (𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I ; 
+
+> 6
+
+for (𝑢 𝑖 , 𝑢 𝑗 ) ∈ 𝑆 do  
+
+> 7
+
+I𝑖,𝑗 ← I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ); 
+
+> 8
+
+for 𝑣 𝑡 ∈ I 𝑖,𝑗 do  
+
+> 9
+
+𝑟 (𝑣 𝑡 ) ← 𝑟 (𝑣 𝑡 ) + 𝑆 (𝑢 𝑖 , 𝑢 𝑗 ); 
+
+> 10
+
+Update fsw (𝑣 𝑞 , 𝑣 𝑡 ) according to Eq. (10);  
+
+> 11
+
+Update 𝜎 (𝑣 𝑡 ) according to Eq. (11);  
+
+> 12
+
+for 𝑣 𝑡 ∈ I s.t. 𝑟 (𝑣 𝑡 ) ≠ 0 do  
+
+> 13
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) ← 𝑟 (𝑣 𝑡 ) 
+
+> 𝑛 𝑓
+
+· fsw (𝑣 𝑞 , 𝑣 𝑡 ); 
+
+> 14
+
+𝜎 (𝑣 𝑡 ) ← 𝜎 (𝑣 𝑡 ) + (𝑛 𝑓 −𝑟 (𝑣 𝑡 ) ) ( 𝑟 (𝑣𝑡 )        
+
+> 𝑛 𝑓 ·fsw (𝑣 𝑞 ,𝑣 𝑡 )2−𝜎 (𝑣 𝑡 ) )
+> 𝑛 𝑓 −1
+
+; 
+
+> 15
+
+T ← argtop-(𝐾 + 𝜅 )𝑣 𝑡 ∈I\{ 𝑣 𝑞 } fsw (𝑣 𝑞 , 𝑣 𝑡 ); 
+
+> 16
+
+Compute UB (𝑣 ) and LB (𝑣 ) ∀ 𝑣 ∈ T ; 
+
+> 17
+
+for 𝑖 ← 𝐾 to 1 do  
+
+> 18
+
+if UB ( T 𝐾 +1 ) ≥ LB ( T 𝑖 ) then Add T𝑖 to B ; 
+
+> 19
+
+for 𝑖 ← 1 to 𝜅 do  
+
+> 20
+
+if UB ( T 𝐾 +𝑖 ) ≥ LB ( T 𝐾 ) then Add T𝐾 +𝑖 to B ;
+
+variances. With these bounds at hand, we are able to determine the borderline items that might fall into or outside the top-𝐾 list. Theorem 4.1 ([3]). Let 𝑍 1, . . . , 𝑍 𝑛 be real-valued i.i.d. random variables, such that 0 ≤ 𝑍 𝑖 ≤ 𝜁 . We denote by 𝑍 = 1
+
+𝑛 
+
+Í𝑛 𝑖 =1 𝑍 𝑖 the empirical mean of these variables and 𝜎 = 1
+
+𝑛 
+
+Í𝑛 𝑖 =1 (𝑍 𝑖 − 𝑍 )2 their empirical variance. Then, we have 
+
+P [ | 𝑍 − E[𝑍 ] | ≥ Φ(𝑛, 𝜎, 𝜁 , 𝛿 ) ] ≤ 𝛿, where 
+
+Φ(𝑛, 𝜎, 𝜁 , 𝛿 ) =√︂ 2𝜎 log (3/𝛿 )
+
+𝑛 + 3𝜁 log (3/𝛿 )
+
+𝑛 .
+
+(9) 
+
+Algorithm. Algorithm 7 displays the pseudo-code for finding the top-𝐾 candidates T based upon GNS . Algorithm 7 begins by sam-pling 𝑛 𝑓 user-pairs and forming the map 𝑆 as in GNS (Lines 1-4). For each distinct user-pair (𝑢 𝑖 , 𝑢 𝑗 ) in 𝑆 , distinct from GNS , we iteratively and dynamically update the empirical mean fsw (𝑣 𝑞 , 𝑣 𝑡 ) and variance 
+
+𝜎 (𝑣 𝑡 ) for each target item 𝑣 𝑡 in the way analogous to Welford’s algorithm [65] that facilitates the efficient update (Lines 6-11). To be specific, Algorithm 7 records and incrementally maintains the num-ber of occurrences 𝑟 (𝑣 𝑡 ) of target item 𝑣 𝑡 observed from user-pair samples at Line 9. Based thereon, we update fsw (𝑣 𝑞 , 𝑣 𝑡 ) as follows: 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) ← fsw (𝑣 𝑞 , 𝑣 𝑡 ) + 𝑆 (𝑢 𝑖 , 𝑢 𝑗 ) · Δ
+
+𝑟 (𝑣 𝑡 ) ,
+
+Δ ← 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+𝛼 + | I 𝑖,𝑗 | − fsw (𝑣 𝑞 , 𝑣 𝑡 ).
+
+(10) 
+
+Accordingly, the empirical variance 𝜎 (𝑣 𝑡 ) is updated to 
+
+𝜎 (𝑣 𝑡 ) ← 𝜎 (𝑣 𝑡 ) + 
+
+𝑆 (𝑢 𝑖 , 𝑢 𝑗 ) · 
+
+ 𝑟 (𝑣 𝑡 ) − 𝑆 (𝑢 𝑖 ,𝑢 𝑗 )   
+
+> 𝑟 (𝑣 𝑡 )
+
+Δ2 − 𝜎 (𝑣 𝑡 )
+
+
+
+𝑟 (𝑣 𝑡 ) − 1 . (11) 
+
+After iterating over 𝑆 , Algorithm 7 applies a final correction to the empirical mean fsw (𝑣 𝑞 , 𝑣 𝑡 ) and variance 𝜎 (𝑣 𝑡 ) for each sampled target item 𝑣 𝑡 , i.e., item 𝑣 𝑡 ∈ I such that 𝑟 (𝑣 𝑡 ) ≠ 0 at Lines 12-14. Next, Algorithm 7 proceeds to identify the confident and border-line candidates based on the above estimations and bounds. Firstly, User -Item Graph  𝓖                                       
+
+> 𝒗 𝟐
+> 𝒗 𝟑
+> 𝒗 𝟒
+> 𝒗 𝟓
+> 𝒗 𝒒
+> 𝒗 𝟏
+> 𝒖 𝟐
+> 𝒖 𝟑
+> 𝒖 𝟒
+> 𝒖 𝟏 𝑣 𝑡 ෦𝑠𝑤(𝑣 𝑞 , 𝑣 𝑡 )𝜎(𝑣 𝑡 )
+> 𝑣 12.65 0.28
+> 𝑣 20.83 1.28
+> 𝑣 30.55 0.88
+> 𝑣 40.38 0.81
+> 𝑣 50.15 0.28
+> 𝑣 60.15 0.22
+> Sampling
+> 𝑲 = 𝟐, 𝜿 = 𝟏, 𝒏 𝒇 = 𝟖𝟎
+> pair 𝑆
+> 𝑢 1, 𝑢 27
+> 𝑢 1, 𝑢 313
+> 𝑢 1, 𝑢 46
+> 𝑢 1, 𝑢 512
+> 𝑢 2, 𝑢 39
+> 𝑢 2, 𝑢 48
+> 𝑢 2, 𝑢 57
+> ……
+> Sampled pairs 𝑺
+> Update
+> ෦𝒔𝒘 and 𝝈
+> Estimated scores
+> 𝒯 = {𝑣 1, 𝑣 2, 𝑣 3}
+> Top -
+> (𝑲 +𝜿 )
+> Ber nstein bounds
+> 2. 03. 3
+> -0.04 1.7
+> -0.27 1.4
+> 𝑣 1:
+> 𝑣 2:
+> 𝑣 3:
+> Top -𝐾
+> boundar y
+> Borderline ℬ: {𝑣 2, 𝑣 3}
+> 𝒯 = {𝑣 1, 𝑣 2, 𝑣 3}
+> 𝑈𝐵 𝑣 3< 𝐿𝐵 𝑣 1
+> 𝑈𝐵 𝑣 3≥ 𝐿𝐵 𝑣 2
+> LB UB
+> Confident ∶ {𝑣 1}
+> 𝒗 𝟔
+> 𝒖 𝟓
+
+Figure 7: A running example for Algorithm 7. 
+
+we find 𝐾 + 𝜅 items T with the highest approximate Swing scores at Line 15, followed by calculating the upper and lower bounds of each item 𝑣 ∈ T in Line 16 as follows: 
+
+UB (𝑣 ) ← fsw (𝑣 𝑞 , 𝑣 𝑡 ) + Φ(𝑛 𝑓 , 𝜎 (𝑣 𝑡 ), 𝜁 , 𝛿 ),
+
+LB (𝑣 ) ← fsw (𝑣 𝑞 , 𝑣 𝑡 ) − Φ(𝑛 𝑓 , 𝜎 (𝑣 𝑡 ), 𝜁 , 𝛿 ). (12) Then, we examine the sorted items in T using these bounds. More concretely, among the current top-𝐾 items in T , we mark an item 
+
+T𝑖 as borderline if LB (T 𝑖 ) ≤ UB (T 𝐾 +1) (Lines 17-18). This condition implies that these items might fall outside the exact top-𝐾 list, and hence, should be added to B as borderline candidates. On the other hand, at Lines 19-20, Algorithm 7 further examines the remaining 
+
+𝜅 items in T , among which those with upper bound satisfying 
+
+UB (T 𝐾 +𝑖 ) ≥ LB (T 𝐾 ) are also added to B as they are likely to be in the exact top-𝐾 items. 
+
+Complexity Analysis. Lines 1-11 extend GNS by additionally main-taining the occurrence count 𝑟 (𝑣 𝑡 ) and estimator variance 𝜎 (𝑣 𝑡 ) for each target item 𝑣 𝑡 . Since each update in Lines 9–11 takes 𝑂 (1) time, this stage has complexity 𝑂 
+
+
+
+𝑛 𝑓 + min 
+
+n
+
+𝑛 𝑓 , 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2
+
+o
+
+· 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+,following § 3.1 with 𝑛 replaced by 𝑛 𝑓 . Because the set of valid target items in Line 12 is collected from Line 8 and is bounded by the same term, both the correction step (Lines 12-14) and the top-(𝐾 +𝜅 ) selec-tion procedure (Line 15), which runs in linear time in the number of valid target items, have the same complexity. Since the candidate set 
+
+T is restricted to the top-(𝐾 +𝜅 ) items, the borderline candidate de-tection step (Lines 16-20) requires 𝑂 (𝐾 ) time. Therefore, the overall complexity is 𝑂 
+
+
+
+𝐾 + 𝑛 𝑓 + min 
+
+n
+
+𝑛 𝑓 , 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2
+
+o
+
+· 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+.
+
+Example 4.2. Figure 7 presents a running example of Greedy Candidate Generation with 𝐾 = 2, 𝜅 = 1, and 𝑛 𝑓 = 80. Suppose that sampling the user pairs yields the frequency map 𝑆 shown in the figure. By updating the approximate Swing scores and empirical variances according to Eqs. (10) and (11), we obtain estimated Swing scores [2.65 , 0.83 , 0.55 , 0.38 , 0.15 , 0.15 ] for 𝑣 1–𝑣 6, respectively, lead-ing to the top-(𝐾 + 𝜅 ) candidate set T = {𝑣 1, 𝑣 2, 𝑣 3}. Based on their empirical variances, the resulting Bernstein bounds of 𝑣 1, 𝑣 2, and 
+
+𝑣 3 are [2.0, 3.3], [− 0.04 , 1.7], and [− 0.27 , 1.4], respectively. Since 
+
+UB (𝑣 3) < LB (𝑣 1) but UB (𝑣 3) ≥ LB (𝑣 2), 𝑣 1 is confidently retained, while 𝑣 2 and 𝑣 3 remain uncertain around the top-𝐾 boundary. Thus, the borderline candidates B = {𝑣 2, 𝑣 3} require further refinement. 
+
+## 4.3 Adaptive Pairwise Refinement 
+
+After obtaining the borderline items B via Algorithm 7, our job is to refine the approximate Swing of each item pair (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ B .We refine only these candidates by restricting computation to their relevant user pairs, substantially reducing the refinement search 
+
+8Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA 
+
+Algorithm 8: Adaptive Pairwise Refinement 
+
+Input: G = ( U ∪ I , E ) , borderline items B, sample size 𝑛 𝑟 
+
+Output: fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ B . 
+
+> 1
+
+if 𝑛 𝑟 ≥ | U ( 𝑣 𝑞 ) |/ 2 then  
+
+> 2
+
+I𝑖, B ← I ( 𝑢 𝑖 ) ∩ B ∀ 𝑢 𝑖 ∈ U ( 𝑣 𝑞 ); 
+
+> 3
+
+U𝑞, B ← { 𝑢 𝑖 ∈ U ( 𝑣 𝑞 ) | | I 𝑖, B | > 0}; 
+
+> 4
+
+if |U 𝑞, B |· (|U 𝑞, B |− 1) 
+
+> 2
+
+≤ 𝑛 𝑟 then  
+
+> 5
+
+for 𝑢 𝑖 ≠ 𝑢 𝑗 ∈ U 𝑞, B do  
+
+> 6
+
+for 𝑣 𝑡 ∈ I 𝑖, B ∩ I 𝑗, B do  
+
+> 7
+
+Increase fsw (𝑣 𝑞 , 𝑣 𝑡 ) by 1   
+
+> 𝛼 +|I 𝑖,𝑗 |
+
+; 
+
+> 8
+
+else  
+
+> 9
+
+for 𝑟 ← 1 to 𝑛 𝑟 do  
+
+> 10
+
+Sample 𝑢 𝑖 ≠ 𝑢 𝑗 ∈ U 𝑞, B ; 
+
+> 11
+
+for 𝑣 𝑡 ∈ I 𝑖, B ∩ I 𝑗, B do  
+
+> 12
+
+Increase fsw (𝑣 𝑞 , 𝑣 𝑡 ) by |U 𝑞, B |· (|U 𝑞, B |− 1)    
+
+> 𝑛 𝑟 (𝛼 +|I 𝑖,𝑗 |)
+
+; 
+
+> 13
+
+else  
+
+> 14
+
+for 𝑟 ← 1 to 𝑛 𝑟 do  
+
+> 15
+
+Sample 𝑢 𝑖 ≠ 𝑢 𝑗 ∈ U ( 𝑣 𝑞 ) s.t. 𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 ) ≥ 2;  
+
+> 16
+
+for 𝑣 𝑡 ∈ B and 𝑣 𝑡 ∈ I ( 𝑢 𝑖 ) and 𝑣 𝑡 ∈ I ( 𝑢 𝑗 ) do  
+
+> 17
+
+Increase fsw (𝑣 𝑞 , 𝑣 𝑡 ) by |U ( 𝑣 𝑞 ) |· (|U ( 𝑣 𝑞 ) |− 1)    
+
+> 𝑛 𝑟 (𝛼 +|I 𝑖,𝑗 |)
+
+;
+
+space, and Algorithm 8 describes the algorithmic steps. By taking as input B and the remaining sample budget 𝑛 𝑟 , we adaptively select the Swing estimation approach by first checking the condition of 
+
+𝑛 𝑟 ≥ |U ( 𝑣 𝑞 )|/ 2 at Line 1. When it fails, i.e., 𝑑 (𝑣 𝑞 ) exceeds the current sample budget 𝑛 𝑟 , extracting the valid user set from U ( 𝑣 𝑞 )
+
+for Swing computation is costly. Instead, we resort to sampling user pairs like GNS , followed by efficient membership checks within B,
+
+I ( 𝑢 𝑖 ), and I ( 𝑢 𝑗 ) to avert expensive set intersections (Lines 14-17). Conversely, Algorithm 8 will execute Lines 2-12. Different from Algorithms 1-5 where the target items are unknown and probing 
+
+𝑂 (|U ( 𝑣 𝑞 )| · (|U ( 𝑣 𝑞 )| − 1)) user pairs is required, computing the Swing for 𝑣 𝑞 and items in B merely involves user pairs in U𝑞, B =
+
+Ð𝑣 𝑡 ∈ B {U ( 𝑣 𝑞 ) ∩ U ( 𝑣 𝑡 )} , which can be constructed by Lines 2-3. The search space is significantly reduced to 𝑂 (|U 𝑞, B | · (|U 𝑞, B | − 1)) 
+
+as |U 𝑞, B | is often dwarfed by |U ( 𝑣 𝑞 )| . Notice that B is typically small (e.g., fewer than 32), the neighbor list can be compressed into a bitmap represented by a 32-bit integer, expediting intersection com-putation. After obtaining U𝑞, B , Algorithm 8 either computes the Swing exactly using the brute-force method (Lines 5-7) or estimates the score in a randomized fashion (Lines 9-12). More specifically, if the estimated runtime of the brute-force method is less than that of the randomized approach (Line 4), Algorithm 8 enumerates all distinct user pairs in the common neighbor set U𝑞, B of 𝑣 𝑞 and items in B, and increases the Swing 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) by 1
+
+𝛼 +| I 𝑖,𝑗 | . Note that the set intersection cardinality 
+
+|I 𝑖,𝑗 | can be directly and efficiently computed via QFilter++ . Oth-erwise, the randomized method is a better choice, Algorithm 8 estimates sw (𝑣 𝑞 , 𝑣 𝑡 ) by randomly picking 𝑛 𝑟 user pairs from U𝑞, B ,each of which is sampled uniformly at random with a probability of User -Item Graph  𝓖                              
+
+> 𝒗 𝟐
+> 𝒗 𝟑
+> 𝒗 𝟒
+> 𝒗 𝟓
+> 𝒗 𝒒
+> 𝒗 𝟏
+> 𝒖 𝟐
+> 𝒖 𝟑
+> 𝒖 𝟒
+> 𝒖 𝟏
+> Filtering
+> Suppose 𝒏 𝒓 = 𝟏𝟎 ,
+> Borderline 𝓑 = 𝒗 𝟐 , 𝒗 𝟑 Filter valid users
+> construct
+> Reduced search space Refinement on ℬ
+> 𝑛 𝑟 ≥𝑈 𝑣 𝑞 /2 and
+> 𝒗 𝟔
+> 𝒖 𝟓
+> 𝐼 1,ℬ = {𝑣 2, 𝑣 3}
+> 𝐼 2,ℬ = {𝑣 2, 𝑣 3}
+> 𝐼 3,ℬ = {𝑣 2}
+> 𝐼 4,ℬ = {𝑣 3}
+> 𝐼 5,ℬ = ∅
+> 𝑈 𝑞,ℬ = {𝑢 1, 𝑢 2, 𝑢 3, 𝑢 4}
+> 𝑢 5is excluded
+> 5
+> 2= 10 → 4
+> 2= 6
+> 40% pairs cutoff
+> 𝑢 1, 𝑢 2
+> 𝑢 1, 𝑢 3
+> 𝑢 1, 𝑢 4
+> 𝑢 2, 𝑢 3
+> 𝑢 2, 𝑢 4
+> 𝑢 2, 𝑢 5
+> Retained Discard
+> 𝑢 1, 𝑢 5
+> 𝑢 2, 𝑢 5
+> 𝑢 3, 𝑢 5
+> 𝑢 4, 𝑢 5
+> = 6 ≤ 𝑛 𝑟 ,
+> 𝑈 𝑞,ℬ
+> 2
+> use exact refinement
+> 𝑠𝑤 𝑣 𝑞 , 𝑣 2= 1
+> 6+ 1
+> 4+ 1
+> 4
+> = 0.67
+> 𝑠𝑤 𝑣 𝑞 , 𝑣 3= 16 + 15 + 14
+> = 0.62
+> refinement
+
+Figure 8: A running example for Algorithm 8. 
+
+1
+
+| U 𝑞, B | · ( | U 𝑞, B | − 1) . For each sampled user pair (𝑢 𝑖 , 𝑢 𝑗 ), we increase 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) by | U 𝑞,𝑡 | · ( | U 𝑞,𝑡 | − 1)
+
+𝑛 𝑟 (𝛼 +| I 𝑖,𝑗 | ) .
+
+Complexity Analysis. When 𝑛 𝑟 ≥ |U ( 𝑣 𝑞 )|/ 2, the algorithm runs in 𝑂 (𝑑 (𝑣 𝑞 ) · |B|) time for filtering (Lines 2-3), and the adaptive part (Lines 4-12) takes 𝑂 
+
+
+
+min 
+
+n
+
+𝑛 𝑟 , 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2
+
+o
+
+· 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+time. When 
+
+𝑛 𝑟 < |U ( 𝑣 𝑞 )|/ 2, each iteration takes 𝑂 
+
+
+
+|B| + 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+time, leading to a total of 𝑂 
+
+
+
+𝑛 𝑟 |B| + 𝑛 𝑟 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+for Lines 14-17. By combining both cases and using the fact |B| ≤ 𝐾 , the overall complexity is 
+
+𝑂 
+
+
+
+𝐾 · min {𝑛 𝑟 , 𝑑 (𝑣 𝑞 )} + min 
+
+n
+
+𝑛 𝑟 , 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2
+
+o
+
+· 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+.
+
+Example 4.3. Figure 8 presents a running example of Adaptive Pairwise Refinement with 𝑛 𝑟 = 10, 𝛼 = 1, and B = {𝑣 2, 𝑣 3}. Since 
+
+|U ( 𝑣 𝑞 )| = 5 and 𝑛 𝑟 ≥ |U ( 𝑣 𝑞 )|/ 2, Algorithm 8 first filters the users according to their connections to the borderline items. This yields 
+
+I1,B = I2,B = {𝑣 2, 𝑣 3}, I3,B = {𝑣 2}, I4,B = {𝑣 3}, and I5,B = ∅, and hence U𝑞, B = {𝑢 1, 𝑢 2, 𝑢 3, 𝑢 4}. As a result, the user-pair search space shrinks from  52
+
+ = 10 to  42
+
+ = 6, i.e., by 40%. Since  | U 𝑞, B |
+
+2
+
+ = 6 ≤ 𝑛 𝑟 ,Algorithm 8 (Lines 4–7) performs exact refinement over the reduced search space. For 𝑣 2, the contributing user pairs are (𝑢 1, 𝑢 2), (𝑢 1, 𝑢 3),and (𝑢 2, 𝑢 3), yielding sw (𝑣 𝑞 , 𝑣 2) = 1/6 + 1/4 + 1/4 = 0.67. Similarly, 
+
+sw (𝑣 𝑞 , 𝑣 3) = 1/6 + 1/5 + 1/4 = 0.62. Thus, all borderline-item Swing scores are exactly refined, excluding irrelevant pairs involving 𝑢 5.
+
+## 4.4 Theoretical Analyses 
+
+Correctness Analysis. First, if Inequality (6) holds ( 𝑑 (𝑣 𝑞 ) is rel-atively low), Algorithm 6 then takes the branch in Lines 1-4 and Algorithm 4 is invoked with 𝜖 , the resulting Swing estimates satisfy the (𝜖, 𝜆 )-approximation guarantee according to Theorem 3.2. Oth-erwise, 𝐾 -ASC handles high-degree query items using Algorithms 7 and 8. Lemma 4.4 ensures the correctness of sample mean and vari-ance maintained in Algorithm 7, which in turn justifies the lower and upper bounds in Eq. (12) by harnessing Theorem 4.1. Lemma 4.4. ∀𝑣 𝑡 ∈ I , fsw (𝑣 𝑞 , 𝑣 𝑡 ) and 𝜎 (𝑣 𝑡 ) in Algorithm 7 are the sample mean and variance over the 𝑛 𝑓 sampled observations. 
+
+Since Algorithm 7 runs GNS with a sample size of 𝑛 𝑓 = 𝛽 · 𝑛 ,by Theorem 3.1, fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I computed by Algorithm 7 are 
+
+(𝜖, 𝜆 𝛽 )-approximate Swing w.p. at least 1 − 𝛿 . Similarly, Algorithm 8 outputs (𝜖, 𝜆 
+
+1−𝛽 )-approximate Swing fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ B w.p. of at least 1 −𝛿 , using 𝑛 𝑟 = 𝑛 −𝑛 𝑓 samples. The theoretical approximation assurance of 𝐾 -ASC is established in Theorem 4.5. 
+
+9SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang 
+
+Theorem 4.5. Let fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I be the Swing estimates by 𝐾 -
+
+ASC . For any item 𝑣 𝑡 ∈ I \ B , fsw (𝑣 𝑞 , 𝑣 𝑡 ) is the (𝜖, 𝜆 /𝛽 )-approximate Swing w.p. of at least 1 − 𝛿 , and for any item 𝑣 𝑡 ∈ B , fsw (𝑣 𝑞 , 𝑣 𝑡 ) is the (𝜖, 𝜆 /( 1 − 𝛽 )) -approximate Swing w.p. of at least 1 − 𝛿 .
+
+Complexity Analysis. When Lines 1-3 are executed (i.e., USS is invoked), the worst-case time complexity of 𝐾 -ASC is the same as 
+
+Exact . On the contrary, 𝐾 -ASC invokes Algorithms 7 and 8 with a total sample size 𝑛 = 𝑛 𝑓 + 𝑛 𝑟 . The overall complexity of 𝐾 -ASC is 
+
+𝑂 
+
+
+
+𝐾 · min {𝑛, 𝑑 (𝑣 𝑞 )} + min 
+
+n
+
+𝑛, 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+> 2
+
+o
+
+· 𝐷 (𝑣 𝑞 )   
+
+> 𝑑 (𝑣 𝑞 )
+
++ 𝑛 
+
+
+
+as per the complexity analyses in §4.2 and §4.3. 
+
+## 5 Related Work 5.1 Similarity Search on Bipartite Graphs 
+
+Early studies [31, 39, 40] primarily adapted similarity measures orig-inally designed for general graphs or set-based data, such as the Jaccard coefficient, the Katz index [40], and Personalized PageRank (PPR) [31, 39]. To better model bipartite structures, bipartite Sim-Rank [38] was proposed, and its optimized variants [2, 14, 76] have been extended to various applications. Another line of research focuses on extending classical PPR to bipartite graphs, leading to the Hidden Personalized PageRank (HPP) [13] and its symmet-ric extension, Bidirectional HPP [75]. Despite their effectiveness, these methods suffer from high computational complexity and scal-ability issues on large graphs. Approximation frameworks such as SimPush [57], Approx-BHPP [75], and BIRD [46] integrate push-based methods with iterative refinement to achieve near-linear time complexity while maintaining accuracy guarantees. Recently, Yang et al. [78] exploit the user–item–user interaction structure in bipar-tite graphs, which provides stronger and more reliable signals for capturing product relationships. In addition, Liu et al. [47] study similarity measurement stability under some information loss. Song et al. [59] proposed a temporal similarity measure on temporal-based bipartite graph to capture the activeness of nodes over time. 
+
+## 5.2 i2i Retrieval in Recommender Systems 
+
+The i2i retrieval has emerged as a fundamental paradigm in rec-ommender systems [5, 6, 9, 19, 23, 28, 45, 67, 73], where personal-ized candidates are generated based on item similarity from users’ historical interactions. Compared with user-based methods, i2i approaches are more scalable due to the relative stability of the item–item similarity matrix, enabling efficient offline computation. They also require limited user history, mitigating cold start for long-tail users [28, 34, 45]. Early item-based collaborative filtering methods rely on direct user–item interactions to derive item sim-ilarity from the rating matrix [25, 45]. Beyond using attribute or side information [7, 43, 58], the Swing algorithm [78] extends this paradigm by leveraging shared interactions to capture more robust item relationships. Recently, LLM-i2i [28] augments Swing with an LLM-based data generator to mitigate data sparsity and noise. Meanwhile, CFG [49] incorporates Swing’s local structural patterns into a Transformer to enhance structural awareness. With deep learning, retrieval methods have evolved from graph-based similar-ity modeling to more expressive neural architectures [34, 53, 66, 70]. 
+
+Table 2: Statistics of datasets used in experiments.                                     
+
+> Dataset | U | | I | | E | Item Type
+> MovieLens 6,040 3,706 1,000,209 movie Gowalla 29,858 40,981 1,027,370 location AmazonBook 52,643 91,599 2,984,108 book SteamGame 2,567,538 15,474 6,889,728 video game MIND 876,956 97,509 18,149,915 news Twitch 15,524,309 790,100 234,422,289 streamer Yambda 921,023 8,746,689 1,339,219,563 music MAG 10,541,560 2,784,240 1,095,315,106 paper
+
+For example, SGL [66] introduces self-supervised contrastive learn-ing, MVKE [70] explores multiple interest-aware embeddings, and 
+
+RimiRec [53] models hierarchical interests. 
+
+## 6 Experiments 
+
+This section experimentally evaluates the effectiveness and effi-ciency of ASC and 𝐾 -ASC for (𝜖, 𝜆 )-approximate and top-𝐾 Swing queries over 8 real datasets. For the interest of space, we refer in-terested readers to Appendix C for more experimental details and results. All algorithms are implemented in C++ and compiled by g++ 8.5 with -O3 optimization, and all experiments are conducted on a Linux machine with an AMD EPYC 7742@2.25GHz CPU and 1TB RAM. We further discuss how single-node query processing maps to sharded deployments on large graphs in Appendix C.8. For reproducibility, the source code and datasets are available at https://github.com/HKBU-LAGAS/K-ASC. 
+
+## 6.1 Experimental Setup 
+
+Datasets. Table 2 lists eight real user-item graph datasets for ex-perimentation, which are widely used in recommender system liter-ature [13, 34, 46, 55, 62, 75, 77]. Gowalla [11] models user check-ins at locations. AmazonBook [33] and SteamGame [62] capture user interactions (e.g., reviews and purchases) with books and games, re-spectively. MovieLens [30], MIND [77], Twitch [55], and Yambda [54] represent user interactions with movies, news, streaming content, and music, respectively. MAG [77] is an academic bipartite graph. 
+
+Baselines. We compare our ASC and 𝐾 -ASC for (𝜖, 𝜆 )-approximate and top-𝐾 Swing queries against 7 baselines: 5 Swing-specific algo-rithms Exact , Truncated , Naïve-MC , GNS , and USS , and 2 general-purpose approximate similarity search algorithms All-Pairs [17] and WHIMP [26]. Truncated is a variant of Exact that adopts the heuristic capping the maximum number of neighbors at 600. As 
+
+All-Pairs and WHIMP were originally designed for cosine similarity, we adapt them as candidate generation methods for Swing retrieval. Further implementation details are provided in Appendix C.6. For a fair comparison, we fix the failure probability 𝛿 = 10 −4 and vary the relative error threshold 𝜖 ∈ { 0.02 , 0.05 , 0.1, 0.2} to obtain the best trade-off between effectiveness and efficiency in all randomized approaches, i.e., Naïve-MC , GNS , USS , ASC and 𝐾 -ASC . The set inter-section and cardinality calculation are implemented by QFilter++ 
+
+in all methods for best performance. 
+
+Evaluation Protocol. We construct two query sets for evaluation. The random query set consists of 1,000 items sampled uniformly at random from all items, while the popular query set consists of 200 items sampled from popular items (top 20% by degree). These two sets are used to evaluate performance on global and high-degree  
+
+> 10 Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA
+
+queries, respectively. Ground truth is obtained using Exact , and the top-𝐾 results are derived by sorting the exact Swing scores. We evaluate each method using two metrics, precision and rela-tive error, for 𝐾 ∈ { 20 , 50 , 100 }. Given a query item 𝑣 𝑞 , let 𝑉 𝐾 denote the ground-truth top-𝐾 result set and b𝑉 𝐾 denote the approximate top-𝐾 result set. Precision is defined as Precision@ 𝐾 = |𝑉 𝐾 ∩b𝑉 𝐾 ||𝑉 𝐾 | ,which measures the fraction of approximate top-𝐾 items that also appear in the ground-truth top-𝐾 results. To evaluate score accu-racy, we further compute the average relative error over the approx-imate top-𝐾 results. Let sw (𝑣 𝑞 , 𝑣 𝑡 ) and fsw (𝑣 𝑞 , 𝑣 𝑡 ) denote the exact and approximate Swing scores, respectively. The average relative error is defined as 𝐸𝑟𝑟𝑜𝑟 @𝐾 = 1  
+
+> |b𝑉 𝐾 |
+
+Í      
+
+> 𝑣 𝑡 ∈b𝑉 𝐾
+> fsw (𝑣 𝑞 ,𝑣 𝑡 ) − sw (𝑣 𝑞 ,𝑣 𝑡 )
+> sw (𝑣 𝑞 ,𝑣 𝑡 )
+
+.
+
+## 6.2 Approximation Query Performance 
+
+The results are presented in Figures 9 and 10, which report the average execution time on both popular and random query sets as 
+
+𝜖 varies over {0.02 , 0.05 , 0.1, 0.2}. Note that All-Pairs and WHIMP 
+
+rely on candidate generation rather than 𝜖 -controlled Swing ap-proximation, and thus do not provide the (𝜖, 𝜆 )-approximation guarantee evaluated here. Based on the results, ASC consistently achieves the best efficiency across all eight datasets and under all error settings. Naïve-MC is competitive only when the required error tolerance is loose, but its running time increases rapidly as 𝜖 
+
+decreases, making it ineffective under strict accuracy requirements. 
+
+GNS is more efficient than Naïve-MC in most cases, showing that the grouped strategy improves over naive estimation. However, GNS 
+
+still suffers from the same inefficiency trend as 𝜖 decreases, and its advantage diminishes on low-degree queries. In contrast, USS 
+
+exhibits relatively stable running time, often achieving 2 × speedup compared to Exact across different 𝜖 and datasets, which suggests that subset sampling achieves a stable improvement. More impor-tantly, ASC typically achieves about 3 × speedup on popular queries and about 5 × speedup on random queries compared with GNS . The advantage becomes much more pronounced on large graphs, i.e., 
+
+Yambda and MAG , where ASC reaches up to 100 × speedup over 
+
+Exact when 𝜖 = 0.02. Overall, these results show that ASC effec-tively adapts to different error regimes, converges to Exact on small graphs, and delivers substantial acceleration on large datasets where efficient approximate retrieval is most needed. 
+
+## 6.3 Top-𝐾 Query Performance 
+
+Figures 11 and 12 report the query performance, i.e., the trade-off between query time and precision, on the popular and random query sets, respectively, for ASC , 𝐾 -ASC , and seven baselines across eight user-item graphs, with 𝐾 = 20 , 50 , 100. Overall, both ASC 
+
+and 𝐾 -ASC consistently outperform the baselines, achieving near-perfect precision with significantly lower query time, while 𝐾 -ASC 
+
+further improves efficiency via top-𝐾 heuristic optimizations. More specifically, on Yambda , 𝐾 -ASC attains above 99 .97% precision for all 𝐾 values, while reducing query time by over two orders of magnitude compared to Exact . Compared with ASC , 𝐾 -ASC further reduces query time by about 5 ×, demonstrating the effectiveness of the top-𝐾 optimization. On MAG , the advantage becomes even more pronounced, where 𝐾 -ASC yields up to three orders of magni-tude speedup over Exact with nearly 100% precision, and remains about 2 × faster than ASC . Against the literature-based baselines 
+
+All-Pairs and WHIMP , 𝐾 -ASC is at least tens of times faster on 
+
+Yambda and over two orders of magnitude faster on MAG at nearly perfect precision, with the speedup exceeding two orders of magni-tude on both graphs for random queries. On relatively small graphs such as MIND and Twitch , ASC already achieves substantial acceleration over Exact , while 𝐾 -ASC further improves upon ASC by about 5 × on MIND and 8 × on Twitch , yield-ing overall speedups of up to two orders of magnitude. Meanwhile, compared with All-Pairs and WHIMP , 𝐾 -ASC achieves over 10 ×
+
+speedup for popular queries and up to two orders of magnitude for random queries. When query cost is already small, i.e., Gowalla 
+
+and AmazonBook , both methods naturally converge to Exact , as expected on small graphs. Compared with popular queries, ran-dom queries exhibit a similar overall trend but are generally more favorable to ASC and 𝐾 -ASC . Since random queries are typically less dominated by high-degree items, both methods achieve lower query time while still maintaining near-perfect precision. Figure 13 reports the average top-𝐾 relative error for different 𝐾 
+
+on the random query set, corresponding to the results in Figure 10. Overall, ASC achieves the best accuracy, while 𝐾 -ASC offers a better efficiency and accuracy trade-off. This advantage is particularly evident on large graphs such as Yambda and MAG . Although 𝐾 -ASC 
+
+has slightly higher relative error due to its top-𝐾 optimization, the increase is marginal given the substantial reduction in query time. 
+
+## 6.4 Item-to-item Retrieval Performance 
+
+This section evaluates the empirical effectiveness of Swing for i2i retrieval in comparison with seven representative neighborhood-based, high-order proximity, and embedding-based methods. Fig-ure 14 illustrates the trade-off between top-𝐾 recall and running time on AmazonBook , SteamGame , Twitch , and MAG , with 𝐾 =
+
+20 , 50 , 100. Detailed baseline descriptions and experimental settings are provided in Appendix C.7. Overall, exact Swing consistently achieves competitive or superior recall across all four datasets and different values of 𝐾 , confirming its effectiveness for i2i retrieval. Meanwhile, ASC preserves nearly identical retrieval quality to exact Swing while substantially reducing the running time. By exploiting the top-𝐾 retrieval objective, 𝐾 -ASC further accelerates retrieval with negligible recall loss, achieving a speedup of over 4 ,000 × over exact Swing on MAG while retaining about 99% of its recall. 
+
+## 6.5 Component Analysis 
+
+Effectiveness of QFilter++ . Figure 15 shows the average speedup over baseline implementations without QFilter++ across all queries. To ensure a fair comparison, we implement the set intersection in the baselines using Ankerl’s hashmap [50], which is reported to be approximately 2 × faster than the standard hashmap [51]. Compared to this highly optimized hashmap implementation, QFilter++ still consistently achieves superior performance. The gains are more pronounced on MAG , reaching up to 2 .3×. Note that for queries with high-degree nodes, the speedup is even more significant, as 
+
+QFilter++ can prune more unnecessary candidates. 
+
+Effectiveness of Adaptive Pairwise Refinement. Since 𝐾 -ASC 
+
+enhances ASC with a refinement step (Algorithm 8) that re-evaluates 
+
+> 11
+
+SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang 
+
+Exact Naïve-MC GNS USS ASC 
+
+> 0.2 0.1 0.05 0.02
+
+10 110 210 3 
+
+> time (ms)
+
+(a) MovieLens 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 3 
+
+> time (ms)
+
+(b) Gowalla 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 3 
+
+> time (ms)
+
+(c) AmazonBook 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 310 4 
+
+> time (ms)
+
+(d) SteamGame 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 310 4 time (ms) 
+
+(e) MIND 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 310 4 
+
+> time (ms)
+
+(f) Twitch 
+
+> 0.2 0.1 0.05 0.02
+
+10 110 210 310 410 5 
+
+> time (ms)
+
+(g) Yambda 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 310 410 5 time (ms) 
+
+(h) MAG 
+
+Figure 9: Running time vs. 𝜖 for popular queries. 
+
+> 0.2 0.1 0.05 0.02
+
+10 110 210 3 
+
+> time (ms)
+
+(a) MovieLens 
+
+> 0.2 0.1 0.05 0.02
+
+10 −110 010 110 210 3 
+
+> time (ms)
+
+(b) Gowalla 
+
+> 0.2 0.1 0.05 0.02
+
+10 −110 010 110 210 3 
+
+> time (ms)
+
+(c) AmazonBook 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 3 
+
+> time (ms)
+
+(d) SteamGame 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 3 
+
+> time (ms)
+
+(e) MIND 
+
+> 0.2 0.1 0.05 0.02
+
+10 −110 010 110 210 3 
+
+> time (ms)
+
+(f) Twitch 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 310 410 5 time (ms) 
+
+(g) Yambda 
+
+> 0.2 0.1 0.05 0.02
+
+10 010 110 210 310 4 
+
+> time (ms)
+
+(h) MAG 
+
+Figure 10: Running time vs. 𝜖 for random queries. 
+
+All-Pairs WHIMP Exact Truncated Naïve-MC GNS USS ASC 𝐾 -ASC   
+
+> query time  (ms)
+> 99 99.5 100
+
+10 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(a) MovieLens   
+
+> 99 99.5 100
+
+10 010 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(b) Gowalla   
+
+> 99 99.5 100
+
+10 010 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(c) AmazonBook   
+
+> 99 99.5 100
+
+10 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(d) SteamGame   
+
+> query time  (ms)
+> 99 99.5 100
+
+10 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(e) MIND   
+
+> 99 99.5 100
+
+10 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(f) Twitch   
+
+> 99 99.5 100
+
+10 210 310 410 5
+
+𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(g) Yambda   
+
+> 99 99.5 100
+
+10 110 210 310 410 5 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(h) MAG 
+
+Figure 11: Running time vs. top-𝐾 precision for popular query items when 𝐾 = 20 , 50 , 100 .  
+
+> query time  (ms)
+> 99 99.5 100
+
+10 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(a) MovieLens   
+
+> 99 99.5 100
+
+10 −110 010 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(b) Gowalla   
+
+> 99 99.5 100
+
+10 010 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(c) AmazonBook   
+
+> 99 99.5 100
+
+10 010 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(d) SteamGame   
+
+> query time  (ms)
+> 99 99.5 100
+
+10 010 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(e) MIND   
+
+> 99 99.5 100
+
+10 010 110 210 310 4 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(f) Twitch   
+
+> 99 99.5 100
+
+10 110 210 310 410 5 𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(g) Yambda   
+
+> 99 99.5 100
+
+10 010 110 210 310 4
+
+𝐾 = 20   
+
+> 99 99.5 100
+
+𝐾 = 50   
+
+> 99 99.5 100
+
+𝐾 = 100 
+
+(h) MAG 
+
+Figure 12: Running time vs. top-𝐾 precision for random query items when 𝐾 = 20 , 50 , 100 .
+
+borderline items identified by empirical bounds, we study its ef-fectiveness empirically. Figure 16 reports the runtime speedup of 
+
+𝐾 -ASC over ASC for random queries under comparable top-𝐾 preci-sion (both above 99 .9%) for 𝐾 ∈ { 20 , 50 , 100 }. The results show that the refinement consistently improves efficiency under the same near-exact accuracy target. Specifically, the speedup reaches around one order of magnitude on Twitch and 4 .7-10 .5× on the billion-scale graph Yambda . The speedup slightly decreases as 𝐾 increases, due to the cost of refining more candidates. 
+
+## 6.6 Parameter Analysis 
+
+This section investigates the impact of 𝜌 , 𝛽 , and 𝜅 in 𝐾 -ASC on the billion-scale graph MAG , varying each while fixing the others and tuning 𝜖 to maintain top-𝐾 precision above 99 .9%, as shown in Figure 17. In practice, a larger 𝐾 requires a smaller 𝜖 to maintain precision. Accordingly, for each 𝐾 , we recommend choosing 𝜖 to en-sure high recall (with extra 𝜅 ), and reducing it only when the target precision cannot be achieved by tuning other parameters. Detailed 
+
+12 Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA 
+
+Truncated Naïve-MC GNS USS ASC 𝐾 -ASC   
+
+> 20 50 100
+> 10 −310 −210 −1
+
+avg. error 
+
+(a) MovieLens   
+
+> 20 50 100
+> 10 −410 −310 −2
+
+avg. error 
+
+(b) Gowalla   
+
+> 20 50 100
+> 10 −410 −310 −210 −1
+
+avg. error 
+
+(c) AmazonBook   
+
+> 20 50 100
+> 10 −410 −310 −210 −1
+
+avg. error 
+
+(d) SteamGame   
+
+> 20 50 100
+> 10 −410 −310 −210 −1
+
+avg. error 
+
+(e) MIND   
+
+> 20 50 100
+> 10 −410 −310 −2
+
+avg. error 
+
+(f) Twitch   
+
+> 20 50 100
+> 10 −410 −310 −210 −110 0
+
+avg. error 
+
+(g) Yambda   
+
+> 20 50 100
+> 10 −510 −410 −310 −2
+
+avg. error 
+
+(h) MAG 
+
+Figure 13: Average Estimation Error vs. 𝐾 .
+
+ItemCF Adamic-Adar Jaccard Partial-Corr. SimRank PPR Item2vec Swing ASC 𝐾 -ASC   
+
+> Recall
+> 10 110 210 3
+> 10 15 20 25 30
+
+𝐾 = 20   
+
+> 10 110 210 3
+
+𝐾 = 50   
+
+> 10 110 210 3
+
+𝐾 = 100 
+
+(a) AmazonBook  
+
+> 10 110 210 310 4
+> 10 20 30 40
+
+𝐾 = 20 
+
+> 10 110 210 310 4
+
+𝐾 = 50 
+
+> 10 110 210 310 4
+
+𝐾 = 100 
+
+(b) SteamGame 
+
+> 10 210 310 410 5
+> 40 50 60 70
+
+𝐾 = 20 
+
+> 10 210 310 410 5
+
+𝐾 = 50 
+
+> 10 210 310 410 5
+
+𝐾 = 100 
+
+(c) Twitch 
+
+> 10 310 410 510 6
+> 10 15 20 25 30
+
+𝐾 = 20 
+
+> 10 310 410 510 6
+
+𝐾 = 50 
+
+> 10 310 410 510 6
+
+𝐾 = 100 
+
+(d) MAG 
+
+Figure 14: Top-𝐾 recall vs. running time for i2i retrieval performance when 𝐾 = 20 , 50 , 100 .
+
+Exact GNS USS ASC 
+
+> 246
+
+speedup (×)
+
+(a) MovieLens 
+
+> 11.52
+
+speedup (×)
+
+(b) Twitch 
+
+> 123
+
+speedup (×)
+
+(c) MAG 
+
+Figure 15: Effectiveness of QFilter++ in Swing Computation.   
+
+> 20 50 100
+> 3579
+
+speedup (×)
+
+(a) SteamGame   
+
+> 20 50 100 8910 11
+
+speedup (×)
+
+(b) Twitch   
+
+> 20 50 100 3711
+
+speedup (×)
+
+(c) Yambda   
+
+> 20 50 100 12
+
+speedup (×)
+
+(d) MAG 
+
+Figure 16: Effectiveness of Algo. 8 in 𝐾 -ASC for 𝐾 = 20 , 50 , 100 parameter settings and cross-dataset sensitivity and transferability analyses are provided in Appendices C.4 and C.5, respectively. 
+
+Varying 𝜌 . Figure 17(a) shows that running time is largely insen-sitive to 𝜌 , remaining stable around 0.2 ms across different values. Given the cross-dataset results in Appendix C.5, we use 𝜌 = 0.8 as a transferable default for 𝐾 -ASC without dataset-specific tuning. 
+
+Varying 𝛽 . Figure 17(b) shows that 𝛽 has a significant impact, as it controls the budget for post-refinement. A smaller 𝛽 generally leads to lower running time for 𝐾 ∈ { 20 , 50 }. However, when 𝐾 = 100, 
+
+𝐾 = 20 𝐾 = 50 𝐾 = 100      
+
+> 0.3 0.4 0.5 0.6 0.7 0.8
+
+1.21.41.61.8
+
+query time(ms) 
+
+(a) vary 𝜌 
+
+> 0.05 0.1 0.15 0.2 0.25 0.3
+
+1.2 1.6 2.0 2.4 
+
+query time(ms) 
+
+(b) vary 𝛽      
+
+> 135710 15
+
+1.11.31.51.7
+
+query time(ms) 
+
+(c) vary 𝜅      
+
+> 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 precision 
+
+(d) vary 𝜌 
+
+> 0.05 0.1 0.15 0.2 0.25 0.3
+
+99.9 100 precision 
+
+(e) vary 𝛽      
+
+> 135710 15
+
+99.9 100 precision 
+
+(f) vary 𝜅 
+
+Figure 17: Performance when varying parameters on MAG .Table 3: Runtime (ms) for popular query items at top-20 .
+
+Dataset ASC 𝐾 -ASC C-KASC 
+
+Movielens 257.406 202.361 1327.461 Gowalla 1.500 1.055 3.185 AmazonBook 3.434 2.626 9.207 SteamGame 354.812 79.181 6971.122 MIND 236.905 30.067 1807.847 Twitch 200.629 21.243 1011.657 Yambda 1377.023 319.663 85208.520 MAG 39.637 13.584 384.344 
+
+a slightly larger 𝛽 is needed to ensure accurate identification of borderline items, unless a smaller 𝜖 is used. 
+
+Varying 𝜅 . Figure 17(c) indicates that the performance is relatively insensitive to 𝜅 , since increasing it yields little benefit once adequate recall is achieved. Moreover, the additional refinement cost remains limited, resulting in only marginal changes in running time. 
+
+13 SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang 
+
+## 6.7 Correctness-Efficiency Trade-off of 𝐾 -ASC 
+
+This section investigates the trade-off between correctness and efficiency. In addition to the heuristic 𝐾 -ASC , we investigate a correctness-guaranteed variant, C-KASC certifying the top-𝐾 re-sults through confidence-bound separation. The algorithmic details and correctness analysis are deferred to Appendix B. Table 3 reports the average query time of ASC , 𝐾 -ASC , and C-KASC for top-20 Swing queries with over 99 .9% empirical precision. Overall, 𝐾 -ASC is con-sistently the most efficient, achieving up to 9 .44 × speedup over 
+
+ASC , whereas C-KASC incurs substantial overhead for correctness certification. Although both 𝐾 -ASC and C-KASC rely on Eq. (12), 
+
+C-KASC requires substantially more samples to sufficiently tighten the bounds to separate the 𝐾 -th and (𝐾 + 1)-th items than 𝐾 -ASC 
+
+does for range-based identification. Thus, we adopt the heuristic 
+
+𝐾 -ASC as our primary solution for the accuracy-efficiency trade-off. 
+
+## 7 Conclusion 
+
+This paper presents ASC and 𝐾 -ASC for answering approximate and top-𝐾 Swing queries. The main ideas include (i) adaptively com-bining GNS and USS to efficiently process items of varying degrees, and (ii) utilizing a filter-refinement paradigm with heuristic opti-mizations to drastically minimize sampling overhead. Compared to competing methods, our solutions significantly reduce computa-tional cost and offer rigorous theoretical guarantees on both relative and additive errors. Extensive experiments demonstrate that ASC 
+
+and 𝐾 -ASC outperform exact and approximate baselines by orders of magnitude in query efficiency, enabling fast and accurate i2i retrieval on billion-scale user-item graphs. 
+
+## Acknowledgments 
+
+This work was supported by the NSFC (No. 62302414), the Hong Kong RGC ECS grant (No. 22202623), GRF grant (No. 12201826), and YCRG (No. C2003-23Y), and Guangdong and Hong Kong Uni-versities “1+1+1” Joint Research Collaboration Scheme, project No.: 2025A0505000002. 
+
+## References 
+
+[1] Aliyun.com. 2025. Official Documentation. https://help.aliyun.com/zh/airec/ what-is-pai-rec/user-guide/swing-algorithm-tools. Online; accessed 17 June 2026. [2] Ioannis Antonellis, Hector Garcia-Molina, and Chi-Chao Chang. 2008. Simrank++ query rewriting through link analysis of the clickgraph (poster). In Proceedings of the 17th international conference on World Wide Web . 1177–1178. [3] Jean-Yves Audibert, Rémi Munos, and Csaba Szepesvári. 2007. Tuning bandit algorithms in stochastic environments. In ALT . 150–165. [4] Ricardo Baeza-Yates and Alejandro Salinger. 2005. Experimental analysis of a fast intersection algorithm for sorted sequences. In International Symposium on String Processing and Information Retrieval . Springer, 13–24. [5] Wei Bao, Hao Chen, Bang Lin, Tao Zhang, and Chengfu Huo. 2025. GRAIN: Group-Reinforced Adaptive Interaction Network for Cold-Start CTR Prediction in E-commerce Search. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 4275–4279. [6] Wentian Bao, Hu Liu, Kai Zheng, Chao Zhang, Shunyu Zhang, Enyun Yu, Wenwu Ou, and Yang Song. 2024. Beyond relevance: Improving user engagement by personalization for short-video search. arXiv preprint arXiv:2409.11281 (2024). [7] Xinlong Bao, Lawrence Bergman, and Rich Thompson. 2009. Stacking recom-mendation engines with additional meta-features. In Proceedings of the third ACM conference on Recommender systems . 109–116. [8] Philip Bille, Anna Pagh, and Rasmus Pagh. 2007. Fast evaluation of union-intersection expressions. In International Symposium on Algorithms and Compu-tation . Springer, 739–750. [9] Yi Cao, Sihao Hu, Yu Gong, Zhao Li, Yazheng Yang, Qingwen Liu, and Shouling Ji. 2022. Gift: Graph-guided feature transfer for cold-start video click-through rate prediction. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management . 2964–2973. [10] Tony F Chan, Gene H Golub, and Randall J LeVeque. 1982. Updating formulae and a pairwise algorithm for computing sample variances. In COMPSTAT 1982 5th symposium held at Toulouse 1982: Part I: Proceedings in Computational Statistics .Springer, 30–41. [11] Eunjoon Cho, Seth A Myers, and Jure Leskovec. 2011. Friendship and mobility: user movement in location-based social networks. In SIGKDD . 1082–1090. [12] Fan Chung and Linyuan Lu. 2006. Concentration inequalities and martingale inequalities: a survey. Internet mathematics 3, 1 (2006), 79–127. [13] Hongbo Deng, Michael R Lyu, and Irwin King. 2009. A generalized co-hits algorithm and its application to bipartite graphs. In Proceedings of the 15th ACM SIGKDD international conference on Knowledge discovery and data mining . 239– 248. [14] Prasenjit Dey, Kunal Goel, and Rahul Agrawal. 2020. P-simrank: Extending simrank to scale-free bipartite networks. In WWW . 3084–3090. [15] Bolin Ding and Arnd Christian König. 2011. Fast set intersection in memory. 
+
+Proceedings of the VLDB Endowment 4, 4 (2011), 255–266. [16] Adamic et al. 2003. Friends and neighbors on the web. Social networks 25, 3 (2003), 211–230. [17] Bayardo et al. 2007. Scaling up all pairs similarity search. In WWW . 131–140. [18] Barkan et al. 2016. Item2vec: neural item embedding for collaborative filtering. In 2016 IEEE 26th international workshop on machine learning for signal processing (MLSP) . IEEE, 1–6. [19] Deng et al. 2024. MMBee: Live Streaming Gift-Sending Recommendations via Multi-Modal Fusion and Behaviour Expansion. In KDD . 4896–4905. [20] Guo et al. 2026. Onesug: The unified end-to-end generative framework for e-commerce query suggestion. In AAAI , Vol. 40. 14774–14782. [21] Huan et al. 2023. SAMD: An Industrial Framework for Heterogeneous Multi-Scenario Recommendation. In KDD . 4175–4184. [22] Kusumoto et al. 2014. Scalable similarity search for SimRank. In SIGMOD . 325– 336. [23] Li et al. 2022. Query Rewriting in TaoBao Search. In CIKM . 3262–3271. [24] Nguyen et al. 2023. LightSAGE: Graph Neural Networks for Large Scale Item Retrieval in Shopee’s Advertisement Recommendation. In RecSys . 334–337. [25] Sarwar et al. 2001. Item-based collaborative filtering recommendation algorithms. In WWW . 285–295. [26] Sharma et al. 2017. When hashes met wedges: A distributed algorithm for finding high similarity vectors. In WWW . 431–440. [27] Wei et al. 2018. Topppr: top-k personalized pagerank queries with precision guarantees on large graphs. In SIGMOD . 441–456. [28] Yinfu Feng, Yanjing Wu, Rong Xiao, and Xiaoyi Zen. 2025. LLM-I2I: Boost Your Small Item2Item Recommendation Model with Large Language Model. arXiv preprint arXiv:2512.21595 (2025). [29] Shuo Han, Lei Zou, and Jeffrey Xu Yu. 2018. Speeding up set intersections in graph algorithms using simd instructions. In Proceedings of the 2018 International Conference on Management of Data . 1587–1602. [30] F Maxwell Harper and Joseph A Konstan. 2015. The movielens datasets: History and context. Acm transactions on interactive intelligent systems (tiis) 5, 4 (2015), 1–19. [31] Taher H Haveliwala. 2002. Topic-sensitive pagerank. In Proceedings of the 11th international conference on World Wide Web . 517–526. [32] Katsuhiko Hayashi. 2022. Rethinking correlation-based item-item similarities for recommender systems. In SIGIR . 2287–2291. [33] Ruining He and Julian McAuley. 2016. Ups and downs: Modeling the visual evolution of fashion trends with one-class collaborative filtering. In TheWebConf .507–517. [34] Junjie Huang, Jizheng Chen, Jianghao Lin, Jiarui Qin, Ziming Feng, Weinan Zhang, and Yong Yu. 2025. A comprehensive survey on retrieval methods in recommender systems. ACM Transactions on Information Systems 44, 1 (2025), 1–43. [35] Frank K. Hwang and Shen Lin. 1972. A simple algorithm for merging two disjoint linearly ordered sets. SIAM J. Comput. 1, 1 (1972), 31–39. [36] Hiroshi Inoue, Moriyoshi Ohara, and Kenjiro Taura. 2014. Faster set intersection with SIMD instructions by reducing branch mispredictions. Proceedings of the VLDB Endowment 8, 3 (2014), 293–304. [37] Adilzhan Ismailov. 2022. Two-Stage Approach for Predicting Fashion Compati-bility. (2022). [38] Glen Jeh and Jennifer Widom. 2002. Simrank: a measure of structural-context similarity. In Proceedings of the eighth ACM SIGKDD international conference on Knowledge discovery and data mining . 538–543. [39] Glen Jeh and Jennifer Widom. 2003. Scaling personalized web search. In Proceed-ings of the 12th international conference on World Wide Web . 271–279. [40] Leo Katz. 1953. A new status index derived from sociometric analysis. Psychome-trika 18, 1 (1953), 39–43. 14 Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA 
+
+[41] Barrie Kersbergen and Sebastian Schelter. 2021. Learnings from a retail rec-ommendation system on billions of interactions at bol. com. In ICDE . IEEE, 2447–2452. [42] Daniel Lemire, Leonid Boytsov, and Nathan Kurz. 2016. SIMD compression and the intersection of sorted integers. Software: Practice and Experience 46, 6 (2016), 723–749. [43] Huizhi Liang, Yue Xu, Yuefeng Li, Richi Nayak, and Xiaohui Tao. 2010. Connecting users and items with weighted tags for personalized item recommendations. In 
+
+Proceedings of the 21st ACM conference on Hypertext and hypermedia . 51–60. [44] LibRecommender. 2020. LibRecommender. https://librecommender.readthedocs. io/en/latest/api/algorithms/swing.html. Online; accessed 17 June 2026. [45] Greg Linden, Brent Smith, and Jeremy York. 2003. Amazon. com recommenda-tions: Item-to-item collaborative filtering. IEEE Internet computing 7, 1 (2003), 76–80. [46] Haoyu Liu and Siqiang Luo. 2024. Bird: Efficient approximation of bidirectional hidden personalized pagerank. PVLDB 17, 9 (2024), 2255–2268. [47] Jianguo Liu, Lei Hou, Xue Pan, Qiang Guo, and Tao Zhou. 2015. Stability of similarity measurements for bipartite networks. Scientific Reports 6 (2015). https: //doi.org/10.1038/srep18653 [48] Weiqing Luo, Chonggang Song, Lingling Yi, and Gong Cheng. 2025. Trawl: External knowledge-enhanced recommendation with llm assistance. In Proceed-ings of the 34th ACM International Conference on Information and Knowledge Management . 5907–5914. [49] Jingsong Lv, Hongyang Chen, Yao Qi, and Lei Yu. 2023. Circle Feature Graphormer: Can Circle Features Stimulate Graph Transformer? arXiv preprint arXiv:2309.06574 (2023). [50] Martin Leitner-Ankerl. 2025. Ankerl’s Hashmap. https://github.com/martinus/ unordered_dense. Online; accessed 17 April 2026. [51] Martin Leitner-Ankerl. 2025. Comprehensive C++ Hashmap Benchmarks 2022. https://martin.ankerl.com/2022/08/27/hashmap-bench-01/. Online; accessed 17 April 2026. [52] Rajeev Motwani and Prabhakar Raghavan. 1996. Randomized algorithms. ACM Computing Surveys (CSUR) 28, 1 (1996), 33–37. [53] Haolei Pei, Yuanyuan Xu, Yangping Zhu, and Yuan Nie. 2024. RimiRec: Mod-eling Refined Multi-interest in Hierarchical Structure for Recommendation. In 
+
+Companion Proceedings of the ACM Web Conference 2024 . 746–749. [54] Alexander Ploshkin, Vladislav Tytskiy, Alexey Pismenny, Vladimir Baikalov, Evgeny Taychinov, Artem Permiakov, Daniil Burlakov, and Eugene Krofto. 2025. Yambda-5B—A Large-Scale Multi-Modal Dataset for Ranking and Retrieval. In 
+
+Proceedings of the Nineteenth ACM Conference on Recommender Systems . 894–901. [55] Jérémie Rappaz, Julian McAuley, and Karl Aberer. 2021. Recommendation on live-streaming platforms: Dynamic availability and repeat consumption. In Pro-ceedings of the 15th ACM conference on recommender systems . 390–399. [56] Peter Sanders and Frederik Transier. 2007. Intersection in integer inverted indices. In 2007 Proceedings of the Ninth Workshop on Algorithm Engineering and Experiments (ALENEX) . SIAM, 71–83. [57] Jieming Shi, Tianyuan Jin, Renchi Yang, Xiaokui Xiao, and Yin Yang. 2020. Real-time index-free single source SimRank processing on web-scale graphs. PVLDB 
+
+13, 7 (2020), 966–980. [58] Yue Shi, Martha Larson, and Alan Hanjalic. 2014. Collaborative filtering beyond the user-item matrix: A survey of the state of the art and future challenges. ACM Computing Surveys (CSUR) 47, 1 (2014), 1–45. [59] Yifan Song, Xiaolong Chen, Wenqing Lin, Jia Li, Chen Zhang, Yan Zhou, Lei Chen, and Jing Tang. 2024. Efficient Graph Embedding Generation and Update for Large-Scale Temporal Graph. Proceedings of the VLDB Endowment 18, 4 (2024), 929–942. [60] Dimitris Tsirogiannis, Sudipto Guha, and Nick Koudas. 2009. Improving the performance of list intersection. Proceedings of the VLDB Endowment 2, 1 (2009), 838–849. [61] B Wan, Z Wu, M Han, and M Wan. 2023. Interval-valued q-rung orthopair fuzzy Weber operator and its group decision-making application. (2023). [62] Mengting Wan and Julian McAuley. 2018. Item recommendation on monotonic behavior chains. In Proceedings of the 12th ACM conference on recommender systems . 86–94. [63] Jizhe Wang, Pipei Huang, Huan Zhao, Zhibo Zhang, Binqiang Zhao, and Dik Lun Lee. 2018. Billion-scale commodity embedding for e-commerce recommendation in alibaba. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining . 839–848. [64] Shaoqing Wang, Yingcai Ma, Kairui Fu, Ziyang Wang, Dunxian Huang, Yuliang Yan, and Jian Wu. 2026. PI2I: A Personalized Item-Based Collaborative Filtering Retrieval Framework. arXiv preprint arXiv:2601.16815 (2026). [65] Barry Payne Welford. 1962. Note on a method for calculating corrected sums of squares and products. Technometrics 4, 3 (1962), 419–420. [66] Jiancan Wu, Xiang Wang, Fuli Feng, Xiangnan He, Liang Chen, Jianxun Lian, and Xing Xie. 2021. Self-supervised graph learning for recommendation. In Proceed-ings of the 44th international ACM SIGIR conference on research and development in information retrieval . 726–735. [67] Yanjing Wu, Yinfu Feng, Jian Wang, Wenji Zhou, Yunan Ye, Rong Xiao, and Jun Xiao. 2024. Hi-gen: Generative retrieval for large-scale personalized e-commerce search. arXiv preprint arXiv:2404.15675 (2024). [68] Tian Xia, Jiaqi Zhang, Yueyang Liu, Hongjian Dou, Tingya Yin, Jiangxia Cao, Xulei Liang, Tianlu Xie, Lihao Liu, Xiang Chen, et al. 2026. QARM V2: Quantitative Alignment Multi-Modal Recommendation for Reasoning User Sequence Modeling. 
+
+arXiv preprint arXiv:2602.08559 (2026). [69] Jingcao Xu, Chaokun Wang, Cheng Wu, Yang Song, Kai Zheng, Xiaowei Wang, Changping Wang, Guorui Zhou, and Kun Gai. 2023. Multi-behavior Self-supervised Learning for Recommendation. arXiv preprint arXiv:2305.18238 (2023). [70] Zhenhui Xu, Meng Zhao, Liqun Liu, Lei Xiao, Xiaopeng Zhang, and Bifeng Zhang. 2022. Mixture of virtual-kernel experts for multi-objective user profile modeling. In Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 4257–4267. [71] Ben Xue, Dan Liu, Lixiang Wang, Mingjie Sun, Peng Wang, Pengfei Zhang, Shaoyun Shi, Tianyu Xu, Yunhao Sha, Zhiqiang Liu, et al. 2026. Generative Recommendation for Large-Scale Advertising. arXiv preprint arXiv:2602.22732 
+
+(2026). [72] Rui Xue, Shichao Zhu, Liang Qin, Guangmou Pan, Yang Song, and Tianfu Wu. 2025. E2E-GRec: An End-to-End Joint Training Framework for Graph Neural Networks and Recommender Systems. arXiv preprint arXiv:2511.20564 (2025). [73] Jieyu Yang, Zhaoxin Huan, Yong He, Ke Ding, Liang Zhang, Xiaolu Zhang, Jun Zhou, and Linjian Mo. 2022. Task Similarity Aware Meta Learning for Cold-Start Recommendation. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management . 4630–4634. [74] Menglin Yang, Zhihao Li, Min Zhou, Jiahong Liu, and Irwin King. 2022. Hicf: Hyperbolic informative collaborative filtering. In Proceedings of the 28th ACM SIGKDD conference on knowledge discovery and data mining . 2212–2221. [75] Renchi Yang. 2022. Efficient and effective similarity search over bipartite graphs. In WWW . 308–318. [76] Renchi Yang and Jieming Shi. 2024. Efficient high-quality clustering for large bipartite graphs. Proceedings of the ACM on Management of Data 2, 1 (2024), 1–27. [77] Renchi Yang, Jieming Shi, Keke Huang, and Xiaokui Xiao. 2022. Scalable and Effective Bipartite Network Embedding. In Proceedings of the 2022 International Conference on Management of Data . 1977–1991. [78] Xiaoyong Yang, Yadong Zhu, Yi Zhang, Xiaobo Wang, and Quan Yuan. 2020. Large scale product graph construction for recommendation in e-commerce. 
+
+arXiv preprint arXiv:2010.05525 (2020). [79] Bo-Wen Zhang, Yan Yan, and Jiapei Yu. 2023. Contrastive Learning of Sentence Embeddings in Product Search. In ICASSP 2023-2023 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) . IEEE, 1–5. [80] Shiding Zhang, Jianye Yang, Wenjie Zhang, Shiyu Yang, Ying Zhang, and Xuemin Lin. 2024. BigSet: An Efficient Set Intersection Approach. IEEE Transactions on Knowledge and Data Engineering 36, 12 (2024), 7677–7691. [81] Zzh, Wei Zhang, and Wentao. 2022. Industrial Solution in Fashion-domain Rec-ommendation by an Efficient Pipeline using GNN and Lightgbm. In Proceedings of the Recommender Systems Challenge 2022 . 45–49. 
+
+## A The QFilter++ Algorithm 
+
+In the following, we detail the efficiency optimizations for BSR construction and intersection cardinality computation implemented in QFilter++ , extending the design of QFilter [29] to user-item graphs. 
+
+Table 4: BSR Construction Overhead. 
+
+Order Scheme Twitch Yambda Mag Prep.(s) Time(ms) Prep.(s) Time(ms) Prep.(s) Time(ms) 
+
+Ori 31.06 0.813 293.6 11.262 126.4 11.759 
+
+Deg 31.55 0.825 291.7 12.658 170.7 8.019 
+
+GRO 99.55 0.680 8635 7.397 1470 6.968 
+
+Ours 44.07 0.681 1285 7.232 216.0 6.816 
+
+## A.1 Optimized BSR Construction 
+
+To address the high preprocessing cost of BSR construction, we propose a simple yet effective sampling-based optimization strat-egy. As shown in Table 4, the BSR structure is sensitive to node 
+
+15 SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang 
+
+ordering before construction, and using the original ordering can be up to twice as slow as using GRO [29]. However, GRO incurs a high computational cost of 𝑂 (log |I| · Í𝑣 ∈ I 
+
+Í𝑢 ∈ U ( 𝑣 ) 𝑑 (𝑣 )𝑑 (𝑢 )) 
+
+as it greedily selects locally optimal items. In contrast, we observe that the state chunk size of BSR is typically small (e.g., 32), making it inefficient to spend substantial computation on estimating exact contributions for local optimization. Instead, we propose to ap-proximate the contribution of items via random sampling, namely LightGRO, which achieves comparable effectiveness while signifi-cantly reducing computational overhead. Specifically, we begin with an adaptive degree-based sorting procedure (Lines 1–5). Under the power-law assumption, items are partitioned into a low-degree set L and a high-degree set H
+
+(Line 2) using an adaptive threshold 𝜏 𝑑 (Line 1). We sort L with 
+
+BucketSort and H with QuickSort , achieving near-linear com-plexity in practice. The subsequent steps follow those of GRO [29]. When filling an empty bucket, we select the remaining item 𝑣 with the largest degree from M0 (Line 8), place it into a new bucket, and remove it from M0 (Line 10). Otherwise, if the current bucket is not empty, we select the item 𝑣 with the largest weight from the top of Q, where Q is a priority queue. Instead of examining all neighbors, we sample a set of 𝑆 neighbors from U ( 𝑣 ). We then accumulate weights from the corresponding items 𝑣 𝑡 (Lines 13-14). To reduce the overhead of frequent priority queue updates, the updates are batched and applied together (Line 15). After reorder-ing, we construct the BSR with bucket size 32 following [29] (Lines 17–21). 
+
+## A.2 Light Intersection Cardinality Computation 
+
+However, computing the intersection cardinality via full set inter-section requires materializing and storing the explicit results, which may incur substantially higher costs than direct cardinality com-putation, often dominating the overall execution time due to extra memory accesses and result write-back overhead. As Figure 18 shows, intersection cardinality computation can achieve up to 3 ×
+
+speedup. Specifically, we specialize the original QFilter (Algorithm 4 in [29]) for intersection cardinality computation by removing un-necessary result materialization. To illustrate the modification, we revisit the structure of QFilter . The original procedure, based on the pseudo-code in Appendix A.3 of [29], consists of three phases, namely candidate pruning (Steps S1-S2), candidate verification (Steps S3-S4), and result materialization (Steps S5-S6), followed by pointer advancement (Step S7). In our cardinality-only variant, the pruning (Steps S1-S2) and verification (Steps S3-S4) stages are retained, since the algorithm must still filter out impossible matches through byte-checking, align candidate pairs, and verify both base equality and non-empty state intersection. This design choice is also consistent with the analysis in Section 4.2 of [29], which shows that byte-checking is highly effective because “no-match” cases are common whereas “multi-match” cases are rare. By contrast, the materialization stage (Steps S5-S6) is removed. In the original algorithm, these steps gather valid result chunks and write them to output arrays. For cardinality computation, this materialization is unnecessary. Instead, after obtaining the base-equality mask and the non-empty intersection mask, we directly count the number of set bits in the resulting bitmask for each block and accumulate them to obtain the final cardinality. Finally, Step S7 remains unchanged, since the pointer advancement logic depends only on the order-ing of base values and is independent of whether the intersection results are materialized. Overall, this specialization preserves the filtering and alignment mechanisms of QFilter while removing the result construction phase. 
+
+Algorithm 9: Optimized BSR Construction for QFilter++ 
+
+Input: G = (U ∪ I , E) , threshold 𝜏 
+
+Output: BSR  
+
+> 1
+
+𝜏 𝑑 ← nth-element ({ 𝑑 (𝑣 ) | 𝑣 ∈ I} , |I| − ⌈ | I |   
+
+> log | I |
+
+⌉) ; 
+
+> 2
+
+L ← { 𝑣 𝑖 ∈ I | 𝑑 (𝑣 𝑖 ) < 𝜏 𝑑 }, H ← I \ L ; 
+
+> 3
+
+sort L by descending degree using BucketSort ; 
+
+> 4
+
+sort H by descending degree using QuickSort ; 
+
+> 5
+
+M0 = H ∥ L ; 
+
+> 6
+
+for 𝑖 ← 0 to 𝑛 − 1 do  
+
+> 7
+
+if 𝑖 mod 32 = 0 then  
+
+> 8
+
+𝑣 ← M 0.front () , Q ← ∅ , W ← ∅ ; 
+
+> 9
+
+else 𝑣 ← Q .top () , Q.pop () ; 
+
+> 10
+
+M ( 𝑣 ) ← 𝑖 , M0.delete (𝑣 ); 
+
+> 11
+
+𝑆 ← Sample (U ( 𝑣 ), min {𝜏 𝑠 , |U ( 𝑣 )|}) , P ← ∅ ; 
+
+> 12
+
+for 𝑢 ∈ 𝑆 do  
+
+> 13
+
+for 𝑣 𝑡 ∈ I ( 𝑢 ) ∩ M 0 do  
+
+> 14
+
+P ← P ∪ { 𝑣 𝑡 }, W ( 𝑣 𝑡 ) ← W ( 𝑣 𝑡 ) + 1;  
+
+> 15
+
+for 𝑣 𝑡 ∈ P do Q ( 𝑣 𝑡 ) = W ( 𝑣 𝑡 ) ; 
+
+> 16
+
+for 𝑢 ∈ U do  
+
+> 17
+
+BSR (𝑢 ) ← ∅ ; 
+
+> 18
+
+for 𝑣 𝑖 ∈ I ( 𝑢 ) do  
+
+> 19
+
+𝑏 ← M ( 𝑣 𝑖 ) ≫ 5; 𝑠 ← M ( 𝑣 𝑖 ) & 31;  
+
+> 20
+
+if 𝑏 ∉ BSR (𝑢 ) then BSR (𝑢 ) ← BSR (𝑢 ) ∪ ( 𝑏, 2𝑠 ) ; 
+
+> 21
+
+else BSR (𝑢, 𝑏 ) ← BSR (𝑢, 𝑏 ) | 2𝑠 ;
+
+## A.3 Dynamic Update Cost 
+
+Table 5 reports the cost of maintaining QFilter++ under dynamic edge updates. For each dataset, we randomly sample 10000 edges for update evaluation. We first compute the item ordering and build the corresponding BSR representation during preprocessing. For each subsequent single-edge update, we keep the ordering index unchanged and only update the sorted neighbor list and locally reconstruct the BSR representation of the affected user. Overall, the update overhead is small across the evaluated datasets. Except for 
+
+Yambda , the average insertion and deletion latencies are below 9 𝜇 sand 8 𝜇 s, respectively, while the maximum costs remain below 1 .3ms for insertion and 0 .1 ms for deletion. Yambda incurs higher costs because it has a substantially larger average user degree. Since each update locally reconstructs the compressed representation of the affected user, the update cost increases with user degree. This also explains the gap between the average and maximum latency, as the latter is dominated by a few extremely high-degree users.  
+
+> 16 Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA
+
+Algorithm 10: C-KASC 
+
+Input: G = (U , I, E) , query item 𝑣 𝑞 .
+
+Output: fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I  
+
+> 1
+
+for 𝜖 ← 12 , 14 , 18 , . . . do  
+
+> 2
+
+Calculate 𝑛 according to Eq. (4);  
+
+> 3
+
+if 𝑛 > |U ( 𝑣 𝑞 )| · (|U ( 𝑣 𝑞 )| − 1)/ 2 then return 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) by Algorithm 1 ; 
+
+> 4
+
+Initialize an empty map 𝑆 and set A; 
+
+> 5
+
+for 𝑟 ← 1 to 𝑛 do  
+
+> 6
+
+Sample 𝑢 𝑖 , 𝑢 𝑗 ∈ U ( 𝑣 𝑞 ) s.t. 𝑢 𝑖 ≠ 𝑢 𝑗 and 
+
+𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 ) ≥ 2;  
+
+> 7
+
+Increase 𝑆 (𝑢 𝑖 , 𝑢 𝑗 ) by 1;  
+
+> 8
+
+Initialize 𝑟 (𝑣 𝑡 ), fsw (𝑣 𝑡 ),𝜎 (𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I ; 
+
+> 9
+
+for (𝑢 𝑖 , 𝑢 𝑗 ) ∈ 𝑆 do  
+
+> 10
+
+I𝑖,𝑗 ← I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ); 
+
+> 11
+
+for 𝑣 𝑡 ∈ I 𝑖,𝑗 do  
+
+> 12
+
+A ← A ∪ { 𝑣 𝑡 } ; 
+
+> 13
+
+𝑟 (𝑣 𝑡 ) ← 𝑟 (𝑣 𝑡 ) + 𝑆 (𝑢 𝑖 , 𝑢 𝑗 ); 
+
+> 14
+
+Update fsw (𝑣 𝑞 , 𝑣 𝑡 ) according to Eq. (10);  
+
+> 15
+
+Update 𝜎 (𝑣 𝑡 ) according to Eq. (11);  
+
+> 16
+
+Initialize an empty heap H of size 𝐾 ; 
+
+> 17
+
+for 𝑣 𝑡 ∈ I s.t. 𝑟 (𝑣 𝑡 ) ≠ 0 do  
+
+> 18
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) ← 𝑟 (𝑣 𝑡 ) 
+
+> 𝑛
+
+· fsw (𝑣 𝑞 , 𝑣 𝑡 ); 
+
+> 19
+
+𝜎 (𝑣 𝑡 ) ← 𝜎 (𝑣 𝑡 ) + (𝑛 −𝑟 (𝑣 𝑡 ) ) ( 𝑟 (𝑣𝑡 )      
+
+> 𝑛 ·fsw (𝑣 𝑞 ,𝑣 𝑡 )2−𝜎 (𝑣 𝑡 ) )
+> 𝑛 −1
+
+; 
+
+> 20
+
+𝑣 ∗ ← H .min () ; 
+
+> 21
+
+if fsw (𝑣 𝑞 , 𝑣 𝑡 ) > fsw (𝑣 𝑞 , 𝑣 ∗) then H .push (𝑣 𝑡 ) ;
+
+/* Separation Condition */  
+
+> 22
+
+𝛽 𝑘 ← min   
+
+> 𝑣 ℓ∈ H
+
+fsw (𝑣 𝑞 , 𝑣 ℓ ) − 𝑓 (𝑛, 𝜎 ℓ , 𝜁 , 𝛿 );               
+
+> 23 𝛽 𝑘 +1←max {max
+> 𝑣ℓ ∈A\H fsw (𝑣 𝑞 , 𝑣 ℓ) + 𝑓 (𝑛, 𝜎 ℓ, 𝜁 , 𝛿 ), 𝑓 (𝑛, 0, 𝜁 , 𝛿 ) } ;
+> 24
+
+if 𝛽 𝑘 > 𝛽 𝑘 +1 then return fsw (𝑣 𝑞 , 𝑣 𝑡 ) ∀ 𝑣 𝑡 ∈ I ;
+
+Table 5: Update time of QFilter++ for edge insertions and deletions. 
+
+Dataset Average ( 𝜇 s) Maximum ( 𝜇 s) Insert Delete Insert Delete 
+
+Movielens 8.667 7.665 598.641 97.574 Gowalla 3.144 2.178 1229.203 37.060 AmazonBook 4.418 3.330 1192.984 59.092 SteamGame 1.319 0.402 1206.379 15.560 MIND 2.443 1.398 1227.299 24.256 Twitch 3.074 1.090 1272.724 8.727 Yambda 81.360 70.561 21233.573 16383.458 MAG 7.694 5.630 1236.364 31.089 
+
+## B Correctness-Guaranteed Extension of 𝐾 -ASC 
+
+In addition to the heuristic 𝐾 -ASC , which avoids excessive sam-ples through borderline items identification, we further investi-gate a correctness-guaranteed variant, C-KASC . Specifically, for each observed item 𝑣 𝑡 , C-KASC maintains its estimated Swing score 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) and empirical variance 𝜎 𝑡 in an online manner. Based on the empirical Bernstein inequality, after 𝑛 samples, we construct the lower and upper confidence bounds fsw (𝑣 𝑞 , 𝑣 𝑡 ) − Φ(𝑛, 𝜎 𝑡 , 𝜁 , 𝛿 ) and 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) + Φ(𝑛, 𝜎 𝑡 , 𝜁 , 𝛿 ), respectively. For the items that have not been observed in the samples, Φ(𝑛, 0, 𝜁 , 𝛿 ) serves as a uniform up-per bound on their Swing scores. Once the minimum lower bound among the current top-𝐾 items exceeds the maximum upper bound among all the remaining items, the current top-𝐾 result is certified to be exact with the prescribed confidence. If such separation can-not be established efficiently, C-KASC eventually resorts to exact computation, as correctness certification can require substantially tighter confidence bounds and hence considerably more samples than the range-based identification in 𝐾 -ASC , particularly when the 
+
+𝐾 -th and (𝐾 + 1)-th Swing scores are close. 
+
+Correctness Analysis. The correctness of C-KASC follows from the maintained confidence intervals. Suppose that, with probabil-ity at least 1 − 𝛿 , the true Swing score of every observed item 
+
+𝑣 𝑡 lies within fsw (𝑣 𝑞 , 𝑣 𝑡 ) − 𝑓 (𝑛, 𝜎 𝑡 , 𝜁 , 𝛿 ), fsw (𝑣 𝑞 , 𝑣 𝑡 ) + 𝑓 (𝑛, 𝜎 𝑡 , 𝜁 , 𝛿 ),while the Swing score of every unseen item is upper-bounded by 
+
+𝑓 (𝑛, 0, 𝜁 , 𝛿 ). Accordingly, 𝛽 𝐾 lower-bounds the Swing scores of all items in H , whereas 𝛽 𝐾 +1 upper-bounds those of all items outside 
+
+H . Once the separation condition 𝛽 𝐾 > 𝛽 𝐾 +1 holds, for any 𝑣 𝑖 ∈ H 
+
+and 𝑣 𝑗 ∉ H , we have sw (𝑣 𝑞 , 𝑣 𝑖 ) ≥ 𝛽 𝐾 > 𝛽 𝐾 +1 ≥ sw (𝑣 𝑞 , 𝑣 𝑗 ). There-fore, no item outside H can have a larger Swing score than any item in H , and hence H constitutes the exact top-𝐾 result with probability at least 1 − 𝛿 .
+
+## C Additional Experiments C.1 Intersection Cardinality Computation 
+
+Figure 18 reports the practical speedup of computing the inter-section size directly, compared with explicitly materializing the intersection set. The results show that the size-only computation is consistently faster in nearly all evaluated cases. In particular, the speedup reaches up to 3 .68 ×, while most cases fall between 1 .3×
+
+and 1 .6×. These gains indicate that a considerable fraction of the cost in full set intersection comes not from identifying common elements itself, but from materializing and storing the resulting set. This improvement is more pronounced on MovieLens due to denser user overlap, which amplifies the cost of materialization. Therefore, when only the intersection cardinality is needed, bypassing result construction provides a clear efficiency advantage.                
+
+> MovieLens Gowalla AmazonBook SteamGame MIND Twitch Yambda MAG
+> 12343.68 ×
+> 1.61 ×1.31 ×1.63 ×1.29 ×1.62 ×1.63 ×1.32 ×
+
+Speedup (×)
+
+Figure 18: Practical speedup of intersection-size computation over full set intersection. 
+
+## C.2 BSR Construction Cost 
+
+Table 4 presents the BSR construction time (denoted as Prep.) and the average set intersection time under different ordering schemes in the GNS algorithm with the same parameters. The results show  
+
+> 17 SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang
+
+Table 9: Optimal parameter settings of 𝐾 -ASC .                                                             
+
+> Dataset Query (𝜖, 𝛽 )
+> K=20 K=50 K=100
+> Movielens Popular (0.06, 0.1) (0.06, 0.1) (0.06, 0.1) Random (0.05, 0.1) (0.04, 0.1) (0.04, 0.1) Gowalla Both (0.1, 0.2) (0.1, 0.2) (0.1, 0.2) AmazonBook Both (0.05, 0.2) (0.05, 0.2) (0.05, 0.2) SteamGame Popular (0.03, 0.2) (0.025, 0.2) (0.02, 0.2) Random (0.05, 0.2) (0.03, 0.2) (0.025, 0.2) MIND Popular (0.05, 0.2) (0.03, 0.2) (0.025, 0.3) Random (0.05, 0.1) (0.05, 0.2) (0.04, 0.2) Twitch Popular (0.05, 0.2) (0.03, 0.2) (0.03, 0.2) Random (0.05, 0.1) (0.05, 0.1) (0.05, 0.2) MAG Popular (0.1, 0.05) (0.1, 0.1) (0.08, 0.2) Random (0.3, 0.05) (0.2, 0.1) (0.2, 0.3) Yambda Popular (0.05, 0.1) (0.05, 0.2) (0.06, 0.1) Random (0.1, 0.1) (0.1, 0.1) (0.05, 0.1)
+
+Table 6: Preprocessing costs and space overhead.                                               
+
+> Dataset Time (s) Space (GB) Graph Size Hashmap BSR Hashmap BSR
+> Movielens 0.077 0.414 0.004 0.003 0.011 GB Gowalla 0.229 0.704 0.013 0.005 0.015 GB AmazonBook 0.699 4.189 0.043 0.014 0.039 GB SteamGame 3.131 1.632 0.398 0.066 0.190 GB MIND 6.056 4.364 0.404 0.111 0.228 GB Twitch 60.050 44.065 4.195 0.999 2.927 GB Yambda 119.759 1284.860 9.295 2.862 13.002 GB MAG 225.489 216.014 15.899 4.692 11.054 GB
+
+Table 7: Extra memory overhead during query processing.                                      
+
+> Dataset Average Extra RSS (KB) Peak Extra RSS (MB)
+> ASC 𝐾 -ASC ASC 𝐾 -ASC
+> Movielens 77.310 15.041 74.359 19.509
+> Gowalla 0.002 0.001 0.002 0.001
+> AmazonBook 0.032 0.077 0.031 0.076 SteamGame 118.773 24.531 125.875 23.586
+> MIND 121.407 10.735 93.227 11.478
+> Twitch 103.052 3.421 110.703 6.973
+> Yambda 92.126 3630.875 74.824 136.496 MAG 0.065 17.770 0.125 21.352
+
+Table 8: Complete memory usage during query processing.                                      
+
+> Dataset Average RSS (GB) Peak RSS (GB)
+> ASC 𝐾 -ASC ASC 𝐾 -ASC
+> Movielens 0.102 0.054 0.106 0.056
+> Gowalla 0.053 0.051 0.054 0.052
+> AmazonBook 0.139 0.136 0.139 0.136
+> SteamGame 0.961 0.868 0.979 0.878
+> MIND 1.031 0.935 1.047 0.939
+> Twitch 10.705 10.618 10.719 10.624
+> MAG 40.602 40.455 40.602 40.456
+> Yambda 35.784 35.831 35.854 35.912
+
+that our LightGRO-based BSR construction is consistently faster in both preprocessing and set intersection costs. Specifically, on the large dataset Yambda , it achieves up to an 6 .7× speedup over GRO in preprocessing time, while maintaining comparable or even better intersection performance. In contrast, simple ordering strate-gies, such as the original index or degree-ascending order, tend to perform poorly on large datasets. 
+
+## C.3 Preprocessing Cost and Space Overhead 
+
+Preprocess Cost. Table 6 reports the preprocessing cost and mem-ory overhead for constructing the hashmap used for constant-time membership checking, and the BSR representation in QFilter++ .While BSR incurs a higher preprocessing cost than the lightweight hashmap, our optimized implementation significantly reduces its construction time, achieving up to 6 × speedup over the original design [29], while remaining practical at scale. This one-time cost is quickly amortized under frequent queries, where BSR delivers substantial efficiency gains, while the hashmap supports efficient dynamic updates without full reconstruction. 
+
+Query Memory Usage. Table 7 reports the additional peak and average memory usage during query processing. On most datasets, 
+
+𝐾 -ASC requires less extra memory than ASC , as candidate generation and refinement reduce the number of sampled user pairs that need to be maintained. However, this reduction is dataset-dependent, the auxiliary storage for variance estimates, hit counts, and a top-
+
+𝐾 priority queue offsets or outweighs the savings from reduced sampling. Overall, the additional memory overhead during query processing remains modest. 
+
+Complete Memory Usage. Table 8 reports the total memory foot-print during query processing, accounting for the graph, hash map, BSR, and dynamic query memory. The two methods show similar memory usage overall, since the total footprint is dominated by the graph and preprocessing structures. For implementation conve-nience, we retain both the original and reordered graphs, together with the hashmap and BSR, throughout query processing. As a result, the reduction in dynamic query memory achieved by 𝐾 -ASC 
+
+only leads to a modest reduction in the total memory footprint on most datasets, while Yambda shows a slightly higher usage. Over-all, 𝐾 -ASC introduces no substantial increase in complete memory usage compared with ASC .
+
+## C.4 Parameter Settings 
+
+In this section, we introduce the parameters that are not discussed in the main text. Some parameters are fixed for each dataset because they have little impact on the experimental results. Specifically, the parameter 𝜌 in Eq. (6) is fixed to 0.5 for ASC and 0.8 for 𝐾 -ASC 
+
+across all datasets, and the number of extra candidates 𝜅 is fixed to 5 for all datasets. We then perform an exhaustive grid search over the parameter spaces of ASC and 𝐾 -ASC to obtain the optimal configurations. Other parameter settings with the best performance are summarized below. For ASC , the optimal 𝜖 is 0.025 on Movielens , 0.1 on Gowalla , 0.05 on AmazonBook , 0.02 on SteamGame , 0.02 on MIND , 0.02 on Twitch ,and 0.02 on Yambda . On MAG , the optimal 𝜖 is 0.05 for popular queries and 0.1 for random queries. For 𝐾 -ASC , the parameter configuration requires slightly finer tuning than that of ASC , since the top-𝐾 extension introduces ad-ditional control over candidate identification and refinement. In particular, the optimal (𝜖, 𝛽 ) may vary with the dataset, query type, and 𝐾 , reflecting different query-time and precision trade-offs under different settings. The resulting optimal configurations are summarized in Table 9. 
+
+## C.5 Complete Parameter Analysis 
+
+> 18
+
+Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA 
+
+𝐾 = 20 𝐾 = 50 𝐾 = 100 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+100 110 120 
+
+query time(ms) 
+
+(a) MovieLens 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+0.25 0.26 0.27 
+
+query time(ms) 
+
+(b) Gowalla 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+0.80 0.81 0.82 0.83 
+
+query time(ms) 
+
+(c) AmazonBook 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+50 70 90 110 
+
+query time(ms) 
+
+(d) SteamGame 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+45 50 55 60 
+
+query time(ms) 
+
+(e) MIND 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+38 42 46 50 
+
+query time(ms) 
+
+(f) Twitch 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+280 320 360 400 
+
+query time(ms) 
+
+(g) Yambda 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+3.2 3.6 4.0 4.4 
+
+query time(ms) 
+
+(h) MAG 
+
+Figure 19: Query time of ASC when varying 𝜌 .
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(a) MovieLens 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(b) Gowalla 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(c) AmazonBook 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(d) SteamGame 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(e) MIND 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(f) Twitch 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(g) Yambda 
+
+> 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+
+99.9 100 
+
+precision 
+
+(h) MAG 
+
+Figure 20: Precision of ASC when varying 𝜌 .
+
+𝐾 = 20 𝐾 = 50 𝐾 = 100 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+50 60 70 80 
+
+query time(ms) 
+
+(a) MovieLens 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+0.25 0.26 0.27 
+
+query time(ms) 
+
+(b) Gowalla 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+0.80 0.82 0.84 0.86 
+
+query time(ms) 
+
+(c) AmazonBook 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+515 25 35 
+
+query time(ms) 
+
+(d) SteamGame 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+510 15 
+
+query time(ms) 
+
+(e) MIND 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+345
+
+query time(ms) 
+
+(f) Twitch 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+20 40 60 
+
+query time(ms) 
+
+(g) Yambda 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+1.21.72.22.7
+
+query time(ms) 
+
+(h) MAG 
+
+Figure 21: Query time of 𝐾 -ASC when varying 𝜌 .
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(a) MovieLens 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(b) Gowalla 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(c) AmazonBook 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(d) SteamGame 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(e) MIND 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(f) Twitch 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(g) Yambda 
+
+> 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+
+99.9 100 
+
+precision 
+
+(h) MAG 
+
+Figure 22: Precision of 𝐾 -ASC when varying 𝜌 .
+
+𝐾 = 20 𝐾 = 50 𝐾 = 100 
+
+0.1 0.15 0.2 0.25 0.3 
+
+50 60 70 80 
+
+query time(ms) 
+
+(a) MovieLens 
+
+0.1 0.15 0.2 0.25 0.3 
+
+0.25 0.26 0.27 
+
+query time(ms) 
+
+(b) Gowalla 
+
+0.1 0.15 0.2 0.25 0.3 
+
+0.80 0.82 0.84 0.86 
+
+query time(ms) 
+
+(c) AmazonBook 
+
+0.1 0.15 0.2 0.25 0.3 
+
+10 20 30 
+
+query time(ms) 
+
+(d) SteamGame 
+
+0.1 0.15 0.2 0.25 0.3 
+
+46810 
+
+query time(ms) 
+
+(e) MIND 
+
+0.1 0.15 0.2 0.25 0.3 
+
+3.43.84.24.6
+
+query time(ms) 
+
+(f) Twitch 
+
+0.1 0.15 0.2 0.25 0.3 
+
+20 40 60 80 
+
+query time(ms) 
+
+(g) Yambda 
+
+0.1 0.15 0.2 0.25 0.3 
+
+1.2 1.6 2.0 2.4 
+
+query time(ms) 
+
+(h) MAG 
+
+Figure 23: Query time of 𝐾 -ASC when varying 𝛽 .
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(a) MovieLens 
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(b) Gowalla 
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(c) AmazonBook 
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(d) SteamGame 
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(e) MIND 
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(f) Twitch 
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(g) Yambda 
+
+0.1 0.15 0.2 0.25 0.3 99.9 100 
+
+precision 
+
+(h) MAG 
+
+Figure 24: Precision of 𝐾 -ASC when varying 𝛽 .
+
+This section further studies the sensitivity and transferability of the parameters in ASC and 𝐾 -ASC across all eight datasets, as shown in Figures 19–26. Specifically, we vary 𝜌 ∈ { 0.2, 0.3, . . . , 0.8} for 
+
+ASC , and 𝜌 ∈ { 0.3, 0.4, . . . , 0.9}, 𝛽 ∈ { 0.1, 0.15 , 0.2, 0.25 , 0.3}, and 
+
+19 SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang                                                 
+
+> 𝐾 =20 𝐾 =50 𝐾 =100
+> 135710 15
+> 50 60 70
+> query time(ms)
+> (a) MovieLens
+> 135710 15
+> 0.25 0.26 0.27
+> query time(ms)
+> (b) Gowalla
+> 135710 15
+> 0.80 0.82 0.84
+> query time(ms)
+> (c) AmazonBook
+> 135710 15
+> 12 16 20 24
+> query time(ms)
+> (d) SteamGame
+> 135710 15
+> 4.5 6.0 7.5
+> query time(ms)
+> (e) MIND
+> 135710 15
+> 3.2 3.6 4.0
+> query time(ms)
+> (f) Twitch
+> 135710 15
+> 20 35 50 65
+> query time(ms)
+> (g) Yambda
+> 135710 15
+> 1.11.31.51.7
+> query time(ms)
+> (h) MAG
+
+Figure 25: Query time of 𝐾 -ASC when varying 𝜅 .                                        
+
+> 135710 15 99.9 100
+> precision
+> (a) MovieLens
+> 135710 15 99.9 100
+> precision
+> (b) Gowalla
+> 135710 15 99.9 100
+> precision
+> (c) AmazonBook
+> 135710 15 99.9 100
+> precision
+> (d) SteamGame
+> 135710 15 99.9 100
+> precision
+> (e) MIND
+> 135710 15 99.9 100
+> precision
+> (f) Twitch
+> 135710 15 99.9 100
+> precision
+> (g) Yambda
+> 135710 15 99.9 100
+> precision
+> (h) MAG
+
+Figure 26: Precision of 𝐾 -ASC when varying 𝜅 .
+
+𝜅 ∈ { 1, 3, 5, 7, 10 , 15 } for 𝐾 -ASC , while fixing the other parameters and calibrating 𝜖 to maintain top-𝐾 precision above 99 .9%. The remaining parameters follow the calibrated settings reported in Appendix C.4. 
+
+Varying 𝜌 in ASC . We first examine the sensitivity of 𝜌 in ASC 
+
+across all eight datasets. The precision remains consistently above 99 .9% over the tested range, while the query time varies only moder-ately on most datasets. Although some medium-scale graphs exhibit larger fluctuations, no single value is uniformly optimal across all datasets. We therefore use 𝜌 = 0.5 as a transferable default for ASC ,which provides stable accuracy and competitive efficiency without dataset-specific tuning. 
+
+Varying 𝜌 in 𝐾 -ASC . The effect of 𝜌 is consistent across different values of 𝐾 . On MovieLens , SteamGame , MIND , and Twitch , increas-ing 𝜌 generally reduces query time until the improvement saturates around 0 .7–0 .8. Gowalla and AmazonBook are considerably less sen-sitive because their query times are already small, while Yambda 
+
+and MAG exhibit a less monotonic trend. These results indicate that 
+
+𝜌 mainly controls the efficiency of adaptive processing rather than the final accuracy once it is in a reasonable range. We therefore use 𝜌 = 0.8 as a transferable default for 𝐾 -ASC , without separately tuning it for each dataset or 𝐾 .
+
+Varying 𝛽 . Increasing 𝛽 generally increases query time on Movie-Lens , SteamGame , MIND , Twitch , and Yambda , whereas the effect is much smaller on Gowalla and AmazonBook . Thus, 𝛽 primar-ily determines the amount of computation devoted to difficult or borderline candidates and provides an efficiency and refinement trade-off rather than a sharp accuracy transition. We use 𝛽 = 0.2as a robust initialization for a new dataset and tune it only when optimizing the best query time under the precision constraint. 
+
+Varying 𝜅 . The effect of 𝜅 on query time is substantially weaker than that of 𝜌 or 𝛽 for most datasets. Once enough extra candidates are retained, increasing 𝜅 gives little additional benefit and only introduces modest extra refinement cost. In contrast, an overly small value such as 𝜅 = 1 can reduce precision, most visibly on Yambda .The results are stable across 𝐾 = 20 , 50 , 100, suggesting that 𝜅 does not need to scale with 𝐾 in the tested range. We therefore fix 𝜅 = 5, which lies near the knee of the accuracy–efficiency trade-off and transfers well across datasets and different 𝐾 values. 
+
+## C.6 Adaptation of Similarity Search Methods 
+
+Since All-Pairs [17] and WHIMP [26] were originally designed to retrieve all pairs whose cosine similarity exceeds a predefined threshold 𝜏 , their optimizations based on inner products cannot be directly applied to the more complex computation of Swing scores. Therefore, we adapt them as candidate generation methods for the Swing retrieval setting. Each item is represented by its historical interaction set, and the query interfaces of both methods are modified to support queries from an arbitrary source item. Specifically, we select 𝜏 from a set of values within [0.01 , 0.5]
+
+according to the retrieval performance on the validation set for each baseline. For All-Pairs , instead of constructing and updat-ing the inverted index during pairwise retrieval, we construct the inverted index over the entire graph in advance for the selected value of 𝜏 . For WHIMP , we precompute the SimHash signatures of all items. These preprocessing modifications allow any item to be used as the source node at query time. Apart from these prepro-cessing and query interface modifications, we retain the original candidate filtering and pruning mechanisms of both methods. Us-ing the selected threshold, each baseline first generates candidates based on cosine similarity. We vary the maximum candidate pool size over {150 , 200 , 300 , 400 , 500 } to achieve the best trade-off be-tween retrieval effectiveness and computational efficiency. The Swing scores of the retained candidates are then computed for final ranking and evaluation. On large-scale graphs, where exact Swing computation is expensive, we accelerate this step using our adaptive pairwise Algorithm 8, treating the candidate set as the borderline set B and setting the sample size 𝑛 according to Eq. (4). 
+
+## C.7 Item-to-item Retrieval Setting 
+
+We compare against representative baselines from three categories: 
+
+• neighborhood-based methods: ItemCF [25], Adamic-Adar [16], 
+
+Jaccard and Partial Correlation [32]; 
+
+• high-order proximity methods: PPR [27] and SimRank [22]; 
+
+• embedding-based methods: Item2vec [18].  
+
+> 20 Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA
+
+The same evaluation protocol and candidate filtering strategy are applied to all methods. Each dataset is randomly split into 80% training and 20% test interactions, and 200 test users are randomly sampled for evaluation. For each user, the training items are used as source items, and each i2i method computes relevance scores from every source item to candidate items. The resulting score vectors are L1-normalized and aggregated using max, mean, or sum pooling, and the best-performing aggregation strategy is adopted. After filtering items observed in the training history, we rank the remaining candidates by their aggregated scores and retrieve the top-𝐾 items for 𝐾 ∈ { 20 , 50 , 100 }. We report Recall@ 𝐾 averaged over the evaluated users and the average online retrieval time per user, measured as the cumulative i2i query time over all source items. 
+
+## C.8 Discussion on Scalability and Sharded Deployment 
+
+Although our experiments are conducted on a single node, this setting is intended to isolate the computational efficiency and mem-ory footprint of the proposed single-source top-𝐾 Swing query processing, rather than to impose a single-machine deployment assumption. After the graph and auxiliary data structures are con-structed, the online processing of a query node 𝑣 𝑞 primarily accesses its neighboring users and the neighborhood information needed to evaluate the corresponding user pairs, without scanning the entire graph. Therefore, in a large-scale deployment, adjacency lists and auxiliary graph data can be partitioned across multiple shards and fetched from the corresponding workers on demand. The query computation is also naturally decomposable. The Swing score of each candidate item is obtained by accumulating the contributions of individual user pairs associated with 𝑣 𝑞 . Thus, these user pairs can be partitioned among multiple workers, each of which independently computes partial candidate scores using the required neighborhood information. The partial scores can then be summed across workers, followed by a global top-𝐾 selection. Since this partitioning only distributes the underlying pairwise computations and does not alter the estimator itself, it does not affect the approximation guarantee of our method. 
+
+## D Theoretical Proofs 
+
+Proof of Lemma 2.1. Since each term 1   
+
+> 𝛼 +| I ( 𝑢 𝑖 )∩I ( 𝑢 𝑗 ) |
+
+> 0, by the definition of sw (𝑣 𝑞 , 𝑣 𝑡 ) in Eq. (1), sw (𝑣 𝑞 , 𝑣 𝑡 ) attains the mini-mum value of 0 when U ( 𝑣 𝑞 ) ∩ U ( 𝑣 𝑡 ) is an empty set. On the other hand, since 𝑣 𝑞 ≠ 𝑣 𝑡 , 𝑢 𝑖 , 𝑢 𝑗 ∈ U ( 𝑣 𝑞 ) ∩ U ( 𝑣 𝑡 ) indicates that 
+
+𝑣 𝑞 , 𝑣 𝑡 ∈ I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 ), i.e., |I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 )| ≥ 2. Therefore, we can derive that 
+
+sw (𝑣 𝑞 , 𝑣 𝑡 ) =∑︁     
+
+> 𝑢 𝑖 ,𝑢 𝑗 ∈ U ( 𝑣 𝑞 )∩U ( 𝑣 𝑡 )
+
+1
+
+𝛼 + |I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 )| ≤∑︁    
+
+> 𝑢 𝑖 ,𝑢 𝑗 ∈ U ( 𝑣 𝑞 )
+
+1
+
+𝛼 + |I ( 𝑢 𝑖 ) ∩ I ( 𝑢 𝑗 )| ≤ 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1) · 1
+
+𝛼 + 2 = 𝑑 (𝑣 𝑞 )2 − 𝑑 (𝑣 𝑞 )
+
+𝛼 + 2 .
+
+The lemma is proved. □
+
+Proof of Lemma 2.3. First, computing the set intersection in Line 4 takes 𝑂 (min (𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 ))) time. For all valid user pairs, we have ∑︁     
+
+> 𝑢 𝑖 ≠𝑢 𝑗 ∈U ( 𝑣 𝑞 )
+
+min (𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 ) ) 
+
+2 ≤ 14∑︁ 𝑢 𝑖 ≠𝑢 𝑗 ∈U ( 𝑣 𝑞 )
+
+𝑑 (𝑢 𝑖 ) + 𝑑 (𝑢 𝑗 )
+
+= 12∑︁ 𝑢 𝑖 ≠𝑢 𝑗 ∈U ( 𝑣 𝑞 )
+
+𝑑 (𝑢 𝑖 )
+
+= 12
+
+©«∑︁ 𝑢 𝑖 ,𝑢 𝑗 ∈U ( 𝑣 𝑞 )
+
+𝑑 (𝑢 𝑖 ) − ∑︁   
+
+> 𝑢 𝑖 ∈U ( 𝑣 𝑞 )
+
+𝑑 (𝑢 𝑖 )ª®¬
+
+= 𝑑 (𝑣 𝑞 ) − 12∑︁ 𝑢 ∈U ( 𝑣 𝑞 )
+
+𝑑 (𝑢 ).
+
+Consequently, the worst-case time complexity of Algorithm 1 is then 𝑂 
+
+ 𝑑 (𝑣 𝑞 ) − 12 · 𝐷 (𝑣 𝑞 )
+
+
+
+. □
+
+Proof of Theorem 3.1. 
+
+Lemma D.1 (Chernoff Bound [12]). For a set of {𝑍 𝑖 }𝑛 𝑖 =1 i.i.d. random variables with 𝑍 𝑖 ∈ [ 0, 𝜁 ], let 𝑍 = Í𝑛 𝑖 =1 𝑍 𝑖 and E[𝑍 ] be its mean. Then, 
+
+P [ | 𝑍 − E[𝑍 ] | ≥ 𝜀 ] ≤ exp 
+
+
+
+− 𝜀 2
+
+2𝜁 (𝜀 /3 + E[𝑍 ] ) 
+
+
+
+. (13) 
+
+Define the random variable for the 𝑟 -th trial (with user pairs 𝑢 𝑖 
+
+and 𝑢 𝑗 ) is 
+
+𝑍 𝑟 = 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+𝛼 + |I 𝑖,𝑗 | · 1[𝑣 𝑡 ∈ I 𝑖,𝑗 ].
+
+According to our analysis in §2.3, 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) = 1
+
+𝑛 
+
+> 𝑛
+
+∑︁  
+
+> 𝑟 =1
+
+𝑍 𝑟 
+
+is an unbiased estimator. Notice that 𝑣 𝑞 , 𝑣 𝑡 ∈ I 𝑖,𝑗 , and then, 2 ≤|I 𝑖,𝑗 | ≤ min {𝑑 (𝑢 𝑖 ), 𝑑 (𝑢 𝑗 )} . The random variable 𝑍 𝑟 can be bounded by 
+
+𝑍 𝑟 ≤ 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+𝛼 + |I 𝑖,𝑗 | ≤ 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+𝛼 + 2 = 𝜁 . 
+
+By letting 𝜀 = 𝑛 · 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 ) and applying Lemma D.1, we can derive 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+= P  𝑛 · fsw (𝑣 𝑞 , 𝑣 𝑡 ) − 𝑛 · sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝑛 · 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+≤ exp ©«
+
+− (𝑛 · 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )) 2
+
+2𝜁 ( 𝑛 ·𝜖 ·sw (𝑣 𝑞 ,𝑣 𝑡 ) 
+
+> 3
+
++ 𝑛 · sw (𝑣 𝑞 , 𝑣 𝑡 )) 
+
+ª®¬
+
+= exp −𝑛 · 𝜖 2 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+2𝜁 ( 𝜖  
+
+> 3
+
++ 1)
+
+!
+
+.
+
+Note that 𝑛 ≥ 2𝜁 (1+𝜖 /3) 
+
+> 𝜖 2𝜆
+
+log 1 
+
+> 𝛿
+
+. Then we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+≤ exp 
+
+
+
+− sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+𝜆 log 1
+
+𝛿 
+
+
+
+.
+
+When sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜆 , we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 ) ≤ 𝛿.  
+
+> 21 SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA Runhao Jiang and Renchi Yang
+
+Applying Lemma D.1 with 𝜀 = 𝑛 · 𝜖 · 𝜆 , we can derive 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · 𝜆 
+
+≤ exp − 𝑛 · ( 𝜖 · 𝜆 )2
+
+2𝜁 ( 𝜖 ·𝜆  
+
+> 3
+
++ sw (𝑣 𝑞 , 𝑣 𝑡 )) 
+
+!
+
+.
+
+When sw (𝑣 𝑞 , 𝑣 𝑡 ) < 𝜆 , we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · 𝜆  ≤ 𝛿, 
+
+which finishes the proof. 
+
+□
+
+Proof of Theorem 3.2. Consider the 𝑟 -th random event that catches target item 𝑣 𝑡 in the subset I′ 
+
+> 𝑖,𝑗
+
+and yields an update 𝑍 𝑟 to 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ). Let 1𝑣 𝑡 ∈ I ′ 
+
+> 𝑖,𝑗
+
+be the indicator variable where 1𝑣 𝑡 ∈ I ′ 
+
+> 𝑖,𝑗
+
+= 1if 𝑣 𝑡 ∈ I ′ 
+
+> 𝑖,𝑗
+
+and 0 otherwise. Since I′ 
+
+> 𝑖,𝑗
+
+is obtained as Line 4 in Algorithm 4 and I′ (𝑢 𝑖 ) is drawn uniformly at random from I ( 𝑢 𝑖 ),we have 
+
+E[1𝑣 𝑡 ∈ I ′ 
+
+> 𝑖,𝑗
+
+] = |I ′ (𝑢 𝑖 )| 
+
+𝑑 (𝑢 𝑖 ) = ⌈𝛾 · 𝑑 (𝑢 𝑖 )⌉ 
+
+𝑑 (𝑢 𝑖 ) .
+
+By Line 7 in Algorithm 4, the expected value of the update score target item 𝑣 𝑡 is 
+
+E[𝑍 𝑟 ] = 1     
+
+> | I ′(𝑢 𝑖 ) |
+> 𝑑 (𝑢 𝑖 )
+
+· ( 𝛼 + |I 𝑖,𝑗 |) · E[1𝑣 𝑡 ∈ I ′ 
+
+> 𝑖,𝑗
+
+] = 1
+
+𝛼 + |I 𝑖,𝑗 | . (14) By the linearity of expectation over all user pairs sharing 𝑣 𝑡 , we have 
+
+E[fsw (𝑣 𝑞 , 𝑣 𝑡 )] = sw (𝑣 𝑞 , 𝑣 𝑡 ),
+
+indicating that fsw (𝑣 𝑞 , 𝑣 𝑡 ) is an unbiased estimator. The random variable 𝑍 𝑟 can be bounded by 
+
+𝑍 𝑟 ≤ max 
+
+> 𝑟
+
+1     
+
+> | I ′(𝑢 𝑖 ) |
+> 𝑑 (𝑢 𝑖 )
+
+· ( 𝛼 + |I 𝑖,𝑗 |) 
+
+= max 
+
+> 𝑟
+
+1      
+
+> ⌈𝛾 ·𝑑 (𝑢 𝑖 ) ⌉
+> 𝑑 (𝑢 𝑖 )
+
+· ( 𝛼 + |I 𝑖,𝑗 |) 
+
+.
+
+Note that 𝛾 ≤ min 
+
+n 2(𝜖 /3+1)(𝛼 +2) · 𝜆𝜖 2 · log 
+
+ 1
+
+> 𝛿
+
+
+
+, 1
+
+o
+
+. Then, we have 
+
+𝑍 𝑟 ≤ 𝜆𝜖 2
+
+2(𝜖 /3 + 1) · log 
+
+ 1
+
+𝛿 
+
+
+
+= 𝜁 . 
+
+By letting 𝜀 = 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 ) and applying Lemma D.1, we can derive 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+≤ exp ©«
+
+− (𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )) 2
+
+2𝜁 ( 𝜖 ·sw (𝑣 𝑞 ,𝑣 𝑡 ) 
+
+> 3
+
++ sw (𝑣 𝑞 , 𝑣 𝑡 )) 
+
+ª®¬
+
+= exp −𝜖 2 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+2𝜁 ( 𝜖  
+
+> 3
+
++ 1)
+
+!
+
+.
+
+When sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜆 , we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 ) ≤ 𝛿. 
+
+Applying Lemma D.1 with 𝜀 = 𝜖 · 𝜆 , we can derive 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · 𝜆 
+
+≤ exp − (𝜖 · 𝜆 )2
+
+2𝜁 ( 𝜖 ·𝜆  
+
+> 3
+
++ sw (𝑣 𝑞 , 𝑣 𝑡 )) 
+
+!
+
+.
+
+When sw (𝑣 𝑞 , 𝑣 𝑡 ) < 𝜆 , we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · 𝜆  ≤ 𝛿, 
+
+which finishes the proof. □
+
+Proof of Theorem 3.3. When 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1) 
+
+> 2
+
+≤ 𝑛 , the runtime for GNS can be simplified as 
+
+𝑇 GNS = 𝜌 GNS ·
+
+
+
+𝑛 + 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2 · 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+≥ 𝜌 GNS · 𝑛 + 1
+
+𝜌 · 𝑇 Exact ,
+
+which is definitely more costly than Exact . In the meanwhile, notice that in this case, 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1) 
+
+> 2
+
+· 𝜌 ≤ 𝑛 , indicating that Eq. (6) holds and Exact will be selected for execution as expected. On the other hand, when 𝑛 < 𝑑 (𝑣 𝑞 ) ( 𝑑 (𝑣 𝑞 ) − 1) 
+
+> 2
+
+, we have 𝑇 GNS =
+
+𝜌 GNS · 𝑛 ·
+
+
+
+1 + 𝐷 (𝑣 𝑞 )  
+
+> 𝑑 (𝑣 𝑞 )
+
+
+
+. If Eq. (6) is satisfied, namely USS is executed by ASC ), we can derive 
+
+𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2 · 𝜌 ≤ 𝑛 
+
+
+
+1 + 𝑑 (𝑣 𝑞 )
+
+𝐷 (𝑣 𝑞 )
+
+
+
+⇔𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2 · 𝜌 USS ≤ 𝑛 
+
+
+
+1 + 𝑑 (𝑣 𝑞 )
+
+𝐷 (𝑣 𝑞 )
+
+
+
+· 𝜌 GNS 
+
+⇔
+
+ 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)
+
+2 · 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 )
+
+
+
+· 𝜌 USS ≤ 𝑛 
+
+ 𝐷 (𝑣 𝑞 )
+
+𝑑 (𝑣 𝑞 ) + 1
+
+
+
+· 𝜌 GNS 
+
+⇔𝑇 USS ≤ 𝑇 GNS .
+
+If Eq. (6) does not hold, ASC invokes GNS . We can also derive that 
+
+𝑇 USS > 𝑇 GNS , which finishes the proof. □
+
+Proof of Lemma D.3. 
+
+Lemma D.2 (Chan’s Algorithm [10]). Let 𝐴 = {𝑥 1, . . . , 𝑥 𝑚 } and 
+
+𝐵 = {𝑥 𝑚 +1, . . . , 𝑥 𝑚 +𝑛 } be two samples. We have 
+
+𝑇 1,𝑚 =
+
+> 𝑚
+
+∑︁ 
+
+> 𝑖 =1
+
+𝑥 𝑖 , 𝑆 1,𝑚 =
+
+> 𝑚
+
+∑︁ 
+
+> 𝑖 =1
+
+(𝑥 𝑖 − 1
+
+𝑚 𝑇 1,𝑚 )2,𝑇 𝑚 +1,𝑚 +𝑛 =
+
+> 𝑚 +𝑛
+
+∑︁ 
+
+> 𝑖 =𝑚 +1
+
+𝑥 𝑖 , 𝑆 𝑚 +1,𝑚 +𝑛 =
+
+> 𝑚 +𝑛
+
+∑︁ 
+
+> 𝑖 =𝑚 +1
+
+(𝑥 𝑖 − 1
+
+𝑛 𝑇 𝑚 +1,𝑚 +𝑛 )2.
+
+Let 𝐶 = 𝐴 ∪ 𝐵 be the combined sample. It can be shown that 
+
+𝑇 1,𝑚 +𝑛 = 𝑇 1,𝑚 + 𝑇 𝑚 +1,𝑚 +𝑛 ,𝑆 1,𝑚 +𝑛 = 𝑆 1,𝑚 + 𝑆 𝑚 +1,𝑚 +𝑛 + 𝑚 𝑛 (𝑚 + 𝑛 ) ( 𝑛 𝑚 𝑇 1,𝑚 − 𝑇 𝑚 +1,𝑚 +𝑛 )2.
+
+We now apply Lemma D.2, setting 𝐴 = {𝑍 1, . . . , 𝑍 𝑛 −𝑐 } to be the set of the first 𝑛 − 𝑐 samples and 𝐵 = {𝑍 𝑛 −𝑐 +1, . . . , 𝑍 𝑛 } to be the new batch of 𝑐 samples whose values are all 𝑤 ,
+
+𝑇 1,𝑛 −𝑐 = (𝑛 − 𝑐 )𝜇 𝑛 −𝑐 , 𝑆 1,𝑛 −𝑐 = (𝑛 − 𝑐 − 1)𝜎 2 
+
+> 𝑛 −𝑐
+
+,𝑇 𝑛 −𝑐 +1,𝑛 = 𝑐𝑤, 𝑆 𝑛 −𝑐 +1,𝑛 = 0.
+
+Then, we derive that 
+
+𝜇 𝑛 = 1
+
+𝑛 𝑇 1,𝑛 = (𝑛 − 𝑐 )𝜇 𝑛 −𝑐 + 𝑐𝑤 𝑛 = 𝜇 𝑛 −𝑐 + 𝑐 (𝑤 − 𝜇 𝑛 −𝑐 )
+
+𝑛 , 
+
+> 22 Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems SIGMOD ’27, June 13–19, 2027, Huntington Beach, CA, USA
+
+𝜎 2 
+
+> 𝑛
+
+= 1
+
+𝑛 − 1 𝑆 1,𝑛 
+
+= 1
+
+𝑛 − 1 (( 𝑛 − 𝑐 − 1)𝜎 2 
+
+> 𝑛 −𝑐
+
++ 𝑛 − 𝑐 𝑐𝑛 ( 𝑐 (𝑛 − 𝑐 )𝜇 𝑛 −𝑐 
+
+𝑛 − 𝑐 − 𝑐𝑤 )2
+
+= 𝜎 2 
+
+> 𝑛 −𝑐
+
++ 1
+
+𝑛 − 1 ( 𝑛 − 𝑐 𝑐𝑛 (𝑐𝜇 𝑛 −𝑐 − 𝑐𝑤 )2 − 𝑐𝜎 2 
+
+> 𝑛 −𝑐
+
+)
+
+= 𝜎 2 
+
+> 𝑛 −𝑐
+
++ 𝑐 𝑛 − 1 ( 𝑛 − 𝑐 𝑛 (𝜇 𝑛 −𝑐 − 𝑤 )2 − 𝜎 2 
+
+> 𝑛 −𝑐
+
+).
+
+□
+
+Proof of Lemma 4.4. First, we need the following lemma. Lemma D.3. Let {𝑍 𝑖 }𝑛 𝑖 =1 be a sequence of 𝑛 random variables. De-note the sample mean and variance of the first (𝑛 − 𝑐 ) observations as 
+
+𝜇 𝑛 −𝑐 = 1
+
+> 𝑛 −𝑐
+
+Í𝑛 −𝑐 𝑖 =1 𝑍 𝑖 and 𝜎 𝑛 −𝑐 = 1 
+
+> 𝑛 −𝑐 −1
+
+Í𝑛 −𝑐 𝑖 =1 (𝑍 𝑖 − 𝜇 𝑛 −𝑐 )2, respec-tively. Suppose that the next 𝑐 observations are identical and equal to 𝑥 , i.e., 𝑍 𝑛 −𝑐 +1 = · · · = 𝑍 𝑛 = 𝑥 . Then, the updated sample mean 𝜇 𝑛 
+
+and variance 𝜎 𝑛 over all 𝑛 observations are 
+
+𝜇 𝑛 = 𝜇 𝑛 −𝑐 + 𝑐 (𝑥 − 𝜇 𝑛 −𝑐 )
+
+𝑛 , 𝜎 𝑛 = 𝜎 𝑛 −𝑐 +
+
+𝑐 
+
+ 𝑛 − 𝑐 𝑛 (𝑥 − 𝜇 𝑛 −𝑐 )2 − 𝜎 𝑛 −𝑐 
+
+
+
+𝑛 − 1 .
+
+Algorithm 7 computes fsw (𝑣 𝑞 , 𝑣 𝑡 ) and 𝜎 (𝑣 𝑡 ) in two parts. Firstly, the flow-processing section (Lines 6-11) can be interpreted as adding 
+
+|𝑆 (𝑢 𝑖 , 𝑢 𝑗 )| identical observations at each iteration, each with an in-crement 𝑑 (𝑣 𝑞 ) · ( 𝑑 (𝑣 𝑞 ) − 1)  
+
+> 𝛼 +| I 𝑖,𝑗 |
+
+. For each target item 𝑣 𝑡 , 𝑟 (𝑣 𝑡 ) records the number of accumulated observations. Applying Lemma D.3 to this grouped update yields the update formulas for the sample mean 
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) in Eq. (10) and the sample variance 𝜎 (𝑣 𝑡 ) in Eq. (11), which update the statistics from 𝑟 (𝑣 𝑡 ) to 𝑟 (𝑣 𝑡 ) + | 𝑆 (𝑢 𝑖 , 𝑢 𝑗 )| observa-tions. Afterwards, Lines 12-14 perform a final correction from 𝑟 (𝑣 𝑡 )
+
+to 𝑛 𝑓 sampling rounds, by viewing the missing 𝑛 𝑓 −𝑟 (𝑣 𝑡 ) rounds as additional observations with value zero and applying Lemma D.3, the sample mean and variance are updated as fsw (𝑣 𝑞 , 𝑣 𝑡 ) ← 𝑟 (𝑣 𝑡 ) 
+
+> 𝑛 𝑓
+
+·
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) and 𝜎 (𝑣 𝑡 ) ← 𝜎 (𝑣 𝑡 ) + (𝑛 𝑓 −𝑟 (𝑣 𝑡 ) ) ( 𝑟 (𝑣𝑡 )       
+
+> 𝑛 𝑓 ·fsw (𝑣 𝑞 ,𝑣 𝑡 )2−𝜎 (𝑣 𝑡 ) )
+> 𝑛 𝑓 −1
+
+.Therefore, for any 𝑣 𝑡 ∈ I fsw (𝑣 𝑞 , 𝑣 𝑡 ) and 𝜎 (𝑣 𝑡 ) are equal to sample mean and variance over all 𝑛 𝑓 observations. This establishes that for any 𝑣 𝑡 ∈ I , fsw (𝑣 𝑞 , 𝑣 𝑡 ) and 𝜎 (𝑣 𝑡 ) exactly match the sample mean and sample variance over all 𝑛 𝑓 observations. □
+
+Proof of Theorem 4.5. If Eq. (6) holds, Algorithm 6 invokes Algorithm 4, thereby achieving an (𝜖, 𝜆 )-approximation with a probability of at least 1 − 𝛿 . Otherwise, Algorithm 6 invokes Al-gorithm 7 and Algorithm 8, resulting in a mixed approximation guarantee. First, Algorithm 7 maintains the sample mean fsw (𝑣 𝑞 , 𝑣 𝑡 ), which is equivalent to that computed by GNS over 𝑛 𝑓 sampled user pairs from U ( 𝑣 𝑞 ), by applying Lemma 4.4. Based on this equivalence, we can derive a similar approximation guarantee as in Theorem 3.1. In particular, by setting 𝜀 = 𝑛 𝑓 ·𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 ) and applying Lemma D.1, we obtain the following result. 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+≤ exp −𝑛 𝑓 · 𝜖 2 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+2𝜁 ( 𝜖  
+
+> 3
+
++ 1)
+
+!
+
+.
+
+Note 𝑛 𝑓 = 𝛽 · 𝑛 ≥ · 2𝜁 (1+𝜖 /3)   
+
+> 𝜖 2(𝜆 /𝛽 )
+
+log 1 
+
+> 𝛿
+
+. Then we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+≤ exp 
+
+
+
+− sw (𝑣 𝑞 , 𝑣 𝑡 )
+
+𝜆 /𝛽 log 1
+
+𝛿 
+
+
+
+.
+
+When sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜆 /𝛽 , we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · sw (𝑣 𝑞 , 𝑣 𝑡 ) ≤ 𝛿. 
+
+Applying Lemma D.1 with 𝜀 = 𝑛 𝑓 · 𝜖 · 𝜆 /𝛽 , we can derive 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · 𝜆 /𝛽 
+
+≤ exp − 𝑛 𝑓 · ( 𝜖 · 𝜆 /𝛽 )2
+
+2𝜁 ( 𝜖 ·𝜆 /𝛽  
+
+> 3
+
++ sw (𝑣 𝑞 , 𝑣 𝑡 )) 
+
+!
+
+.
+
+When sw (𝑣 𝑞 , 𝑣 𝑡 ) < 𝜆 /𝛽 , we have 
+
+P  fsw (𝑣 𝑞 , 𝑣 𝑡 ) − sw (𝑣 𝑞 , 𝑣 𝑡 ) ≥ 𝜖 · 𝜆 /𝛽  ≤ 𝛿. 
+
+Combining the two cases, for any target item 𝑣 𝑡 ∈ I , fsw (𝑣 𝑞 , 𝑣 𝑡 )
+
+computed by Algorithm 7 is the (𝜖, 𝜆 /𝛽 )-approximate Swing with a probability of at least 1 − 𝛿 .Afterwards, Algorithm 8 refines the borderline items B generated by Algorithm 7. If 𝑛 𝑟 ≥ |U ( 𝑣 𝑞 )|/ 2, Algorithm 8 adaptively switches to a brute-force method (Lines 5–7) to compute the exact Swing scores. Otherwise, it estimates the scores using 𝑛 𝑟 user-pair samples drawn uniformly from U𝑞, B (𝑣 𝑞 ) (Lines 9-12). Since |U 𝑞, B (𝑣 𝑞 )| ≤ |U ( 𝑣 𝑞 )| , the random variable 𝑍 𝑟 = | U 𝑞, B (𝑣 𝑞 ) | · ( | U 𝑞, B (𝑣 𝑞 ) | − 1)  
+
+> 𝛼 +| I 𝑖,𝑗 |
+
+is still bounded by 𝜁 = | U ( 𝑣 𝑞 ) | · ( | U ( 𝑣 𝑞 ) | − 1) 
+
+> 𝛼 +2
+
+. Therefore, the same argu-ment used for Algorithm 7 applies here, with the sample size re-placed by 𝑛 𝑟 = (1 − 𝛽 )𝑛. By Lemma D.1, for any 𝑣 𝑡 ∈ B , the estimator produced in Lines 9-12 is an (𝜖, 𝜆 /( 1 − 𝛽 )) -approximation of sw (𝑣 𝑞 , 𝑣 𝑡 ) with probability at least 1 − 𝛿 . When 𝑛 𝑟 < |U ( 𝑣 𝑞 )|/ 2, Algorithm 8 performs 𝑛 𝑟 random sampling steps (Lines 14-17) from 
+
+U ( 𝑣 𝑞 ), with a more efficient membership check. The same analysis applies, implying that fsw (𝑣 𝑞 , 𝑣 𝑡 ) is an (𝜖, 𝜆 /( 1 − 𝛽 )) -approximation of sw (𝑣 𝑞 , 𝑣 𝑡 ) with probability at least 1 −𝛿 . Therefore, for any target item 𝑣 𝑡 ∈ B , fsw (𝑣 𝑞 , 𝑣 𝑡 ) output by Algorithm 8 is the (𝜖, 𝜆 /( 1 − 𝛽 )) -approximate Swing with a probability of at least 1 − 𝛿 .Putting the above together, Algorithm 6 provides a mixed ap-proximation guarantee. Specifically, for any target item 𝑣 𝑡 ∈ I \ B ,
+
+fsw (𝑣 𝑞 , 𝑣 𝑡 ) is the (𝜖, 𝜆 /𝛽 )-approximate Swing with a probability of at least 1 − 𝛿 , and for any target item 𝑣 𝑡 ∈ B , fsw (𝑣 𝑞 , 𝑣 𝑡 ) is the 
+
+(𝜖, 𝜆 /( 1 − 𝛽 )) -approximate Swing with a probability of at least 1 − 𝛿 . □

@@ -1,0 +1,445 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-17T22:28:26.197173+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 4,
+    "deep_cap": 6,
+    "deep_selected": 4,
+    "quick_candidates": 5,
+    "quick_skim_target": 11,
+    "quick_selected": 5
+  },
+  "deep_dive": [
+    {
+      "id": "2609.18148v1",
+      "source": "arxiv",
+      "title": "LIGE-GR: A Smooth Leap from Ranking to Generative Recommendation in the LLM Era",
+      "abstract": "The remarkable success of large language models (LLMs) has provided important inspiration for the next generation of recommender systems. Structurally, recommendation and language generation share a similarity: both aim to produce an ordered sequence that optimizes the user's experience. However, how to precisely absorb the essence of the LLM paradigm into mature industrial recommender systems remains an open problem.   There are two challenges. First, it is unclear how to incorporate sequence-level generation and optimization from the LLM paradigm into recommendation. Second, real-world recommender systems are mature systems that have been iteratively customized for years around specific products, business constraints, serving infrastructure, and organizational ownership. Replacing such systems wholesale is often technically risky and organizationally disruptive.   In this paper, we propose LIGE-GR, a listwise generation and evaluation recommendation framework that upgrades from a traditional ranking system based on itemwise recommendation toward a generative recommendation paradigm. Instead of rebuilding the entire recommendation stack from scratch, LIGE-GR generalizes the existing pointwise recommendation system into a listwise generation system. This allows mature recommender systems to benefit from listwise optimization while preserving compatibility with existing models, value functions, and serving infrastructure.   We validate LIGE-GR in short-video recommendation on Instagram Reels and Facebook Video. On these recommendation surfaces, LIGE-GR improves time spent by 1.14 percent on Instagram Reels and 0.72 percent on Facebook Video, while requiring only modest additional inference resources.",
+      "authors": [
+        "Venkat Srinivas",
+        "Chenzhang He",
+        "Sam Woodmansee",
+        "Shawn Lian",
+        "Wenjie Hu",
+        "Renjie Jiang",
+        "Ziheng Huang",
+        "Xinyuan Zhang",
+        "Zhihao Zheng",
+        "Zhuoran Yu",
+        "Rui Li",
+        "Lei Yuan",
+        "Ziwei Li",
+        "Jimmy Jia",
+        "Mert Terzihan",
+        "Ekrem Kocaguneli",
+        "Yiming Liao",
+        "Zhichen Zhao",
+        "Yue Yin",
+        "Yue Weng",
+        "Wanlin Ma",
+        "Xufeng Cai",
+        "Weimiao Wu",
+        "Yezhou Huang",
+        "Du Zhang",
+        "Yukun Ding",
+        "Aaron Johnston",
+        "Yueming Wang",
+        "Zhaojie Gong",
+        "Yuting Zhang",
+        "Serena Li",
+        "Adithya Ganesh",
+        "Boying Liu",
+        "Haichuan Yang",
+        "Xialu Li",
+        "Matt Ma",
+        "Qunshu Zhang",
+        "John Joshua Miller",
+        "Praveen Rathinavelu",
+        "Cheng Huang",
+        "Aadhar Sachdeva",
+        "Josh Karns",
+        "Andres Aaron Gutierrez",
+        "Neil Agarwal",
+        "Gustas Pladis",
+        "Vladimir Batygin",
+        "Gopal Ray",
+        "Aditya Priyadarshi",
+        "Shantanu Patil",
+        "Zhe Wang",
+        "Penny Pan",
+        "Yiping Han",
+        "Arun Singh",
+        "Guangdeng Liao",
+        "Bi Xue",
+        "Xinyao Hu",
+        "Yang Song",
+        "Yisong Song",
+        "Meihong Wang",
+        "Haotian Wu",
+        "Deepak Agarwal",
+        "Ji Liu"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.IR"
+      ],
+      "published": "2026-09-16T05:28:52+00:00",
+      "link": "https://arxiv.org/pdf/2609.18148v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "ranking-to-generative recommendation with sequence-level generation for industrial recsys",
+      "llm_evidence_cn": "从排序到生成式推荐，工业级序列生成",
+      "llm_evidence": "从排序到生成式推荐，工业级序列生成",
+      "canonical_evidence": "从排序到生成式推荐，工业级序列生成",
+      "llm_tldr_en": "The paper tackles how to absorb the LLM paradigm into mature industrial recommender systems, proposing LIGE-GR to move from ranking to generative recommendation while respecting business and serving constraints.",
+      "llm_tldr_cn": "该文针对如何将LLM范式融入成熟的工业推荐系统这一开放问题展开研究，指出序列级生成优化与既有服务基础设施的兼容是两大挑战。作者提出LIGE-GR框架，实现从排序模型到生成式推荐的平滑过渡，兼顾业务约束与服务架构。方法强调在保留工业系统稳定性的同时引入序列级生成与优化。其贡献在于为工业级生成式推荐落地提供了可行路径。",
+      "llm_tldr": "该文针对如何将LLM范式融入成熟的工业推荐系统这一开放问题展开研究，指出序列级生成优化与既有服务基础设施的兼容是两大挑战。作者提出LIGE-GR框架，实现从排序模型到生成式推荐的平滑过渡，兼顾业务约束与服务架构。方法强调在保留工业系统稳定性的同时引入序列级生成与优化。其贡献在于为工业级生成式推荐落地提供了可行路径。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.18296v1",
+      "source": "arxiv",
+      "title": "One-Step Retrieval Framework for Real-Time Sponsored Search Ads Using Hierarchical Text Representations",
+      "abstract": "Traditional retrieval systems typically use multi-stage cascading architectures (MCA), where each module is optimized independently, leading to inconsistent objectives and the premature elimination of high-potential candidates. Recent LLM-based generation methods offer end-to-end solutions but use discrete semantic identifiers (SIDs) to retrieve ads, which are not learned by the base LLM and require memorization of numerous SID-to-ad mappings during SFT, suffering from limited generalization to unseen ads, high maintenance and update costs. The one-to-one mapping between SIDs and advertisements leads to inefficient decoding. Moreover, these methods rely on a small reward model (e.g. pctr) for relevance and ranking, limiting the LLM's ability to fully assess ads' commercial value. To address these challenges, we propose A uNified Generation-discriminative-ranking reaL-time rEtrieval (ANGLE) framework. ANGLE uses LLM-generated hierarchical textual representations, which consist of commercial intent that provide high-level overviews and ad abstract that deliver fine-grained details. Additionally, ANGLE integrates retrieval, relevance, and ranking directly within a single LLM, enabling precise and efficient ranking of ads by leveraging the full capabilities of the LLM. We applied ANGLE to the real-world search scenarios, achieving a 1.81% increase in consumption and a 2.16% increase in gross merchandise volume (GMV). We also conducted offline evaluations of ANGLE and seven baselines, with ANGLE outperforming all across key metrics such as HR and ACR.",
+      "authors": [
+        "Tongtong Liu",
+        "Renyu Zhang",
+        "Jiayu Ding",
+        "Hongchao Guo",
+        "Xintao Yang",
+        "He Wei",
+        "Zhaoyu Li",
+        "Haiyang Wu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-16T08:18:50+00:00",
+      "link": "https://arxiv.org/pdf/2609.18296v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "one-step generative retrieval for real-time sponsored search ads using hierarchical text representations",
+      "llm_evidence_cn": "面向实时赞助搜索广告、基于层次化文本表示的一步式生成式检索",
+      "llm_evidence": "面向实时赞助搜索广告、基于层次化文本表示的一步式生成式检索",
+      "canonical_evidence": "面向实时赞助搜索广告、基于层次化文本表示的一步式生成式检索",
+      "llm_tldr_en": "The paper addresses multi-stage ad retrieval and LLM-based generative retrieval with semantic IDs, proposing a one-step retrieval framework using hierarchical text representations for real-time sponsored search ads.",
+      "llm_tldr_cn": "传统赞助搜索广告检索采用多阶段级联架构，各模块目标不一致且易过早淘汰高潜候选；现有基于语义标识符的LLM生成式检索又难以泛化到新广告、维护成本高且解码低效。论文提出基于层次化文本表示的一步式检索框架，避免离散SID到广告的一一映射，提升对未见过广告的泛化与实时解码效率。该工作面向真实广告检索场景，为生成式广告召回的端到端落地提供了新范式。",
+      "llm_tldr": "传统赞助搜索广告检索采用多阶段级联架构，各模块目标不一致且易过早淘汰高潜候选；现有基于语义标识符的LLM生成式检索又难以泛化到新广告、维护成本高且解码低效。论文提出基于层次化文本表示的一步式检索框架，避免离散SID到广告的一一映射，提升对未见过广告的泛化与实时解码效率。该工作面向真实广告检索场景，为生成式广告召回的端到端落地提供了新范式。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative models for ad retrieval, ad ranking, and sponsored content generation",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.16070v1",
+      "source": "arxiv",
+      "title": "Efficient Multimodal Generative Recommendation with Latent Narrative Reasoning",
+      "abstract": "Generative recommendation reformulates item prediction as semantic identifier generation, yet episodic content introduces a fundamentally different setting where the target is determined by narrative evolution rather than user preference. This task requires models to understand multimodal storyline progression while addressing the efficiency challenges caused by redundant visual contexts and costly explicit reasoning generation. We propose \\textbf{NarraLite}, an efficient multimodal generative recommendation framework that jointly compresses perception and reasoning. Specifically, Progressive Spectral Compression selectively distills long visual contexts into compact narrative-relevant evidence, preserving transition-critical information while reducing redundant visual computation. Latent Narrative Reasoning introduces context-routed latent reasoning tokens and aligns their contextualized representations with future continuation semantics, enabling implicit narrative inference without autoregressively decoding textual rationales. We further establish a user-agnostic multimodal benchmark for short-form drama continuation across UGC, PGC, and OOD settings. Extensive experiments demonstrate that NarraLite consistently improves continuation accuracy, narrative coherence, and robustness over existing approaches, while achieving a favorable accuracy--efficiency trade-off.",
+      "authors": [
+        "Chenxing Wang",
+        "Nantao Zheng",
+        "Hao Miao",
+        "Juyuan Wang",
+        "Xinke Jiang",
+        "Yuchen Fang",
+        "Aolin Li",
+        "Haijun Wu"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI"
+      ],
+      "published": "2026-09-13T15:04:05+00:00",
+      "link": "https://arxiv.org/pdf/2609.16070v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "multimodal generative recommendation that generates semantic identifiers for item prediction",
+      "llm_evidence_cn": "将物品预测转化为语义标识符生成的多模态生成式推荐",
+      "llm_evidence": "将物品预测转化为语义标识符生成的多模态生成式推荐",
+      "canonical_evidence": "将物品预测转化为语义标识符生成的多模态生成式推荐",
+      "llm_tldr_en": "NarraLite is an efficient multimodal generative recommendation framework that compresses visual contexts and latent reasoning, addressing narrative-driven item prediction under redundancy and cost constraints.",
+      "llm_tldr_cn": "生成式推荐将物品预测转化为语义标识符生成，但情节化内容的目标由叙事演进而非用户偏好决定，且冗余视觉上下文与显式推理生成带来高昂开销。论文提出NarraLite，通过渐进谱压缩将长视觉上下文蒸馏为紧凑的叙事相关证据，并联合压缩感知与推理过程。该框架在保留关键转场信息的同时显著降低计算成本，为多模态生成式推荐的高效落地提供了新思路。",
+      "llm_tldr": "生成式推荐将物品预测转化为语义标识符生成，但情节化内容的目标由叙事演进而非用户偏好决定，且冗余视觉上下文与显式推理生成带来高昂开销。论文提出NarraLite，通过渐进谱压缩将长视觉上下文蒸馏为紧凑的叙事相关证据，并联合压缩感知与推理过程。该框架在保留关键转场信息的同时显著降低计算成本，为多模态生成式推荐的高效落地提供了新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.16560v1",
+      "source": "arxiv",
+      "title": "ReliGRec: Reliability-Oriented LLM-Based Generative Recommendation via User-Risk-Aware Prompt Routing",
+      "abstract": "User behavior in real-world recommender systems is heterogeneous. While some users exhibit coherent preferences, others show abrupt interest shifts, bursty interactions, excessive repetition, or inconsistency with collaborative neighborhoods. Such deviations may arise from benign variation or manipulation, including shilling attacks, but do not alone establish malicious intent. Existing robust recommenders exploit user-risk signals through training-time reweighting or graph aggregation, whereas adapting generation to estimated user-level weak risk remains underexplored in LLM-based generative recommendation. We propose ReliGRec (Reliability-oriented Generative Recommendation), a weakly supervised framework whose name denotes its design goal rather than a supervised reliability variable. ReliGRec derives user-level weak-risk proxy labels from review-feedback signals for a subset of users and represents sequential behavior and collaborative context using a Behavior Token and temporal Graph Tokens, respectively. A Dual-View Weak-Risk Estimator fuses the representations to produce a user-level weak-risk score that selects a Simple or Cautious Prompt at inference. The Cautious Prompt is designed to encourage attention to stable, collaboratively supported evidence while reducing overreliance on isolated, short-term, or repeated interactions. The Behavior Token affects generation through weak-risk estimation and routing, whereas the aggregated Graph Token provides collaborative context for next-item Semantic ID generation. ReliGRec thus turns weak-risk estimation from an auxiliary prediction into a generation-time control signal. Experiments report competitive recommendation and weak-risk proxy-label prediction, while routing analyses characterize the recommendation-quality and inference-cost behavior of weak-risk-guided prompting.",
+      "authors": [
+        "Haoran Yang",
+        "Fei Chen",
+        "Yutian Xiao",
+        "Jiahao Liang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-15T02:56:30+00:00",
+      "link": "https://arxiv.org/pdf/2609.16560v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM-based generative recommendation adapting generation to estimated user-level risk",
+      "llm_evidence_cn": "基于LLM的生成式推荐，按用户风险自适应调整生成",
+      "llm_evidence": "基于LLM的生成式推荐，按用户风险自适应调整生成",
+      "canonical_evidence": "基于LLM的生成式推荐，按用户风险自适应调整生成",
+      "llm_tldr_en": "ReliGRec is a weakly supervised LLM-based generative recommendation framework that routes prompts according to user-level risk signals to handle heterogeneous and potentially manipulated behaviors.",
+      "llm_tldr_cn": "真实推荐系统中用户行为异质，部分用户兴趣突变、交互爆发或与协同邻域不一致，可能源于正常波动或刷单操纵。现有鲁棒推荐器多在训练期重加权或图聚合中利用风险信号，而LLM生成式推荐中按用户级弱风险调整生成仍未被充分探索。论文提出ReliGRec弱监督框架，通过用户风险感知的提示路由自适应生成推荐。该工作为生成式推荐在异质与潜在操纵环境下的可靠性提供了新方案。",
+      "llm_tldr": "真实推荐系统中用户行为异质，部分用户兴趣突变、交互爆发或与协同邻域不一致，可能源于正常波动或刷单操纵。现有鲁棒推荐器多在训练期重加权或图聚合中利用风险信号，而LLM生成式推荐中按用户级弱风险调整生成仍未被充分探索。论文提出ReliGRec弱监督框架，通过用户风险感知的提示路由自适应生成推荐。该工作为生成式推荐在异质与潜在操纵环境下的可靠性提供了新方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.16548v1",
+      "source": "arxiv",
+      "title": "QueryFormer: Winning Solution for KDD Cup 2026 Tencent UniRec Challenge",
+      "abstract": "Post-click conversion rate (pCVR) prediction requires jointly modeling feature interactions and sequential user behaviors. The KDD Cup 2026 Tencent UniRec Challenge calls for a unified architecture addressing both. We observe that existing unified architectures often generate query tokens---the central information hub---with projection-based multi-layer perceptrons (MLPs), without explicit token-to-query attention for refining the query side. We propose QueryFormer, centered on a stackable unified field--sequence block that bridges non-sequential multi-field features and behavioral sequences, and provide a latency-aware scaling study over view width $H$, model width, depth, data, and compute. The block generates queries through cross-attention and packs sequence queries into shared-parameter attention. QueryFormer secured 1st place in the Industrial Track, achieving an official test area under the ROC curve (AUC) of 0.83254; a modest post-competition scale-up reached 0.832713. Within our grid, $H$-scaling improves validation AUC from 0.84540 to 0.84615 and beats HyFormer at comparable budgets. Ablation identifies query generation as the largest contributor. Packed shared-parameter cross-attention keeps H=8 inference latency to only 1.89x that of H=1, positioning the bridge as an efficient stackable unified block.",
+      "authors": [
+        "Yuanzhe Zhou",
+        "Zhaoyang Zeng"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-15T02:46:27+00:00",
+      "link": "https://arxiv.org/pdf/2609.16548v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "latency-aware scaling study over model width, depth, data and compute for recommendation",
+      "llm_evidence_cn": "面向推荐任务的模型宽度、深度、数据与算力的延迟感知扩展研究",
+      "llm_evidence": "面向推荐任务的模型宽度、深度、数据与算力的延迟感知扩展研究",
+      "canonical_evidence": "面向推荐任务的模型宽度、深度、数据与算力的延迟感知扩展研究",
+      "llm_tldr_en": "QueryFormer proposes a unified field-sequence block for joint pCVR prediction, generating query tokens via cross-attention, and reports a latency-aware scaling study over width, depth, data and compute.",
+      "llm_tldr_cn": "针对pCVR预测中特征交互与序列行为难以统一建模的问题，论文提出QueryFormer，用可堆叠的字段-序列统一模块通过交叉注意力生成查询token，桥接非序列多字段特征与行为序列。作者进一步开展延迟感知的扩展性研究，系统分析视图宽度、模型宽度、深度、数据与算力对性能的影响。该方案在KDD Cup 2026腾讯UniRec挑战赛中夺冠，为大规模推荐模型的统一架构与规模化扩展提供了可复现的经验证据。",
+      "llm_tldr": "针对pCVR预测中特征交互与序列行为难以统一建模的问题，论文提出QueryFormer，用可堆叠的字段-序列统一模块通过交叉注意力生成查询token，桥接非序列多字段特征与行为序列。作者进一步开展延迟感知的扩展性研究，系统分析视图宽度、模型宽度、深度、数据与算力对性能的影响。该方案在KDD Cup 2026腾讯UniRec挑战赛中夺冠，为大规模推荐模型的统一架构与规模化扩展提供了可复现的经验证据。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "papers that study scaling up search advertising and recommendation systems including model size, data scale, and training efficiency",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.13500v1",
+      "source": "arxiv",
+      "title": "One Spectrum, Two Resources: Data-Memory Scaling in Autoregressive Prediction",
+      "abstract": "How much learned memory is needed to benefit from more data? We show that the two resources are governed by one predictive-energy spectrum in a positive-entropy autoregressive retrieval source. Each coordinate contributes its query probability times the squared radius of its unknown logit. Writing $μ$ for the resulting energy spectrum, we prove the minimax law $\\mathfrak R^*_{\\rm value}(n,B)\\asymp_R Φ_μ(n^{-1})+Φ_μ(τ_B), Φ_μ(t)=\\int\\min\\{x,t\\}\\,μ(\\mathrm dx),$ for $n$ prediction blocks and a learned state with at most $2^B$ values. Data set the resolution $1/n$; memory sets the level $τ_B$ reached by optimal bit allocation. The complete curve also recovers the positive spectrum. Energy-dimension pairing is essential: two causal sources with identical block-energy and block-dimension marginals have different data and memory exponents. A masked query-key attention head learns the route and values, realizing the law with explicit routing, format, and arithmetic errors. Further results give exponent-adaptive allocation, finite-precision realization, and compute-precision laws under two-sided arithmetic assumptions. Experiments recover the data-memory collapse and coupling exponents, explain the routing and allocation mechanisms, and examine weight-only quantization across six pretrained-model scales.",
+      "authors": [
+        "Chiwun Yang",
+        "Xiaoyu Li"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI",
+        "cs.CL"
+      ],
+      "published": "2026-09-11T20:05:13+00:00",
+      "link": "https://arxiv.org/pdf/2609.13500v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "data-memory scaling law for autoregressive prediction",
+      "llm_evidence_cn": "自回归预测的数据-记忆缩放规律",
+      "llm_evidence": "自回归预测的数据-记忆缩放规律",
+      "canonical_evidence": "自回归预测的数据-记忆缩放规律",
+      "llm_tldr_en": "This work asks how much learned memory is needed to benefit from more data, proving a minimax scaling law in which data sets resolution and memory sets the level, unifying both resources under one predictive-energy spectrum.",
+      "llm_tldr_cn": "论文研究学习记忆容量与数据量之间的权衡关系，即多少记忆才能从更多数据中获益。作者针对正熵自回归检索源推导出极小极大缩放律，将数据分辨率与记忆水平统一在同一预测能量谱下，并可由完整曲线恢复正谱。该结果为自回归模型的规模扩展提供了理论刻画，对理解数据与容量的协同缩放具有指导意义。",
+      "llm_tldr": "论文研究学习记忆容量与数据量之间的权衡关系，即多少记忆才能从更多数据中获益。作者针对正熵自回归检索源推导出极小极大缩放律，将数据分辨率与记忆水平统一在同一预测能量谱下，并可由完整曲线恢复正谱。该结果为自回归模型的规模扩展提供了理论刻画，对理解数据与容量的协同缩放具有指导意义。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "empirical scaling laws for recommender systems describing data size, model capacity, and ranking quality",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.17639v1",
+      "source": "arxiv",
+      "title": "Scaling Articulated Rationales for MLLM-based Recommendation",
+      "abstract": "Modern recommendation systems largely infer user preferences from implicit behaviors such as clicks, watch time, and negative feedback, but these signals reveal what users do rather than why they like or dislike content. This work studies articulated user rationales (AURs), i.e., users' natural-language explanations of their preferences, as a new class of polarity-aware and reason-level textual signals for recommendation. Despite their potential value, AURs are difficult to use in industrial systems because they are naturally sparse, often low-quality, and only cover a small fraction of items. We present SARA (Scaling Articulated Rationales), an industrial framework that turns sparse AURs into scalable recommendation signals. SARA first builds a data engine that elicits and curates AURs from 240M Kuaishou Live users, producing SARA-HQ, a quality-controlled and author-centric rationale dataset. It then aligns a general-purpose MLLM into SARA-7B through large-scale SFT and Quality-Refining DPO, extending rationale generation from 86,564 AUR-covered authors to the full 10M-author space. Finally, SARA-Ranker integrates the generated positive and negative rationales into production ranking via rationale-aware interaction modeling and rejection-memory modeling. Extensive offline evaluation, human calibration, and online A/B tests show that SARA-7B generates more specific, polarity-consistent, and grounded rationales than strong MLLM baselines, while SARA-Ranker improves engagement and reduces negative feedback in production. Deployed with daily refresh for over 30 days, SARA establishes articulated rationales as a practical, first-class textual signal for industrial recommendation systems.",
+      "authors": [
+        "Haoke Xiao",
+        "Yueyang Liu",
+        "Yuhui Zhang",
+        "Xiang Chen",
+        "Yufei Liu",
+        "Jia Xu",
+        "Yalong Guan",
+        "Xiaolan Zhu",
+        "Xiaoyu Zhang",
+        "Shijun Wang",
+        "Shuang Yang",
+        "Zijie Meng",
+        "Zejian Zhang",
+        "Ruochen Yang",
+        "Xiangyu Wu",
+        "Tingting Gao",
+        "Han Li",
+        "Lantao Hu",
+        "Cheng Luo",
+        "Kun Gai"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-09-15T13:39:16+00:00",
+      "link": "https://arxiv.org/pdf/2609.17639v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "MLLM-based recommendation with scaled articulated user rationales",
+      "llm_evidence_cn": "基于MLLM推荐的可解释理由规模化",
+      "llm_evidence": "基于MLLM推荐的可解释理由规模化",
+      "canonical_evidence": "基于MLLM推荐的可解释理由规模化",
+      "llm_tldr_en": "Studies articulated user rationales as reason-level signals for recommendation and presents SARA, an industrial framework that scales sparse rationales into usable recommendation signals.",
+      "llm_tldr_cn": "现有推荐系统多依赖点击、观看时长等隐式行为，只能反映用户做了什么，而非为何偏好。本文研究用户自然语言解释（AUR）作为极性感知与原因级文本信号，但AUR稀疏、质量参差、覆盖物品有限。作者提出SARA工业框架，通过数据引擎将稀疏AUR转化为可扩展的推荐信号，使MLLM推荐能够利用原因级监督，提升推荐的可解释性与效果。",
+      "llm_tldr": "现有推荐系统多依赖点击、观看时长等隐式行为，只能反映用户做了什么，而非为何偏好。本文研究用户自然语言解释（AUR）作为极性感知与原因级文本信号，但AUR稀疏、质量参差、覆盖物品有限。作者提出SARA工业框架，通过数据引擎将稀疏AUR转化为可扩展的推荐信号，使MLLM推荐能够利用原因级监督，提升推荐的可解释性与效果。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.16850v1",
+      "source": "arxiv",
+      "title": "Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems",
+      "abstract": "Given a user-item graph $G$, a query item $v_q$ and a target item $v_t$, the Swing score $sw(v_q, v_t)$ of the item pair $(v_q, v_t)$ leverages the user-item-user interaction structure to evaluate their similarity. This measure is found to be highly effective in item-to-item (i2i) retrieval task and finds extensive applications in industrial-scale recommender systems. However, existing solutions towards computing Swing scores are either prohibitively expensive due to their quadratic time complexity w.r.t. the item degree, or rely on truncation heuristics that yield unsatisfactory quality, rendering them impractical particularly on graphs with billions of interactions.   In this paper, we present ASC and $K$-ASC, two novel and efficient algorithms for approximate and top-$K$ Swing queries, to address the aforementioned limitations. Specifically, these algorithms provide rigorous theoretical guarantees in probabilistic relative and additive errors of Swing values. The basic idea of ASC is to combine two randomized algorithms, GNS and USS, in a simple yet non-trivial way to adaptively process high- and low-degree query items with minimal runtime cost. In particular, $K$-ASC offers practical efficiency and effectiveness for top-$K$ queries through a filter-refinement paradigm with carefully-designed heuristics. Extensive experiments over eight real datasets demonstrate that ASC and $K$-ASC can achieve orders of magnitude speed-up over competitors in terms of computational time while offering the same approximate and top-$K$ query result quality, and in particular, $K$-ASC is highly efficient on massive graphs including the billion-edge Yambda and MAG datasets.",
+      "authors": [
+        "Runhao Jiang",
+        "Renchi Yang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-15T08:42:59+00:00",
+      "link": "https://arxiv.org/pdf/2609.16850v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "efficient i2i retrieval on billion-scale user-item graphs",
+      "llm_evidence_cn": "十亿级用户物品图上的高效i2i检索",
+      "llm_evidence": "十亿级用户物品图上的高效i2i检索",
+      "canonical_evidence": "十亿级用户物品图上的高效i2i检索",
+      "llm_tldr_en": "Proposes ASC and K-ASC algorithms to compute Swing item similarity efficiently for large-scale recommender retrieval, avoiding quadratic cost and quality-degrading truncation heuristics.",
+      "llm_tldr_cn": "在大规模推荐系统的i2i检索中，Swing分数能利用用户-物品-用户交互结构衡量物品相似度，但已有算法复杂度随物品度呈二次增长，或依赖截断启发式导致质量下降，难以应对数十亿交互。本文提出ASC与K-ASC两种高效算法，在保证相似度质量的同时显著降低计算开销。实验表明其可在工业级图上实用化，为大规模推荐检索提供可扩展方案。",
+      "llm_tldr": "在大规模推荐系统的i2i检索中，Swing分数能利用用户-物品-用户交互结构衡量物品相似度，但已有算法复杂度随物品度呈二次增长，或依赖截断启发式导致质量下降，难以应对数十亿交互。本文提出ASC与K-ASC两种高效算法，在保证相似度质量的同时显著降低计算开销。实验表明其可在工业级图上实用化，为大规模推荐检索提供可扩展方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.17391v1",
+      "source": "arxiv",
+      "title": "FlashVector: Agent for Hierarchical Model Serving Stack Optimization",
+      "abstract": "Model serving is one of the largest cost drivers in production recommender systems. Maximizing its throughput requires navigating a deeply layered hierarchy: GPU kernels, the ML framework computation graph, the model server, and on-demand feature processing -- each demanding specialized domain expertise. Such cross-layer expertise is inherently difficult to acquire, and does not scale with a workload that continuously grows and evolves, leaving significant cost efficiency gains unrealized. While recent AI agents have demonstrated human expert level efficiency in standalone GPU kernel optimization, automated tuning and optimization for the rest of the serving stack remain largely unexplored. We present FlashVector, an agentic system that optimizes performance across all layers of the model serving stack. The key contribution is an extensible framework to generalize the single kernel optimization agent paradigm to heterogeneous technical stacks, and to deliver performance improvements holistically. After deployment in Unity's Vector advertising platform, FlashVector achieved up to 2x throughput increase and up to 1.98x latency speedup on model server, and up to 1.6x throughput increase on feature store. These optimizations were discovered not only at the GPU kernel and computation graph levels, but also across the other components of the model serving stack, such as the model server (NVIDIA Triton's C++ codebase) and the on-demand feature transformation service (Python codebase), demonstrating the extensibility of the framework to more complex system architectures.",
+      "authors": [
+        "Qi Wu",
+        "Lohan Lemire",
+        "Kai Meng",
+        "Zhongmou Cai",
+        "Raphael Bargues",
+        "Petr Zhitnikov",
+        "Zeyuan Cao",
+        "Yao Wang",
+        "Shujun Bian",
+        "Wei Chen",
+        "Sean Sheng"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.PF"
+      ],
+      "published": "2026-09-15T16:27:45+00:00",
+      "link": "https://arxiv.org/pdf/2609.17391v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "optimizing the production recommender model serving stack at scale",
+      "llm_evidence_cn": "生产级推荐模型服务栈优化",
+      "llm_evidence": "生产级推荐模型服务栈优化",
+      "canonical_evidence": "生产级推荐模型服务栈优化",
+      "llm_tldr_en": "The paper targets model serving cost in production recommender systems, presenting FlashVector, an agentic system that optimizes the layered serving stack from GPU kernels to feature processing.",
+      "llm_tldr_cn": "模型服务是生产推荐系统最大的成本来源之一，其吞吐优化需跨越GPU内核、框架计算图、模型服务器与在线特征处理等多层专业知识。作者提出FlashVector智能体系统，自动调优并优化整个服务栈，弥补了现有AI智能体仅聚焦单一GPU内核优化的空白。系统面向持续增长且演化的负载实现跨层优化。其贡献在于为大规模推荐系统服务提供自动化降本路径。",
+      "llm_tldr": "模型服务是生产推荐系统最大的成本来源之一，其吞吐优化需跨越GPU内核、框架计算图、模型服务器与在线特征处理等多层专业知识。作者提出FlashVector智能体系统，自动调优并优化整个服务栈，弥补了现有AI智能体仅聚焦单一GPU内核优化的空白。系统面向持续增长且演化的负载实现跨层优化。其贡献在于为大规模推荐系统服务提供自动化降本路径。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "joint modeling and serving of search, advertising, and recommendation systems at scale",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
