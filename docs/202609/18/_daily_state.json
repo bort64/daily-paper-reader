@@ -1,0 +1,73 @@
+{
+  "date": "20260918",
+  "date_label": "",
+  "generated_at": "2026-09-18 21:22:10 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.20630v1",
+      "route": "202609/18/2609.20630v1-unipolicy-unified-objective-specific-policies-for-generative-search-advertising",
+      "title": "UniPolicy: Unified Objective-Specific Policies for Generative Search Advertising",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向生成式搜索广告的目标感知多策略对齐框架",
+      "first_seen_at": "2026-09-18 21:22:10 UTC",
+      "updated_at": "2026-09-18 21:22:10 UTC"
+    },
+    {
+      "paper_id": "2609.16304v1",
+      "route": "202609/18/2609.16304v1-evaluating-brand-retrieval-and-ranking-in-large-language-model-recommendations",
+      "title": "Evaluating Brand Retrieval and Ranking in Large Language Model Recommendations",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "评估大模型推荐中的品牌检索与排序",
+      "first_seen_at": "2026-09-18 21:22:10 UTC",
+      "updated_at": "2026-09-18 21:22:10 UTC"
+    },
+    {
+      "paper_id": "2609.16625v1",
+      "route": "202609/18/2609.16625v1-aura-agentic-diagnosis-and-refinement-for-production-recommender-systems-at-scale",
+      "title": "AURA: Agentic Diagnosis and Refinement for Production Recommender Systems at Scale",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "大规模生产推荐系统的诊断",
+      "first_seen_at": "2026-09-18 21:22:10 UTC",
+      "updated_at": "2026-09-18 21:22:10 UTC"
+    },
+    {
+      "paper_id": "2609.19209v1",
+      "route": "202609/18/2609.19209v1-generative-query-suggestion-via-intent-coverage-and-query-level-credit-assignment",
+      "title": "Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向搜索的生成式查询建议",
+      "first_seen_at": "2026-09-18 21:22:10 UTC",
+      "updated_at": "2026-09-18 21:22:10 UTC"
+    }
+  ]
+}

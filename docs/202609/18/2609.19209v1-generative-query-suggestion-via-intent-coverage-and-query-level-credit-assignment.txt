@@ -1,0 +1,699 @@
+Title: Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+URL Source: https://arxiv.org/pdf/2609.19209v1
+
+Published Time: Fri, 18 Sep 2026 00:03:36 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+# Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment 
+
+Xinpeng Liu *, ‡2, Lu Ma ‡1, Jiayi Qiao *3, Mengyu Zhou †1, Linglong Li 4, Xiaofeng Bian 1, Haonan Chen 1, Xiaoxi Jiang 1 and Guanjun Jiang 1     
+
+> 1Qwen Business Unit of Alibaba, 2Peking University, 3National University of Singapore, 4Pengcheng National Laboratory
+> *Work done during an internship at Alibaba. †Corresponding author. ‡Equal contribution.
+
+Generative query suggestion aims to enhance user engagement by anticipating user intents and recom-mending relevant follow-up queries. A central challenge is to generate slates whose individual queries are useful while the slate covers distinct intents. We propose an Intent-Driven Query Suggestion Framework with dual-stage optimization. First, intent-aware diversity modeling constructs intent-aligned supervised fine-tuning (SFT) data and uses an Intent-Aware Diversity Reward to optimize intent coverage. Second, 
+
+query-level credit assignment routes individual quality signals to the corresponding query tokens while sharing a slate-level diversity signal across the slate. Experiments on a large-scale production dataset, including online A/B testing and offline evaluation, show improvements in click-through rate, query quality, and intent coverage. 
+
+## 1. Introduction a clickable query 
+
+> query slates
+> user query
+> assistant response
+
+Figure 1 | Example of conversational query suggestion, where the AI Assistant recommends diverse follow-up queries to enhance user engagement. The rise of conversational AI assistants Achiam et al. (2023) has fundamentally transformed how users access information and accomplish tasks. Re-cent work studies multimodal, click-guided, and preference-aligned query suggestion for conversational systems Wang et al. (2024); Min et al. (2025); Yin et al. (2025). Figure 1 shows an example of conversational query suggestion, where diverse follow-up queries are recommended to enhance user engagement. Recent advances Lin et al. (2023); Bao et al. (2023) in gener-ative query suggestion employ large language models (LLMs) to synthesize queries directly from conversa-tional context. While generative query suggestion of-fers greater flexibility than retrieval-based methods, it requires dual optimization: query slates must be diverse to cover the breadth of potential user follow-up interests, while each individual query must remain contextually relevant to the conversation history, accu-rately capturing the user’s underlying intent. However, jointly optimizing these objectives presents two challenges. L1) Intent-aware diversity optimization. Semantic diversification through em-bedding similarity and post-hoc reranking is well established, but such methods do not necessarily optimize context-dependent coverage of distinct user intents during policy training. For instance, “How to learn Python” and “Python tutorials” are lexically distinct but express the same learning intent. We therefore model diversity as coverage over orthogonal intent dimensions rather than textual variation alone. L2) Within-slate credit assignment. Min et al. (2025) and Yin et al. (2025) align query suggestions with click- or preference-based objectives. Our method instead explicitly applies query-specific quality advantages only to the correspond-ing query tokens while sharing a slate-level intent-coverage advantage across the slate. This decomposition 
+
+> Corresponding author: Mengyu Zhou ( zhoumengyu.zmy@alibaba-inc.com )arXiv:2609.19209v1 [cs.LG] 16 Sep 2026 Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+identifies each query’s contribution within an autoregressively generated slate. To address these challenges, we propose an Intent-Driven Query Suggestion Framework with dual-stage optimization for conversational AI assistants. To address L1, we introduce intent-aware diversity modeling in semantic intent space. During SFT, we construct a cold-start data pipeline based on user-initiative alignment. During reinforcement learning (RL), an Intent-Aware Diversity Reward (IAD-R) captures intent coverage through Noisy-OR aggregation. To address L2, we devise a query-level credit assignment mechanism :query-quality advantages are applied only to the corresponding query tokens, whereas a slate-level diversity advantage is shared across all queries. Their composite enables fine-grained optimization of individual quality while maintaining overall slate diversity. We validate the framework through industrial online A/B testing and human evaluation. Its distinguishing feature is the combination of query-specific token-level advantages and a shared slate-level intent-coverage advantage in a single policy update. 
+
+## 2. Related Work 
+
+Generative Query Suggestion Large Language Models (LLMs) have been widely used to generate diverse and context-aware query suggestions Di Palma (2023). Diversification can be imposed through decoding constraints Deng et al. (2025); Guo et al. (2025), embedding-based reranking Bacciu et al. (2024), or preference alignment. Min et al. (2025) combine multi-source CTR modeling, diversity-aware CTR-weighted DPO, and iterative CTR calibration; Yin et al. (2025) introduce uncertainty-aware preference modeling, out-of-distribution regularization, and multi-stage alignment. These systems align suggestions with clicks or preferences. Our focus instead is the granularity of credit within a generated slate: query-specific quality advantages are routed only to the corresponding tokens, while intent coverage supplies a shared slate-level advantage. Inspired by exposure modeling in recommender systems Yin et al. (2025); Min et al. (2025); Chen et al. (2025), we view each generated query as activating a user intent and optimize intent-space coverage directly. 
+
+Credit Assignment and Slate Optimization in RL Reinforcement Learning (RL) is commonly used to align generative models with human preferences Rafailov et al. (2023); Ouyang et al. (2022), but slate-level rewards often lead to ambiguous credit assignment Yin et al. (2025). Prior studies address this with process reward modeling at the token or step level Yue et al. (2025); Xiong et al. (2025); Cui et al. (2025). SlateQ Ie et al. (2019) decomposes slate Q-values into item-level scores over a fixed candidate pool, while our setting constructs slates autoregressively and optimizes them with policy gradients. We therefore introduce query-level credit assignment, which distributes slate rewards into per-query advantages and combines them with intent-aware diversity rewards. 
+
+## 3. Methodology 
+
+We formalize conversational query suggestion as a slate generation task (§3.1) that jointly optimizes query-level quality and slate-level diversity. As illustrated in Figure 2, our framework consists of two stages: (1) a cold-start supervised fine-tuning stage (§3.2) that constructs high-quality training data through LLM generation and human-AI collaboration, and (2) a reinforcement learning stage (§3.3) that optimizes intent-aware diversity and query-level credit assignment. 
+
+3.1. Problem Formulation 
+
+We formulate conversational query suggestion as a conditional generation task. Given context X = {𝑞 𝑢 , 𝑟, ℎ },where 𝑞 𝑢 denotes the current user query, 𝑟 the assistant response, and ℎ the conversation history, the model generates a slate of 𝐾 candidate queries: 
+
+S = {𝑞 1, . . . , 𝑞 𝐾 } ∼ 𝜋 𝜃 (· | X) (1) where 𝜋 𝜃 represents the policy model parameterized by 𝜃 . The objective is to jointly optimize individual query quality and slate-level diversity. 
+
+> 2
+
+Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment Query-level Reward Query 𝑞 !
+
+> Query 𝑞 "
+> Query 𝑞 #
+> …
+
+Multi-objective Reward Query-level Credit Assignment 
+
+Query-level Advantage 
+
+Global Standardization 
+
+𝐴 !,# $ = # 𝛾 %&# % 𝑟 '!,% '%(#   
+
+> 𝑟 !,# 𝑟 "!,# 𝐴 !,# $
+
+𝐴 !,# )!* = 𝑅 )!*,! − 𝜇 )!* 
+
+𝜎 )!* + 𝜖  
+
+> 𝑅 $!%,! 𝐴 !,# %!&
+
+Slate-level Advantage Slate-level Reward 
+
+Intent-Aware Diversity Reward 
+
+Rule-based Penalty 
+
+CTR Reward Rubric-based Reward 
+
+> Combined Reward Signal
+
+Policy Optimization   
+
+> 𝒒 𝒊,𝒕 …𝒒 𝒊,𝒕'𝟏 𝒒 𝒊,𝑲
+> 𝒒 𝒊,𝒕
+> Full Slate
+
+Inter-group Standardization 
+
+> Full Slate S
+
+Aggregation 
+
+> Query-level
+
+𝐺 !
+
+𝐺 "
+
+𝐺 # 𝒒 𝟏,𝟏     
+
+> 𝒒 𝟐,𝟏
+> ………𝒒 𝑵,𝟏
+> 𝒒 𝟏,𝟐 𝒒 𝟏,𝑲
+> 𝒒 𝟐,𝟐 …𝒒 𝟐,𝑲
+> 𝒒 𝑵,𝟐 𝒒 𝑵,𝑲
+> Slate-level
+
+𝐺 !
+
+𝐺 "
+
+𝐺 # 𝒒 𝟏,𝟏     
+
+> 𝒒 𝟐,𝟏
+> ………𝒒 𝑵,𝟏
+> 𝒒 𝟏,𝟐 𝒒 𝟏,𝑲
+> 𝒒 𝟐,𝟐 …𝒒 𝟐,𝑲
+> 𝒒 𝑵,𝟐 𝒒 𝑵,𝑲
+> Intent C Intent B Intent A
+> Query N
+> Query 1 Query 2
+
+Step 1: Candidate Generation 
+
+SFT with Intent Aligned           
+
+> 𝑞 ',' 𝑞 ',( 𝑞 ',) 𝑞 (,' 𝑞 (,( 𝑞 (,) 𝑞 !,# 𝑞 *,( 𝑞 *,)
+> …Intent 1 Intent 2 Intent N LLM (Gemini) Dialogue Context
+
+Intent Reasoning   
+
+> Reconstruct Latent User Scenarios
+> Diagnose Specific Pain Points
+> Disentangle Orthogonal User Intents
+> ………
+
+Validate 
+
+Step 2: Collaborative Refinement 
+
+Filter Label Refine 
+
+> Candidate Query Slate
+
+Step 3: Hybrid Training 
+
+SFT Training 
+
+Prompt A 𝑞 "Intent 2 
+
+CoT 
+
+> 𝑞 !Intent 1
+> 𝑞 *Intent N
+
+Prompt B 𝑞 "
+
+> 𝑞 !
+> 𝑞 *
+
+Figure 2 | Overview of our framework. Left: Cold-Start SFT stage with LLM generation, human-AI collaboration and hybrid CoT training. Right: RL stage with multi-objective reward and query-level credit assignment. 
+
+3.2. Cold-Start SFT 
+
+To address the data quality and diversity bottleneck in the SFT, we design a two-stage data construction pipeline coupled with a hybrid training strategy. 
+
+Step 1: Candidate Generation. We leverage LLMs to perform multi-dimensional intent analysis on dialogue context, decomposing user needs into orthogonal intent dimensions through scenario reconstruction and pain point diagnosis. For each identified intent, we generate a diverse set of candidate queries that address distinct user information needs. 
+
+Step 2: Collaborative Refinement. We adopt a multi-stage human-AI collaboration pipeline to ensure data quality. The LLM first filters the optimal query for each intent dimension. Human annotators and an LLM-based evaluator then iteratively label and cross-validate the samples, with disagreements surfaced for re-adjudication to reduce subjective variability. This process ensures both scalability and high annotation quality. Detailed annotation protocols, qualification criteria, and quality control procedures are provided in Appendix C. 
+
+Step 3: Hybrid Training. To balance inference efficiency with reasoning capability, we construct a hybrid instruction dataset containing both Direct Query Generation and Intent-Aware Chain-of-Thought (CoT) samples. Each generation mode is guided by task-specific system prompts (representative excerpts appear in Appendix Figures 4 and 5). This hybrid approach enables the model to capture complex intent reasoning patterns while maintaining real-time generation throughput. 
+
+3.3. Reinforcement Learning 
+
+3.3.1. Multi-Objective Reward 
+
+CTR Reward To align suggestions with user preferences, we employ a lightweight BERT-based CTR model trained on historical click logs. Given conversational context X (𝜏 ) = {𝑞 (𝜏 ) 
+
+> 𝑢
+
+, 𝑟 (𝜏 ) , ℎ (𝜏 ) } and candidate query 𝑞 𝑖 , the model predicts click probability: 
+
+𝑅 CTR (𝑞 𝑖 , X (𝜏 ) ) = ˆ𝑝 (𝑞 𝑖 | X (𝜏 ) ) ∈ [ 0, 1] (2) This reward guides the policy toward generating user-preferred suggestions. 
+
+3Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment 
+
+Rubric-based Reward To prevent reward models from exploiting surface-level patterns, we introduce Rubric-based Rewards following Ye et al. (2023); Liu et al. (2023). We employ an LLM to assess whether each query satisfies expert-curated quality rubrics (summarized in Appendix Figure 6). Given query 𝑞 and rubrics 
+
+R = {𝑟 1, . . . , 𝑟 𝑛 }, the reward uses an all-pass criterion: 
+
+𝑅 rubrics (𝑞 ) =
+
+(
+
+1, if ∀𝑖, 𝑟 𝑖 (𝑞 ) = 10, otherwise (3) where 𝑟 𝑖 (𝑞 ) ∈ { 0, 1} indicates whether query 𝑞 satisfies the 𝑖 -th rubric. During RL training, Qwen-Max produces this rubric-based reward using the rubric structure summarized in Appendix Figure 6. 
+
+Rule-based Penalty We impose rule-based constraints 𝑅 rule ( ˆQ (𝑡 )(𝜏 ) ) to ensure quality and prevent degenerate outputs: (1) redundancy penalty based on Jaccard similarity, (2) length penalty, and (3) format compliance penalty. 
+
+Intent-Aware Diversity Reward In deployed generative query suggestion, commonly used surface deduplica-tion and post-hoc reranking do not explicitly optimize context-dependent intent coverage during training. Given conversation history ℎ(𝜏 ) , we leverage an LLM to infer 𝑀 orthogonal user intents Z = {𝑧 1, . . . , 𝑧 𝑀 }
+
+during offline construction, verified by human annotators. We adopt a Noisy-OR model Pearl (1988) to measure slate S’s coverage over the intent space. For intent 𝑧 𝑚 , the coverage probability represents the likelihood that at least one query in the slate activates this intent: 
+
+𝑃 cov (𝑧 𝑚 | S) = 1 −
+
+Ö 
+
+> 𝑞 𝑘 ∈ S
+
+(1 − 𝜎 (sim (𝑞 𝑘 , 𝑧 𝑚 ))) (4) where sim (𝑞 𝑘 , 𝑧 𝑚 ) = 𝜙 (𝑞 𝑘 )⊤𝜙 (𝑧 𝑚 )∥𝜙 (𝑞 𝑘 ) ∥ 2 ∥𝜙 (𝑧 𝑚 ) ∥ 2 is the cosine similarity between query and intent embeddings from Sentence-BERT Reimers & Gurevych (2019), and 𝜎 (·) is the sigmoid function. The Intent-Aware Diversity Reward (IAD-R) averages coverage across all intents: 
+
+𝑅 div (S) = 1
+
+𝑀 
+
+> 𝑀
+
+∑︁ 
+
+> 𝑚 =1
+
+𝑃 cov (𝑧 𝑚 | S) (5) We employ uniform weighting to ensure unbiased intent coverage. This prevents the model from prioritizing dominant intents at the expense of long-tail scenarios. 
+
+3.3.2. Query-level Credit Assignment 
+
+Our query-level credit assignment mechanism includes query-level quality advantages and slate-level diversity advantages. 
+
+Query-level Advantage Calculation For 𝐺 query slates { 𝑦 𝑖 }𝐺 𝑖 =1 sampled from policy 𝜋 𝜃 , where each slate consists of 𝐾 queries, we compute the query-level reward for the 𝑘 -th query in the 𝑖 -th slate as a weighted combination of rubric-based and CTR rewards: 
+
+𝑟 𝑖,𝑘 = 𝛼 · R rubrics (𝑞 𝑖,𝑘 ) + 𝛽 · R CTR (𝑞 𝑖,𝑘 ) (6) Here, 𝛼 = 0.6 weights rubric compliance and 𝛽 = 0.4 weights predicted CTR. The aggregated query-level reward ensures that the generated queries maintain semantic compliance and quality stability while maximizing actual click-through conversion efficiency. In contrast to GRPO’s group-level normalization over sequence returns, we perform query-level advantage estimation by globally normalizing rewards across all 𝐺 × 𝐾 queries: ˜𝑟 𝑖,𝑘 = 𝑟 𝑖,𝑘 − 𝜇 𝑟 
+
+𝜎 𝑟 + 𝜖 (7) 
+
+> 4Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+Method CTR Gain (%) ↑ GSB vs. base ↑ LLM Critic ↑ Self-BLEU ↓ Intent Cov. ↑
+
+PE-based +0 +0 0.33 0.0656 0.27 SFT-cold start +27.06 +0.16 0.67 0.0609 0.54 PPO +35.29 +0.31 0.71 0.0571 0.69 GRPO +43.53 +0.37 0.83 0.0474 0.85 
+
+RL-Ours +48.24 +0.44 0.88 0.0470 0.91 
+
+Table 1 | Main results. CTR reports relative gains over the PE-based arm; GSB is relative to PE-based outputs. Bold indicates the best result. where 𝜇 𝑟 and 𝜎 𝑟 denote the mean and standard deviation computed over all sampled query rewards. To account for the sequential dependency between queries, we introduce a discount factor 𝛾 ∈ [ 0, 1] and compute the advantage for the 𝑡 -th query as: 
+
+𝐴 q 
+
+> 𝑖,𝑡
+
+=
+
+> 𝐾
+
+∑︁ 
+
+> 𝑘 =𝑡
+
+𝛾 𝑘 −𝑡 · ˜𝑟 𝑖,𝑘 (8) This formulation values each query by both its immediate reward and its impact on subsequent generations, encouraging coherent and high-quality query sequences. 
+
+Slate-level Diversity Advantage To encourage diverse query lists, we introduce slate-level diversity advantages. As diversity is a collective property, we normalize the diversity reward 𝑅 div ,𝑖 within the group: 
+
+𝐴 div  
+
+> 𝑖,𝑡
+
+= 𝑅 div ,𝑖 − 𝜇 div 
+
+𝜎 div + 𝜖 , ∀𝑡 ∈ { 1, . . . , 𝐾 } (9) where 𝜇 div , 𝜎 div are computed over {𝑅 div , 𝑗 } 𝑗 ∈𝐺 . This advantage is uniformly assigned to all queries, encouraging complementary suggestions. 
+
+Advantage Aggregation and Policy Optimization We combine query quality and slate diversity through a composite advantage with rule-based gating: 
+
+𝐴 𝑖,𝑡 =
+
+  
+
+> 𝐴 q
+> 𝑖,𝑡 +𝐴 div
+> 𝑖,𝑡
+> √2
+
+, if Rule ( 𝑦 𝑖 ) = Pass 
+
+−1, if Rule ( 𝑦 𝑖 ) = Fail (10) where quality and diversity advantages are equally weighted and normalized. Slates violating critical constraints receive −1 penalty, combining learned and rule-based rewards. Following GRPO, we optimize token-level generation probabilities using query-level advantages. To bridge this granularity gap, we uniformly broadcast each query-level advantage to all its tokens: 
+
+𝐴 tok  
+
+> 𝑗
+
+= 𝐴 𝑖,𝑡 , ∀𝑢 𝑗 ∈ tokens (𝑞 𝑖,𝑡 ) (11) The policy is then optimized via the clipped surrogate objective: 
+
+L( 𝜃 ) = −𝔼 𝑦 ∼𝜋 𝜃 (· | 𝑥 )
+
+∑︁ 
+
+> 𝑗
+
+min 
+
+   
+
+> 𝜌 𝑗 𝐴 tok
+> 𝑗 ,
+
+¯𝜌 𝑗 𝐴 tok 
+
+> 𝑗
+
+
+
+− 𝜆 KL 𝐷 KL (𝜋 𝜃 ∥𝜋 ref )
+
+ 
+
+> .
+
+(12) 
+
+where 𝜌 𝑗 = 𝜋 𝜃 (𝑢 𝑗 |𝑢 < 𝑗 )/ 𝜋 ref (𝑢 𝑗 |𝑢 < 𝑗 ) is the probability ratio, ¯ 𝜌 𝑗 = clip (𝜌 𝑗 , 1 − 𝜖, 1 + 𝜖 ), and 𝜆 KL is the KL coefficient. The clipping mechanism prevents large policy updates, while the KL penalty ensures training stability. 
+
+## 4. Experiments 
+
+4.1. Experimental Setup 
+
+We evaluate on a large-scale production system using anonymized real-world interactions. We use Qwen3-30B-A3B Yang et al. (2025) as the foundation model (training details in Appendix D). 
+
+> 5Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+Training Datasets. We collect data from real user logs of a large-scale conversational AI assistant. For SFT, we construct 15,000 instances from 4 weeks of conversations using the pipeline in §3.2, mixing 20% intent-augmented CoT samples with 80% direct generation samples. For RL, we sample 12,000 instances from an additional 2 weeks, annotated with intents for IAD-R. 
+
+Test Datasets. We construct two expert-validated test sets spanning diverse user scenarios. The Offline Evalu-ation Set contains 500 contexts for automatic metrics. The Human Evaluation Set contains 150 representative contexts for measuring generation quality and diversity. 
+
+Online Metrics. To assess real-world efficacy, we conducted a one-week A/B test on live traffic. The core metric is Click-Through Rate (CTR), which measures interaction with the suggestion slate within a single turn. The five systems ran concurrently in mutually exclusive, randomly assigned user-level buckets. Traffic allocation for PE-based/SFT/PPO/GRPO/RL-Ours was 5/80/5/5/5%; SFT was the incumbent production arm, while Table 1 reports CTR gains relative to the PE-based arm. We use two-proportion 𝑧 -tests on unrounded arm-level CTRs. Exact traffic counts and absolute CTR values are commercially sensitive. 
+
+Offline Metrics. We evaluate query quality with: (1) Good-Same-Bad (GSB), a pairwise side-by-side human evaluation across content quality, text quality, intent relevance, and information gain (Table 8), yielding 
+
+(#Good − #Bad )/ 𝑁 ; and (2) LLM Critic , an ensemble of Gemini-3, Claude-4.5, and Qwen-Max that reports the majority-voted checklist pass rate (Figure 6). Thus, no single Qwen-family evaluator determines this metric. For slate diversity, we use: (1) Self-BLEU Yin et al. (2025); Min et al. (2025), the average pairwise similarity within each slate; and (2) Intent Coverage , the recall of separately annotated test intents, where three annotators independently label intent matches for each query and majority voting determines the final label. Intent Coverage targets the same property as IAD-R, and LLM Critic uses the same rubric family as the training reward. We therefore treat both as target-aligned diagnostics rather than fully independent evidence. Neither evaluation directly reuses stored training-time reward outputs: evaluation coverage uses discrete human matching against separately annotated test intents instead of Sentence-BERT similarity and Noisy-OR aggregation, while LLM Critic recomputes judgments on held-out contexts using the three-model ensemble. Because Qwen-Max participates in both training and the evaluation ensemble, online CTR and human GSB serve as the primary independent evidence. 
+
+4.2. Overall Results and Analysis 
+
+Table 1 compares our RL framework with the production and policy-optimization baselines. Scalability to Qwen3-235B-A22B is evaluated in Appendix B. 
+
+SFT Establishes a Strong Foundation. Starting from the PE-based prompt engineering baseline, supervised fine-tuning on user interaction data improves all five metrics. As shown in Table 1, the SFT-cold start strategy achieves a +27.06% CTR improvement, a GSB score of +0.16, and an LLM Critic score of 0.67. These results support the value of learning from real user interactions beyond prompt engineering. 
+
+RL Methods Improve Performance. We explore PPO and GRPO using the same reward signals as our method. PPO increases the PE-relative CTR gain to +35.29%. GRPO reaches +43.53% CTR gain, +0.37 GSB, and 0.83 LLM Critic. Relative to the incumbent SFT arm, GRPO improves CTR by 13.0% ( 𝑝 = 0.006). 
+
+Query-level Credit Assignment Achieves the Best Results. Our method attains the highest PE-relative CTR gain (+48.24%). The 4.71 difference from GRPO is measured in percentage points of PE-relative gain; the direct comparison is a 3.25% relative CTR improvement ( 𝑝 = 0.02). RL-Ours also improves CTR over the incumbent SFT arm by 16.7% ( 𝑝 = 0.003). On the common 150-context paired evaluation subset, two-sided paired 𝑡 -tests comparing RL-Ours with GRPO give GSB +0.07 ( 𝑝 = 0.03), Intent Coverage +0.06 ( 𝑝 = 0.002), and LLM Critic +0.05 ( 𝑝 = 0.05). Self-BLEU changes from 0.0474 to 0.0470, whereas Intent Coverage increases from 0.85 to 0.91. Because Intent Coverage and LLM Critic are aligned with their corresponding training objectives, CTR and human GSB are the primary independent evidence for the improvement. 
+
+4.3. Ablation Studies Ablation Study on SFT Data. To validate our data construction pipeline (Section 3.2), we conduct an ablation study using different data sources: PE-based uses only prompt engineering without fine-tuning, SFT-Candidate 
+
+> 6Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+Method GSB vs. base LLM Critic Self-BLEU Intent Cov. 
+
+PE-based +0 0.33 0.0656 0.27 SFT-Candidate +0.05 0.41 0.0631 0.28 SFT-Refined +0.13 0.59 0.0617 0.42 SFT-Hybrid +0.16 0.67 0.0609 0.54 
+
+Table 2 | Ablation study on data pipeline stages. Self-BLEU ↓, other metrics ↑.      
+
+> Method
+> ΔGSB vs. RL-Ours LLM Critic Self-BLEU Intent Cov. RL-Ours 0.00 0.88 0.0470 0.91
+> w/o IAD-R
+
+−0.12 0.83 0.0461 0.71 w/o Rubric −0.09 0.62 0.0496 0.86 w/o CTR −0.11 0.76 0.0486 0.89 w/o query-level −0.07 0.83 0.0474 0.85 
+
+Table 3 | Ablation on RL components. GSB is mea-sured relative to RL-Ours; the other columns report absolute values. “query-level” refers to query-level credit assignment. Self-BLEU ↓, other metrics ↑. 
+
+> (a) IAD-R (b) Query-level CA
+
+Figure 3 | Training dynamics of ablated components. (a) IAD-R impact on Intent Coverage. (b) Query-level credit assignment on LLM Critic. trains on LLM-generated candidates (Stage 1), SFT-Refined trains on human-AI collaborative refined queries (Stage 2), and SFT-Hybrid trains on the full pipeline with mixed CoT traces and queries (Stage 3). Table 2 shows progressive improvements across pipeline stages. Relative to SFT-Candidate, SFT-Refined improves GSB by 0.08 and Intent Coverage by 0.14, supporting the value of human-AI refinement. SFT-Hybrid adds a further 0.12 in Intent Coverage, suggesting that mixing CoT traces with direct queries helps the model learn intent-aware generation. We adopt SFT-Hybrid as the cold-start model for RL training. 
+
+Ablation Study on RL Components. We systematically remove key components from our RL framework to validate their individual contributions. Table 3 presents the final performance, while Figure 3 illustrates the training dynamics to provide deeper insights into how these components affect the learning process. Removing diversity reward causes the largest Intent Coverage drop, decreasing from 0.91 to 0.71. Figure 3(a) shows models with this reward converge faster and to a higher plateau, reaching 0.91 by step 100, whereas the ablated variant continues to improve gradually, only approaching 0.71 by step 125. Both quality reward components prove essential. Without rubric-based reward, the LLM Critic score drops from 0.88 to 0.62, showing its role in maintaining generation quality. Similarly, removing CTR reward decreases GSB by 0.11, suggesting that engagement signals effectively guide the model toward user-preferred queries. Query-level credit assignment also outperforms the sequence-level baseline. Figure 3(b) demonstrates consistent advantages throughout training. As early as step 50, our method achieves an LLM Critic score of approximately 0.86 compared to 0.75 for the baseline, maintaining a consistent gap through convergence with final scores of 0.88 and 0.83 respectively. This result supports the conclusion that assigning rewards at the query level rather than the sequence level enables more effective optimization by providing precise feedback for each individual query. 
+
+> 7Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+## 5. Conclusion 
+
+We propose an intent-driven framework that jointly optimizes query quality and slate diversity through dual-stage optimization. The online and offline results show that query-level credit assignment improves engagement and human-evaluated quality while intent-aware training increases semantic coverage. Future work will explore personalization and multimodal query generation. 
+
+## Limitations 
+
+This work has several limitations. First, our training and online evaluation are based on anonymized production logs from a deployed conversational assistant; although this setting provides realistic feedback, the proprietary nature of the data limits direct reproducibility. We therefore report detailed data construction and evaluation protocols and plan to release a sanitized evaluation subset when compliance permits. Second, online CTR is an engagement proxy rather than a direct measure of user satisfaction or task success. We interpret it together with offline human evaluation, and future work should incorporate richer satisfaction and task-completion signals. The online analysis reports significance from a single one-week experiment but does not report confidence intervals or repeated-window variance. Third, Intent Coverage targets the same property as IAD-R, and LLM Critic uses the same rubric family as the training reward; Qwen-Max also participates in both training and the evaluation ensemble. The metrics do not reuse stored training-time reward outputs, but they are not fully independent evidence, so our main conclusions foreground online CTR and human GSB. Fourth, our evaluation uses independent annotations and majority voting but does not report a chance-corrected inter-annotator agreement statistic. Our intent-aware diversity reward also relies on LLM-assisted intent construction and human validation; remaining annotation noise or intent granularity mismatch may affect coverage estimation. Repeated full-scale RL runs and a complete sweep over the quality–diversity weights are computationally prohibitive, so we report evaluation-sample significance tests and only a targeted discount-factor sensitivity study. We also do not measure whether broader intent coverage improves multi-turn engagement conditioned on distinct follow-up intents. Finally, while query-level advantages improve optimization granularity, diversity remains a slate-level property shared across its queries; more precise marginal contribution estimation is an important direction for future work. 
+
+## Ethics Statement 
+
+Use of AI Assistants We used ChatGPT solely as a writing assistant to polish the manuscript after the initial draft was written. The authors were responsible for all scientific content, analyses, and conclusions presented in this paper. 
+
+## References 
+
+Josh Achiam, Steven Adler, Sandhini Agarwal, Lama Ahmad, Ilge Akkaya, Florencia Leoni Aleman, Diogo Almeida, Janko Altenschmidt, Sam Altman, Shyamal Anadkat, et al. Gpt-4 technical report. arXiv preprint arXiv:2303.08774 , 2023. Andrea Bacciu, Enrico Palumbo, Andreas Damianou, Nicola Tonellotto, and Fabrizio Silvestri. Generating query recommendations via llms. arXiv preprint arXiv:2405.19749 , 2024. Keqin Bao, Jizhi Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan He. Tallrec: An effective and efficient tuning framework to align large language model with recommendation. arXiv preprint arXiv:2305.00447 ,2023. Jiahui Chen, Xiaoze Jiang, Zhibo Wang, Quanzhi Zhu, Junyao Zhao, Feng Hu, Kang Pan, Ao Xie, Maohua Pei, Zhiheng Qin, et al. Unisearch: Rethinking search system with a unified generative architecture. arXiv preprint arXiv:2509.06887 , 2025. Ganqu Cui, Lifan Yuan, Zefan Wang, Hanbin Wang, Yuchen Zhang, Jiacheng Chen, Wendi Li, Bingxi-ang He, Yuchen Fan, Tianyu Yu, et al. Process reinforcement through implicit rewards. arXiv preprint arXiv:2502.01456 , 2025. 
+
+> 8Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+Jiaxin Deng, Shiyao Wang, Kuo Cai, Lejian Ren, Qigen Hu, Weifeng Ding, Qiang Luo, and Guorui Zhou. Onerec: Unifying retrieve and rank with generative recommender and iterative preference alignment. arXiv preprint arXiv:2502.18965 , 2025. Dario Di Palma. Retrieval-augmented recommender system: Enhancing recommender systems with large language models. In Proceedings of the 17th ACM Conference on Recommender Systems , pp. 1369–1373, 2023. Xian Guo, Ben Chen, Siyuan Wang, Ying Yang, Chenyi Lei, Yuqing Ding, and Han Li. Onesug: The unified end-to-end generative framework for e-commerce query suggestion. arXiv preprint arXiv:2506.06913 , 2025. Eugene Ie, Vihan Jain, Jing Wang, Sanmit Narvekar, Ritesh Agarwal, Rui Wu, Heng-Tze Cheng, Tushar Chandra, and Craig Boutilier. Slateq: A tractable decomposition for reinforcement learning with recommendation sets. In IJCAI , volume 19, pp. 2592–2599, 2019. Jianghao Lin, Xinyi Dai, Yunjia Xi, Weiwen Liu, Bo Chen, Xiangyang Li, Chenxu Zhu, Huifeng Guo, Yong Yu, Ruiming Tang, and Weinan Zhang. How can recommender systems benefit from large language models: A survey. arXiv preprint arXiv:2306.05817 , 2023. Yang Liu, Dan Iter, Yichong Xu, Shuohang Wang, Ruochen Xu, and Chenguang Zhu. G-eval: Nlg evaluation using gpt-4 with better human alignment, 2023. URL https://arxiv.org/abs/2303.16634 .Erxue Min, Hsiu-Yuan Huang, Xihong Yang, Min Yang, Xin Jia, Yunfang Wu, Hengyi Cai, Junfeng Wang, Shuaiqiang Wang, and Dawei Yin. Ctr-guided generative query suggestion in conversational search. In 
+
+Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing: Industry Track , pp. 2624–2634, 2025. Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, et al. Training language models to follow instructions with human feedback. Advances in neural information processing systems , 35:27730–27744, 2022. Judea Pearl. Probabilistic reasoning in intelligent systems: networks of plausible inference . Morgan kaufmann, 1988. Rafael Rafailov, Archit Sharma, Eric Mitchell, Christopher D Manning, Stefano Ermon, and Chelsea Finn. Direct preference optimization: Your language model is secretly a reward model. Advances in neural information processing systems , 36:53728–53741, 2023. Nils Reimers and Iryna Gurevych. Sentence-bert: Sentence embeddings using siamese bert-networks, 2019. URL https://arxiv.org/abs/1908.10084 .Zheng Wang, Bingzheng Gan, and Wei Shi. Multimodal query suggestion with multi-agent reinforcement learning from human feedback. In Proceedings of the ACM Web Conference 2024 , pp. 1374–1385, 2024. Wei Xiong, Wenting Zhao, Weizhe Yuan, Olga Golovneva, Tong Zhang, Jason Weston, and Sainbayar Sukhbaatar. Stepwiser: Stepwise generative judges for wiser reasoning. arXiv preprint arXiv:2508.19229 , 2025. An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, Chujie Zheng, Dayiheng Liu, Fan Zhou, Fei Huang, Feng Hu, Hao Ge, Haoran Wei, Huan Lin, Jialong Tang, Jian Yang, Jianhong Tu, Jianwei Zhang, Jianxin Yang, Jiaxi Yang, Jing Zhou, Jingren Zhou, Junyang Lin, Kai Dang, Keqin Bao, Kexin Yang, Le Yu, Lianghao Deng, Mei Li, Mingfeng Xue, Mingze Li, Pei Zhang, Peng Wang, Qin Zhu, Rui Men, Ruize Gao, Shixuan Liu, Shuang Luo, Tianhao Li, Tianyi Tang, Wenbiao Yin, Xingzhang Ren, Xinyu Wang, Xinyu Zhang, Xuancheng Ren, Yang Fan, Yang Su, Yichang Zhang, Yinger Zhang, Yu Wan, Yuqiong Liu, Zekun Wang, Zeyu Cui, Zhenru Zhang, Zhipeng Zhou, and Zihan Qiu. Qwen3 technical report. arXiv preprint arXiv:2505.09388 , 2025. Seonghyeon Ye, Doyoung Kim, Sungdong Kim, Hyeonbin Hwang, Seungone Kim, Yongrae Jo, James Thorne, Juho Kim, and Minjoon Seo. Flask: Fine-grained language model evaluation based on alignment skill sets. 
+
+arXiv preprint arXiv:2307.10928 , 2023. Junhao Yin, Haolin Wang, Peng Bao, Ju Xu, and Yongliang Wang. From clicks to preference: A multi-stage align-ment framework for generative query suggestion in conversational system. arXiv preprint arXiv:2508.15811 ,2025. 
+
+> 9Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+Chuhuai Yue, Chengqi Dong, Yinan Gao, Hang He, Jiajun Chai, Guojun Yin, and Wei Lin. Promoting efficient reasoning with verifiable stepwise reward. arXiv preprint arXiv:2508.10293 , 2025. 
+
+> 10 Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+## A. Prompt Templates 
+
+We provide abridged prompt excerpts that illustrate the formats used for direct query generation (Figure 4), intent-guided CoT reasoning (Figure 5), and rubric-based evaluation (Figure 6). Some operational rules are omitted for brevity. 
+
+System Prompt for Direct Query Generation 
+
+# Role 
+
+User Intent Insight Expert tasked with generating follow-up queries on behalf of users. 
+
+# Workflow 1. Intent Categorization 
+
+• Creative : Content generation/refinement tasks (writing, coding, translation). • Non-Creative : Factual Q&A, information retrieval, troubleshooting. 
+
+2. Strategy 
+
+• Creative : Generate instructive queries (style, audience, tone optimization). • Non-Creative : Explore extended value and practical needs. 
+
+# Constraints 
+
+• Generate 3-5 diverse queries (no duplicates or highly similar ones). • Character limit: 20 characters or fewer (preferably 8-16). • Avoid repeating historical queries or answered content. 
+
+Example: 
+
+What scenarios suit deep learning? How does ML do feature engineering? What GPUs for training models? 
+
+Figure 4 | Abridged system prompt for direct query generation. 
+
+## B. Scalability to Larger Models 
+
+Method GSB vs. base LLM Critic Self-BLEU Intent Cov. 
+
+PE-based +0 0.57 0.0493 0.58 SFT-cold start +0.14 0.79 0.0471 0.76 
+
+RL-Ours +0.23 0.92 0.0463 0.94 
+
+Table 4 | Scalability results on Qwen3-235B-A22B. Self-BLEU ↓, other metrics ↑.To validate the generalizability of our framework across model scales, we conduct experiments on Qwen3-235B-A22B using offline metrics due to deploy-ment constraints. As shown in Table 4, our approach achieves 0.92 LLM Critic and 0.94 Intent Coverage compared with the baseline’s 0.57 and 0.58. Despite the larger model’s stronger baseline (0.57 vs. 0.33 LLM Critic on Qwen3-30B-A3B), our framework re-tains improvements of 61% in LLM Critic and 62% in Intent Coverage. Self-BLEU decreases from 0.0493 to 0.0471 and 0.0463, showing that SFT data construction and RL optimization also reduce lexical redundancy at the larger model scale. We use 𝛾 = 0.95 and fix 𝐾 = 3 because the production interface displays three suggestions; neither value was tuned on the test set. The rubric/CTR mixture (𝛼, 𝛽 ) = (0.6, 0.4) is fixed across experiments. Table 7 reports a targeted offline sensitivity analysis with all other settings fixed. Both metrics remain within a narrow range. Intent Coverage requires per-model human annotation and is therefore reported only for the selected 
+
+𝛾 = 0.95 setting (0.91 in Table 1). 
+
+## C. Annotation Pipeline and Quality Control 
+
+Annotation Pipeline. The collaborative refinement in Step 2 follows a four-stage procedure: (i) the LLM filters the optimal query for each intent dimension; (ii) human annotators verify and label a seed subset of 
+
+> 11 Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+System Prompt for Intent CoT Query Generation You are an expert in user intent understanding. First, conduct user needs analysis, then provide queries the user wants to ask .
+
+# Input Description 
+
+• [Session History] <history >
+
+• [User Query] <query >
+
+• [Agent Answer] <response >
+
+# Output Format 
+
+> {"deeperIntent": { "userSituation": "<user profile>", "motivations": "<latent intent>", "potentialIntents": ["<Intent 1>", ...] }, "response_summary": { "answeredInDetail": "<fully answered>", "answeredNotDetail": "<partially>", "notAnswered": "<not covered>" }, "recommend_query": { "query1": "<query>", // 20 chars "reason1": "<reason>", ... }}
+
+# recommend_query_rule 
+
+1. Content Repetition Issue : Recommended queries must not obviously repeat content from the user query or AI-Chat response; 2. . . . (Additional rules omitted for brevity) 
+
+Figure 5 | Abridged system prompt for intent-guided CoT query generation. samples to establish quality standards; (iii) an LLM-based evaluator performs batch labeling guided by human feedback; (iv) human validators review and refine the LLM-labeled results. 
+
+Annotator Training and Qualification. All annotators follow standardized guidelines and undergo rigorous training. Qualification requires achieving >90% agreement in back-to-back validation against gold-standard samples before being assigned to production labeling. 
+
+Quality Control. An independent QC team audits annotation quality on sampled batches. In addition, we apply machine-assisted cross-validation between LLM and human labels: samples with disagreement are automatically flagged and routed for re-adjudication. This mechanism reduces variability in subjective decisions and provides a continuous feedback loop for guideline refinement. 
+
+## D. Training Configuration 
+
+Model training is conducted using a cluster of 256 NVIDIA H100 GPUs. The specific training parameters for each stage are summarized in Tables 5 and 6. 
+
+## E. Algorithm Details 
+
+The complete pseudocode of our query-level credit assignment mechanism is provided in Algorithm 1. 
+
+> 12 Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment
+
+System Prompt for Rubric-based Evaluation 
+
+# Role 
+
+Senior Dialogue Recommendation Auditor. Evaluate whether recommended queries meet strict quality validation rules. 
+
+# Input Definitions 
+
+• Query Intent , Current Time , Session History 
+
+• User Query , Agent Answer , Recommended Query # Evaluation Rules 
+
+• R01 (Awkward Expression) : Grammatical issues, improper collocations, punctuation errors. • R02 (Language Inconsistency) : Must match the language of current user query. • R03 (Outdated Questions) : No outdated content unless historical context requested. • R04 (Creative Content) : For creative writing, use declarative/imperative only. • R05 (Irrelevant Needs) : Avoid content unrelated to user query or agent answer. • . . . (Additional rules) 
+
+# Output Format 
+
+JSON structure with two fields: • is_pass : Boolean indicating pass/fail status • violations : Array of violation objects containing rule_id , rule_name , and reason 
+
+Figure 6 | Abridged prompt for rubric-based quality assessment.                
+
+> Parameter Value Parameter Value
+> Optimizer AdamW LR Scheduler Linear Learning Rate 1e-5 Grad Clip 1.0
+> 𝛽 10.99 𝛽 20.999 Batch Size 128 Max Tokens 8192
+
+Table 5 | Hyper-parameters for the SFT stage. 
+
+Parameter Value Parameter Value 
+
+Optimizer AdamW LR Schedule Linear LR 2e-6 Grad Clip 1.0 
+
+𝛽 1 0.99 𝛽 2 0.999 Batch Size 64 Max Tokens 9216 
+
+𝜆 KL 0.05 Rollout 𝑁 8WD 0.1 Warmup 2Clip Ratio [0.2, 0.28] Temp. 1.0 Top-𝑝 1.0 Epochs 2Rubric wt. 𝛼 0.6 CTR wt. 𝛽 0.4 
+
+𝛾 0.95 Slate Size 𝐾 3
+
+Table 6 | Hyper-parameters for the RL stage. 
+
+## F. Case study 
+
+Traditional query suggestion models focus solely on the current turn, providing surface-level recommendations while neglecting global dialogue context and users’ implicit needs. In contrast, our model integrates dialogue history with the current QA trajectory to perform multi-dimensional intent modeling across multiple facets: 
+
+Reconstructing Latent User Scenarios , Diagnosing Specific Pain Points , and Disentangling Orthogonal User Intents .As illustrated in Figure 7, the baseline captures only surface-level intent, while our model performs implicit need inference and intent-driven analysis. The generated suggestions maintain contextual continuity and precisely address users’ latent intentions. 
+
+## G. Offline Evaluation Standard 
+
+To systematically assess the contextual quality of the generated query suggestions, we establish a manual offline evaluation standard. The scoring protocol operates on a per-case basis, where each test case consists of three 
+
+> 13
+
+Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment 
+
+𝛾 0.90 0.95 0.99 1.00 LLM Critic ↑ 0.871 0.880 0.868 0.873 Self-BLEU ↓ 0.0491 0.0470 0.0482 0.0479 
+
+Table 7 | Offline sensitivity to the query-level discount factor 𝛾 .
+
+Algorithm 1 Query-level Credit Assignment 
+
+Require: Policy 𝜋 𝜃 , ref. policy 𝜋 ref , input 𝑥 
+
+Require: Hyperparams: 𝐺 , 𝐾 , 𝛼 , 𝛽 , 𝛾 , 𝜖 , 𝜆 KL 
+
+Ensure: Updated policy parameters 𝜃 
+
+1: Step 1: Sample Generation 
+
+2: for 𝑖 = 1 to 𝐺 do 
+
+3: Sample slate 𝑦 𝑖 = {𝑞 𝑖, 1, . . . , 𝑞 𝑖,𝐾 } ∼ 𝜋 𝜃 (· | 𝑥 )
+
+4: end for 
+
+5: Step 2: Query-level Reward 
+
+6: Compute 𝑟 𝑖,𝑘 = 𝛼 · R rubrics (𝑞 𝑖,𝑘 ) + 𝛽 · R CTR (𝑞 𝑖,𝑘 )
+
+7: Step 3: Query-level Advantage 
+
+8: Normalize: ˜ 𝑟 𝑖,𝑘 = 𝑟 𝑖,𝑘 −𝜇 𝑟  
+
+> 𝜎 𝑟 +𝜖
+
+9: Compute: 𝐴 q 
+
+> 𝑖,𝑡
+
+= Í𝐾 𝑘 =𝑡 𝛾 𝑘 −𝑡 · ˜𝑟 𝑖,𝑘 
+
+10: Step 4: Diversity Advantage 
+
+11: Compute 𝑅 div ,𝑖 = Rdiv ( 𝑦 𝑖 )
+
+12: Normalize: 𝐴 div  
+
+> 𝑖,𝑡
+
+= 𝑅 div ,𝑖 −𝜇 div 
+
+> 𝜎 div +𝜖
+
+13: Step 5: Advantage Aggregation 
+
+14: 𝐴 𝑖,𝑡 =
+
+(( 𝐴 q 
+
+> 𝑖,𝑡
+
++ 𝐴 div  
+
+> 𝑖,𝑡
+
+)/ √2, Pass 
+
+−1, Fail 
+
+15: Step 6: Token-level Broadcasting 
+
+16: Assign 𝐴 tok  
+
+> 𝑗
+
+= 𝐴 𝑖,𝑡 for all 𝑢 𝑗 ∈ tokens (𝑞 𝑖,𝑡 )
+
+17: Step 7: Policy Optimization 
+
+18: Compute 𝜌 𝑗 = 𝜋 𝜃 (𝑢 𝑗 |𝑢 < 𝑗 )    
+
+> 𝜋 ref (𝑢 𝑗 |𝑢 < 𝑗 )
+
+19: J = Í𝑗 min (𝜌 𝑗 𝐴 tok  
+
+> 𝑗
+
+, ¯𝜌 𝑗 𝐴 tok  
+
+> 𝑗
+
+) − 𝜆 KL 𝐷 KL (𝜋 𝜃 ∥𝜋 ref )
+
+20: L( 𝜃 ) = −𝔼 [J ] 
+
+21: Update: 𝜃 ← 𝜃 − ∇ 𝜃 L( 𝜃 )
+
+22: return Updated policy 𝜋 𝜃 
+
+query suggestions generated from the preceding context. The score assigned to each case directly corresponds to the number of suggestions deemed valuable by the annotator. Table 8 presents the detailed evaluation criteria across four dimensions: Content Quality, Requirement Satisfaction, Text Quality, and Information Gain. 
+
+14 Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment [User Inquiry]   
+
+> Will human beings still be needed for tasks like upgrading and maintaining them?
+
+[Current QA]   
+
+> [Turn 1]
+> Assuming virtual assistants could completely
+> replace human jobs, would we lose employment
+> opportunities and economic independence?
+
+[Dialogue History]  
+
+> [Turn 2]
+> What consequences would this lead to ?
+> [Intelligent Response]
+> Though virtual assistants may be able to replace human jobs in many fields, their upgrades, maintenance, and optimization still require human specialized skills and knowledge…
+
+Our Approach (Intent-Aware Focus)            
+
+> What emerging professions that previously did not exist has AI given rise to? What skills will be needed for future AI-related work? How can humans collaborate with AI rather than being replaced ?
+
+Query Suggestions 
+
+[Reconstruct Latent User Scenarios] 
+
+The Transition from Defense to Exploration: The user is moving beyond the "total AI replacement" hypothesis, shifting focus from job displacement toward actively exploring the possibilities of job creation .The Search for Irreplaceable Value: Driven by anxiety over automated labor, the user is in a scenario of seeking concrete evidence that human presence and professional roles remain essential in a highly automated future. Mitigating Existential Uncertainty: The user is attempting to identify both systemic challenges and emerging opportunities to cultivate a balanced perspective and reduce future-related anxiety. 
+
+[Diagnose Specific Pain Points] 
+
+Lack of Concrete Vision: A difficulty in conceptualizing the specific nature and duties of " newly created roles ." Automation Paradox: The concern that even " maintenance or oversight " roles might eventually be automated by next-generation AI. Strategic Ambiguity: Uncertainty regarding personal career planning and how to adapt to these evolving labor paradigms. 
+
+[Disentangle Orthogonal User Intents] 
+
+Cognitive Intent: To cultivate a comprehensive and balanced perspective on the future relationship between AI and humanity. Psychological Intent: To confirm human value and mitigate a sense of uncertainty and existential anxiety. Practical Intent: To identify specific skill sets , case studies of 
+
+collaboration , and necessary educational reforms for adaptation. 
+
+[CoT of Our Model ] 
+
+> What standards and regulations currently apply to virtual assistants? What are the maintenance costs of virtual assistants?
+
+Baseline Approach (Query-Only Focus) 
+
+> How to ensure that virtual assistants can provide personalized services?
+
+Query Suggestions 
+
+Figure 7 | Case study comparing intent modeling approaches between baseline and our model. 
+
+15 Generative Query Suggestion via Intent Coverage and Query-Level Credit Assignment 
+
+Criterion Description Content Quality 
+
+Timeliness Issue The recommended query is outdated and no longer meets current requirements. Security & Compli-ance Content involving pornography, politics, violence, or illegal activities is deemed non-compliant. Question Duplication Recommended queries should avoid significant (over 80%) textual duplication. History Duplicate Overlapping less than 50% with historical queries, offering additional information gain. Duplicate-of-Response Overlapping less than 50% with previous responses and providing additional information. 
+
+Requirement Satisfaction 
+
+Irrelevant The query severely deviates from the user’s current primary needs and intent. Over-Assumption Makes unfounded assumptions about the user’s identity, context, or expertise. Over-Reliance Overly focuses on past conversations, neglecting current needs. Prioritize the current round. 
+
+Text Quality 
+
+Word-Count-Exceeded Exceeds 20 characters (Chinese, English x2, digits, punctuation, spaces each count as 1). Unit Error Non-standard units not commonly used, increasing user comprehension difficulty. Poorly-Expression The text is unclear, poorly expressed, with grammatical errors, typos, or ambiguities. Inappropriate Topic Pose questions about trending topics conversationally—avoid simply listing news. 
+
+Information Gain 
+
+Logical Confusion The query is logically inconsistent or contradictory with the preceding content. Generic Question The query is too vague, generic, and common knowledge, offering little added value. 
+
+Table 8 | Human evaluation standards for query suggestion quality assessment.
