@@ -1,0 +1,25 @@
+{
+  "date": "20260919",
+  "date_label": "",
+  "generated_at": "2026-09-19 21:31:53 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.12697v1",
+      "route": "202609/19/2609.12697v1-enabling-and-understanding-personalization-in-ai-generated-advertising-imagery",
+      "title": "Enabling and Understanding Personalization in AI-Generated Advertising Imagery",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "从客户数据生成个性化广告图像的生成式框架",
+      "first_seen_at": "2026-09-19 21:31:53 UTC",
+      "updated_at": "2026-09-19 21:31:53 UTC"
+    }
+  ]
+}

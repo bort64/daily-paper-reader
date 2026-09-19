@@ -1,0 +1,57 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-19T21:30:48.986654+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 1,
+    "quick_skim_target": 11,
+    "quick_selected": 1
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.12697v1",
+      "source": "arxiv",
+      "title": "Enabling and Understanding Personalization in AI-Generated Advertising Imagery",
+      "abstract": "Personalized marketing traditionally matches static products to customers, while dynamic creative optimization focuses mainly on AI-driven text personalization or basic product image modifications. We address this gap by developing and implementing an AI-based framework that generates personalized advertising imagery directly from customer data. We evaluate this framework in a two-stage within-subject study with N=100 participants across four products and three levels of personalization, varied by the amount and specificity of customer data used. Participants rated each image on attitude toward the advertisement, attitude toward the product, and purchase intention. Results show that participants perceive differences across personalization levels and evaluate AI-generated advertising imagery most positively at a moderate level of personalization. High personalization increases perceived personalization, which is positively associated with all three outcome measures, but also increases perceived creepiness, which is negatively associated with the outcomes and dominates the total effect.",
+      "authors": [
+        "Victor Kolominsky-Rabas",
+        "Leopold Müller",
+        "Claudius Budcke",
+        "Claas Christian Germelmann",
+        "Niklas Kühl"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.HC"
+      ],
+      "published": "2026-09-11T10:44:37+00:00",
+      "link": "https://arxiv.org/pdf/2609.12697v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "generative framework producing personalized advertising imagery from customer data",
+      "llm_evidence_cn": "从客户数据生成个性化广告图像的生成式框架",
+      "llm_evidence": "从客户数据生成个性化广告图像的生成式框架",
+      "canonical_evidence": "从客户数据生成个性化广告图像的生成式框架",
+      "llm_tldr_en": "This work develops and evaluates an AI framework that generates personalized advertising imagery directly from customer data, studying how personalization level affects ad attitude and purchase intention.",
+      "llm_tldr_cn": "个性化营销通常将静态产品匹配给客户，动态创意优化又主要聚焦文本个性化或基础图像修改，本文针对该缺口提出基于AI的框架，直接从客户数据生成个性化广告图像。作者开展两阶段被试内实验，N=100名参与者覆盖四类产品与三档个性化水平，按数据数量与具体度变化。结果显示参与者对不同个性化水平的图像在广告态度、产品态度与购买意愿上存在感知差异。该研究为生成式广告内容的个性化设计提供了实证依据。",
+      "llm_tldr": "个性化营销通常将静态产品匹配给客户，动态创意优化又主要聚焦文本个性化或基础图像修改，本文针对该缺口提出基于AI的框架，直接从客户数据生成个性化广告图像。作者开展两阶段被试内实验，N=100名参与者覆盖四类产品与三档个性化水平，按数据数量与具体度变化。结果显示参与者对不同个性化水平的图像在广告态度、产品态度与购买意愿上存在感知差异。该研究为生成式广告内容的个性化设计提供了实证依据。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative models for ad retrieval, ad ranking, and sponsored content generation",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

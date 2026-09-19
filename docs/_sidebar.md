@@ -1,6 +1,9 @@
 * <a class="dpr-sidebar-root-link" href="#/">首页</a>
 * <a class="dpr-sidebar-root-link dpr-sidebar-noactive-link" href="javascript:void(0)" data-dpr-hash="#/tutorial/README">使用教程</a>
 * Daily Papers
+  * 2026-09-19 <!--dpr-date:20260919-->
+    * 速读区
+      * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202609/19/2609.12697v1-enabling-and-understanding-personalization-in-ai-generated-advertising-imagery" data-sidebar-item="{&quot;title&quot;: &quot;Enabling and Understanding Personalization in AI-Generated Advertising Imagery&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2609.12697v1-enabling-and-understanding-personalization-in-ai-generated-advertising-imagery&quot;, &quot;score&quot;: &quot;6.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;search-rec&quot;}], &quot;evidence&quot;: &quot;从客户数据生成个性化广告图像的生成式框架&quot;}">Enabling and Understanding Personalization in AI-Generated Advertising Imagery</a>
   * 2026-09-18 <!--dpr-date:20260918-->
     * 精读区
       * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202609/18/2609.20630v1-unipolicy-unified-objective-specific-policies-for-generative-search-advertising" data-sidebar-item="{&quot;title&quot;: &quot;UniPolicy: Unified Objective-Specific Policies for Generative Search Advertising&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2609.20630v1-unipolicy-unified-objective-specific-policies-for-generative-search-advertising&quot;, &quot;score&quot;: &quot;9.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;search-rec&quot;}], &quot;evidence&quot;: &quot;面向生成式搜索广告的目标感知多策略对齐框架&quot;}">UniPolicy: Unified Objective-Specific Policies for Generative Search Advertising</a>

@@ -1,0 +1,24 @@
+{
+  "label": "2026-09-19",
+  "date": "2026-09-19",
+  "generated_at": "2026-09-19T21:31:57",
+  "count": 1,
+  "papers": [
+    {
+      "paper_id": "202609/19/2609.12697v1-enabling-and-understanding-personalization-in-ai-generated-advertising-imagery",
+      "section": "quick",
+      "title_en": "Enabling and Understanding Personalization in AI-Generated Advertising Imagery",
+      "authors": "Victor Kolominsky-Rabas, Leopold Müller, Claudius Budcke, Claas Christian Germelmann, Niklas Kühl",
+      "date": "2026-09-11",
+      "pdf": "https://arxiv.org/pdf/2609.12697v1",
+      "score": "6.0",
+      "evidence": "从客户数据生成个性化广告图像的生成式框架",
+      "tldr": "个性化营销多将静态产品匹配顾客，动态创意优化也偏重文本或基础图片修改，缺少直接从顾客数据生成广告图像的框架。本文提出AI生成个性化广告图像的框架，并用N=100被试的两阶段被试内实验，覆盖4种产品和3档个性化水平进行评价。结果显示，中等个性化获得最积极的广告态度、产品态度和购买意愿；高个性化虽提升感知个性化，却因感知诡异感上升而拖累总体效果。研究揭示个性化强度与诡异感的权衡，为AI广告图像设计提供依据。",
+      "tags": "query:search-rec",
+      "abstract_en": "Personalized marketing traditionally matches static products to customers, while dynamic creative optimization focuses mainly on AI-driven text personalization or basic product image modifications. We address this gap by developing and implementing an AI-based framework that generates personalized advertising imagery directly from customer data. We evaluate this framework in a two-stage within-subject study with N=100 participants across four products and three levels of personalization, varied by the amount and specificity of customer data used. Participants rated each image on attitude toward the advertisement, attitude toward the product, and purchase intention. Results show that participants perceive differences across personalization levels and evaluate AI-generated advertising imagery most positively at a moderate level of personalization. High personalization increases perceived personalization, which is positively associated with all three outcome measures, but also increases perceived creepiness, which is negatively associated with the outcomes and dominates the total effect.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}
