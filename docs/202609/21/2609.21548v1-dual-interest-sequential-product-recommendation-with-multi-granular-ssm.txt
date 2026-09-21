@@ -1,0 +1,431 @@
+Title: Dual-Interest Sequential Product Recommendation With Multi-Granular SSM
+
+URL Source: https://arxiv.org/pdf/2609.21548v1
+
+Published Time: Mon, 21 Sep 2026 00:50:26 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Dual-Interest Sequential Product Recommendation With Multi-Granular SSM 
+
+Shuiying Liao 
+
+The Hong Kong University of Science and Technology Clear Water Bay, Hong Kong shuiyingl@ust.hk 
+
+P. Y. Mok ∗
+
+The Hong Kong University of Science and Technology Clear Water Bay, Hong Kong tracy.mok@ust.hk 
+
+Abstract —Sequential recommendation aims to predict the next item a user will interact with based on their historical behavior. Advances in Transformers have significantly improved sequential recommendation but still limited by cost efficiency. Although State Space Models (SSMs) have recently enabled efficient long-range modeling, most existing methods models encode each item with a single static contextual role, overlooking the phenomenon of item polysemy . In fact, the same item often plays different semantic roles depending on user context, and existing methods are limited in capture dynamic behavior across different temporal granularities. In this work, we propose DSRec, a novel dual-interest cross SSM model that explicitly disentangles item roles across long-term and short-term semantic context. Sequential items are encoded into long-term interest embeddings that captures stable preferences via historical aggregation, and ashort-term interest branch that emphasizes local session intent modulated by inter-click time intervals. These interest embed-dings are processed through distinct SSM encoders: a full-sequence Mamba for long-term modeling, and a time-modulated SSM that dynamically adjusts state evolution based on temporal gaps. To enable effective cross-granularity alignment, we adopt residual cross-fusion mechanism that exchanges contextual in-formation between the two branches while preserving semantic independence. Experiments on public benchmarks demonstrate that DSRec outperforms other state-of-the-art methods. 
+
+Index Terms —sequential recommendation, long-term interest, short-term interest, polysemy, SSM 
+
+I. I NTRODUCTION 
+
+Sequential recommendation has become a fundamental task in modern recommender systems, where the goal is to predict a user’s next interaction based on their historical behavioral sequence [1]–[3]. With the surge of online activities and the increasing volume of temporally ordered data, it has become crucial to model both long-term stable preferences and 
+
+short-term intent dynamics to achieve personalized and timely recommendations [4]–[6]. Transformer-based models, such as SASRec [1] and BERT4Rec [2], have shown promising results in modeling user sequences through attention mechanisms. However, their high computational complexity and limited scalability to long sequences hinder their practical deploy-ment [7], [8]. Recent developments in structured state space models (SSMs), including S4 [9], S5 [10], and Mamba [7], provide efficient alternatives by enabling long-range depen-dency modeling with linear complexity. Consequently, SSMs are gaining increasing interest in recommendation tasks [11], [12]. time1    
+
+> time2
+> ∆� 1∆� 2∆� 3∆� 4
+> Fiction Comic
+
+Fig. 1. Motivation illustration. The same item ( ”Dune” ) can appear in different viewing sequences—either among consistent sci-fi films (long-term preference) or after comics (short-term interest). This demonstrates the polysemous nature of item semantics, requiring recommendation to distinguish temporal contexts for accurate personalization. 
+
+Despite their advantages, most existing SSM-based recom-mender models treat user behavior as a homogeneous sequence and apply a single representation for each item across all contexts. However, user-item interactions are inherently multi-intent: a user may engage with the same item due to different motivations. In fact, an item can carry polysemous semantics roles. Take Fig. 1 as an example, the same item (e.g., Dune )may occur in different contexts, appearing alongside other science fiction films as part of a user’s long-term preference, or following a sequence of comics driven by recent short-term interest. This illustrates the polysemous nature of item semantics and highlights the necessity of modeling different interest intent to enable accurate personalization. Although prior works have explored multi-interest mod-eling [4], [13], [14], they often focus on user-side intent separation or perform sequence slicing at the cost of disrupting temporal coherence [5], [15], [16]. These limitations motivate us to design a model that captures item-level semantic disam-biguation across multiple temporal granularities. To address these limitations, we propose Dual SSM 
+
+Rec ommendation ( DSRec ), a novel dual-interest sequential recommendation model based on multi-granular cross residual SSM encoders. Specifically, we first adopt a dual-interest modeling that explicitly distinguish the short-term and long-arXiv:2609.21548v1 [cs.AI] 18 Sep 2026 term semantic roles of each item. Each item in the sequence is embedded into two semantic roles: a long-term interest 
+
+embedding that encodes persistent user preferences through historical aggregation, and a short-term interest modeling that emphasizes local session intent modulated by inter-click time intervals. The long-term and short-term interest are independently encoded using structurally distinct SSM-based architectures: one using a standard full-sequence Mamba [11], and the other using a time-modulated SSM that dynamically adjusts state updates based on time gaps. Importantly, as using two identical Mamba encoders over-looks the distinct temporal patterns present in short-term and long-term behaviors. Long-term preferences benefit from full-sequence modeling and high-order memory, while short-term interest depends heavily on session-local dynamics and time sensitivity. Hence, we design asymmetric SSM encoders, to optimize each path for its respective granularity. Rather than merging the two branches via simple concatenation or early fusion, we adopt a residual cross-fusion mechanism that allows each branch to inject contextual signals from the other without disrupting their specialized semantics. This cross-residual de-sign promotes joint modeling of multi-granular dependencies. Extensive experiments on benchmark datasets show that DSRec outperforms state-of-the-art methods in terms of both accuracy and efficiency. Ablation studies further verify the effectiveness of key modules. We believe DSRec opens a new path for item role-aware modeling in sequential recommen-dation, which has not been explored in existing sequential recommendation systems. Our main contributions are as follows:  
+
+> •
+
+We propose item polysemy of long-term interest and short-term interest semantical roles in sequential recom-mendation. We adopt polysemous modeling that encodes each item into different interest patterns, enables the model to handle item semantic ambiguity across diverse user histories and session contexts.  
+
+> •
+
+We design an asymmetric dual-SSM architecture com-posed of a global Mamba encoder for modeling long-term user interest and a time-modulated SSM for capturing short-term dynamics. A residual cross-fusion mechanism is adopted to enable bidirectional information exchange between the two branches while preserving their semantic independence.  
+
+> •
+
+We extensively evaluate our model on multiple public benchmarks, demonstrating that our approach surpasses existing methods in terms of overall accuracy and effi-ciency. II. R ELATED WORK 
+
+A. Sequential Recommendation 
+
+Sequential recommendation aims to predict the next item a user will interact with based on their historical behavior sequence [5], [17], [18]. Early research in sequential recom-mendation systems heavily relied on RNNs [19], [20], which were adept at handling sequential data due to their ability to maintain a hidden state across different time steps. However, RNNs faced limitations in parallel computation and struggled with capturing long-range dependencies within sequences. These challenges led to the exploration of Transformer-based models [1], [2], [5], [13], [14], [21]–[23], which introduced self-attention mechanisms to overcome the sequential process-ing constraints. Several works have attempted to enhance per-formance via self-supervised pretraining [24] or dual represen-tations [14], [25]. However, despite the improved performance, the quadratic computational complexity of Transformers with respect to sequence length posed a challenge, especially in real-time recommendation scenarios where latency is critical [26]. The need for more computationally efficient models in sequential recommendation systems has driven the adoption of SSMs [7], [12], [27]–[30]. These models offer linear computational loads, making them more suitable for handling long sequences and real-time recommendations [31], [32]. 
+
+Our work complements these trends by exploring a new modeling dimension: semantic interest roles disentanglement, which explicitly separates short- and long-term item semantics and models them via dual SSMs for efficient and more accurate sequence learning. B. State Space Models. 
+
+State Space Models (SSMs) [33], [34] have recently gained popularity in sequential modeling due to their ability to capture long-range dependencies with linear computational complexity [7], [27], [35]. In contrast to the quadratic cost of Transform-ers, SSMs leverage recurrence-based mechanisms to process sequences efficiently, making them especially attractive for long-context scenarios [7], [8]. Mamba [7] first introduces a selective state space model with hardware-aware design, marked a breakthrough in combining high efficiency with strong sequence modeling. Following this, a variety of models extended Mamba to other domains. For example, Lieber et al. [8] proposed Jamba, a hybrid Transformer-Mamba large language model that supports efficient long-context process-ing through a mixture-of-experts architecture. In the vision domain, Wu and Wan [36] and Liu et al. [37] applied SSMs to image segmentation, demonstrating their superiority in capturing global spatial dependencies over Transformer-based approaches. In sequential recommendation domain, Mamba4Rec [11] introduces the first efficient selective state-space architecture, provides a robust solution for capturing complex temporal dynamics in user sequential behavior. To enhance SSMs further, SIGMA [1] extended Mamba with selective gating and dense extraction layers to better adapt to short sequences and unidirectionaly sequence modeling, and shown promising results. 
+
+However, existing Mamba-based methods in recommenda-tion mostly treat items as a static semantic role and apply monolithic architectures for modeling sequence dynamics. user history          
+
+> Emb Layer Time-aware SSM Block Mamba Block Input SSM_L SSM_S Layer Norm Feed Forward Add & Norm Mamba Layer x�
+> �SiLU activation Nonlinearlity LP LP Con1d Selective SSM LP
+> ��
+> Prediction Layer Layer Norm Feed Forward Add & Norm cross
+> Long-Term Interest Modeling Short-Term Interest Modeling
+> Emb Layer x�
+> SSM time gate
+> ∆� 1∆� 2∆� 3
+> �(∆�)
+> Con1d
+> �
+> LP LP
+> ∆� 1∆� 2∆� 3Fig. 2. Structure overview. DCRec is a dual-SSM architecture that explicitly disentangles short-term and long-term user preferences via embedding and state-space separate modeling. The two streams are connected through residual cross-links.
+
+III. M ETHODOLOGY 
+
+A. Notations Problem Statement 
+
+Let U denotes a set of users and V denotes a set of items, where |U| and |V| denote the number of users/items, u ∈ U 
+
+and v ∈ V . The sequential recommendation aims to predict the next item that a user u is likely to interact with based on their historical sequence Su of interactions. Therefore, we represent a historical sequence of interactions for the user u with Su =[v1, v 2, . . . , v T ], where vt represents the item interacted with the user u at time step t, and here we omit the subscript u
+
+for convenience. vT +1 represents the next item that user u is expected to interact with, which is to be predicted. Based on the above notations, given a set of historical interaction sequences Su for users in the training dataset 
+
+D = {(Su, v T +1 )}, the task of sequential recommendation is to learn a model F : Su → vT +1 that can accurately predict the next item vT +1 for each user u.
+
+B. Framework Overview 
+
+In DSRec , we model long-term interest and short-term in-terest jointly. We adopt dual-SSM sequential recommendation model based on residual-coupled state space networks. Each item in the input sequence is represented by two contextual embeddings: a long-term embedding that captures persistent preferences from historical interactions, and a short-term embedding that emphasizes local intent modulated by inter-click time gaps. The two contextual embeddings are processed independently through dedicated SSM encoders: the long-term embedding is modeled with standard Mamba [7], while the short-term embedding is processed using a time-modulated state-space model. To enable effective coordination, a residual cross-fusion mechanism is introduced between branches. The fused representations are then projected for next-item predic-tion. The main structure are illustrated in Fig. 2. 
+
+C. State Space Model 
+
+State Space Models (SSMs) are a class of dynamical systems widely used for modeling temporal dependencies in continuous or discrete-time signals. Recent variant Mamba has shown strong performance in sequence modeling tasks due to their efficient handling of long-range dependencies. Formally, an SSM defines the evolution of a hidden state h(t) over time based on an input signal x(t), and generates an output signal 
+
+y(t) through the following continuous-time equations: 
+
+ddt h(t) = Ah(t) + Bx(t) (1) 
+
+y(t) = Ch(t) (2) where A ∈ RP ×P , B ∈ RP ×D, and C ∈ RD×P are learnable parameter matrices, and P denotes the dimension of the hidden state space. To apply SSMs in discrete-time sequential recommendation, we discretize the above system using the Zero-Order Hold (ZOH) method with a constant step size ∆t, resulting in: 
+
+ht = ¯Ah t−1 + ¯Bx t (3) 
+
+yt = Ch t (4) Here, ¯A and ¯B are the discretized equivalents of A and B,typically computed via matrix exponentials or approximation methods. The model sequentially updates the internal state 
+
+ht given an input embedding xt, and produces the output 
+
+yt at each time step. This formulation allows the model to capture structured temporal dynamics in user-item interaction sequences. For simplicity, we shorten the whole process to SSM in the following two branches. 
+
+D. Long-Term Interest Modeling 1) Embedding Layer: We first establish a learnable em-bedding table E = E1, E 2, · · · , E |V| ∈ R|V|× D. Each item 
+
+vj ∈ V is initially represented as a one-hot vector and then projected into a dense vector space R|V|× D via an embedding matrix E. Given an interaction sequence S = {v1, v 2, . . . , v T },the corresponding embedded input is denoted as X ∈ RT ×D,obtained by retrieving embeddings from E.
+
+User History Aggregation for Long-Term Interest. To cap-ture consistent user preferences beyond the current session, we enhance each item’s long-term interest embedding with a user-level historical aggregation Xl = M LP (X|| Eu). The intuition is that long-term interests are not determined by the current session alone, but by its relative semantics within a user’s broader interaction history Eu. We compute this aggregation by applying a mean pooling over all previous items in the user’s sequence, excluding the current item, and use it as a contextual shift added to the item’s base embedding: 
+
+xil = xi + 1
+
+i − 1
+
+> i−1
+
+X
+
+> j=1
+
+xj , (5) where ei is the embedding of the i-th item and the second term captures aggregated historical context. This design allows the long-term encoder to better model stable preferences and suppress short-term fluctuations. To enhance the expressiveness and generalization of the item embeddings, we then apply dropout regularization [38] and layer normalization [39] on the input embbeding Xl for long-term interest branch. These operations mitigate overfitting and stabilize training dynamics, ensuring a more robust embedding space for downstream modeling. 
+
+2) Mamba Block: To capture long-range user behavior effi-ciently, we keep and leverage structured SSMs as Mamba4Rec [11] dose. The core component is the Mamba Block , which transforms an input sequence Xl ∈ RB×L×D (with batch size B, sequence length L, and hidden dimension D) into output features using a selective SSM kernel and residual connections. Each Mamba Block transforms an input sequence tensor 
+
+Hi ∈ RB×L×D, where B is the batch size, L is the sequence length, and D is the hidden dimension. The transformation fol-lows a structured state space modeling pipeline with selective parameterization. First, the input undergoes a linear projection and 1D convolution to capture local patterns, followed by a gated activation: 
+
+Hx = SiLU (Conv1D (W 1Xl)) , (6) where W 1 ∈ RD×D is a learnable projection matrix, and SiLU (·) is the Sigmoid Linear Unit activation defined as SiLU (x) = x · σ(x). Next, the convolved features Hx are passed through a parameterized structured state space model (SSM), which applies input-dependent filters using learned state matrices A, B, and C:
+
+Hy = SSM (Hx; A, B, C), (7) where SSM (·) denotes the discretized recurrence function modeling temporal dynamics. To ensure gradient flow and preserve original semantics, a residual connection is introduced with a second projection: 
+
+Hl = W 2(SiLU (Hy )) + Xl. (8) where W 2 is another trainable linear layer. This operation fuses the SSM-refined representation with the original input for stable layer-wise integration. The Mamba Block jointly leverages local convolutional processing and global state space modeling, while the use of input-dependent parameters and residual connections facilitates efficient long-sequence encod-ing in recommendation scenarios. 
+
+E. Short-Term Interest Modeling 1) Embedding Layer: To account for the multi-role nature of items in user behavior sequences, we first assign each item two learned embeddings: Xl is assigned as Long-term interest embedding , combined with user history shift as we mentioned. While in short-term interest modeling, we first use 
+
+Xs represents Short-term interest embedding after a projection from initial sequence embedding X, to encode the transient intent and session-specific semantics that may vary across occurrences. Both representations are learned independently. As user short-term intent in recommendation sequences is often influenced by the timing of recent interactions. In-tuitively, two items clicked within a short time span are more likely to be semantically coherent than those separated by long intervals. To capture such dynamics, we integrate 
+
+time interval encoding into the short-term interest modeling branch. 
+
+Time Interval Encoding: To incorporate temporal dynamics into sequential modeling, we process the timestamp sequence 
+
+T = {t1, t 2, . . . , t T } by computing its temporal difference sequence D = {d1, d 2, . . . , d T } [26], where each di represents the elapsed time between inter-click intervals. Specifically, the differences are computed as follows: 
+
+Di =
+
+(
+
+0, i = 1 
+
+Ti − T i−1, i = 2 , . . . , T . (9) The resulting sequence D ∈ RT captures fine-grained temporal intervals between actions. Then we assign each time interval a learnable embedding. To reduce variance and suppress tem-poral noise, we further apply dropout and layer normalization to D prior to feeding it into downstream temporal modules. This enables the model to better distinguish between long pauses and rapid interactions, improving its sensitivity to user intent shifts over time. The raw intervals are then normalized via logarithmic scaling and discretized into N buckets using quantile binning. Each bucket is mapped to a learnable embed-ding xt
+
+> i
+
+, capturing temporal sensitivity. This time encoding is concatenated with the item embedding to form the short-term interest representation: 
+
+xis = MLP S
+
+ xi ∥ xt
+
+> i
+
+ , (10) 
+
+2) Time-aware SSM: To further enhance temporal sensitiv-ity, we introduce a gating mechanism that modulates the state update based on time interval after similar process as Eq. 6, 7, and 8: 
+
+gi = σ(W t · xt
+
+> i
+
+), (11) 
+
+his = gi ⊙ SSM (xis) + (1 − gi) ⊙ hi−1 
+
+> s
+
+, (12) where σ(·) is a sigmoid activation. The gate vector gi controls how much the current input should influence the hidden state. When the time gap is small, gi tends to be higher, allowing new information to be integrated; for large gaps, 
+
+gi is smaller, retaining past state memory, allowing dynamic temporal sensitivity. This time-aware control mechanism is critical for modeling transient interests that shift rapidly within user sessions. 
+
+F. Residual Cross-SSM Fusion 
+
+We construct two independent SSM encoders: Mamba Block 
+
+processes the Xl sequence to extract long-term user prefer-ence; Time-aware SSM processes the Xs sequence to model session-level short-term dynamics. Each encoder is augmented with a residual cross-connection, meaning each branch re-ceives the detached output of the other as auxiliary input. This enables information sharing while preventing entanglement of gradients. 
+
+G. Feed-Forward Network 
+
+The standard feed-forward network is adopted to enhance the modeling of user interactions in both long- and short-term interest latent space, which is defined as follows: FFN (Hl) = GELU 
+
+
+
+HlW (1) + b(1) 
+
+W (2) + b(2) , (13) FFN (Hs) = GELU 
+
+
+
+HsW (3) + b(3) 
+
+W (4) + b(4) , (14) where W (1) , W (3) ∈ RD×4D, W (2) , W (4) ∈ R4D×D,
+
+b(1) , b (3) ∈ R4D, and b(2) , b (4) ∈ RD are the parameters of two dense layers, and we utilize the GELU activation function [40]. The FFN is designed to capture complex patterns and interactions within sequential data by applying two non-linear transformations using dense layers with the activation function. To enhance model robustness and prevent overfitting, we incorporate dropout and layer normalization after each Mamba block/Time-aware SSM block and feed-forward network, as depicted in Eq. 13. This approach aids in regularizing the model and accelerating training convergence. 
+
+H. Stacking SSM Layers 
+
+We investigate the use of stacked SSM layers (B) to enhance sequential recommendation. Despite deeper networks not always improving performance, residual connections are vital for propagating features across layers. We explore con-figurations for stacked SSM layers to balance effectiveness and efficiency. Further experiments are conducted to evaluate the trade-offs between effectiveness and efficiency of stacked layers. 
+
+I. Prediction Layer and Optimization 
+
+The final output embedding is formed by concatenating the last positions of long-term interest modeling output ht and long-term interest modeling output st:
+
+oT = MLP([ hTl ∥ hTs ]) . (15) Prediction is computed via dot product over the item embed-ding matrix: 
+
+ˆy = Softmax( oT · E⊤) ∈ R|V| , (16) where ˆy is the probability distribution over the next item in the item set V. To optimize the DSRec, we adopt the cross entropy loss function as below: 
+
+L = − X
+
+> u∈U
+> N
+
+X
+
+> i=1
+
+yT +1 log (ˆ yT +1 ) (17) where yi represents the ground truth of item vT +1 .IV. E XPERIMENTS 
+
+In this section, we first give brief introduction of the experimental setting, and to evaluate the effectiveness of our proposed DSRec, we conducted extensive experiments on two benchmark datasets, giving answers to the following research questions (RQs):  
+
+> •
+
+RQ1: Can the proposed DSRec outperform previous sequential recommendation methods?  
+
+> •
+
+RQ2: Can the key modules contribute to the overall prediction accuracy?  
+
+> •
+
+RQ3: How do specific settings in the method affect overall performance?  
+
+> •
+
+RQ4: How does our model benefit sequential recommen-dations? 
+
+A. Experimental Settings 1) Data : We conduct our experiments on three public datasets, and all the datasets are collected from various real-world application platforms, and these datasets show consid-erable variation in both sequence length and sparsity. 
+
+Beauty and Video-Games [41] are obtained from Amazon e-commerce platform, and the two dataset typically contains information related to beauty and movie products. 
+
+MovieLens-1M [42] is a benchmark movie recommenda-tion dataset which contains bout one million movie ratings from users. TABLE I DATASET STATISTICS .                        
+
+> Dataset # Users # Items # Interactions Avg. actions of users Avg. actions of items Sparsity
+> MovieLens-1M 6,041 3,417 999,611 165.5 292.6 95.157% Amazon-Beauty 22,364 12,102 198,502 8.9 16.4 99.927% Amazon-Video-Games 24,304 10,673 231,780 9.5 21.7 99.911%
+
+The important statistics for the three datasets can be found in Table I. 
+
+2) Baselines : A variety of representative methods in se-quential recommendation have been chosen for comparison against our approach. They are organized into the following distinct categories: 
+
+a) CNN based method:  
+
+> •
+
+Caser [43]: It utilizes a convolutional layer to extract features from user interaction sequences, capturing both short-term and long-term patterns. 
+
+b) RNN based method:  
+
+> •
+
+GRU4Rec [19]: It refines conventional RNNs, incorpo-rating a ranking loss function to achieve superior perfor-mance tailored to sequential recommendation domain. 
+
+c) Attention based methods:  
+
+> •
+
+NARM [20]: This model employs an attention-based blended encoder to distill user intent from a sequence of actions, forming a unified session representation.  
+
+> •
+
+SASRec [1]: It is a self-attention-based sequential model that harmonizes long-term semantic comprehension with a focus on a select set of pertinent actions. It dynamically selects pertinent past items at each step to forecast the subsequent item.  
+
+> •
+
+BERT4Rec [2]: It further applies the Transformer model to capture long-term dependencies in sequences through a bidirectional transformer architecture, thus improving the accuracy and effectiveness. 
+
+d) SSM based methods:  
+
+> •
+
+Mamba4Rec [11]:It is the first to apply selective State Space Models (SSMs) in sequential recommendations, particularly the hardware-optimized Mamba block. This 
+
+method has attracted wide attention and applications.  
+
+> •
+
+SIGMA [12]: This model is a hybrid model that in-tegrates Mamba and GRU. It incorporates a Partially Flipped Mamba component combined with a Dense Se-lective Gate. 
+
+3) Implementation : Our evaluation is implemented based on PyTorch 1 and RecBole 2. All models utilize a model dimension of 64, a standard selection for sequential recom-mendation models that focus solely on ID-based interactions. The optimizer is Adam [44] with a learning rate of 0.001, 
+
+> 1http://pytorch.org
+> 2https://github.com/RUCAIBox/RecBole
+
+and the training batch size is set to 2048. For Mamba-based models, we use structured state space model configurations with a state dimension was consistently set to 32, a local convolution width set to 4, the kernel size for 1D causal convolution was 4, and a block expansion factor was set to 2. We apply a dropout rate of 0.2 after each layer to prevent over-fitting. All experiments are conducted on NVIDIA GeForce RTX 4090 GPUs. We employ a training batch size of 2048 and a validation batch size of 4096 across all experiments. The maximum sequence length is dynamically determined based on each dataset’s characteristics: 200 for MovieLens-1M and 50 for both Amazon-Beauty and Amazon-Video-Games. All models are carefully tuned to achieve their best potential performance under unified experimental setup. 
+
+4) Evaluation : Followed by previous studies [1], [2], [11], [45], we employ the leave-one-out strategy to assess the effectiveness of each method. Under this strategy, for each user, the last interacted item in temporal order is considered as the test data and the previous one as validation data. To ensure robust evaluation metrics, we utilize Hit Ratio ( HR@ ), Nor-malized Discounted Cumulative Gain ( NDCG@ ), and Mean Reciprocal Rank ( MRR@ ) to evaluate the performance of each method, as these metrics are widely accepted in the field of recommendation. In this study, we report the evaluation metrics at rank 10. 
+
+B. Overall Performance 
+
+Table II summarizes the overall performance of our pro-posed DSRec model compared to a wide range of state-of-the-art sequential recommendation baselines. Best results are highlighted in bold red , while the second-best results are 
+
+underlined in blue . From the table, we can make the following observations:  
+
+> •
+
+Our DSRec achieves state-of-the-art performance across all datasets and most evaluation metrics. On MovieLens-1M , DSRec outperforms the best-performing baseline (SIGMA [12]) by +2 .58% in HR@10, while achieving a notable +5 .67% gain in MRR@10 over Mamba4Rec. These improvements demonstrate the advantage of our dual-interest embedding design and residual cross-SSM in capturing semantic signals in dense user sequences. On the more sparse datasets Amazon-Beauty and Amazon-Video-Games , DSRec continues to outperform other models, validating its effectiveness in data sparsity sce-nario.  
+
+> •
+
+Our experimental results indicate that Transformer-based models outperform RNNs and CNNs based methods, TABLE II OVERALL PERFORMANCE COMPARISON OF DIFFERENT METHODS . RED AND BOLD DATA INDICATE THE BEST RESULTS , AND BLUE underlined ONES ARE THE SECOND BEST RESULTS . ” ⋆” INDICATES THE IMPROVEMENTS ARE STATISTICALLY SIGNIFICANT                                                                                                           
+
+> Method MovieLens-1M Amazon-Beauty Amazon-Video-Games HR@10 NDCG@10 MRR@10 HR@10 NDCG@10 MRR@10 HR@10 NDCG@10 MRR@10 Caser [43] (WSDM’18) 0.2892 0.1714 0.1354 0.0531 0.0294 0.0222 0.0891 0.0460 0.0330
+> GRU4Rec [19] ICLR’16) 0.2934 0.1642 0.1249 0.0606 0.0332 0.0249 0.1030 0.0536 0.0380
+> NARM [20] (CIKM’17) 0.2735 0.1506 0.1132 0.0627 0.0347 0.0262 0.1032 0.0530 0.0379
+> SASRec [1] (ICDM’18) 0.2977 0.1687 0.1294 0.0847 0.0425 0.0296 0.1168 0.0571 0.0390
+> BERT4Rec [2] (CIKM’19) 0.3098 0.1764 0.1357 0.0760 0.0393 0.0282 0.1053 0.0538 0.0381
+> Mamba4Rec [11] (KDD’24) 0.3121 0.1822 0.1376 0.0812 0.0461 0.0362 0.1152 0.0603 0.0438
+> SIGMA [12] (AAAI’25) 0.3136 0.1777 0.1361 0.0678 0.0376 0.0284 0.1239 0.0592 0.0430
+> DSRec ⋆0.3217 ⋆0.1869 ⋆0.1454 ⋆0.0871 ⋆0.0508 ⋆0.0354 0.1287 ⋆0.0661 ⋆0.0452 ⋆
+> #Improve 2.58% 2.57% 5.67% 2.83% 10.19% -2.2% 3.87% 9.61% 3.20%
+
+in sequential recommendation tasks. This enhanced per-formance can be attributed to the Transformer’s ability to process sequences in parallel and capture complex dependencies over long distances, which is particularly advantageous for modeling user-item interactions.  
+
+> •
+
+SSM-based models (Mamba4Rec [11], SIGMA [12]) demonstrate further improvements over Transformers, especially on datasets like MovieLens-1M with longer sequence lengths. This aligns with recent findings [7], [8] that SSMs can efficiently capture long-range dependen-cies while maintaining linear scalability. The performance gap between SSM and Transformer models is more significant in longer sequence than in short sessions, validating the architectural design of structured temporal modeling. 
+
+C. Ablation Study 
+
+To validate the contributions of each component in DSRec, we conduct comprehensive ablation studies by systematically removing (w/o) or modifying key modules. The results are presented in Table III, evaluated on three datasets and reported by HR@10 and NDCG@10. 
+
+a) Impact of Residual Cross-Fusion: From the com-parison results, we can observe that removing the residual cross-fusion module significantly degrades performance on all datasets, especially on MovieLens-1M and Amazon-Beauty. This demonstrates the importance of inter-branch communi-cation, where each interest embedding branch (long-term and short-term) benefits from contextual signals in the other. 
+
+b) Impact of Dual interest embedding Representation: 
+
+Replacing the dual-interest embedding input with a single-interest embedding, as other baselines do, results in notable performance degradation across all benchmarks. This confirms our hypothesis that items assume different semantic roles in short-term and long-term contexts, and a unified interest embedding is insufficient to capture such polysemy behavior. 
+
+c) Impact of SSM-S Branch: Removing the short-term SSM-S encoder while retaining the long-term SSM-L leads to a notable performance drop, especially on the MovieLens dataset. This suggests that the short-term intent modeling is vital, particularly in sequential data where recent actions carry strong semantic signals. 
+
+d) Impact of Fusion Encoder: Without the fusion en-coder, the model retains the dual-interest embedding structure but lacks effective integration before output. While the impact is slight, the drop in NDCG@10 on Amazon datasets indicates its importance in combining interest-specific outputs for fine-grained ranking. 
+
+e) Dual Mamba Baseline: We also construct a variant with two identical Mamba modules (Dual Mamba) without semantic-specific design. While this variant performs compet-itively on MovieLens-1M, it underperforms significantly on Amazon-Beauty and Amazon-Video-Games. This observation confirms that our asymmetric dual-SSM design is more effec-tive than merely duplicating Mamba blocks. These ablation observations validate the necessity of each proposed component. The dual-interest embedding, heteroge-neous SSM encoders, and residual cross-fusion are all crucial for capturing multi-granular temporal dynamics and achieving state-of-the-art performance. 
+
+D. Hyperparameter Analysis 
+
+In this section, we conduct experiments on Beauty to analyze the influence of two significant hyperparameters: a) L, the maximum sequential length; b) B, the number of stacked DSRec blocks. The results are respectively visualized in Fig. 3 and Table IV. 
+
+a) Effect of the Number of Blocks B: From Table IV, we observe that on Amazon-Beauty and Amazon-Video-Games, the model achieves the highest HR@10 and NDCG@10 when B = 3 and B = 2 , respectively. This suggests that stacking multiple residual-coupled dual-SSM layers improves TABLE III ABLATION STUDY ON MODEL VARIANT . BOLD DATA INDICATE THE BEST RESULTS .Model Variant MovieLens-1M Amazon-Beauty Amazon-Video-Games HR@10 NDCG@10 HR@10 NDCG@10 HR@10 NDCG@10 DSRec (full) 0.3217 0.1869 0.0871 0.0508 0.1287 0.0661 
+
+w/o Residual Cross-Fusion 0.3180 0.1755 0.0867 0.0433 0.1271 0.0638 w/o Dual interest embedding (single) 0.2983 0.1710 0.0726 0.0448 0.1172 0.0656 w/o SSM S 0.2346 0.1329 0.0601 0.0360 0.0911 0.0499 w/o Fusion Encoder 0.3134 0.1868 0.0655 0.0348 0.1164 0.0617 Dual Mamba 0.3200 0.1855 0.0665 0.0382 0.1093 0.0592 
+
+Fig. 3. Max Sequence Length T study on Amazon-Beauty and Amazon-Video-Games. TABLE IV PARAMETER STUDY FOR B ON AMAZON -B EAUTY AND 
+
+AMAZON -V IDEO -G AMES .
+
+Dataset #blocks HR@10 NDCG@10 Training(s) GPU Mem Beauty 
+
+1 0.0849 0.0524 12.90s 2.87 G 2 0.0861 0.0507 17.71s 3.55 G 3 0.0871 0.0508 22.41s 4.24 G 4 0.0786 0.0422 23.37s 5.62 G 5 0.0777 0.0411 25.76s 6.59 G 
+
+Games 
+
+1 0.1227 0.0634 15.05s 2.60 G 2 0.1287 0.0661 20.83s 3.47 G 3 0.1221 0.063 21.50s 4.44 G 4 0.1194 0.0599 29.07s 5.41 G 5 0.1178 0.0600 30.21s 6.39 G 
+
+to capture multi-granular temporal dynamics. However, further increasing B beyond 3 leads to degradation in performance. This is likely due to overfitting or optimization difficulties caused by deeper architectures, especially on sparse datasets. Moreover, we observe a steady increase in training time and GPU memory consumption with more layers, highlighting a trade-off between performance and efficiency. 
+
+b) Effect of Maximum Sequence Length T : Fig. 3 shows the performance varying the maximum sequence length. On both Amazon-Beauty and Amazon-Video-Games, we observe a peak at T = 50 , after which performance gradually drops. This suggests that for sparse and short-session datasets, incor-porating overly long histories may introduce noise or dilute recent preference signals. Furthermore, longer sequences also lead to substantial computational overhead, as training time nearly quadruples from T = 50 to T = 200 . These results 
+
+Fig. 4. Prediction comparison and training loss comparison on MovieLens-1M and Amazon-Video-Games datasets. 
+
+highlight the importance of tuning both structural depth and temporal context window to match dataset characteristics. DSRec demonstrates strong adaptability across a wide range of hyperparameter settings. 
+
+E. Model Complexity and Efficiency 
+
+We analyze the theoretical and empirical complexity of DSRec compared to Transformer- and SSM-based baselines. In addition, we also compare prediction and training efficiency with the most competitive baseline. 
+
+a) Theoretical Complexity: As shown in Table V, the Transformer-based models incur quadratic time and space cost with respect to sequence length T , making them less suitable for long sequences. RNNs and SSMs maintain linear scaling in 
+
+T . While both RNNs and SSMs require O(d2) operations due to dense linear transitions, SSMs can still outperform RNNs in parallelizability and hardware efficiency. DSRec maintains linear complexity in sequence length but doubles the cost in hidden size due to its dual-branch architecture, which remains attractive and scalable in practice. 
+
+TABLE V THEORETICAL TIME COMPLEXITY COMPARISON . T : SEQUENCE LENGTH ,
+
+d: DIMENSION OF HIDDEN LAYERS .
+
+Model Time Comp. 
+
+RNN (GRU4Rec, NARM) O(T · d2)
+
+Transformer (SASRec, BERT4Rec) O(T 2 · d)
+
+SSM (Mamba4Rec, SIGMA, DSRec ) O(T · d2)b) Prediction and Training Efficiency: Fig. 4 presents a comparative analysis of model performance, focusing on HR@10 and training loss across epochs for two models: Mamba4Rec and DSRec, evaluated on the MovieLens-1M and Amazon-Video-Games datasets. The comparative analysis shows that DSRec generally outperforms Mamba4Rec in terms of HR@10, and faster initial convergence in training loss. This suggests that DSRec is better suited for capturing complex patterns in sequential recommendation tasks, particularly on long sequential dataset. 
+
+c) Runtime Efficiency: We further compare wall-clock inference time and GPU memory cost at Table VI. The exper-imental results highlight SSM’s superior runtime efficiency, with both faster inference times and lower GPU memory. Although DSRec introduces two SSM encoders, both are linear-time and lightweight. Thus, the overall inference costs remain close to SSM baselines and are significantly more efficient than Transformer-based method.           
+
+> TABLE VI INFERENCE TIME AND GPU M EMORY COST COMPARISONEACHEPOCH
+> (A MAZON -B EAUTY ,BATCH =2048).
+> Model Inference Time GPU Mem.
+> SASRec 123ms 7.58G Mamba4Rec 72ms 2.69G
+> DSRec 83ms 3.55G
+
+F. Robustness Analysis 
+
+Recommender systems often suffer from the cold-start and long-tail problems, where items with few interactions are poorly represented during training. To assess the robustness of DSRec across users with varying historical interaction lengths, we partition the test users into three groups based on the number of their training interactions: 0–5 , 5–20 , and 20+ .Each subset corresponds to users with sparse, moderate, and rich historical behavior, respectively. We compare our model DSRec against the strong SSM-based baseline and report met-rics including Hit@10/20, NDCG@10/20, and MRR@10/20 for each group. From Fig. 5, we can observe that for cold-start users with short histories (0–5 interactions), DSRec significantly outperforms Mamba4Rec, which indicating superior modeling of early-stage preferences. For mid-range users (5–20), DSRec continues to outperform in most metrics, suggesting its ability to balance long- and short-term signals. For users with rich histories (20+), DSRec achieves the highest performance, confirming the benefit of its dual-interest encoding for long-horizon modeling. These results demonstrate the robustness of DSRec under varying interaction sparsity. The consistent improvements across all user groups validate the effectiveness of our DSRec.  
+
+> Fig. 5. Robustness comparison across user history length groups in Amazon-Video-Games.
+
+V. C ONCLUSION AND FUTURE WORK 
+
+Most existing sequential recommendation models implicitly assuming that each item has consistent semantics across all user contexts. This limits their ability to capture the polyse-mous nature of item behavior. Moreover, standard state space architectures failing to account for the distinct dynamics of long-term preferences versus short-term session-based intent. To address these challenges, in this paper, we propose DSRec ,a dual-interest embedding state-space model for sequential recommendation that explicitly models both long-term and short-term user preferences. Our method introduces a semantic disentanglement mechanism where each item is projected into a long-term interest embedding and a short-term interest embedding. These embeddings are encoded separately by two specialized SSM encoders: a full-sequence Mamba and a time-modulated sensitive SSM to inter-click temporal gaps. To enable cross-granular coordination without semantic interfer-ence, we design a residual cross-fusion mechanism that injects context between branches. Extensive experiments on multiple benchmark datasets demonstrate the effectiveness of DSRec. 
+
+Future Work. While DSRec achieves advanced performance, several limitations remain open for future research. First, the item polysemous modeling is novel but basic, we plan to extend by context aware dual-tokenization to incorporate item-side semantic roles, such as Variational AutoEncoder (VAE). Second, sparse context information in transactions need the integration of external knowledge (such as graph structure) into the interest embedding, which may further en-hance generalization. Finally, exploring a learnable fusion gate or contrastive alignment between the two semantic branches could yield more adaptive interactions beyond residual fusion. We also intend to test DSRec in cross-domain settings to assess its broader applications. ACKNOWLEDGMENTS 
+
+REFERENCES [1] W.-C. Kang and J. McAuley, “Self-attentive sequential recommenda-tion,” in 2018 IEEE international conference on data mining (ICDM) .IEEE, 2018, pp. 197–206. [2] F. Sun, J. Liu, J. Wu, C. Pei, X. Lin, W. Ou, and P. Jiang, “Bert4rec: Sequential recommendation with bidirectional encoder representations from transformer,” in Proceedings of the 28th ACM international confer-ence on information and knowledge management , 2019, pp. 1441–1450. [3] S. Liao, P. Mok, and L. Li, “Consistency regularization for complemen-tary clothing recommendations,” Applied Soft Computing , p. 115069, 2026. [4] Y. Yang, C. Huang, L. Xia, Y. Liang, Y. Yu, and C. Li, “Multi-behavior hypergraph-enhanced transformer for sequential recommendation,” in 
+
+Proceedings of the 28th ACM SIGKDD conference on knowledge discovery and data mining , 2022, pp. 2263–2274. [5] S. Liao and P. Mok, “Hypergraph-enhanced contrastively regularized transformer for multi-behavior e-commerce product recommendation,” in 2024 IEEE International Conference on Data Mining (ICDM) . IEEE, 2024, pp. 767–772. [6] S. Liao, Y. Ding, and P. Mok, “Recommendation of mix-and-match clothing by modeling indirect personal compatibility,” in Proceedings of the 2023 ACM International Conference on Multimedia Retrieval ,2023, pp. 560–564. [7] A. Gu and T. Dao, “Mamba: Linear-time sequence modeling with selective state spaces,” arXiv preprint arXiv:2312.00752 , 2023. [8] O. Lieber, B. Lenz, H. Bata, G. Cohen, J. Osin, I. Dalmedigos, E. Safahi, S. Meirom, Y. Belinkov, S. Shalev-Shwartz et al. , “Jamba: A hybrid transformer-mamba language model,” arXiv preprint arXiv:2403.19887 ,2024. [9] A. Gu, K. Goel, and C. R´ e, “Efficiently modeling long sequences with structured state spaces,” arXiv preprint arXiv:2111.00396 , 2021. [10] J. T. Smith, A. Warrington, and S. W. Linderman, “Simplified state space layers for sequence modeling,” arXiv preprint arXiv:2208.04933 , 2022. [11] C. Liu, J. Lin, J. Wang, H. Liu, and J. Caverlee, “Mamba4rec: Towards efficient sequential recommendation with selective state space models,” 
+
+arXiv preprint arXiv:2403.03900 , 2024. [12] Z. Liu, Q. Liu, Y. Wang, W. Wang, P. Jia, M. Wang, Z. Liu, Y. Chang, and X. Zhao, “Sigma: Selective gated mamba for sequential recommen-dation,” in Proceedings of the AAAI Conference on Artificial Intelligence ,vol. 39, no. 12, 2025, pp. 12 264–12 272. [13] X. Xie, F. Sun, Z. Liu, S. Wu, J. Gao, J. Zhang, B. Ding, and B. Cui, “Contrastive learning for sequential recommendation,” in 2022 IEEE 38th international conference on data engineering (ICDE) . IEEE, 2022, pp. 1259–1273. [14] R. Qiu, Z. Huang, H. Yin, and Z. Wang, “Contrastive learning for representation degeneration problem in sequential recommendation,” in 
+
+Proceedings of the fifteenth ACM international conference on web search and data mining , 2022, pp. 813–823. [15] S. Liao and P. Mok, “Hamiltonian spectral-temporal dissipative dynam-ics for sequential recommendation,” arXiv preprint arXiv:2608.25755 ,2026. [16] ——, “Pcgnet: Unifying shared and specific information for fashion matching recommendations,” arXiv preprint arXiv:2609.13339 , 2026. [17] Y. Ding, Y. Ma, W. K. Wong, and T.-S. Chua, “Leveraging two types of global graph for sequential fashion recommendation,” in Proceedings of the 2021 international conference on multimedia retrieval , 2021, pp. 73–81. [18] ——, “Modeling instant user intent and content-level transition for sequential fashion recommendation,” IEEE transactions on multimedia ,vol. 24, pp. 2687–2700, 2021. [19] B. Hidasi, A. Karatzoglou, L. Baltrunas, and D. Tikk, “Session-based recommendations with recurrent neural networks,” arXiv preprint arXiv:1511.06939 , 2015. [20] J. Li, P. Ren, Z. Chen, Z. Ren, T. Lian, and J. Ma, “Neural attentive session-based recommendation,” in Proceedings of the 2017 ACM on Conference on Information and Knowledge Management , 2017, pp. 1419–1428. [21] Y. Ye, L. Xia, and C. Huang, “Graph masked autoencoder for sequential recommendation,” in Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval ,2023, pp. 321–330. [22] Y. Yang, C. Huang, L. Xia, C. Huang, D. Luo, and K. Lin, “Debiased contrastive learning for sequential recommendation,” in Proceedings of the ACM web conference 2023 , 2023, pp. 1063–1073. [23] Y. Chen, Z. Liu, J. Li, J. McAuley, and C. Xiong, “Intent contrastive learning for sequential recommendation,” in Proceedings of the ACM Web Conference 2022 , 2022, pp. 2172–2182. [24] K. Zhou, H. Wang, W. X. Zhao, Y. Zhu, S. Wang, F. Zhang, Z. Wang, and J.-R. Wen, “S3-rec: Self-supervised learning for sequential recom-mendation with mutual information maximization,” in Proceedings of the 29th ACM international conference on information & knowledge management , 2020, pp. 1893–1902. [25] S. Liao, Y. Ding, P. Mok, Q. Huang, and J. Cao, “Reproducibility com-panion paper: Recommendation of mix-and-match clothing by modeling indirect personal compatibility,” in Proceedings of the 2024 International Conference on Multimedia Retrieval , 2024, pp. 1224–1227. [26] H. Fan, M. Zhu, Y. Hu, H. Feng, Z. He, H. Liu, and Q. Liu, “Tim4rec: An efficient sequential recommendation model based on time-aware structured state space duality model,” arXiv preprint arXiv:2409.16182 ,2024. [27] T. Huang, X. Pei, S. You, F. Wang, C. Qian, and C. Xu, “Localmamba: Visual state space model with windowed selective scan,” in European Conference on Computer Vision . Springer, 2025, pp. 12–22. [28] S. Zhang, R. Zhang, and Z. Yang, “Matrrec: Uniting mamba and transformer for sequential recommendation,” arXiv preprint arXiv:2407.19239 , 2024. [29] Z. Zhang, B. Yang, and Y. Lu, “A local context enhanced consistency-aware mamba-based sequential recommendation model,” Information Processing & Management , vol. 62, no. 3, p. 104076, 2025. [30] Z. Liu, Q. Liu, Y. Wang, W. Wang, P. Jia, M. Wang, Z. Liu, Y. Chang, and X. Zhao, “Bidirectional gated mamba for sequential recommenda-tion,” arXiv preprint arXiv:2408.11451 , 2024. [31] A. Gu, T. Dao, S. Ermon, A. Rudra, and C. R´ e, “Hippo: Recurrent memory with optimal polynomial projections,” Advances in neural information processing systems , vol. 33, pp. 1474–1487, 2020. [32] B. Peng, E. Alcaide, Q. Anthony, A. Albalak, S. Arcadinho, S. Bider-man, H. Cao, X. Cheng, M. Chung, M. Grella et al. , “Rwkv: Reinventing rnns for the transformer era,” arXiv preprint arXiv:2305.13048 , 2023. [33] J. D. Hamilton, “State-space models,” Handbook of econometrics , vol. 4, pp. 3039–3080, 1994. [34] M. Aoki, State space modeling of time series . Springer Science & Business Media, 2013. [35] H. Qu, Y. Zhang, L. Ning, W. Fan, and Q. Li, “Ssd4rec: a structured state space duality model for efficient sequential recommendation,” arXiv preprint arXiv:2409.01192 , 2024. [36] J. Wu, Z. Wang, M. Hong, W. Ji, H. Fu, Y. Xu, M. Xu, and Y. Jin, “Medical sam adapter: Adapting segment anything model for medical image segmentation,” Medical image analysis , vol. 102, p. 103547, 2025. [37] Y. Liu, Y. Tian, Y. Zhao, H. Yu, L. Xie, Y. Wang, Q. Ye, J. Jiao, and Y. Liu, “Vmamba: Visual state space model,” Advances in neural information processing systems , vol. 37, pp. 103 031–103 063, 2024. [38] N. Srivastava, G. Hinton, A. Krizhevsky, I. Sutskever, and R. Salakhut-dinov, “Dropout: a simple way to prevent neural networks from over-fitting,” The journal of machine learning research , vol. 15, no. 1, pp. 1929–1958, 2014. [39] J. Xu, X. Sun, Z. Zhang, G. Zhao, and J. Lin, “Understanding and im-proving layer normalization,” Advances in neural information processing systems , vol. 32, 2019. [40] D. Hendrycks and K. Gimpel, “Gaussian error linear units (gelus),” arXiv preprint arXiv:1606.08415 , 2016. [41] J. McAuley, C. Targett, Q. Shi, and A. Van Den Hengel, “Image-based recommendations on styles and substitutes,” in Proceedings of the 38th international ACM SIGIR conference on research and development in information retrieval , 2015, pp. 43–52. [42] F. M. Harper and J. A. Konstan, “The movielens datasets: History and context,” Acm transactions on interactive intelligent systems (tiis) , vol. 5, no. 4, pp. 1–19, 2015. [43] J. Tang and K. Wang, “Personalized top-n sequential recommendation via convolutional sequence embedding,” in Proceedings of the eleventh ACM international conference on web search and data mining , 2018, pp. 565–573. [44] K. Diederik, “Adam: A method for stochastic optimization,” (No Title) ,2014. [45] L. Liu, L. Cai, C. Zhang, X. Zhao, J. Gao, W. Wang, Y. Lv, W. Fan, Y. Wang, M. He et al. , “Linrec: Linear attention mechanism for long-term sequential recommender systems,” in Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval , 2023, pp. 289–299.

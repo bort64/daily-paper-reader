@@ -1,0 +1,39 @@
+{
+  "label": "2026-09-21",
+  "date": "2026-09-21",
+  "generated_at": "2026-09-21T22:57:52",
+  "count": 2,
+  "papers": [
+    {
+      "paper_id": "202609/21/2609.21281v1-hybrid-gpu-cpu-retrieval-for-personalized-search-at-ultra-large-scale",
+      "section": "deep",
+      "title_en": "Hybrid GPU-CPU Retrieval for Personalized Search at Ultra-Large Scale",
+      "authors": "Hao Fu, Jichao Sun, Baiting Zhu, Qiaoling Liu, Yan Shi, Cheng Lu, Liu Liu, Yubo Wang, Xin Yao, Xiangyu Niu, Xu Dong, Wenhan Lyu, Chiyao Shen, Yinjie Huang, Minglei Chen, Shuai Ding, Li Fan, Xiao Kong",
+      "date": "2026-09-18",
+      "pdf": "https://arxiv.org/pdf/2609.21281v1",
+      "score": "8.0",
+      "evidence": "万亿规模个性化搜索检索的服务扩展",
+      "tldr": "万亿级用户内容检索面临个性化深度与库存覆盖的矛盾：全量GPU驻留资源过高，纯CPU又难在延迟关键路径运行重交互模型。本文提出GPU-CPU混合共服务系统，用编排而非新模型解决该悖论。GPU路径在约十亿文档在线池上融合检索与交互预排序，CPU路径以轻量个性化打分覆盖约二十倍库存。生产A/B测试提升相关性、互动及经济性，验证深度-广度可独立演进架构。",
+      "tags": "query:search-rec",
+      "abstract_en": "Embedding-based retrieval on user-generated content at the trillion-document scale exposes a sharp conflict between two production demands: deep, expressive personalization for queries with rich user intent, and broad coverage of a massive inventory under fixed latency and resource budgets. We characterize this as the personalization-scale paradox: hosting the full serving inventory in GPU memory is too resource intensive, while CPU compute cannot execute the same interaction-heavy model on the latency-critical path.   We present a hybrid GPU-CPU co-serving system that resolves the paradox through orchestration rather than a new model class. A high-depth GPU pathway fuses retrieval and interaction pre-ranking over a curated online pool on the order of a billion documents, while a high-breadth CPU pathway searches an independently selected online inventory roughly twenty times larger with lightweight personalized scoring. Either or both pathways can run per request; candidates are deduplicated before shared downstream ranking.   The system is deployed in production. A full-system A/B test against the legacy CPU-only configuration improves model-scored relevance and substantive engagement, while separate pathway experiments show positive value at their own deployment scopes. Retrieval logs show that the pathways contribute structurally distinct candidates, production serving measurements characterize their latency, and a matched capacity plan quantifies the economic rationale for assigning modeling depth to GPUs and inventory breadth to CPUs. Together, these results validate a practical, independently evolvable depth-breadth architecture for ultra-large-scale personalized search.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202609/21/2609.21548v1-dual-interest-sequential-product-recommendation-with-multi-granular-ssm",
+      "section": "quick",
+      "title_en": "Dual-Interest Sequential Product Recommendation With Multi-Granular SSM",
+      "authors": "Shuiying Liao, P. Y. Mok",
+      "date": "2026-09-18",
+      "pdf": "https://arxiv.org/pdf/2609.21548v1",
+      "score": "6.0",
+      "evidence": "基于SSM预测下一物品的序列推荐",
+      "tldr": "序列推荐旨在基于用户历史行为预测下一次交互，但Transformer成本高，现有SSM方法多以单一静态角色编码物品，忽略一词多义和跨时间粒度动态。为此，DSRec提出双兴趣跨SSM模型，将物品解耦为长期稳定偏好与短期会话意图，并分别用全序列Mamba和时间调制SSM编码。模型通过残差交叉融合实现跨粒度对齐，同时保持语义独立。公开基准实验表明，DSRec优于现有最先进方法，兼顾效率与动态建模。",
+      "tags": "query:search-rec",
+      "abstract_en": "Sequential recommendation aims to predict the next item a user will interact with based on their historical behavior. Advances in Transformers have significantly improved sequential recommendation but are still limited by cost efficiency. Although State Space Models (SSMs) have recently enabled efficient long-range modeling, most existing methods encode each item with a single static contextual role, overlooking the phenomenon of item polysemy. In fact, the same item often plays different semantic roles depending on user context, and existing methods are limited in capturing dynamic behavior across different temporal granularities. In this work, we propose DSRec, a novel dual-interest cross-SSM model that explicitly disentangles item roles across long-term and short-term semantic context. Sequential items are encoded into long-term interest embeddings that capture stable preferences via historical aggregation, and a short-term interest branch that emphasizes local session intent modulated by inter-click time intervals. These interest embeddings are processed through distinct SSM encoders: a full-sequence Mamba for long-term modeling, and a time-modulated SSM that dynamically adjusts state evolution based on temporal gaps. To enable effective cross-granularity alignment, we adopt a residual cross-fusion mechanism that exchanges contextual information between the two branches while preserving semantic independence. Experiments on public benchmarks demonstrate that DSRec outperforms other state-of-the-art methods.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

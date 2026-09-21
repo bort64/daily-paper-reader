@@ -1,0 +1,41 @@
+{
+  "date": "20260921",
+  "date_label": "",
+  "generated_at": "2026-09-21 22:57:51 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.21281v1",
+      "route": "202609/21/2609.21281v1-hybrid-gpu-cpu-retrieval-for-personalized-search-at-ultra-large-scale",
+      "title": "Hybrid GPU-CPU Retrieval for Personalized Search at Ultra-Large Scale",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "万亿规模个性化搜索检索的服务扩展",
+      "first_seen_at": "2026-09-21 22:57:51 UTC",
+      "updated_at": "2026-09-21 22:57:51 UTC"
+    },
+    {
+      "paper_id": "2609.21548v1",
+      "route": "202609/21/2609.21548v1-dual-interest-sequential-product-recommendation-with-multi-granular-ssm",
+      "title": "Dual-Interest Sequential Product Recommendation With Multi-Granular SSM",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "基于SSM预测下一物品的序列推荐",
+      "first_seen_at": "2026-09-21 22:57:51 UTC",
+      "updated_at": "2026-09-21 22:57:51 UTC"
+    }
+  ]
+}
