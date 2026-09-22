@@ -1,0 +1,89 @@
+{
+  "date": "20260922",
+  "date_label": "",
+  "generated_at": "2026-09-22 22:13:23 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.23111v1",
+      "route": "202609/22/2609.23111v1-inherit4rec-parameter-inheritance-for-efficient-scaling-of-recommendation-models",
+      "title": "Inherit4Rec: Parameter Inheritance for Efficient Scaling of Recommendation Models",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "通过参数继承实现推荐模型容量的高效扩展",
+      "first_seen_at": "2026-09-22 22:13:23 UTC",
+      "updated_at": "2026-09-22 22:13:23 UTC"
+    },
+    {
+      "paper_id": "2609.23718v1",
+      "route": "202609/22/2609.23718v1-unique-a-unified-retrieval-and-ranking-system-for-large-scale-feed-recommendation",
+      "title": "UNIQUE: A Unified Retrieval and Ranking System for Large-Scale Feed Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向大规模信息流推荐的生成式码检索与目标感知排序统一框架",
+      "first_seen_at": "2026-09-22 22:13:23 UTC",
+      "updated_at": "2026-09-22 22:13:23 UTC"
+    },
+    {
+      "paper_id": "2609.24430v1",
+      "route": "202609/22/2609.24430v1-what-makes-a-good-semantic-id-for-generative-recommendation-a-reproducibility-study",
+      "title": "What Makes a Good Semantic ID for Generative Recommendation? A Reproducibility Study",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "生成式推荐语义ID的可复现性研究",
+      "first_seen_at": "2026-09-22 22:13:23 UTC",
+      "updated_at": "2026-09-22 22:13:23 UTC"
+    },
+    {
+      "paper_id": "2609.23677v1",
+      "route": "202609/22/2609.23677v1-muser-scalable-long-sequence-recommendation-with-multi-interest-modeling",
+      "title": "MuSeR: Scalable Long-sequence Recommendation with Multi-interest Modeling",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向超长用户行为序列的可扩展多兴趣推荐建模",
+      "first_seen_at": "2026-09-22 22:13:23 UTC",
+      "updated_at": "2026-09-22 22:13:23 UTC"
+    },
+    {
+      "paper_id": "2609.22441v1",
+      "route": "202609/22/2609.22441v1-connected-content-retriever-dense-graph-edge-features-powering-pre-ranking-at-linkedin",
+      "title": "Connected Content Retriever: Dense Graph Edge Features Powering Pre-Ranking at LinkedIn",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "十亿级职业图上的大规模预排序检索",
+      "first_seen_at": "2026-09-22 22:13:23 UTC",
+      "updated_at": "2026-09-22 22:13:23 UTC"
+    }
+  ]
+}

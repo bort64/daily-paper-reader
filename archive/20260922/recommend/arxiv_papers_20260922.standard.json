@@ -1,0 +1,232 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-22T22:09:22.735660+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 3,
+    "deep_cap": 6,
+    "deep_selected": 3,
+    "quick_candidates": 2,
+    "quick_skim_target": 11,
+    "quick_selected": 2
+  },
+  "deep_dive": [
+    {
+      "id": "2609.23111v1",
+      "source": "arxiv",
+      "title": "Inherit4Rec: Parameter Inheritance for Efficient Scaling of Recommendation Models",
+      "abstract": "Scaling model capacity has emerged as an effective approach to overcoming performance bottlenecks in industrial recommender systems. However, repeatedly training larger dense models from scratch demands substantial data and time, while their growing computation conflicts with the strict serving budgets of industrial systems. Parameter inheritance provides a promising route for both dense model growth and sparse conversion, yet existing methods are primarily designed for static corpora and can suffer sharp performance drops under dynamically evolving recommendation data. To address these challenges, we propose Inherit4Rec, a parameter-inheritance framework that supports both Dense-to-Dense (D2D) growth and Dense-to-Sparse (D2S) conversion. Inherit4Rec-D2D combines hybrid growth with asymmetric training to preserve the forward function at expansion and maintain update continuity. Inherit4Rec-D2S constructs SMoE networks through co-activation-aware partitioning and a load-balancing loss, preserving dense-model capabilities while promoting balanced expert activation. Experiments on KuaiRand-1K and an industrial short-video recommendation dataset show that both transformations consistently outperform the evaluated inheritance baselines across all prediction objectives. These results demonstrate the effectiveness of Inherit4Rec for continual capacity expansion and computation-efficient sparse conversion in industrial recommender systems.",
+      "authors": [
+        "Ruihao Zhang",
+        "Bo Chen",
+        "Xiao Wang",
+        "Jinlong Jiao",
+        "Tijian Hu",
+        "Qinglin Jia",
+        "Xiuqiang He",
+        "Xiangyu Zhao",
+        "Chaoyi Ma",
+        "Ruiming Tang",
+        "Wenwu Ou"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-19T16:27:51+00:00",
+      "link": "https://arxiv.org/pdf/2609.23111v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Parameter inheritance framework for efficient scaling of large recommendation models",
+      "llm_evidence_cn": "通过参数继承实现推荐模型容量的高效扩展",
+      "llm_evidence": "通过参数继承实现推荐模型容量的高效扩展",
+      "canonical_evidence": "通过参数继承实现推荐模型容量的高效扩展",
+      "llm_tldr_en": "Scaling recommendation capacity requires costly from-scratch training and conflicts with serving budgets; Inherit4Rec inherits parameters to support dense-to-dense growth and dense-to-sparse conversion while avoiding drops on evolving data.",
+      "llm_tldr_cn": "扩大模型容量是突破工业推荐系统性能瓶颈的有效途径，但从零训练更大的稠密模型需要大量数据与时间，且增长的计算量与线上服务预算冲突。本文提出Inherit4Rec参数继承框架，同时支持稠密到稠密增长与稠密到稀疏转换，并针对动态演化的推荐数据缓解性能骤降问题。该工作为推荐模型在有限训练与推理预算下的规模化扩展提供了新路径，兼顾训练效率与线上服务约束。",
+      "llm_tldr": "扩大模型容量是突破工业推荐系统性能瓶颈的有效途径，但从零训练更大的稠密模型需要大量数据与时间，且增长的计算量与线上服务预算冲突。本文提出Inherit4Rec参数继承框架，同时支持稠密到稠密增长与稠密到稀疏转换，并针对动态演化的推荐数据缓解性能骤降问题。该工作为推荐模型在有限训练与推理预算下的规模化扩展提供了新路径，兼顾训练效率与线上服务约束。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "papers that study scaling up search advertising and recommendation systems including model size, data scale, and training efficiency",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.23718v1",
+      "source": "arxiv",
+      "title": "UNIQUE: A Unified Retrieval and Ranking System for Large-Scale Feed Recommendation",
+      "abstract": "Industrial mobile feed systems rely on a retrieval-ranking pipeline to serve large-scale, heterogeneous, and fast-changing content under strict latency constraints. However, existing pipelines still suffer from two critical issues: hierarchical quantization instability in candidate retrieval and information loss between separated retrieval and ranking stages. These issues hurt long-tail and cold-start recommendation and complicate efficient serving. To address them, we present UNIQUE, a unified retrieval and ranking recommendation framework with single-layer flat quantization. UNIQUE integrates generative code-based retrieval and target-aware ranking into one early-fusion architecture, enabling end-to-end training under a shared representation while preserving efficient candidate generation. A balanced quantization mechanism is further introduced to mitigate codebook imbalance and improve long-tail representation. Offline experiments evaluate UNIQUE from both retrieval and ranking perspectives, while codebook analysis shows more balanced resource allocation than hierarchical quantization. We deploy UNIQUE in the homepage feed, discovery-page, and short-video recommendation scenarios of Mobile Baidu, serving large-scale real-world traffic. Online A/B tests achieve a 0.96% gain in total watch duration and a 1.08% gain in total distribution volume, with notable improvements for new users and highly active users. Serving measurements show 89 ms P99 latency and 44.23% online inference MFU. These results show that UNIQUE provides a stable, efficient, and production-ready framework for unified retrieval and ranking in industrial recommendation.",
+      "authors": [
+        "Zhuang Liu",
+        "Yongkang Fu",
+        "Zuodong Yang",
+        "Guangxing Chen",
+        "Zonggang Wu",
+        "Yuqi Lu",
+        "Shouke Qin",
+        "Shantao Li",
+        "Maolin Wang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-20T15:54:06+00:00",
+      "link": "https://arxiv.org/pdf/2609.23718v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "unified generative code-based retrieval and target-aware ranking for large-scale feed recommendation",
+      "llm_evidence_cn": "面向大规模信息流推荐的生成式码检索与目标感知排序统一框架",
+      "llm_evidence": "面向大规模信息流推荐的生成式码检索与目标感知排序统一框架",
+      "canonical_evidence": "面向大规模信息流推荐的生成式码检索与目标感知排序统一框架",
+      "llm_tldr_en": "UNIQUE unifies generative code-based retrieval and target-aware ranking into one early-fusion architecture with flat quantization, tackling quantization instability and information loss in large-scale feed recommendation pipelines.",
+      "llm_tldr_cn": "工业信息流推荐通常采用检索-排序两阶段流水线，但分层量化不稳定与阶段间信息损失会损害长尾和冷启动效果。论文提出UNIQUE统一框架，用单层平坦量化把生成式码检索与目标感知排序整合进早期融合架构，支持共享表示下的端到端训练。该设计在保持严格时延约束的同时提升了候选质量与推荐效果，为大规模生成式推荐的一体化服务提供了可行路径。",
+      "llm_tldr": "工业信息流推荐通常采用检索-排序两阶段流水线，但分层量化不稳定与阶段间信息损失会损害长尾和冷启动效果。论文提出UNIQUE统一框架，用单层平坦量化把生成式码检索与目标感知排序整合进早期融合架构，支持共享表示下的端到端训练。该设计在保持严格时延约束的同时提升了候选质量与推荐效果，为大规模生成式推荐的一体化服务提供了可行路径。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.24430v1",
+      "source": "arxiv",
+      "title": "What Makes a Good Semantic ID for Generative Recommendation? A Reproducibility Study",
+      "abstract": "Generative recommendation has emerged as an active research direction, where items are commonly represented by semantic IDs (SIDs): discrete codes generated token by token. Despite strong empirical results, SID designs vary widely in construction strategy, codebook organization, and code length, making their true impact on recommendation performance unclear.   We conduct a large-scale reproducibility study to systematically investigate the impact of semantic ID design on generative recommendation under a unified experimental framework. We focus on a fundamental question: What makes a good semantic ID for generative recommendation? To answer this question, we examine four aspects: the relative effectiveness of different semantic ID designs, the connection between codebook utilization and recommendation quality, the effect of semantic code length, and the influence of semantic ID design on local item semantic preservation. Through a unified evaluation and additional cross-dataset controlled analyses, we find that the effects of SID design are largely non-monotonic: no single SID design is universally best, and commonly used RQ-VAE- and OPQ-based designs can behave inconsistently across datasets. The method with the most balanced first-level codebook is not consistently the best recommender, showing that utilization is diagnostic but insufficient. Scaling either the generative backbone or the SID length is also not always beneficial. Finally, semantic-neighborhood analysis reveals that no single SID design dominates all notions of local semantic preservation; instead, different designs exhibit complementary strengths that remain stable across datasets and neighborhood sizes. Our study provides a controlled and reproducible understanding of semantic ID design and offers practical insights for future generative recommender systems.",
+      "authors": [
+        "Yufei Chen",
+        "Junchen Fu",
+        "Jujia Zhao",
+        "Yukun Zhao",
+        "Zhaochun Ren"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-21T11:26:49+00:00",
+      "link": "https://arxiv.org/pdf/2609.24430v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "reproducibility study on semantic IDs for generative recommendation",
+      "llm_evidence_cn": "生成式推荐语义ID的可复现性研究",
+      "llm_evidence": "生成式推荐语义ID的可复现性研究",
+      "canonical_evidence": "生成式推荐语义ID的可复现性研究",
+      "llm_tldr_en": "This large-scale reproducibility study systematically examines how semantic ID design (construction strategy, codebook organization, code length) affects generative recommendation under a unified framework.",
+      "llm_tldr_cn": "生成式推荐常以语义ID表示物品，即逐token生成的离散编码，但语义ID的构建策略、码本组织与码长差异很大，其真实影响尚不清晰。作者在统一实验框架下开展大规模可复现研究，从四个维度系统考察不同语义ID设计对推荐性能的影响。结果厘清了何种语义ID更优，并揭示设计选择与效果之间的关系。该工作为生成式推荐的标识设计与后续研究提供了规范化的实证基准。",
+      "llm_tldr": "生成式推荐常以语义ID表示物品，即逐token生成的离散编码，但语义ID的构建策略、码本组织与码长差异很大，其真实影响尚不清晰。作者在统一实验框架下开展大规模可复现研究，从四个维度系统考察不同语义ID设计对推荐性能的影响。结果厘清了何种语义ID更优，并揭示设计选择与效果之间的关系。该工作为生成式推荐的标识设计与后续研究提供了规范化的实证基准。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.23677v1",
+      "source": "arxiv",
+      "title": "MuSeR: Scalable Long-sequence Recommendation with Multi-interest Modeling",
+      "abstract": "Ultra-long user behavior sequences carry rich signals of stable and diverse preferences, yet industrial recommender systems typically truncate histories to a few hundred actions under strict latency and memory budgets, leaving long-term interests under-utilized. Users also pursue multiple heterogeneous intents across modalities such as news, Q&A, and short video, which sparse ID embeddings alone struggle to represent. We present Multi-interest Sequence Representation (MuSeR), a retrieval framework built on the deployed MGS system, which integrates three components: (i) hierarchical temporal compression, which retains recent actions at full resolution while progressively pooling older segments, so that per-user histories of $10^{4}$-$10^{5}$ interactions fit within a fixed serving budget; (ii) disentangled multi-query interest extraction with orthogonality regularization; and (iii) multimodal semantic alignment, which augments sparse item IDs with textual summaries distilled from a large language model. For industrial deployment, MuSeR further adopts asynchronous user-representation refresh with adaptive caching and hierarchical beam-search retrieval across heterogeneous hardware. On three public benchmarks and a large-scale industrial dataset, MuSeR consistently improves Recall@$K$ over strong long-sequence and multi-interest baselines. In online A/B tests on Baidu APP's homepage feed, discovery feed, and short-video scenarios, MuSeR yields +0.26% daily active users and +0.89% total session duration (both statistically significant, p<0.05), alongside reduced serving latency and cost. Rather than proposing a new modeling primitive, our contribution is a system-level integration that makes long-term, multi-interest, and multimodal modeling jointly deployable in a real-time production pipeline, together with the engineering practices required to sustain it.",
+      "authors": [
+        "Yongkang Fu",
+        "Beining Bao",
+        "Yu Jiang",
+        "Xiangyu Zhao",
+        "Hongyang Wei",
+        "Guangxing Chen",
+        "Zuodong Yang",
+        "Shantao Li",
+        "Zonggang Wu",
+        "Yuqi Lu",
+        "Shouke Qin",
+        "Hanmeng Liu",
+        "Maolin Wang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-20T14:36:07+00:00",
+      "link": "https://arxiv.org/pdf/2609.23677v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Scalable long-sequence recommendation with multi-interest modeling on large user-item histories",
+      "llm_evidence_cn": "面向超长用户行为序列的可扩展多兴趣推荐建模",
+      "llm_evidence": "面向超长用户行为序列的可扩展多兴趣推荐建模",
+      "canonical_evidence": "面向超长用户行为序列的可扩展多兴趣推荐建模",
+      "llm_tldr_en": "Industrial recommenders truncate ultra-long histories under latency and memory budgets, losing long-term and multi-interest signals; MuSeR adds hierarchical temporal compression and multi-interest modeling to scale to 10^4-10^5 user interactions.",
+      "llm_tldr_cn": "工业推荐系统受限于延迟与内存预算，通常将用户历史截断为数百条行为，难以利用超长序列中的长期兴趣；同时用户跨新闻、问答、短视频等存在多模态异构意图，稀疏ID嵌入难以刻画。本文提出基于已部署MGS系统的MuSeR检索框架，结合分层时间压缩与多兴趣表示，在保留近期行为全分辨率的同时渐进池化历史片段，可处理每用户上万至十万级交互。该工作为大规模长序列推荐提供了可落地的表示与检索方案。",
+      "llm_tldr": "工业推荐系统受限于延迟与内存预算，通常将用户历史截断为数百条行为，难以利用超长序列中的长期兴趣；同时用户跨新闻、问答、短视频等存在多模态异构意图，稀疏ID嵌入难以刻画。本文提出基于已部署MGS系统的MuSeR检索框架，结合分层时间压缩与多兴趣表示，在保留近期行为全分辨率的同时渐进池化历史片段，可处理每用户上万至十万级交互。该工作为大规模长序列推荐提供了可落地的表示与检索方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.22441v1",
+      "source": "arxiv",
+      "title": "Connected Content Retriever: Dense Graph Edge Features Powering Pre-Ranking at LinkedIn",
+      "abstract": "In large-scale recommendation systems like the LinkedIn Feed, content generated by a member's network (connections and follows) makes up over 70% of impressions and engagement. It is therefore essential that the pre-ranking layer forwards the best possible few hundred candidates to the ranking layer. LinkedIn's professional knowledge graph carries engagement signals across both the first degree network (connections and follows) and the second-degree network: posts that a 1st-degree connection reacted to, commented on or reshared but did not author (a.k.a. stranger viral). Due to this fan out, the resulting candidate index exceeds one billion; selection of activities from the viewer's network narrows it down to roughly tens of thousands of activities that must be scored within a 120 ms p99 latency budget. We present Connected Content Retriever (CC Retriever), a pre-ranking system that scores these candidates with a full deep ranking model on GPUs at low latency. At its core is a sorted-search GPU primitive that joins dense graph affinity features (viewer to author) with document level features stored on the GPU at runtime in 5-10 ms. The shift to GPU served scoring enabled a 50x scale up of the ranking model's parameters and delivered a +2.5% lift in content time spent on the LinkedIn Feed in online experiments, significantly higher than the typical gains observed in LinkedIn Feed experiments. In this work, we describe the feature set we leverage from LinkedIn's economic graph and the model architecture used for scoring, with a particular emphasis on the online system that scales the stack.",
+      "authors": [
+        "Akhilesh Gupta",
+        "Sudarshan Srinivasa Ramanujam",
+        "Chirag Bhanuprasad Mehta",
+        "Reshma Asharaf Beena",
+        "Dhritiman Das",
+        "Birjodh Singh Tiwana",
+        "Bhargavkumar Kanubhai Patel",
+        "Mack Lee",
+        "Renyi Tang"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-09-18T18:01:37+00:00",
+      "link": "https://arxiv.org/pdf/2609.22441v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Large-scale pre-ranking retrieval over a billion-node professional graph",
+      "llm_evidence_cn": "十亿级职业图上的大规模预排序检索",
+      "llm_evidence": "十亿级职业图上的大规模预排序检索",
+      "canonical_evidence": "十亿级职业图上的大规模预排序检索",
+      "llm_tldr_en": "LinkedIn's Connected Content Retriever uses dense graph edge features from the professional knowledge graph to select the best candidates for feed pre-ranking, handling a billion-scale candidate index.",
+      "llm_tldr_cn": "在LinkedIn信息流等大规模推荐系统中，来自人脉网络的内容占曝光与互动的七成以上，因此预排序层必须从海量候选中筛出最优的数百条。本文提出连接内容检索器，利用职业知识图谱中一度与二度网络的稠密图边特征进行候选选择，应对超过十亿的候选索引规模。该工业系统提升了预排序的候选质量，为大规模用户-内容图上的深度推荐检索提供了可扩展的建模与工程方案。",
+      "llm_tldr": "在LinkedIn信息流等大规模推荐系统中，来自人脉网络的内容占曝光与互动的七成以上，因此预排序层必须从海量候选中筛出最优的数百条。本文提出连接内容检索器，利用职业知识图谱中一度与二度网络的稠密图边特征进行候选选择，应对超过十亿的候选索引规模。该工业系统提升了预排序的候选质量，为大规模用户-内容图上的深度推荐检索提供了可扩展的建模与工程方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

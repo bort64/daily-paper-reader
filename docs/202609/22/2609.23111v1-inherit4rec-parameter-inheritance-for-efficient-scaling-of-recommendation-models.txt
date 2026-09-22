@@ -1,0 +1,648 @@
+Title: Inherit4Rec: Parameter Inheritance for Efficient Scaling of Recommendation Models
+
+URL Source: https://arxiv.org/pdf/2609.23111v1
+
+Published Time: Tue, 22 Sep 2026 01:18:01 GMT
+
+Number of Pages: 21
+
+Markdown Content:
+# INHERIT 4R EC : P ARAMETER INHERITANCE FOR EFFI -
+
+# CIENT SCALING OF RECOMMENDATION MODELS 
+
+Ruihao Zhang 1,* , Bo Chen 1,* , Xiao Wang 1,* , Jinlong Jiao 1, Tijian Hu 1, Qinglin Jia 1,Xiuqiang He 2, Xiangyu Zhao 3, Chaoyi Ma 1, †, Ruiming Tang 1, †, Wenwu Ou 1
+
+> 1
+
+Kuaishou Technology 2Shenzhen Technology University 
+
+> 3
+
+City University of Hong Kong 
+
+ruihaozhang711@gmail.com, renze03@kuaishou.com, wangxiao35@kuaishou.com jiaojinlong@kuaishou.com, hutijian@kuaishou.com, dukang05@kuaishou.com he.xiuqiang@gmail.com, xianzhao@cityu.edu.hk,machaoyi03@kuaishou.com tangruiming@kuaishou.com, luocheng10@kuaishou.com 
+
+## ABSTRACT 
+
+Scaling model capacity has emerged as an effective approach to overcoming per-formance bottlenecks in industrial recommender systems. However, repeatedly training larger dense models from scratch demands substantial data and time, while their growing computation conflicts with the strict serving budgets of in-dustrial systems. Parameter inheritance provides a promising route for both dense model growth and sparse conversion, yet existing methods are primarily designed for static corpora and can suffer sharp performance drops under dynamically evolving recommendation data. To address these challenges, we propose In-herit4Rec, a parameter-inheritance framework that supports both Dense-to-Dense (D2D) growth and Dense-to-Sparse (D2S) conversion. Inherit4Rec-D2D com-bines hybrid growth with asymmetric training to preserve the forward function at expansion and maintain update continuity. Inherit4Rec-D2S constructs SMoE networks through co-activation-aware partitioning and a load-balancing loss, pre-serving dense-model capabilities while promoting balanced expert activation. Ex-periments on KuaiRand-1K and an industrial short-video recommendation dataset show that both transformations consistently outperform the evaluated inheritance baselines across all prediction objectives. These results demonstrate the effective-ness of Inherit4Rec for continual capacity expansion and computation-efficient sparse conversion in industrial recommender systems. 
+
+## 1 INTRODUCTION 
+
+Figure 1: Convergence compari-son across models of different pa-rameter scales Recent advances in recommender systems have demonstrated the potential of model scaling to push performance bound-aries and enhance representational capacity (Zhai et al., 2024; Jiang et al., 2026; Zhang et al., 2026b). Prior studies have explored scaling recommender systems along dimen-sions including sequence length (e.g., LONGER (Chai et al., 2025), STCA (Guan et al., 2026)), feature interactions (e.g., HHFT (Yu et al., 2025), RankMixer (Zhu et al., 2025)), task modeling (e.g., HoME (Wang et al., 2025), SMES (Zhang et al., 2026a)), and co-scaling along multiple dimensions (e.g., OneTrans (Zhang et al., 2026b), Hyformer (Huang et al., 2026b), Uniformer (Chen et al., 2026)). These methods em-pirically demonstrate consistent performance gains from in-creasing model capacity in industrial recommender systems. Meanwhile, given the stringent low-latency and high-throughput requirements of industrial recom-
+
+> *
+
+Equal contribution. 
+
+> †
+
+Corresponding authors. 
+
+1arXiv:2609.23111v1 [cs.IR] 19 Sep 2026 (a) Dense-to-Dense Methods. (b) Dense-to-Sparse Methods. 
+
+Figure 2: AUC difference before and after employing the parameter inheritance methods, where Inheit4Rec is our proposed method. mendation serving, some studies (e.g., TokenMixer-Large (Jiang et al., 2026), UniMoMo (Xin et al., 2026)) also applying the sparse mixture-of-expert (SMoE) to enable efficient model scaling. Nevertheless, in industrial recommender systems, model scaling also necessitates a corresponding increase in training data (Jiang et al., 2026; Zhang et al., 2025). As shown in Figure 1, larger mod-els require substantially more training time and data to reach the convergance, particularly under the common from-scratch training paradigm. For example, training a 0.3B-parameter UniFormer from scratch to convergence requires more than 250,000 GPU hours. This cost becomes particu-larly burdensome when model capacity is upgraded repeatedly. Therefore, how to inherit existing parameters to avoid retraining model from scratch, is the key to continual scaling of industrial rec-ommender models. 
+
+Parameter inheritance has been extensively studied in LLMs along two directions: expanding pre-trained dense models to increase parameter capacity (Chen et al., 2016; 2021; Yu et al., 2026) and partitioning dense models into MoE (Zhu et al., 2024; Lee et al., 2024) architectures for efficient serving. However, directly transferring such technique to recommender systems is challenging. Un-like language-model pretraining on stable offline corpora, industrial recommendation models learn from continuously streaming data characterized by rapidly evolving user interests, item distributions, and feedback patterns (Zhou et al., 2018). Therefore, in streaming recommendation, both model pa-rameters and optimizer states must remain closely aligned with the current data distribution. Naively inheriting model parameters and optimizer states fails to adapt to dynamic data distributions, caus-ing a sharp performance drop when training resumes. As shown in Figure 2, existing parameter inheritance strategies commonly suffer from a huge performance drop after growth or conversion due to the static inheritance of model parameters and optimizer states. To address this issue, we propose Inherit4Rec : Parameter Inheritance for Efficient Scaling of Recommendation Models, which achieves the efficient and economy scaling up of redommender models thorugh parameter inheritance. Specifically, to achieve efficient model scaling in stream-ing data-based recommender scenarios, we decompose the parameter inheritance into two sub-objectives: Dense-to-Dense (D2D) reuses the pretrained parameters to expand the dense model ca-pacity, whereas Dense-to-Sparse (D2S) reuses the pretrained parameters to sparsify the large dense model. Based on these, we propose the Inherit4Rec-D2D and the Inherit4Rec-D2S. For Inherit4Rec-D2D, we establish two design principles. (1) Forward preservation: Inherit4Rec-D2D employs the hybrid growth strategy, which combines the channel-wise parameter replication and normalized random initialization to stabilize the forward function after expansion. (2) Up-date Continuity: Inherit4Rec-D2D employs the asymmetric training strategy, which assigns differ-entiated training settings to old and newly expanded parameters, maintaining continuity in opti-mization of pretrained parameters while promoting effective specialization of new parameters. For Inherit4Rec-D2S, two principles are also established: (1) Capability preservation: Inherit4Rec-D2S employs co-activation-aware partitioning to construct sparse MoEs while maximally preserving the output Normalized Mean Squared Error (NMSE) of the original dense model. (2) Balanced activa-tion: Inherit4Rec-D2S introduces a load-balancing loss to equalize expert activation probabilities. Compared with the Dense and SMoE models trained from scratch, Inherit4Rec-D2S incurs per-formance degradations of only 0.04% and approximately 0.01%, respectively, while reducing the incremental SMoE training cost by 72%. 2Our contributions can be summarized as follows. • To the best of our knowledge, we are the first to enable efficient continual scaling of recommender models, avoiding costly retraining from scratch and supporting continual capacity expansion and efficient sparsification in industrial systems. • We propose the Efficient Parameter Inheritance Framework (Inherit4Rec), a general framework that leverages parameter inheritance to effectively reduce the resource overhead of dense-to-dense growth and Dense-to-Sparse conversion for recommender models. • We propose Inherit4Rec-D2D, which adopts the hybrid expansion strategy and asymmetric train-ing strategy to preserve both the forward function and update continuity during the parameter expansion. • We propose Inherit4Rec-D2S, which adopts the co-activation-aware partitioning and the load-balancing loss to enable capability preservation and balanced activation. 
+
+## 2 RELATED WORK 
+
+2.1 SCALABLE RECOMMENDATION MODELS 
+
+The empirical success of scaling large language models has motivated analogous scaling efforts in industrial recommendation. Recent studies have increased model capacity through feature inter-action and sequence modeling, yielding substantial performance gains. DHEN (Zhang et al., 2022) and Wukong (Zhang et al., 2024) improve scalability through hierarchical feature interactions, while HSTU (Zhai et al., 2024) demonstrates gains from scaling sequence modeling. For industrial rank-ing, RankMixer (Zhu et al., 2025) combines hardware-friendly token mixing, per-token FFNs, and sparse MoE to scale to billion-parameter models while maintaining computational efficiency. Beyond individual components, recent work has jointly scaled sequence modeling, feature interac-tion, and multi-task learning. OneTrans (Zhang et al., 2026b), HyFormer (Huang et al., 2026b), MixFormer (Huang et al., 2026a), and EST (Liu et al., 2026) jointly model behavior sequences and non-sequential features within a unified backbone, balancing expressiveness and computational ef-ficiency as models scale. UniFormer (Chen et al., 2026) further extends this paradigm to feature and task spaces through shared interaction structures and multi-view FFNs. These studies primarily address architectural designs for scalable recommendation models, whereas adapting a trained model to evolving capacity and efficiency requirements remains less explored. 2.2 STRUCTURAL TRANSFORMATION OF TRAINED MODELS 
+
+As recommender models and interaction datasets scale, model transformation reuses trained check-points to reduce the substantial cost of repeatedly training larger architectures from scratch. Two directions are particularly relevant: Dense-to-Dense growth expands model capacity by adding pa-rameters to an existing dense model, whereas Dense-to-Sparse conversion reorganizes dense com-putation into conditionally activated experts to reduce per-example computation. Despite their dif-ferent objectives, both transformations must limit changes to the learned function at conversion and support effective continued training. 
+
+Dense-to-Dense growth. Dense-to-Dense growth expands an existing model while reusing its learned parameters and capabilities. Net2Net (Chen et al., 2016) constructs parameter mappings between source and target models to preserve functional equivalence after increasing network width or depth. Copy-based initialization, however, can induce gradient symmetry and does not explicitly transfer optimizer states, potentially limiting the effective learning of newly added parameters. This idea was later extended to Transformer models. bert2BERT (Chen et al., 2021) initializes a larger model from a smaller BERT or GPT, while LiGO (Wang et al., 2023) learns operators for parameter transfer during model growth. Masked Structural Growth (MSG) (Yao et al., 2024) uses progressive masking to preserve the original function, and LEMON (Wang et al., 2024) provides lossless width and depth expansions. SPARKLING (Yu et al., 2026) combines signal-scale preser-vation with asymmetric optimization to promote stable expansion and differentiation of new param-3eters. Together, these studies broaden the focus of model growth from function preservation alone to stable transformation and effective optimization of newly added parameters. 
+
+Dense-to-Sparse conversion. Mixture-of-Experts (MoE) models increase total capacity without proportionally increasing computation per input by activating only a subset of experts. Examples include DeepSeekMoE (Dai et al., 2024) in language modeling and TokenMixer-Large (Jiang et al., 2026) in industrial ranking. Unlike training MoE models from scratch, Dense-to-Sparse conversion directly reuses the FFN pa-rameters of an existing dense model to construct a sparse MoE architecture. LLaMA-MoE (Zhu et al., 2024) converts LLaMA into a sparse MoE model through expert construction and continual pretraining. LLaMA-MoE v2 (Qu et al., 2024) further explores expert granularity, activation ratios, and post-conversion training strategies. G-MoEfication (Lee et al., 2024) constructs experts using balanced K-means clustering and retains representative activation values to enable sparse execution in models with smooth activation functions such as GeLU and SiLU. Overall, existing studies investigate dense expansion and sparse conversion separately, primarily under offline training on static corpora. For continuously updated industrial recommender models, it remains underexplored how to jointly control the immediate function shift, migrate parameter-aligned optimizer states, and ensure that newly introduced capacity or reorganized sparse experts become effective during continued training. 
+
+## 3 PRELIMINARIES 
+
+3.1 STREAMING INDUSTRIAL RECOMMENDATION 
+
+Industrial recommender systems are incrementally trained on streaming interactions. At each time window t ∈ { 1, . . . , T }, the model receives a batch Bt = {(xt,j , yt,j )}nt
+
+> j=1
+
+, where xt,j contains user, item, contextual, and sequential features, and yt,j denotes user feedback, such as clicks, views, and conversions. We denote the complete training checkpoint at time window t by 
+
+Ct = ( θt, st) , (1) where θt denotes the model parameters and st denotes the associated training state, including the optimizer statistics, learning-rate schedule, and training progress. The checkpoint is updated as 
+
+Ct+1 = U (Ct; Bt+1 ) , (2) where U denotes the update operator. 3.2 EFFICIENT SCALING IN RECOMMENDATION 
+
+In this paper, we focus on the efficient scaling of feed-forward networks (FFNs) and investigate two structural evolution strategies: Dense-to-Dense and Dense-to-Sparse. 3.2.1 DENSE -TO -D ENSE GROWTH 
+
+Dense-to-Dense (D2D) growth converts a pretrained FFN within a scaling model (e.g., Uniformer) into a wider FFN with increased parameter capacity. Let θd 
+
+> t
+
+denote the parameters of the expanded FFN. Its parameters are decomposed as 
+
+
+
+θd
+
+> t, old
+
+, θd
+
+> t, new
+
+ gd
+
+−→ θd 
+
+> t
+
+(3) Here, gd is the growing operator, θd 
+
+> t, old
+
+denotes the inherited parameter channels, while θd
+
+> t, new
+
+denotes the newly introduced parameter channels. 3.2.2 DENSE -TO -S PARSE CONVERSION 
+
+Dense-to-Sparse (D2S) conversion partitions a pretrained SwiGLU FFN within a scaling model into multiple expert FFNs. Let θm 
+
+> t
+
+denote the parameters of the converted MoE. Its FFN parameters are decomposed as 
+
+θm
+
+> t
+> gm
+
+−−→  θm
+
+> t, 1
+
+, . . . , θm
+
+> t,M
+
+ , θm 
+
+> t
+
+= concat  θm
+
+> t, 1
+
+, . . . , θm
+
+> t,M
+
+ , (4) 4where gm is the partition operator, M is the number of experts and θm 
+
+> t,m
+
+denotes the parameters associated with the m-th partition of the intermediate channels. 
+
+## 4 MOTIVATION AND DESIGN PRINCIPLES 
+
+In this section, we investigate why existing parameter inheritance methods struggle in recommen-dation scenarios from a data-distribution perspective, and derive the key principles for effectively applying parameter inheritance to recommender systems. 4.1 DYNAMIC DATA DISTRIBUTION OF RECOMMENDER SYSTEMS 
+
+A fundamental distinction between language models and recommender systems lies in their data distributions. The training data for language models are typically treated as relatively stationary: 
+
+Pt(X, Y) ≈ Pt+∆ (X, Y). (5) In contrast, recommendation data evolve continuously over time: 
+
+Pt(X, Y)̸ = Pt+∆ (X, Y). (6) Here, t denotes the current time window, ∆ denotes the time interval, X and Y represent the in-put features and supervision signals, respectively, and Pt denotes the data distribution at time t.Consequently, parameter inheritance methods developed for language models cannot be directly transferred to recommendater systems, as their inability to adapt to dynamic data streams can cause substantial performance degradation during continual training. 4.2 PRINCIPLES OF PARAMETER INHERITANCE 
+
+Given the dynamic nature of data in recommender systems, parameter inheritance should satisfy the following properties. Detailed formulations of these principles are given in Appendix A.4 For D2D growth: • Forward Stability : Preserving the original FFN’s output immediately after model expansion. • Update Continuity : Maintaining a controlled deviation from the original optimization trajectory during post-expansion training. For D2S conversion: • Capability Preservation : Preserving the output behavior of the original dense FFN after its con-version into an MoE. • Balanced Activation : Distributing routing probabilities evenly across experts. Existing D2D methods (Chen et al., 2021; Yu et al., 2026) preserve forward stability through function-preserving transformations but fail to maintain update continuity , leading to substantial output deviations and pronounced oscillations in optimization trajectories after model expansion. Details are given in Section 6.5. Therefore, effective D2D growth should therefore preserve both the model function and a smooth optimization trajectory under dynamic data. Existing D2S methods (Zhu et al., 2024; Lee et al., 2024) focus on balanced activation through parameter-based partitioning. However, they exhibit high output Normalized Mean Squared Error (NMSE) relative to the original FFNs under sparse routing, indicating poor preservation of the origi-nal FFN’s capability. Details are given in Section 6.5. Therefore, balanced expert activation does not necessarily guarantee capability preservation, particularly in dynamic data scenario, where evolving activation patterns may invalidate static parameter partitioning. 
+
+## 5 METHODOLOGY 
+
+5.1 OVERVIEW OF FFN T RANSFORMATION 
+
+Starting from the streaming checkpoint Ct defined in Section 3.1, we construct a transformed check-point C+ 
+
+> t
+
+from which training continues without a restart. We focus on the model’s per-token FFNs, 5Figure 3: Function-preserving, symmetry-breaking Dense-to-Dense growth. (a) The source SwiGLU FFN consists of channel-aligned gate, up, and down projections. (b) New channels copy the gate and up projections, while their down projections are randomly initialized using statistics of the source Wdown and centered across replicas. The zero-sum construction preserves the FFN output at conversion; distinct down projections allow the replicas to differentiate during continued training. whose channel structure provides a direct way to expand capacity or reduce active computation. We transform these FFNs and map their associated training state, leaving all other modules unchanged at conversion. For a SwiGLU FFN with input/output dimension d and hidden dimension dhid , the hidden activa-tions and output for an input x ∈ Rd are 
+
+h(x) = SiLU( xWgate ) ⊙ (xWup ), FDense (x) = h(x)Wdown , (7) where Wgate , W up ∈ Rd×dhid , Wdown ∈ Rdhid ×d, and h(x) ∈ Rdhid .Let hj (x) denote the j-th hidden activation and Wdown ,j : the j-th row of Wdown . The output then decomposes into hidden-channel contributions: 
+
+FDense (x) = 
+
+> dhid
+
+X
+
+> j=1
+
+hj (x)Wdown ,j :. (8) Each hidden activation hj (x) is computed from the j-th columns of Wgate and Wup , and contributes to the output through the j-th row of Wdown . We therefore treat these three aligned parameter slices as a single channel-level unit in both transformations. Building on this channel-wise view, we design two transformations for recommendation models trained on evolving data streams: • Dense-to-Dense exactly preserves the original FFN’s output at conversion while gradually bring-ing added capacity into use during continued training. • Dense-to-Sparse uses forward-pass statistics from the current stream to construct the Sparse MoE, aiming to retain the dense FFN’s output behavior with less active computation. 5.2 PARAMETER INHERITANCE FOR DENSE -T O-D ENSE GROWTH 
+
+In a recommender trained on an evolving data stream, FFN growth should preserve capabilities learned from past interactions while introducing capacity for future data. Inherit4Rec-D2D follows 6two principles: forward stability and update continuity . We develop a hybrid growth strategy that combines parameter replication with zero-sum random initialization, and an asymmetric training strategy that treats inherited and newly introduced parameters differently. 
+
+Hybrid Growth Strategy. To preserve the forward function while enabling new channels to dif-ferentiate, we replicate the gate and up projections and randomly initialize the new down projections under a zero-sum constraint. As illustrated in Figure 3, we add c replicas of each channel in a source FFN with hidden dimension dhid , increasing its width to d+hid = ( c + 1) dhid , where c ≥ 1. For the 
+
+q-th replica block, we set 
+
+W (q)gate = Wgate , W (q)up = Wup , q = 1 , . . . , c. (9) All new blocks therefore have identical hidden activations immediately after growth: h(q)(x) = 
+
+h(x).Let μdown and σ2down denote the empirical entrywise mean and variance of the source Wdown .We independently sample the entries of each new down-projection block W (q)down ∈ Rdhid ×d from 
+
+N (μdown , σ 2down ) and center the blocks across replicas: 
+
+cW (q)down = W (q)down − 1
+
+c
+
+> c
+
+X
+
+> r=1
+
+W (r)down ,
+
+> c
+
+X
+
+> q=1
+
+cW (q)down = 0. (10) The source projections remain unchanged. Since the new blocks have identical initial activations, their output contributions cancel: 
+
+F +Dense (x) = FDense (x) + 
+
+> c
+
+X
+
+> q=1
+
+h(q)(x)cW (q)down 
+
+= FDense (x) + h(x)
+
+> c
+
+X
+
+> q=1
+
+cW (q)down = FDense (x).
+
+(11) Thus, hybrid growth ensures forward stability by exactly preserving the source FFN function at expansion in exact arithmetic. For c > 1, the centered down projections are generally distinct, allowing the replicated channels to receive different gradient signals. Specifically, given the row-vector upstream gradient δ at the FFN output, 
+
+∂L
+
+∂h(q) = δ cW (q)down 
+
+⊤. (12) Under non-degenerate gradients, these differences enable the copied gate and up projections to de-velop distinct representations during continued training. The zero-sum constraint is applied only at initialization. 
+
+Asymmetric Training Strategy. To support update continuity while allowing new capacity to adapt, we assign different optimizer states and learning-rate schedules to inherited and newly intro-duced parameters. Inherited parameters retain their first and second optimizer moments and continue their existing learning-rate schedule, preserving the accumulated optimization history. New parame-ters start with zero optimizer moments and follow a separate warmup-and-decay schedule, allowing their contributions to develop gradually. Together, these treatments support a smooth transition from the pretrained model to the expanded model during streaming training. Appendix A.2 provides the detailed state mapping. 5.3 PARAMETER INHERITANCE FOR DENSE -TO -S PARSE CONVERSION 
+
+In streaming recommendation, Dense-to-Sparse conversion aims to reduce active FFN computation while carrying forward capabilities learned from prior interactions. Unlike Dense-to-Dense growth, sparse execution evaluates only a subset of the original channels for each input, so exact preser-vation of the dense FFN output is generally unattainable. To retain these capabilities as much as possible, we use forward-pass statistics from streaming samples available at conversion to build a contribution-aware sparse warm start: consistently high-contribution channels form an always-on shared expert, while the remaining channels that often contribute on the same inputs are grouped into routed experts. 7Figure 4: Contribution-aware Dense-to-Sparse conversion into a Sparse MoE. A forward-only cal-ibration pass ranks channels by empirical output contribution. The top-ranked channels form an always-on shared expert, while the remaining channels are divided into routed experts using a bal-anced partition based on contribution co-activation. All experts reuse channel-aligned Dense param-eters and optimizer states. 
+
+Co-activation-aware Partitioning. As illustrated in Figure 4, we reorganize the dhid channels of the source Dense FFN into one shared expert and R routed experts, each containing m = dhid /(R +1) channels. For each input, the shared expert and one router-selected expert are active, so 2m
+
+channels are evaluated, corresponding to 2/(R + 1) of the original FFN width. 
+
+Channel allocation. In order to retain as much of the Dense FFN’s learned capability as possible under sparse execution, we need to determine which channels should remain active for every input and which should be assigned to the same routed expert. Building on the channel-aligned parameter view above, we freeze the Dense checkpoint and run a forward-only pass over observed samples available at conversion to characterize each channel’s contribution to the Dense FFN output on the current training stream. For each FFN, let {xn}Nn=1 denote the N collected module inputs. We score channel j by its mean squared output contribution: 
+
+Ij = 1
+
+N
+
+> N
+
+X
+
+> n=1
+
+∥hj (xn)Wdown ,j :∥22 , j = 1 , . . . , d hid . (13) The m highest-scoring channels form the always-on shared expert. For the remaining channels, we derive a pairwise similarity Gij from how often channels i and j make large output contributions on the same samples, adjusting for individual channel frequencies and downweighting low-support co-occurrences. Let Er denote the set of channels in routed expert r. We partition the remain-ing channels into R equal-width, non-overlapping routed experts with the objective of maximizing within-expert similarity: 
+
+max  
+
+> {Er}Rr=1
+> R
+
+X
+
+> r=1
+
+X
+
+> i<j i,j ∈Er
+
+Gij ,
+
+s.t. |Er | = m, Er ∩ Er′ = ∅ (r̸ = r′).
+
+(14) 8This groups channels that tend to contribute strongly to the same inputs, allowing them to be evalu-ated together when their expert is selected. The definition of Gij and the partitioning algorithm are given in Appendix A.1. 
+
+Sparse continuation. For an FFN input x, the new router WR ∈ Rd×R computes a probability over the R routed experts and selects the highest-probability expert before expert evaluation. The shared expert is always executed, while only this selected routed expert is executed. Let Es(x) and Er(x)
+
+denote their respective outputs. The selected routed expert receives the weight 
+
+g(x) = max  
+
+> r
+
+[softmax( xWR)] r . (15) The resulting sparse FFN output is 
+
+FMoE (x) = Es(x) + g(x)Er(x). (16) 
+
+Load-balanced Training. Each expert reuses the gate and up columns and down rows correspond-ing to its channel set, with the associated optimizer moments transferred using the same indices. All experts and the router remain trainable after conversion; the router starts with freshly initialized parameters and optimizer state. To balance routed-expert utilization, let fr be the fraction of inputs assigned to expert r in a batch and 
+
+¯pr its mean softmax probability before top-1 selection. We use the Switch-style auxiliary loss (Fedus et al., 2022) 
+
+Lbal = R
+
+> R
+
+X
+
+> r=1
+
+fr ¯pr . (17) We average this loss across transformed FFNs and add it to the original task loss with coefficient 
+
+λbal . Appendix A.2z details the parameter and optimizer-state mapping; Appendix A.3 specifies router initialization and further continued-training details. Together, the two transformations adapt the FFN in complementary ways within ongoing recom-mendation training. Dense-to-Dense preserves the original FFN output at conversion and allows new channels to differentiate as later interactions arrive; Dense-to-Sparse reorganizes existing chan-nels using contribution statistics from the current stream, seeking to retain the Dense FFN’s output behavior with less active computation. Both start from the current training checkpoint, allowing training to continue on subsequent data windows without retraining the model from scratch. 
+
+## 6 EXPERIMENTS 
+
+6.1 EXPERIMENTAL SETTINGS 
+
+Datasets and evaluation metrics. The proposed Inherit4Rec-D2D and Inherit4Rec-D2S methods are evaluated on the public KuaiRand-1K dataset (Gao et al., 2022) and an industrial dataset col-lected from the single page of a short-video recommendation platform. Each example represents a user–video interaction and records the user’s response to an exposed video. Each dataset contains four prediction objectives covering viewing duration and user engagement; the dataset-specific tar-get sets are reported in Tables 1 and 2. Following established practice in recommendation research, GAUC (Chen et al., 2026) is adopted as the common evaluation metric for all methods. 
+
+Baselines. UniFormer (Chen et al., 2026) is adopted as the common recommendation backbone owing to its balanced co-scaling design, which jointly allocates capacity to behavior modeling, fea-ture interaction, and task modeling. The Dense-to-Dense comparison includes Seed , Train-from-Scratch , bert2BERT (Chen et al., 2021), and SPARKLING (Yu et al., 2026). Seed (Base) model retains the source architecture during continued training. Train-from-Scratch trains the target archi-tecture from random initialization and provides an Oracle reference for the empirical upper bound. bert2BERT performs function-preserving width expansion through parameter replication, whereas SPARKLING combines signal-scale preservation with symmetry breaking for width-progressive training. The Dense-to-Sparse comparison includes Seed (Base) , Dense and SMoE Train-from-Scratch references, LLaMA-MoE (Zhu et al., 2024), and G-MoEfication (Lee et al., 2024). Seed (Base) is reported as a separate reference. The Dense and SMoE Train-from-Scratch models use 9fully activated FFNs and the target sparse architecture, respectively; the latter serves as the cor-responding Oracle reference. LLaMA-MoE converts Dense FFNs into a sparse MoE architecture through expert construction and continued training, whereas G-MoEfication constructs experts using balanced K-means clustering and retains representative activation values to enable sparse execution with smooth activation functions such as GeLU and SiLU. All MoE architectures are evaluated un-der matched FFN activation budgets, and all checkpoint-based conversion methods are initialized from the same Dense checkpoint. 
+
+Implementation details. For Dense-to-Dense growth, the intermediate dimension of each feed-forward network (FFN) is increased fourfold. For Dense-to-Sparse conversion, the primary con-figuration adopts a 1:4 ratio between the activated and total FFN intermediate dimensions. On the industrial dataset, we use approximately 768 million causally available calibration examples from the pre-conversion stream to estimate the channel-contribution and co-activation statistics used for Dense-to-Sparse conversion. The source models are trained on the first 18 daily traffic windows, containing approximately 900 billion samples, to ensure sufficient convergence before transforma-tion. After transformation, the models continue training on the subsequent seven daily windows, containing approximately 350 billion samples. All checkpoint-based Dense-to-Sparse conversion methods start from the same Dense checkpoint and use the same continuation data, whereas the Dense and SMoE Train-from-Scratch references are trained on the complete training stream. Ad-ditional architectural configurations, optimization hyperparameters, calibration settings, and routing details are provided in Appendix A.5. 6.2 DENSE -TO -D ENSE GROWTH 
+
+As reported in Table 1, Train-from-Scratch consistently outperforms the Seed (Base) model across all four objectives within each dataset, yielding average relative GAUC improvements of 0.86% on KuaiRand-1K and 0.16% on the industrial dataset. This comparison establishes that increasing model capacity provides measurable performance gains under the continual training protocol. Rel-ative to the oracle, bert2BERT and SPARKLING exhibit mean GAUC deficits of 0.60% and 0.25% on KuaiRand-1K, and 0.11% and 0.12% on the industrial dataset, respectively. These remaining gaps suggest that growth techniques developed for language models do not fully recover the pre-dictive performance of the target architecture under streaming recommendation. In contrast, our method achieves the highest GAUC among all Dense-to-Dense growth methods for every evaluated objective in each dataset. Relative to the strongest existing baseline, it yields average relative gains of 0.15% on KuaiRand-1K and 0.05% on the industrial dataset, with the largest gain of 0.22% ob-served for Like on KuaiRand-1K. It further reduces the mean relative GAUC gap to the oracle to 0.10% and 0.05% on the two datasets, respectively. Table 1: Offline Dense-to-Dense GAUC results on KuaiRand-1K and the industrial dataset. Bold-face and underlining denote the best and second-best results among transformation methods in each GAUC column.                                                              
+
+> KuaiRand-1K Dataset Industrial Dataset Model Effective-view Long-view Comment Like Effective-view Long-view Follow Like Seed (Base) 0.6631 0.6987 0.6773 0.6690 0.7545 0.7655 0.8259 0.8293 Train-from-Scratch (Oracle) 0.6659 0.7013 0.6935 0.6707 0.7557 0.7667 0.8273 0.8307 bert2BERT-FPI 0.6638 0.6995 0.6857 0.6661 0.7548 0.7658 0.8266 0.8298 SPARKLING 0.6653 0.6998 0.6904 0.6691 0.7547 0.7657 0.8265 0.8297 Inherit4Rec-D2D 0.6656 0.7010 0.6914 0.6706 0.7551 0.7662 0.8272 0.8302
+> Impr. 0.05% 0.17% 0.14% 0.22% 0.04% 0.05% 0.07% 0.05% Seed and Train-from-Scratch serve as reference models and are excluded from both the best/second-best ranking and baseline selection. Impr. denotes the relative GAUC gain of Ours over the strongest non-Ours transformation method, computed as 100 ×(GAUC Ours −
+> GAUC base )/GAUC base . the appendix.
+
+6.3 DENSE -TO -S PARSE CONVERSION 
+
+As shown in Table 2, under matched FFN activation budgets, Inherit4Rec-D2S surpasses LLaMA-MoE and GMoEfication on every objective, achieving relative GAUC improvements of up to 0.05%, 10 0.07%, 0.74%, and 0.15% over the strongest competing conversion method in four metrics. Com-pared with the SMoE Train-from-Scratch reference, Inherit4Rec-D2S incurs average relative GAUC reductions of only 0.117% on KuaiRand-1K and 0.019% on the industrial dataset, indicating that Inherit4Rec-D2S recovers much of the target architecture’s predictive capability through parameter inheritance and continued training. Table 2: Offline Dense-to-Sparse GAUC results. Checkpoint-based conversion methods are com-pared under matched FFN activation budgets. Boldface and underlining denote the best and second-best results, respectively, among LLaMA-MoE, GMoEfication, and Inherit4Rec-D2S in each GAUC column.                                                                   
+
+> KuaiRand-1K Dataset Industrial Dataset Model Effective-view Long-view Comment Like Effective-view Long-view Follow Like Seed (Base) 0.6631 0.6987 0.6773 0.6690 0.7557 0.7662 0.8318 0.8335 Train-from-Scratch Dense 0.6664 0.7018 0.6950 0.6707 0.7570 0.7675 0.8332 0.8350 SMoE 0.6659 0.7014 0.6947 0.6706 0.7567 0.7674 0.8329 0.8349 LLaMA-MoE 0.6632 0.7006 0.6876 0.6680 0.7562 0.7667 0.8326 0.8344 GMoEfication 0.6651 0.7007 0.6821 0.6691 0.7561 0.7667 0.8325 0.8343 Inherit4Rec-D2S 0.6654 0.7012 0.6927 0.6701 0.7566 0.7672 0.8328 0.8347
+> Impr. 0.05% 0.07% 0.74% 0.15% 0.05% 0.07% 0.02% 0.04% Seed (Base) is a separate reference. Train-from-Scratch contains Dense and SMoE reference architectures; the SMoE row serves as the target-architecture Oracle. Seed (Base) and both Train-from-Scratch rows are excluded from the best/second-best ranking and baseline selection. Impr. denotes the relative GAUC gain of Inherit4Rec-D2S over the strongest checkpoint-based conversion baseline, computed using the same formula as in Table 1.
+
+6.4 ABLATION STUDIES 
+
+Dense-to-Dense components. We conduct ablations for two objectives of Dense-to-Dense growth: Forward Preservation and Update Continuity . For Forward Preservation, w/o zero-sum 
+
+removes group centering on the new down-projection rows. For Update Continuity, w/o optimizer transfer resets all Adam moments at growth. Table 3: Dense-to-Dense component ablation on the industrial dataset.                                 
+
+> Industrial Dataset Variant Effective-view Impr. Long-view Impr. Follow Impr. Like Impr. Full 0.7551 –0.7662 –0.8272 –0.8302 –w/o zero-sum 0.7546 −0.066% 0.7656 −0.078% 0.8258 −0.169% 0.8294 −0.096%
+> w/o optimizer transfer 0.7544 −0.093% 0.7654 −0.104% 0.8251 −0.254% 0.8293 −0.108%
+
+As shown in Table 3, removing either component consistently degrades all four targets. Without the zero-sum construction, GAUC drops by 0.066%–0.169%, confirming that preserving the pretrained function at the growth point is important when injecting new capacity. Resetting optimizer states causes larger drops of 0.093%–0.254%, highlighting that the accumulated optimization history is critical for maintaining Update Continuity. 
+
+Dense-to-Sparse components. We conduct ablations for two objectives of Dense-to-Sparse con-version: Capability Preservation and Balanced Activation . For the former, w/o co-act partition 
+
+replaces co-activation-aware partitioning with contiguous partitioning, while w/o shared expert re-moves the shared expert. For the latter, w/o balancing removes the auxiliary load-balancing loss. 11 Table 4: Dense-to-Sparse component ablation on the industrial dataset. Full is the complete method.                                         
+
+> Industrial Dataset Variant Effective-view Impr. Long-view Impr. Follow Impr. Like Impr. Full 0.7566 –0.7672 –0.8328 –0.8347 –w/o co-act partition 0.7552 −0.185% 0.7656 −0.209% 0.8308 −0.240% 0.8336 −0.132%
+> w/o shared expert 0.7562 −0.053% 0.7668 −0.052% 0.8328 0.000% 0.8345 −0.024%
+> w/o balancing 0.7558 −0.106% 0.7664 −0.104% 0.8324 −0.048% 0.8343 −0.048%
+
+As shown in Table 4, w/o co-act partition causes the largest degradation, with GAUC drops of 0.132%–0.240% across all four targets. This confirms that co-activation-aware partitioning is critical for Capability Preservation: channels that frequently make large contributions together should be assigned to the same routed expert, so that top-1 routing can retain their joint response from the original Dense FFN. In contrast, contiguous partitioning may separate such co-contributing channels across different experts, leading to a larger capability loss. The smaller drops from removing the shared expert or load-balancing loss further show that they provide complementary benefits for preserving important dense responses and maintaining balanced expert activation. 6.5 VISUALIZATION ANALYSIS 
+
+6.5.1 UPDATE CONTINUITY OF D2D M ETHODS 
+
+We compare the proposed Inherit4Rec-D2D with existing D2D methods, including bert2BERT and SPARKLING, in terms of update continuity. As defined in Appendix A.4, update continuity mea-sures whether the inherited parameter channels depart smoothly from their pre-growth trajectories after expansion, rather than exhibiting substantial oscillations. Stronger update continuity indicates that the inherited parameters can evolve stably while integrating the newly introduced capacity. To evaluate this property, we use the pre-growth model as the reference and continue training both the reference and expanded models from step (0). As shown in Figure 5, existing methods exhibit a large initial output discrepancy between their inherited channels and the reference model, followed by substantial fluctuations over time. In contrast, the inherited channels of Inherit4Rec-D2D di-verge smoothly and stably from the reference trajectory. These results demonstrate that Inherit4Rec avoids abruptly disrupting previously acquired knowledge and adapts more effectively to evolving recommendation data, thereby enabling stable continual evolution. 
+
+Figure 5: Update-continuity error Eu 
+
+> t
+
+for Dense-to-Dense methods across post-growth optimizer steps τ . Lower values indicate closer tracking of the synchronized unexpanded reference. 6.5.2 CAPABILITY PRESERVATION OF D2S M ETHODS 
+
+We compare the proposed Inherit4Rec-D2S with existing D2S methods, including LLaMA-MoE and GMoEfication, in terms of capability preservation. As defined in Appendix A.4, capability 12 preservation measures how well the sparsified expert module retains the output capability of the original dense FFN under a limited activation budget. We use the pre-conversion dense FFN as the reference and compute the normalized mean squared er-ror (NMSE) between their outputs under the same sparsity level. As shown in Figure 6, Inherit4Rec-D2S consistently achieves lower NMSE, indicating better preservation of the original FFN function-ality under sparse routing. In contrast, LLaMA-MoE and GMoEfication incur more substantial ca-pability loss. These results suggest that: 1) activation balance captures only the uniformity of expert utilization and does not guarantee capability preservation; and 2) under dynamic data distributions, static parameter partitioning cannot accommodate evolving neuronal activation and co-activation patterns, causing the functional subspaces covered by the routed experts to become misaligned with current data and thereby amplifying output discrepancies and capability loss. 
+
+Figure 6: Dense-to-Sparse capability-preservation error at matched sparsity. Panel (a) shows Ec over paired continuation; panel (b) shows the aggregate error. Lower is better. 
+
+## 7 CONCLUSION 
+
+We study checkpoint evolution for recommendation models under streaming training, where a struc-tural transformation must reuse accumulated training state while limiting disruption to the learned function and subsequent optimization trajectory. We develop two channel-level transformations for self per-token FFNs. Our Dense-to-Dense method adds capacity through zero-sum channel replicas that, in exact arithmetic, preserve the source function at conversion. Distinct down projections break the optimization symmetry among replicas, while inherited parameters retain their optimizer states and newly introduced parameters follow a separate learning-rate schedule. Our Dense-to-Sparse method uses output-contribution statistics from a forward-only calibration pass to select an always-on expert and organizes the remaining channels into equal-width routed experts through balanced co-activation partitioning. The converted model directly reuses the corresponding Dense parameters and optimizer states for continued training. We evaluate both transformations on KuaiRand-1K and an industrial short-video recommendation stream using chronological, matched-continuation protocols that jointly examine recommendation quality, conversion fidelity, recovery dynamics, routing behavior, and end-to-end efficiency. Taken together, the two methods cast architectural change as a stateful continuation of an existing train-ing process: Dense-to-Dense growth expands capacity without changing the function at conversion, whereas Dense-to-Sparse conversion reorganizes existing capacity under a controlled active-width budget. This perspective provides a unified foundation for adapting continually trained recom-mender models as data and serving constraints evolve. Future work can extend checkpoint evo-lution beyond self per-token FFNs and study repeated transformations, adaptive expert budgets, and longer-term behavior under distribution shift. 13 REFERENCES 
+
+Zheng Chai, Qin Ren, Xijun Xiao, Huizhi Yang, Bo Han, Sijun Zhang, Di Chen, Hui Lu, Wenlin Zhao, Lele Yu, et al. Longer: Scaling up long sequence modeling in industrial recommenders. In 
+
+Proceedings of the Nineteenth ACM Conference on Recommender Systems , pp. 247–256, 2025. Bo Chen, Jinlong Jiao, Tijian Hu, Ruihao Zhang, Yanzhi Liu, Chenghou Jin, Qinglin Jia, Baixuan He, Hechang Pan, Yiwu Liu, Jian Liang, Chaoyi Ma, Ruiming Tang, Han Li, and Kun Gai. UniFormer: Efficient and unified model-centric scaling for industrial recommendation, 2026. URL https://arxiv.org/abs/2606.27058 .Cheng Chen, Yichun Yin, Lifeng Shang, Xin Jiang, Yujia Qin, Fengyu Wang, Zhi Wang, Xiao Chen, Zhiyuan Liu, and Qun Liu. bert2BERT: Towards reusable pretrained language models, 2021. URL https://arxiv.org/abs/2110.07143 .Tianqi Chen, Ian Goodfellow, and Jonathon Shlens. Net2Net: Accelerating learning via knowledge transfer, 2016. URL https://arxiv.org/abs/1511.05641 .Damai Dai, Chengqi Deng, Chenggang Zhao, R. X. Xu, Huazuo Gao, Deli Chen, Jiashi Li, Wangding Zeng, Xingkai Yu, Y. Wu, Zhenda Xie, Y. K. Li, Panpan Huang, Fuli Luo, Chong Ruan, Zhifang Sui, and Wenfeng Liang. DeepSeekMoE: Towards ultimate expert specializa-tion in mixture-of-experts language models, 2024. URL https://arxiv.org/abs/2401. 06066 .William Fedus, Barret Zoph, and Noam Shazeer. Switch transformers: Scaling to trillion parameter models with simple and efficient sparsity, 2022. URL https://arxiv.org/abs/2101. 03961 .Chongming Gao, Shijun Li, Yuan Zhang, Jiawei Chen, Biao Li, Wenqiang Lei, Peng Jiang, and Xiangnan He. KuaiRand: An unbiased sequential recommendation dataset with randomly exposed videos. In Proceedings of the 31st ACM International Conference on Information and Knowledge Management , pp. 3953–3957, 2022. doi: 10.1145/3511808.3557624. URL 
+
+https://doi.org/10.1145/3511808.3557624 .Lin Guan, Jia-Qi Yang, Zhishan Zhao, Beichuan Zhang, Bo Sun, Xuanyuan Luo, Jinan Ni, Xiaowen Li, Yuhang Qi, Zhifang Fan, et al. Make it long, keep it fast: End-to-end 10k-sequence modeling at billion scale on douyin. In Proceedings of the ACM Web Conference 2026 , pp. 7989–7998, 2026. Xu Huang, Hao Zhang, Zhifang Fan, Yunwen Huang, Zhuoxing Wei, Zheng Chai, Jinan Ni, Yuchao Zheng, and Qiwei Chen. Mixformer: Co-scaling up dense and sequence in industrial recom-menders. arXiv preprint arXiv:2602.14110 , 2026a. Yunwen Huang, Shiyong Hong, Xijun Xiao, Jinqiu Jin, Xuanyuan Luo, Zhe Wang, Zheng Chai, Shikang Wu, Yuchao Zheng, and Jingjian Lin. Hyformer: Revisiting the roles of sequence mod-eling and feature interaction in ctr prediction. arXiv preprint arXiv:2601.12681 , 2026b. Yuchen Jiang, Jie Zhu, Xintian Han, Hui Lu, Kunmin Bai, Mingyu Yang, Shikang Wu, Ruihao Zhang, Wenlin Zhao, Shipeng Bai, et al. Tokenmixer-large: Scaling up large ranking models in industrial recommenders. arXiv preprint arXiv:2602.06563 , 2026. Jaeseong Lee, Seung-won Hwang, Wonpyo Park, and Mingi Ji. Breaking ReLU barrier: Generalized MoEfication for dense pretrained models. In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing , pp. 10097–10107. Association for Computational Lin-guistics, 2024. doi: 10.18653/v1/2024.emnlp-main.563. URL https://aclanthology. org/2024.emnlp-main.563/ .Mingyang Liu, Yong Bai, Zhangming Chan, Sishuo Chen, Xiang-Rong Sheng, Han Zhu, Jian Xu, and Xinyang Chen. Est: Towards efficient scaling laws in click-through rate prediction via unified modeling. arXiv preprint arXiv:2602.10811 , 2026. Xiaoye Qu, Daize Dong, Xuyang Hu, Tong Zhu, Weigao Sun, and Yu Cheng. LLaMA-MoE v2: Exploring sparsity of LLaMA from perspective of mixture-of-experts with post-training, 2024. URL https://arxiv.org/abs/2411.15708 .14 Peihao Wang, Rameswar Panda, Lucas Torroba Hennigen, Philip Greengard, Leonid Karlinsky, Rogerio Feris, David Daniel Cox, Zhangyang Wang, and Yoon Kim. Learning to grow pretrained models for efficient transformer training, 2023. URL https://arxiv.org/abs/2303. 00980 .Xu Wang, Jiangxia Cao, Zhiyi Fu, Kun Gai, and Guorui Zhou. Home: Hierarchy of multi-gate experts for multi-task learning at kuaishou. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 1 , pp. 2638–2647, 2025. Yite Wang, Jiahao Su, Hanlin Lu, Cong Xie, Tianyi Liu, Jianbo Yuan, Haibin Lin, Ruoyu Sun, and Hongxia Yang. LEMON: Lossless model expansion. In International Conference on Learning Representations , 2024. URL https://openreview.net/forum?id=3Vw7DQqq7U .Lei Xin, Bin Gu, Peize Li, Zitong Wang, Jianbo Zhao, Changjiang Jiang, Chao Huang, Xuyang Zhao, Zunhai Su, Fanhu Zeng, and Zhenglun Kong. Unimomo: Expert merging-based moe acceleration for large recommendation models. arXiv preprint arXiv:2608.08627 , 2026. Yiqun Yao, Zheng Zhang, Jing Li, and Yequan Wang. Masked structural growth for 2× faster language model pre-training, 2024. URL https://arxiv.org/abs/2305.02869 .Liren Yu, Wenming Zhang, Silu Zhou, Tao Zhang, Zhixuan Zhang, and Dan Ou. Hhft: Hi-erarchical heterogeneous feature transformer for recommendation systems. arXiv preprint arXiv:2511.20235 , 2025. Qifan Yu, Xinyu Ma, Zhijian Zhuo, Minrui Wang, Deyi Liu, Shiyi Zhan, Yiyuan Ma, Liang Xiang, Xingyan Bin, and Di He. SPARKLING: Balancing signal preservation and symmetry breaking for width-progressive learning, 2026. URL https://arxiv.org/abs/2602.02472 .Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhaojie Gong, Fangda Gu, Michael He, et al. Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations. arXiv preprint arXiv:2402.17152 , 2024. Buyun Zhang, Liang Luo, Xi Liu, Jay Li, Zeliang Chen, Weilin Zhang, Xiaohan Wei, Yuchen Hao, Michael Tsang, Wenjun Wang, Yang Liu, Huayu Li, Yasmine Badr, Jongsoo Park, Jiyan Yang, Dheevatsa Mudigere, and Ellie Wen. DHEN: A deep and hierarchical ensemble network for large-scale click-through rate prediction, 2022. URL https://arxiv.org/abs/2203.11014 .Buyun Zhang, Liang Luo, Yuxin Chen, Jade Nie, Xi Liu, Daifeng Guo, Yanli Zhao, Shen Li, Yuchen Hao, Yantao Yao, et al. Wukong: Towards a scaling law for large-scale recommendation. arXiv preprint arXiv:2403.02545 , 2024. Yukun Zhang, Si Dong, Xu Wang, Bo Chen, Qinglin Jia, Shengzhe Wang, Jinlong Jiao, Runhan Li, Jiaqing Liu, Chaoyi Ma, et al. Smes: Towards scalable multi-task recommendation via expert sparsity. arXiv preprint arXiv:2602.09386 , 2026a. Yunkai Zhang, Qiang Zhang, Feng Lin, Ruizhong Qiu, Hanchao Yu, Jiayi Liu, Yinglong Xia, Benyu Zhang, Zeyu Zheng, and Diji Yang. Don’t waste it: Guiding generative recommenders with structured human priors via multi-head decoding. arXiv preprint arXiv:2511.10492 , 2025. Zhaoqi Zhang, Haolei Pei, Jun Guo, Tianyu Wang, Yufei Feng, Hui Sun, Shaowei Liu, and Aixin Sun. Onetrans: Unified feature interaction and sequence modeling with one transformer in indus-trial recommender. In Proceedings of the ACM Web Conference 2026 , pp. 8162–8170, 2026b. Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. Deep interest network for click-through rate prediction. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining , pp. 1059–1068, 2018. Jie Zhu, Zhifang Fan, Xiaoxie Zhu, Yuchen Jiang, Hangyu Wang, Xintian Han, Haoran Ding, Xin-min Wang, Wenlin Zhao, Zhen Gong, et al. Rankmixer: Scaling up ranking models in industrial recommenders. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management , pp. 6309–6316, 2025. 15 Tong Zhu, Xiaoye Qu, Daize Dong, Jiacheng Ruan, Jingqi Tong, Conghui He, and Yu Cheng. LLaMA-MoE: Building mixture-of-experts from LLaMA with continual pre-training, 2024. URL 
+
+https://arxiv.org/abs/2406.16554 .16 A ADDITIONAL METHODOLOGICAL DETAILS 
+
+A.1 DENSE -TO -S PARSE CALIBRATION AND PARTITIONING 
+
+Contribution-based shared expert. We freeze the Dense checkpoint and collect module inputs 
+
+{xn}Nn=1 from causally available calibration examples. For channel j, define its output contribution and magnitude as 
+
+vj (xn) = hj (xn)Wdown ,j :, aj (xn) = ∥vj (xn)∥2 = |hj (xn)|∥ Wdown ,j :∥2. (18) Equation (13) is equivalently the mean of aj (xn)2. The m channels with the largest Ij form the always-on shared expert. Let U denote the indices of the remaining Rm channels, which are parti-tioned into the routed experts. 
+
+Sparse co-activation statistics. For every input, we retain the Kc channels with the largest con-tribution magnitudes and define 
+
+bj (xn) = Ij ∈ Top Kc {al(xn)} ∧ aj (xn) > γ  . (19) The pairwise co-activation counts and marginal supports are 
+
+Cij =
+
+> N
+
+X
+
+> n=1
+
+bi(xn)bj (xn), ni =
+
+> N
+
+X
+
+> n=1
+
+bi(xn). (20) These quantities are accumulated independently for each transformed FFN module. Multiple data workers maintain local sums for the contribution energies, co-activation counts, marginal supports, and sample counts. Summing the local sufficient statistics before dividing by the global sample count produces the same Ij , Cij , and ni as single-worker collection. We convert these counts into the support-aware channel similarity 
+
+Gij = Cij 
+
+√ninj
+
+Cij 
+
+Cij + τ , (21) with Gij = 0 if the normalization denominator vanishes. The first factor normalizes marginal frequency, while the second shrinks low-support co-occurrences. 
+
+Balanced partition objective. We optimize the balanced partition in Equation (14) over the re-maining channels. Each Er is a subset of U , and the constraints SRr=1 Er = U and Er ∩ Er′ = ∅
+
+for r̸ = r′ ensure that every remaining channel is assigned to exactly one routed expert. The fixed capacity |Er | = m gives all routed experts the same width. 
+
+Capacity-constrained greedy initialization. After selecting the shared expert, we operate on the remaining channel set U . The weighted degree of candidate channel i is 
+
+di = X
+
+> j∈U
+
+Gij . (22) The first expert seed is the channel with the largest weighted degree. For each subsequent seed, let C
+
+denote the unused candidates and Z the selected seeds. We retain at most min( |C| , max(256 , 64 R)) 
+
+high-degree candidates and score each retained channel by 
+
+qi = di
+
+dmax 
+
+− max 
+
+> s∈Z
+
+Gis 
+
+p(di + ϵ)( ds + ϵ) , (23) where dmax is the largest candidate degree and ϵ > 0 is a numerical stabilizer. The first term favors representative graph nodes, whereas the second discourages highly similar channels from seeding different experts. After seed selection, we process the remaining channels in descending order of weighted degree. For each expert Er that has not reached its hard capacity m, the assignment score of channel i is 
+
+A(i, r ) = 
+
+P 
+
+> j∈Er
+
+Gij 
+
+p|Er | + β m − | Er |. (24) We assign i to the available expert with the largest score. The first term measures its affinity to the current expert, while the small second term favors experts with more remaining capacity. 17 Swap refinement and candidate selection. Starting from the greedy partition, we consider pair-wise channel swaps across experts. For each expert pair, we apply the valid swap with the largest positive increase in the objective of Equation (14); capacities are therefore preserved throughout refinement. We perform at most two complete refinement rounds and stop early when a round pro-duces no positive-gain swap. Random tie-breaking among equal-degree channels produces four candidate partitions. We select the candidate with the largest within-expert edge-weight ratio 
+
+ρ =
+
+PRr=1 
+
+P i<j i,j ∈Er
+
+Gij 
+
+P i<j i,j ∈U
+
+Gij 
+
+. (25) The selected shared and routed experts form a complete, disjoint partition of the original Dense FFN channels. A.2 PARAMETER AND OPTIMIZER -S TATE MIGRATION 
+
+Dense-to-Dense growth. Inherited FFN parameters remain at their original indices, and their first and second optimizer moments are copied without modification. Although each new gate and up projection copies a source parameter value, it is a newly created parameter and therefore starts with zero optimizer moments. The sampled and centered down projections likewise start with zero moments. Inherited parameters continue their checkpoint learning-rate schedule, whereas all new parameters use the separate warmup-and-decay schedule summarized in Appendix A.5. 
+
+Dense-to-Sparse conversion. For any expert channel set B, the expert parameters are channel-aligned slices of the Dense FFN: 
+
+W (B)gate = Wgate ,:,B , W (B)up = Wup ,:,B ,W (B)down = Wdown ,B, :.
+
+(26) Every channel-aligned optimizer tensor is sliced using the same indices. Model parameters outside the converted FFNs retain their checkpoint values and optimizer states. The router is the only newly introduced D2S module and starts with a fresh optimizer state. A.3 MOE C ONTINUED -T RAINING STRATEGY 
+
+Router initialization. We draw each entry of the bias-free router WR from a zero-mean truncated normal distribution with standard deviation 0.01 and initialize fresh optimizer moments. All param-eters of the shared and routed experts remain trainable from their transferred values and optimizer states. Each token evaluates the shared expert and the single routed expert selected by Equation (16); no expert is frozen after conversion. 
+
+Load-balanced continued training. Let fr be the fraction of module inputs assigned to routed expert r in a batch, and let ¯pr be its mean softmax probability before top-1 selection. The auxiliary loss in Equation (17) is computed for each transformed FFN module and then averaged before being combined with the original task loss: 
+
+L = Ltask + λbal Lbal . (27) Training then continues on the original data objective with the same active shared-plus-top-1 execu-tion pattern used at inference. The calibration, partition, router, and balancing defaults are summa-rized in Appendix A.5. A.4 PRINCIPLES OF PARAMETER INHERITANCE 
+
+Definition 1 (Forward Stability) . Given the expanded FFN Fθd  
+
+> t(0)
+
+at step = 0, and the original FFN 
+
+Fθt , forward stability measures their output discrepancy immediately after transformation ( τ = 0 ): 
+
+Ef 
+
+> t
+
+(x) = Fθd 
+
+> t(0)
+
+(x) − Fθt (x) 22
+
+. (28) 
+
+A smaller Ef 
+
+> t
+
+(x) indicates greater forward stability. 
+
+18 Definition 2 (Update Continuity) . Let θd
+
+> t, old
+
+(τ ) and ¯θt(τ ) denote the inherited parameters of the expanded FFN and the parameters of the unexpanded reference FFN, respectively, at post-growth training progress τ . Their normalized deviation is 
+
+Eu 
+
+> t
+
+(τ, x) = RMS 
+
+
+
+Fθd 
+
+> t, old (τ)
+
+(x) − F¯θt(τ )(x)
+
+
+
+RMS ( Fθt (x)) + ϵ . (29) 
+
+Here, a more stable Eu 
+
+> t
+
+(τ, x) indicates a more continual and stable update of training. 
+
+Definition 3 (Capability Preservation) . Given the original dense FFN Fθt and the converted MoE 
+
+Fθm 
+
+> t
+
+, the capability preservation error is defined as 
+
+Ec 
+
+> t
+
+=
+
+Ex∼Pt(X)
+
+h
+
+Fθm 
+
+> t
+
+(x) − Fθt (x) 22
+
+i
+
+Ex∼Pt(X)
+
+h
+
+∥Fθt (x)∥22
+
+i
+
++ ϵ. (30) 
+
+Here, Fθm 
+
+> t
+
+is evaluated under the top-1 routing decision r(x). A smaller Ec 
+
+> t
+
+indicates better preser-vation of the original dense FFN. 
+
+Definition 4 (Balanced Activation) . Given R routed experts and their assignment fractions {fr }Rr=1 ,where fr ≥ 0 and PRr=1 fr = 1 , balanced expert activation is quantified by the load coefficient of variation and normalized load entropy: 
+
+CV load =
+
+q
+
+R−1 PRr=1 (fr − R−1)2
+
+R−1 , Hload = − 1log R
+
+> R
+
+X
+
+> r=1
+
+fr log fr , (31) 
+
+where 0 log 0 is defined as 0. A lower CV load and a higher Hload indicate more balanced expert utilization. 
+
+A.5 METHOD -S PECIFIC DEFAULTS 
+
+Tables 5 and 6 consolidate the dataset-specific defaults used by the two transformations. The in-dustrial conversion uses approximately 7.68 × 10 8 causally available calibration examples from the pre-conversion stream, whereas KuaiRand-1K uses 512 training examples. 19 Table 5: Transformation and continuation defaults for the industrial dataset. Dense parameter counts exclude sparse embedding tables. 
+
+Setting Value Default recommendation backbone Three Transformer layers; hidden size 256; four attention heads; embedding size 64 Dense-parameter optimizer AdamW with learning rate 2×10 −3 and weight decay 10 −3
+
+Sparse-embedding optimizer Adam with learning rate 10 −3
+
+D2D optimizer-state transfer Retain moments for inherited parameters; initialize new parameters with zero moments D2D dense-parameter count 28 M → 74 M 
+
+D2D source/target FFN width 256 /1,024 (c = 3 replicas per source channel) D2D candidate-row distribution Global entrywise mean and variance of Wdown 
+
+D2D new-parameter schedule 500-step linear warmup to 3 × 10 −3 (1.5× the base rate), followed by 1,000-step cosine annealing to 2 × 10 −3 (the base rate) D2S comparison control Same Dense checkpoint, calibration samples, continuation data, and active-width budget D2S calibration-set size N ≈ 7.68 × 10 8 examples D2S total FFN width dhid = 1 ,024 
+
+D2S 1:4 active-width setting R = 7 routed experts, m = 128 
+
+Per-sample contribution cutoff Kc = 32 , γ = 0 
+
+Co-activation shrinkage τ = 10 
+
+Seed-candidate bound min( |C| , max(256 , 64 R)) 
+
+Greedy capacity bonus β = 10 −7
+
+Candidate partitions / refinement Four random tie-breaking candidates; at most two swap rounds Sparse routing One always-on shared expert plus one top-1 routed expert D2S total/active dense parameters 74 M total and 28 M active per example, including Router parameters Router initialization Bias-free; TruncatedNormal(0 , 0.01 2)
+
+Load-balancing coefficient λbal = 0 .01 
+
+20 Table 6: Transformation and continuation defaults for KuaiRand-1K. Dense parameter counts ex-clude sparse embedding tables. 
+
+Setting Value Recommendation backbone Two FIM layers and one TIM layer; hidden size 400; five attention heads; embedding size 128; 66 FIM tokens Dense/sparse optimizers AdamW with learning rate 10 −4 and weight decay 10 −3;SparseAdam with learning rate 10 −3
+
+Sparse-embedding reset Reinitialize the sparse tables and SparseAdam between non-final epochs; preserve dense weights and AdamW states D2D training horizon Five source-model epochs followed by five target-model epochs D2D dense-parameter count 112 M → 302 M 
+
+D2D source/target FFN width 600 /1,800 (one retained group and c = 2 new groups) D2D growth initialization Exact copies for Wgate and Wup ; sample two Wdown groups from the source mean and variance and pair them as A and −A
+
+D2D optimizer-state transfer Retain AdamW moments for inherited parameters; initialize new parameters with zero moments D2D new-parameter schedule 200-step linear warmup from zero to 1.5 × 10 −4, followed by 1,000-step cosine annealing to 10 −4
+
+D2S continuation horizon Five complete MoE epochs after conversion of the Dense checkpoint D2S total/active dense parameters 303 M total and 113 M active per example, including Router parameters D2S calibration statistics N = 512 examples (eight batches of 64); top-32 channel contributions; 32-dimensional random-sign co-activation sketch D2S expert configuration dhid = 1 ,800 ; one always-on and five routed experts with 
+
+m = 300 ; top-1 routing activates width 600 (1:3) D2S partition search Select the 300 highest-contribution channels for the always-on expert; partition the remaining channels by balanced spherical clustering with four starts and at most six refinement rounds Router initialization Bias-free; TruncatedNormal(0 , 0.01 2)
+
+Load-balancing coefficient λbal = 0 .01 
+
+21
