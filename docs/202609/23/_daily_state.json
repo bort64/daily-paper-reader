@@ -1,0 +1,41 @@
+{
+  "date": "20260923",
+  "date_label": "",
+  "generated_at": "2026-09-23 22:37:06 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.21550v1",
+      "route": "202609/23/2609.21550v1-onebid-a-unified-auto-bidding-foundation-model-for-diverse-ocpx-advertising-scenarios",
+      "title": "OneBid: A Unified Auto-Bidding Foundation Model for Diverse oCPX Advertising Scenarios",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向多oCPX广告场景的统一自动出价基础模型",
+      "first_seen_at": "2026-09-23 22:37:06 UTC",
+      "updated_at": "2026-09-23 22:37:06 UTC"
+    },
+    {
+      "paper_id": "2609.25433v1",
+      "route": "202609/23/2609.25433v1-lightweight-ranking-heads-accelerating-multi-task-experimentation-in-production-recommender-systems",
+      "title": "Lightweight Ranking Heads: Accelerating Multi-Task Experimentation in Production Recommender Systems",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "生产级多任务排序模型扩展",
+      "first_seen_at": "2026-09-23 22:37:06 UTC",
+      "updated_at": "2026-09-23 22:37:06 UTC"
+    }
+  ]
+}

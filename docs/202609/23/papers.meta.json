@@ -1,0 +1,39 @@
+{
+  "label": "2026-09-23",
+  "date": "2026-09-23",
+  "generated_at": "2026-09-23T22:37:10",
+  "count": 2,
+  "papers": [
+    {
+      "paper_id": "202609/23/2609.21550v1-onebid-a-unified-auto-bidding-foundation-model-for-diverse-ocpx-advertising-scenarios",
+      "section": "quick",
+      "title_en": "OneBid: A Unified Auto-Bidding Foundation Model for Diverse oCPX Advertising Scenarios",
+      "authors": "Yewen Li, Peng Jiang, Yitian Li, Pengfei Lv, Xialong Liu, Peng Jiang, Qingpeng Cai",
+      "date": "2026-09-18",
+      "pdf": "https://arxiv.org/pdf/2609.21550v1",
+      "score": "7.0",
+      "evidence": "面向多oCPX广告场景的统一自动出价基础模型",
+      "tldr": "oCPX广告涵盖注册、购买等异构场景，传统自动出价常为每场景单独建模，流程碎片化且难以跨场景迁移。OneBid将Decision Transformer扩展为统一基础模型，用Return-to-Go和Cost-to-Go双目标条件，并结合序列级MoE与CROP离线后训练实现安全适配。该模型在快手全量部署，oCPX广告整体ADVV提升2.2%，ROAS场景峰值提升13.1%。其贡献在于以单一可复用骨干统一多场景自动出价，兼顾多目标控制、低延迟扩展与离线安全优化。",
+      "tags": "query:search-rec",
+      "abstract_en": "Auto-bidding is central to computational advertising, where strategies must maximize advertisers' conversion value under economic constraints. It has evolved from rule-based controllers to reinforcement learning and generative methods such as Decision Transformer (DT). Yet these methods increasingly mismatch the prevailing optimized cost-per-X (oCPX) paradigm, which spans heterogeneous scenarios (e.g., registration, purchase), each served by a separate model, leading to fragmented pipelines and underexploring cross-scenario modeling. Inspired by foundation models like LLMs, unifying these oCPX scenarios into one model raises three challenges: multi-objective control, scalable capacity under strict latency, and safe offline policy improvement. We present OneBid, a unified auto-bidding foundation model that learns a reusable backbone from heterogeneous oCPX logs and adapts it to scenario-specific deployments via offline post-training. Building on DT, OneBid extends single Return-to-Go conditioning to two atomic signals, Return-to-Go for conversion value and Cost-to-Go for cost ratio, plus value-aware regularization on next-action prediction. To absorb distributional heterogeneity, we design a sequence-level Mixture-of-Experts architecture, where shared experts encode cross-scenario knowledge and sparsely-routed experts capture scenario-specific patterns at low latency, yielding consistent scaling with model size and data. During post-training, we align the backbone with scenario preferences via Critic-guided Relative Offline Policy optimization (CROP): a learned critic scores candidate actions group-relatively, avoiding the unsafe online exploration of GRPO-style fine-tuning while constraining policy shift to reduce OOD risk. Validated via online A/B tests and fully deployed at Kuaishou, OneBid delivers an overall +2.2% ADVV gain on oCPX Ads, peaking at +13.1% in the ROAS scenario.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202609/23/2609.25433v1-lightweight-ranking-heads-accelerating-multi-task-experimentation-in-production-recommender-systems",
+      "section": "quick",
+      "title_en": "Lightweight Ranking Heads: Accelerating Multi-Task Experimentation in Production Recommender Systems",
+      "authors": "Sanjay Surendranath Girija, Aniruddh Nath, Li Wei, Yanhao Jiang, Shawn Andrews, Lukasz Heldt, Yi Wu, Aditya Mahajan, Mohit Sharma",
+      "date": "2026-09-21",
+      "pdf": "https://arxiv.org/pdf/2609.25433v1",
+      "score": "7.0",
+      "evidence": "生产级多任务排序模型扩展",
+      "tldr": "生产级推荐系统的多任务排序模型在引入新预测任务时，常因任务冲突风险、骨干模型重训成本高、奖励组合公式调参繁琐，导致实验迭代周期长达数周。本文提出 Lightweight Ranking Heads（Light Heads）框架，面向持续在线学习环境，通过 stop-gradient 与无状态每日训练动态注入新任务，无需冷启动或重训骨干。该框架在 YouTube 规模成功部署，将多任务实验迭代周期从数周缩短至数天。",
+      "tags": "query:search-rec",
+      "abstract_en": "Modern production-scale recommender systems rely on complex, multi-task ranking models. Introducing new prediction tasks into these massive systems often causes bottlenecks - it risks negative task conflicts with existing tasks, and can lead to long development and experimentation cycles due to the expensive retraining of backbone models and downstream models or tuning of reward combination formulas. To address the critical challenge of slow experimentation velocity, we introduce the Lightweight Ranking Heads (Light Heads) framework. Designed for continuous online learning environments, Light Heads enable the dynamic injection of new tasks into existing multi-task ranking models, effectively obviating the need for model cold-starting and retraining of backbone models. By utilizing stop-gradients and stateless daily training, this design strictly isolates new tasks, mitigating the risk of adverse task conflicts. Crucially, this framework uses a centralized configuration that allows Light Heads to be added to multiple models simultaneously, unblocking faster training data generation and co-training of downstream models. Successfully deployed at YouTube scale, this approach reduces the iteration cycle for multi-task experimentation from several weeks to days. In this paper, we detail the system architecture, analyze the training dynamics of stateless cold-started heads, compare their performance to full heads, and demonstrate how Light Heads have enabled the rapid A/B experimentation and deployment of new ranking tasks that yield measurable production value.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

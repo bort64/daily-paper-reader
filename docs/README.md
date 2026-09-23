@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-22</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-23</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 5 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 2 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-22 22:13:23 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-23 22:37:06 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日精选5篇推荐系统论文，精读3篇速读2篇，重点聚焦推荐模型的高效扩展与大规模检索排序。最值得看的是Inherit4Rec的参数继承扩展方案和UNIQUE的统一检索排序系统（均8.0分）。建议普通读者优先从这两篇精读入手，再按兴趣浏览长序列多兴趣建模方向。</p>
+<p>今天精读0篇、速读2篇，均为7.0分，方向集中在自动出价基础模型与推荐系统多任务实验加速。</p>
+<p>最值得看的是 OneBid 用统一基础模型覆盖多样 oCPX 广告场景，以及 Lightweight Ranking Heads 用轻量排序头加速生产推荐多任务实验。</p>
+<p>普通读者可先</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">3 篇</strong>
+    <strong class="dpr-home-dashboard-count">0 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Inherit4Rec: Parameter Inheritance for Efficient Scaling of Recommendation Models">Inherit4Rec: Parameter Inheritance for Efficient Scaling of Recommendation Models</span></li><li><span class="dpr-home-dashboard-paper-title" title="UNIQUE: A Unified Retrieval and Ranking System for Large-Scale Feed Recommendation">UNIQUE: A Unified Retrieval and Ranking System for Large-Scale Feed Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="What Makes a Good Semantic ID for Generative Recommendation? A Reproducibility Study">What Makes a Good Semantic ID for Generative Recommendation? A Reproducibility Study</span></li></ul>
+<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
+
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,7 +96,7 @@
     <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="MuSeR: Scalable Long-sequence Recommendation with Multi-interest Modeling">MuSeR: Scalable Long-sequence Recommendation with Multi-interest Modeling</span></li><li><span class="dpr-home-dashboard-paper-title" title="Connected Content Retriever: Dense Graph Edge Features Powering Pre-Ranking at LinkedIn">Connected Content Retriever: Dense Graph Edge Features Powering Pre-Ranking at LinkedIn</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="OneBid: A Unified Auto-Bidding Foundation Model for Diverse oCPX Advertising Scenarios">OneBid: A Unified Auto-Bidding Foundation Model for Diverse oCPX Advertising Scenarios</span></li><li><span class="dpr-home-dashboard-paper-title" title="Lightweight Ranking Heads: Accelerating Multi-Task Experimentation in Production Recommender Systems">Lightweight Ranking Heads: Accelerating Multi-Task Experimentation in Production Recommender Systems</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>2</strong></span></div>
 </section>
