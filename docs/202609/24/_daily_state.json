@@ -1,0 +1,57 @@
+{
+  "date": "20260924",
+  "date_label": "",
+  "generated_at": "2026-09-24 22:39:17 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.23354v3",
+      "route": "202609/24/2609.23354v3-from-ranked-documents-to-reliable-contexts-an-answer-oriented-context-construct-framework-for-ai-search",
+      "title": "From Ranked Documents to Reliable Contexts: An Answer-Oriented Context Construct Framework for AI Search",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向AI搜索的答案导向上下文构建",
+      "first_seen_at": "2026-09-24 22:39:17 UTC",
+      "updated_at": "2026-09-24 22:39:17 UTC"
+    },
+    {
+      "paper_id": "2609.25405v1",
+      "route": "202609/24/2609.25405v1-efficient-iterative-retrieval-with-heterogeneous-batching",
+      "title": "Efficient Iterative Retrieval with Heterogeneous Batching",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "嵌入与生成检索模型的统一服务",
+      "first_seen_at": "2026-09-24 22:39:17 UTC",
+      "updated_at": "2026-09-24 22:39:17 UTC"
+    },
+    {
+      "paper_id": "2609.26921v1",
+      "route": "202609/24/2609.26921v1-distilling-lexical-product-associations-into-deep-transformers-an-extreme-multi-label-approach-for-natural-language-e-commerce-search",
+      "title": "Distilling Lexical Product Associations into Deep Transformers: An Extreme Multi-Label Approach for Natural Language E-Commerce Search",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用DistilBERT Transformer做自然语言电商商品搜索",
+      "first_seen_at": "2026-09-24 22:39:17 UTC",
+      "updated_at": "2026-09-24 22:39:17 UTC"
+    }
+  ]
+}

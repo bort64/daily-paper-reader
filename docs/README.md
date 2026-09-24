@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-23</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-24</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 2 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 3 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-23 22:37:06 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-24 22:39:17 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今天精读0篇、速读2篇，均为7.0分，方向集中在自动出价基础模型与推荐系统多任务实验加速。</p>
-<p>最值得看的是 OneBid 用统一基础模型覆盖多样 oCPX 广告场景，以及 Lightweight Ranking Heads 用轻量排序头加速生产推荐多任务实验。</p>
-<p>普通读者可先</p>
+<p>今日筛选 3 篇 AI 搜索与检索方向论文，均为速读（各 6.0/10），无精读。</p>
+<p>值得关注两条线索：面向 AI 搜索的“答案导向上下文构建”试图把排序文档重组为可靠上下文，以及异构批处理驱动的高效迭代检索。</p>
+<p>普通读者可先看这两篇了解检索增强生成的上下文组织与效率优化，电商搜索那篇留作按需补充。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -93,12 +93,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">2 篇</strong>
+    <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="OneBid: A Unified Auto-Bidding Foundation Model for Diverse oCPX Advertising Scenarios">OneBid: A Unified Auto-Bidding Foundation Model for Diverse oCPX Advertising Scenarios</span></li><li><span class="dpr-home-dashboard-paper-title" title="Lightweight Ranking Heads: Accelerating Multi-Task Experimentation in Production Recommender Systems">Lightweight Ranking Heads: Accelerating Multi-Task Experimentation in Production Recommender Systems</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="From Ranked Documents to Reliable Contexts: An Answer-Oriented Context Construct Framework for AI Search">From Ranked Documents to Reliable Contexts: An Answer-Oriented Context Construct Framework for AI Search</span></li><li><span class="dpr-home-dashboard-paper-title" title="Efficient Iterative Retrieval with Heterogeneous Batching">Efficient Iterative Retrieval with Heterogeneous Batching</span></li><li><span class="dpr-home-dashboard-paper-title" title="Distilling Lexical Product Associations into Deep Transformers: An Extreme Multi-Label Approach for Natural Language E-Commerce Search">Distilling Lexical Product Associations into Deep Transformers: An Extreme Multi-Label Approach for Natural Language E-Commerce Search</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>2</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
 </div>
 

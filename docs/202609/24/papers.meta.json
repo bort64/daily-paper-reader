@@ -1,0 +1,54 @@
+{
+  "label": "2026-09-24",
+  "date": "2026-09-24",
+  "generated_at": "2026-09-24T22:39:19",
+  "count": 3,
+  "papers": [
+    {
+      "paper_id": "202609/24/2609.23354v3-from-ranked-documents-to-reliable-contexts-an-answer-oriented-context-construct-framework-for-ai-search",
+      "section": "quick",
+      "title_en": "From Ranked Documents to Reliable Contexts: An Answer-Oriented Context Construct Framework for AI Search",
+      "authors": "Yunfei Zhong, Yinqiong Cai, Lixin Su, Haosheng Qian, Lixin Zou, Yixing Fan, Sheng Xu, Jiafeng Guo, Daiting Shi, Jingzhou He",
+      "date": "2026-09-20",
+      "pdf": "https://arxiv.org/pdf/2609.23354v3",
+      "score": "6.0",
+      "evidence": "面向AI搜索的答案导向上下文构建",
+      "tldr": "传统Web搜索面向人类，用户自行查看排序文档并整合信息；AI搜索中检索文档成为生成模型输入，目标从按搜索满意度排序转向为正确答案构建可靠上下文。为此提出面向答案的上下文构建三阶段框架：答案支持识别候选文档，内容可信度从来源、时效与事实维度评估可靠性，上下文组织在有限预算下选择、合并与结构化信息。同时给出覆盖先验与后验优化的工业流程及系统评测协议。实验在检索与答案层面均取得一致提升，验证了框架及其工业落地的有效性。",
+      "tags": "query:search-rec",
+      "abstract_en": "Traditional Web search follows a human-facing paradigm in which users inspect ranked documents and synthesize information themselves. In AI Search, retrieved documents instead serve as inputs to a generation model, shifting the retrieval objective from ranking documents by Search Satisfaction to constructing reliable context for correct answer generation. We formulate this shift as answer-oriented context construction through a three-stage framework: (1) Answer Support identifies candidate documents that contribute information to answer generation; (2) Content Trustworthiness assesses whether this information provides a reliable basis for correct answers from source, temporal, and factual perspectives; and (3) Context Organization selects, consolidates, and structures retained information under a finite context budget for consistent and robust generation. We further develop an industrial workflow spanning prior and posterior optimization and establish a systematic evaluation protocol covering both retrieval-side context and final answers. Experiments show consistent improvements at both Retrieval and Answer levels, demonstrating the effectiveness of the framework and its industrial implementation.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202609/24/2609.25405v1-efficient-iterative-retrieval-with-heterogeneous-batching",
+      "section": "quick",
+      "title_en": "Efficient Iterative Retrieval with Heterogeneous Batching",
+      "authors": "Dohyun Park, Hubertus Franke, Daniel G. Waddington, Swaminathan Sundararaman, Yongjoo Park",
+      "date": "2026-09-21",
+      "pdf": "https://arxiv.org/pdf/2609.25405v1",
+      "score": "6.0",
+      "evidence": "嵌入与生成检索模型的统一服务",
+      "tldr": "现代检索常同时使用嵌入与生成模型处理复杂查询，但现有服务系统将二者隔离执行，导致吞吐低、GPU利用率差。Orthrus在统一推理循环中实现异构批处理，通过分块嵌入与增量池化，并按负载感知调整批次组成。在4张A100上，其吞吐较基线提升1.28–4.52倍，在迭代RAG基准上端到端p99延迟最高降低55.8%。该工作为混合嵌入与生成负载的高效服务提供了新方案，并开源代码。",
+      "tags": "query:search-rec",
+      "abstract_en": "Modern information retrieval increasingly employs both embedding and generative models to handle complex queries. However, current serving systems suffer from low throughput and poor GPU utilization because they execute these models in isolation. Coarse-grained partitioning, such as dedicating GPUs to specific tasks, fails to adapt to dynamic workloads and creates computational \"bubbles\". To address these, we present Orthrus, a serving system that performs heterogeneous batching within a unified inference loop. The primary challenge lies in unifying embedding and generation workloads with conflicting computational patterns while optimizing batch composition for high performance. Orthrus addresses these challenges through chunked embedding with incremental pooling and by adjusting batch composition in a workload-aware manner. Evaluation on four A100 GPUs shows that, relative to baseline deployments, Orthrus achieves 1.28$\\times$--4.52$\\times$ higher throughput on controlled workloads and up to 55.8% lower end-to-end p99 latency on an iterative-RAG benchmark. We release our code at https://github.com/illinoisdata/Orthrus .",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202609/24/2609.26921v1-distilling-lexical-product-associations-into-deep-transformers-an-extreme-multi-label-approach-for-natural-language-e-commerce-search",
+      "section": "quick",
+      "title_en": "Distilling Lexical Product Associations into Deep Transformers: An Extreme Multi-Label Approach for Natural Language E-Commerce Search",
+      "authors": "Sunnidhya Roy, Samarpita Bhaumik",
+      "date": "2026-09-22",
+      "pdf": "https://arxiv.org/pdf/2609.26921v1",
+      "score": "6.0",
+      "evidence": "用DistilBERT Transformer做自然语言电商商品搜索",
+      "tldr": "传统电商搜索依赖BM25/TF-IDF等词法匹配，面对对话式、意图驱动或改写查询时常出现词汇不匹配。作者将对话式商品推荐建模为5.4万商品的极端多标签分类，用DistilBERT将TF-IDF近邻相似拓扑蒸馏为稠密上下文表示。在85/15严格自排除划分上，学生模型P@1达93.15%、NDCG@10为0.8845，接近TF-IDF教师上限。十类自然语言查询基准显示其能泛化到关键词匹配失效的隐式意图场景。",
+      "tags": "query:search-rec",
+      "abstract_en": "Traditional e-commerce search platforms rely heavily on inverted indices and token-level lexical matching algorithms (e.g., BM25 and TF-IDF), which frequently fail on conversational, intent-driven, or paraphrased user queries -- the classic vocabulary mismatch problem. We formulate conversational product recommendation as an Extreme Multi-Label Classification (XMLC) problem over an e-commerce catalog of N = 54,000 products spanning 27 balanced retail categories from the Amazon Reviews '23 benchmark. Using a pre-trained DistilBERT transformer encoder, we distill dense item-to-item similarity topologies (generated via TF-IDF cosine similarity over cumulative metadata with K = 50 nearest neighbours) into a deep contextual representation via a pseudo-label knowledge distillation framework.   Evaluated on an exact 85/15 train/validation split (8,089 held-out products across C = 53,923 output classes) with strict self-exclusion enforced, the DistilBERT neural student achieves P@1 = 93.15%, P@5 = 90.08%, NDCG@10 = 0.8845, and MRR@10 = 0.9545, closely recovering the empirical ceiling established by the corrected TF-IDF teacher (P@1 = 98.10%, NDCG@10 = 0.9419, MRR@10 = 0.9882). Furthermore, a qualitative benchmark across ten structured natural language query archetypes -- encompassing situational, cross-category, paraphrased, and negative-constraint queries -- demonstrates that the transformer student generalises substantially beyond keyword matching, successfully resolving implicit user intent where lexical models fail completely. Finally, we analyse the architectural and memory scalability trade-offs of extreme classification projection layers at industrial catalog scale (> 10^6 items) and present a concrete deployment trajectory toward Dual-Encoder (Two-Tower) vector search. Code: https://github.com/Sunnidhya/Distilling-Lexical-Product-Associations-into-Deep-Transformers.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

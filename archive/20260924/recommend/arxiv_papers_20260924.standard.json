@@ -1,0 +1,137 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-24T22:37:10.513531+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.23354v3",
+      "source": "arxiv",
+      "title": "From Ranked Documents to Reliable Contexts: An Answer-Oriented Context Construct Framework for AI Search",
+      "abstract": "Traditional Web search follows a human-facing paradigm in which users inspect ranked documents and synthesize information themselves. In AI Search, retrieved documents instead serve as inputs to a generation model, shifting the retrieval objective from ranking documents by Search Satisfaction to constructing reliable context for correct answer generation. We formulate this shift as answer-oriented context construction through a three-stage framework: (1) Answer Support identifies candidate documents that contribute information to answer generation; (2) Content Trustworthiness assesses whether this information provides a reliable basis for correct answers from source, temporal, and factual perspectives; and (3) Context Organization selects, consolidates, and structures retained information under a finite context budget for consistent and robust generation. We further develop an industrial workflow spanning prior and posterior optimization and establish a systematic evaluation protocol covering both retrieval-side context and final answers. Experiments show consistent improvements at both Retrieval and Answer levels, demonstrating the effectiveness of the framework and its industrial implementation.",
+      "authors": [
+        "Yunfei Zhong",
+        "Yinqiong Cai",
+        "Lixin Su",
+        "Haosheng Qian",
+        "Lixin Zou",
+        "Yixing Fan",
+        "Sheng Xu",
+        "Jiafeng Guo",
+        "Daiting Shi",
+        "Jingzhou He"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-20T04:41:42+00:00",
+      "link": "https://arxiv.org/pdf/2609.23354v3",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "answer-oriented context construction for AI search",
+      "llm_evidence_cn": "面向AI搜索的答案导向上下文构建",
+      "llm_evidence": "面向AI搜索的答案导向上下文构建",
+      "canonical_evidence": "面向AI搜索的答案导向上下文构建",
+      "llm_tldr_en": "This work reframes AI Search retrieval from document ranking to answer-oriented context construction, proposing a three-stage framework of answer support, content trustworthiness, and context assembly.",
+      "llm_tldr_cn": "传统网页搜索以人工阅读排序文档为主，而在AI搜索中检索文档转而作为生成模型的输入，检索目标从搜索满意度排序变为构建可靠上下文。本文提出答案导向的上下文构建三阶段框架，包括答案支持识别、内容可信度评估与上下文组装。该框架为生成式搜索中的检索质量评估提供了新范式，有助于提升答案生成正确性。",
+      "llm_tldr": "传统网页搜索以人工阅读排序文档为主，而在AI搜索中检索文档转而作为生成模型的输入，检索目标从搜索满意度排序变为构建可靠上下文。本文提出答案导向的上下文构建三阶段框架，包括答案支持识别、内容可信度评估与上下文组装。该框架为生成式搜索中的检索质量评估提供了新范式，有助于提升答案生成正确性。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.25405v1",
+      "source": "arxiv",
+      "title": "Efficient Iterative Retrieval with Heterogeneous Batching",
+      "abstract": "Modern information retrieval increasingly employs both embedding and generative models to handle complex queries. However, current serving systems suffer from low throughput and poor GPU utilization because they execute these models in isolation. Coarse-grained partitioning, such as dedicating GPUs to specific tasks, fails to adapt to dynamic workloads and creates computational \"bubbles\". To address these, we present Orthrus, a serving system that performs heterogeneous batching within a unified inference loop. The primary challenge lies in unifying embedding and generation workloads with conflicting computational patterns while optimizing batch composition for high performance. Orthrus addresses these challenges through chunked embedding with incremental pooling and by adjusting batch composition in a workload-aware manner. Evaluation on four A100 GPUs shows that, relative to baseline deployments, Orthrus achieves 1.28$\\times$--4.52$\\times$ higher throughput on controlled workloads and up to 55.8% lower end-to-end p99 latency on an iterative-RAG benchmark. We release our code at https://github.com/illinoisdata/Orthrus .",
+      "authors": [
+        "Dohyun Park",
+        "Hubertus Franke",
+        "Daniel G. Waddington",
+        "Swaminathan Sundararaman",
+        "Yongjoo Park"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.CL"
+      ],
+      "published": "2026-09-21T20:55:10+00:00",
+      "link": "https://arxiv.org/pdf/2609.25405v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "unified serving of embedding and generative retrieval models",
+      "llm_evidence_cn": "嵌入与生成检索模型的统一服务",
+      "llm_evidence": "嵌入与生成检索模型的统一服务",
+      "canonical_evidence": "嵌入与生成检索模型的统一服务",
+      "llm_tldr_en": "Orthrus is a serving system that unifies embedding and generative retrieval models in one inference loop via heterogeneous batching, improving throughput and GPU utilization over isolated execution.",
+      "llm_tldr_cn": "现代检索同时依赖嵌入模型与生成模型，但现有服务系统分别执行二者，导致吞吐低、GPU利用率差并产生计算气泡。本文提出Orthrus服务系统，在统一推理循环中实现异构批处理，通过分块嵌入与增量池化调和两类冲突的计算模式，并优化批组成。实验表明该系统能缓解资源空转并提升吞吐与利用率。该工作为嵌入与生成模型混合的检索服务提供了统一的推理调度方案。",
+      "llm_tldr": "现代检索同时依赖嵌入模型与生成模型，但现有服务系统分别执行二者，导致吞吐低、GPU利用率差并产生计算气泡。本文提出Orthrus服务系统，在统一推理循环中实现异构批处理，通过分块嵌入与增量池化调和两类冲突的计算模式，并优化批组成。实验表明该系统能缓解资源空转并提升吞吐与利用率。该工作为嵌入与生成模型混合的检索服务提供了统一的推理调度方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "joint modeling and serving of search, advertising, and recommendation systems at scale",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.26921v1",
+      "source": "arxiv",
+      "title": "Distilling Lexical Product Associations into Deep Transformers: An Extreme Multi-Label Approach for Natural Language E-Commerce Search",
+      "abstract": "Traditional e-commerce search platforms rely heavily on inverted indices and token-level lexical matching algorithms (e.g., BM25 and TF-IDF), which frequently fail on conversational, intent-driven, or paraphrased user queries -- the classic vocabulary mismatch problem. We formulate conversational product recommendation as an Extreme Multi-Label Classification (XMLC) problem over an e-commerce catalog of N = 54,000 products spanning 27 balanced retail categories from the Amazon Reviews '23 benchmark. Using a pre-trained DistilBERT transformer encoder, we distill dense item-to-item similarity topologies (generated via TF-IDF cosine similarity over cumulative metadata with K = 50 nearest neighbours) into a deep contextual representation via a pseudo-label knowledge distillation framework.   Evaluated on an exact 85/15 train/validation split (8,089 held-out products across C = 53,923 output classes) with strict self-exclusion enforced, the DistilBERT neural student achieves P@1 = 93.15%, P@5 = 90.08%, NDCG@10 = 0.8845, and MRR@10 = 0.9545, closely recovering the empirical ceiling established by the corrected TF-IDF teacher (P@1 = 98.10%, NDCG@10 = 0.9419, MRR@10 = 0.9882). Furthermore, a qualitative benchmark across ten structured natural language query archetypes -- encompassing situational, cross-category, paraphrased, and negative-constraint queries -- demonstrates that the transformer student generalises substantially beyond keyword matching, successfully resolving implicit user intent where lexical models fail completely. Finally, we analyse the architectural and memory scalability trade-offs of extreme classification projection layers at industrial catalog scale (> 10^6 items) and present a concrete deployment trajectory toward Dual-Encoder (Two-Tower) vector search. Code: https://github.com/Sunnidhya/Distilling-Lexical-Product-Associations-into-Deep-Transformers.",
+      "authors": [
+        "Sunnidhya Roy",
+        "Samarpita Bhaumik"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-22T18:16:41+00:00",
+      "link": "https://arxiv.org/pdf/2609.26921v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "DistilBERT transformer for natural language e-commerce product search",
+      "llm_evidence_cn": "用DistilBERT Transformer做自然语言电商商品搜索",
+      "llm_evidence": "用DistilBERT Transformer做自然语言电商商品搜索",
+      "canonical_evidence": "用DistilBERT Transformer做自然语言电商商品搜索",
+      "llm_tldr_en": "This paper casts conversational product recommendation as extreme multi-label classification over 54,000 products, distilling TF-IDF item similarity into a DistilBERT encoder to alleviate vocabulary mismatch in e-commerce search.",
+      "llm_tldr_cn": "传统电商搜索依赖倒排索引与词级匹配算法，难以应对口语化、意图驱动或改写的查询，存在经典词汇不匹配问题。本文把对话式商品推荐建模为覆盖五万四千个商品、27个品类的极端多标签分类问题，使用预训练DistilBERT编码器蒸馏由TF-IDF余弦相似度构建的商品间相似拓扑。方法缓解了词汇不匹配并提升自然语言商品搜索效果。该工作表明将词汇关联蒸馏进深层Transformer能有效增强电商搜索与推荐的语义匹配能力。",
+      "llm_tldr": "传统电商搜索依赖倒排索引与词级匹配算法，难以应对口语化、意图驱动或改写的查询，存在经典词汇不匹配问题。本文把对话式商品推荐建模为覆盖五万四千个商品、27个品类的极端多标签分类问题，使用预训练DistilBERT编码器蒸馏由TF-IDF余弦相似度构建的商品间相似拓扑。方法缓解了词汇不匹配并提升自然语言商品搜索效果。该工作表明将词汇关联蒸馏进深层Transformer能有效增强电商搜索与推荐的语义匹配能力。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "modern transformer and generative architectures for web search and recommender systems beyond traditional statistical models",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
