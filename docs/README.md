@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-24</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-25</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 3 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 7 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>5</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-24 22:39:17 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-25 22:27:20 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日筛选 3 篇 AI 搜索与检索方向论文，均为速读（各 6.0/10），无精读。</p>
-<p>值得关注两条线索：面向 AI 搜索的“答案导向上下文构建”试图把排序文档重组为可靠上下文，以及异构批处理驱动的高效迭代检索。</p>
-<p>普通读者可先看这两篇了解检索增强生成的上下文组织与效率优化，电商搜索那篇留作按需补充。</p>
+<p>2026-09-25 日报：7 篇推荐系统论文中精读 5 篇，其中两篇 9.0 分领跑。</p>
+<p>最值得看的是跨语言代码混合做生成式推荐（9.0 分）和 X-Rec 技术报告（9.0 分），速读的 LLM 重排序（6.0 分）与 LSF-SR 序列推荐（6.0 分）可作为延伸。</p>
+<p>普通读者可先读两篇 9.0 分精读，再按兴趣挑一篇速读了解 LLM 重排序或序列推荐思路。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -80,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">0 篇</strong>
+    <strong class="dpr-home-dashboard-count">5 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Cross-Country Code-Mixing for Generative Recommendation">Cross-Country Code-Mixing for Generative Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="X-Rec Technical Report">X-Rec Technical Report</span></li><li><span class="dpr-home-dashboard-paper-title" title="Learning Better Reasoning for Generative Recommendation with Semantic IDs">Learning Better Reasoning for Generative Recommendation with Semantic IDs</span></li></ul>
   </div>
-
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>5</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -93,12 +93,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">3 篇</strong>
+    <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="From Ranked Documents to Reliable Contexts: An Answer-Oriented Context Construct Framework for AI Search">From Ranked Documents to Reliable Contexts: An Answer-Oriented Context Construct Framework for AI Search</span></li><li><span class="dpr-home-dashboard-paper-title" title="Efficient Iterative Retrieval with Heterogeneous Batching">Efficient Iterative Retrieval with Heterogeneous Batching</span></li><li><span class="dpr-home-dashboard-paper-title" title="Distilling Lexical Product Associations into Deep Transformers: An Extreme Multi-Label Approach for Natural Language E-Commerce Search">Distilling Lexical Product Associations into Deep Transformers: An Extreme Multi-Label Approach for Natural Language E-Commerce Search</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search">Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search</span></li><li><span class="dpr-home-dashboard-paper-title" title="LSF-SR: Latent Semantic Fusion for Sequential Recommendation via Flow-based Conditional Variational Autoencoders">LSF-SR: Latent Semantic Fusion for Sequential Recommendation via Flow-based Conditional Variational Autoencoders</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>2</strong></span></div>
 </section>
 </div>
 

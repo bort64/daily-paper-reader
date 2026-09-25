@@ -1,0 +1,290 @@
+Title: Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search
+
+URL Source: https://arxiv.org/pdf/2609.25825v1
+
+Published Time: Wed, 23 Sep 2026 00:49:45 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search 
+
+# Aleksandr V. Petrov ∗
+
+aleksandrv@spotify.com Spotify UK 
+
+# Nathan Stein ∗
+
+nathanstein@spotify.com Spotify Sweden 
+
+# Erik Lybecker ∗
+
+erikl@spotify.com Spotify Sweden 
+
+# Emma Schüldt 
+
+eschuldt@spotify.com Spotify Sweden 
+
+# Daniel Lazarovski 
+
+dnll@spotify.com Spotify Stockholm, Sweden 
+
+# Hugues Bouchard 
+
+hb@spotify.com Spotify Spain 
+
+# Mounia Lalmas 
+
+mounia@acm.org Spotify UK 
+
+## Abstract 
+
+Personalised search sits at the boundary between retrieval and rec-ommendation: it must satisfy explicit query intent while incorpo-rating user context and collective interaction evidence. LLM-based cross-encoders offer a single reranking interface for these signals. In industrial search, however, relevance also depends heavily on be-havioural signals such as click-through rates and historical search success. These signals can be injected directly into the language-model prompt, but doing so creates an important risk: the model may over-rely on historical statistics instead of learning semantic and user-context patterns that generalise to sparse or previously unseen searches. We study this problem in the personalised search system of a large-scale audio streaming platform using Query Slice Stats (QSS), a collective, interaction-derived behavioural feature summarising historical success for query–candidate pairs. We first show that naïvely injecting QSS into the cross-encoder substantially improves ranking quality when QSS is available, but causes the model to depend heavily on this feature, reducing performance on searches where such statistics are sparse or missing. We address this problem with dual-sample feature-dropout training, a deterministic paired feature-removal strategy that presents each example once with QSS included and once with QSS intentionally removed. Offline experiments show that injecting QSS improves ranking quality by 13.3% when the feature is available; however, models trained with QSS always present perform worse in a diagnostic evaluation where QSS is removed. Dual-sample feature-dropout preserves these ranking gains while improving QSS-removed per-formance by 4.0% relative to naïve QSS training. In a live online test, both QSS-aware variants improve search success by roughly 2%. The aggregate test does not distinguish dual-sample from features-only training, while the cold-start comparison is directionally consistent with the offline results. These results show that paired feature-present and feature-removed training can reduce the tension between exploiting strong 
+
+> ∗Authors contributed equally to this research.
+
+behavioural statistics and remaining robust when those statistics are unavailable. 
+
+## CCS Concepts 
+
+• Information systems → Information retrieval ; Retrieval models and ranking ; Personalization .
+
+## Keywords 
+
+Personalised Search, Search and Recommendation, Cross-Encoder Reranking, Large Language Models, Behavioural Signal Fusion, Shortcut Learning, Missing-Feature Robustness 
+
+## 1 Introduction 
+
+Personalised search sits at the boundary between retrieval and recommendation: it combines explicit query intent with user pref-erences and collective evidence from historical interactions. On the one hand, it can exploit strong behavioural signals, such as historical click-through rates for frequent query-item pairs, which are often highly predictive on head queries. On the other hand, it must generalise to the long tail of rare and previously unseen queries and items, where such statistics are sparse or unavailable. This tension is amplified by the fact that the same query may re-quire different rankings for different users, while query frequencies typically follow a heavy-tailed distribution with a small head and a vast tail of rare queries. Pre-trained language models have recently transformed ranking in both information retrieval and recommender systems. In infor-mation retrieval, jointly encoding query and passage text with a pre-trained language model achieves state-of-the-art performance on benchmarks such as MS MARCO [19, 20]. In recommender sys-tems, jointly encoding user behaviour histories with LLMs similarly achieves state-of-the-art results on benchmarks such as MovieLens and Amazon Reviews [8, 10, 32]. In personalised search, these two traditions meet within a single ranking problem: query and candi-date content provide retrieval-style evidence, while user context and aggregate interactions provide recommendation-style evidence. Architectures that concatenate such conditioning context with each arXiv:2609.25825v1 [cs.IR] 22 Sep 2026 Petrov et al. 
+
+candidate and apply full self-attention across the pair are commonly termed cross-encoders [11, 24, 28]. Academic cross-encoders are typically evaluated on purely tex-tual inputs, such as a query string paired with a document passage. Industrial ranking systems, however, operate in a much richer fea-ture space. Production rankers rely heavily on numerical, categori-cal, and interaction-derived features, including click rates, success rates, impression counts, and popularity scores [12]. These signals are naturally represented as structured features rather than free text, and incorporating them into cross-encoders is non-trivial because the model input is primarily a sequence of tokens. Consequently, feature-based rankers such as gradient-boosted decision trees re-main widely used industrial baselines [17], partly because they han-dle heterogeneous feature types, skewed distributions, and missing values more naturally than standard neural architectures [7]. Recent LLM rerankers make it possible to expose such signals through the prompt by converting structured features into textual tokens. This provides a simple, production-compatible way to com-bine semantic, personalised, and behavioural signals within a single reranker without architectural modifications. However, we show that this flexibility introduces an important failure mode. When injected features are highly predictive of relevance, the model may over-rely on these behavioural statistics instead of learning se-mantic and personalised relevance patterns that generalise beyond frequent query-item pairs. As a result, ranking quality can degrade on sparse, long-tail, and cold-start traffic where historical statistics are unreliable or unavailable. We study this phenomenon through the lens of shortcut learning [6], where models exploit easy pre-dictive signals without learning the intended semantic behaviour. The prompt therefore acts as a signal-fusion interface, combining semantic, user-context, and collective behavioural evidence. Our work centres on Query Slice Stats (QSS), a collective, interaction-derived behavioural feature in the platform’s search system that summarises historical success for query-item pairs. QSS is particularly useful for studying this trade-off because it is highly predictive on frequent traffic while becoming sparse or unavail-able for rare queries and newly introduced items. We convert QSS values into ordinal prompt tokens, allowing the cross-encoder to condition directly on historical search success through the prompt. We then apply dual-sample feature-dropout training, which pairs each QSS-present training example with a matched QSS-removed view. This encourages the reranker to use behavioural statistics when informative while remaining effective when it must rely more heavily on semantic and user-context signals. To evaluate this trade-off, we measure ranking quality both when QSS is available and when it is removed at evaluation time, pro-viding a direct probe of the model’s dependence on behavioural statistics. We further slice the analysis by query and item train-ing frequency to distinguish behaviour on head traffic from sparse and cold-start regimes. Our experiments show that naïvely inject-ing QSS substantially improves ranking quality, but also causes the model to depend heavily on this feature. Dual-sample feature-dropout training preserves most of these gains while improving QSS-removed performance; popularity-sliced results show its clear-est advantage on sparse and cold-start traffic. In summary, our contributions are as follows: (1) We describe a production-compatible prompt representation for injecting structured statistical features into LLM-based cross-encoders, instantiated through QSS in a large-scale personalised search system. (2) We identify shortcut learning as a practical failure mode of prompt-based feature injection: strong behavioural statistics improve ranking quality on frequent traffic, but can reduce per-formance on sparse and cold-start searches where such signals are unavailable. (3) We evaluate a deterministic paired feature-removal strategy that preserves QSS-derived ranking gains offline while improv-ing QSS-removed and long-tail performance; a live A/B/C test separately confirms the production value of QSS-aware rerank-ing. 
+
+## 2 Prior Work and Context 
+
+Cross-encoder reranking. Cross-encoders are established second-stage rerankers in information retrieval [20], with text-to-text, LLM-based, latency-aware, and deployed variants extending the archi-tecture beyond academic benchmarks [18, 21–23, 34]. We use a discriminative cross-encoder to score candidates from a first-stage retrieval system, following the candidate-generation-then-ranking pattern common to large-scale search and recommendation [4, 32]. The distinctive question in our setting is how that reranker com-bines semantic, user-context, and interaction-derived evidence. 
+
+Semantic and behavioural signal fusion. Production rankers routinely combine memorisation-oriented sparse signals with learned representations that support generalisation [3, 31]. Recent CTR and recommendation models extend this pattern by fusing language-model representations with non-textual features, collab-orative embeddings, or numerical and categorical side informa-tion [2, 15, 30, 33]. Behavioural aggregates over query–item histo-ries likewise remain central in product-search ranking [16]. A close information-retrieval precedent injects a first-stage BM25 score into a BERT reranker as text [1]; our setting instead examines an interaction-derived query–candidate statistic and treats its prompt injection as a robustness problem when the statistic is sparse or unavailable. 
+
+Missing-signal robustness and cold start. Shortcut learning de-scribes reliance on an easy predictive signal that does not capture the intended behaviour [6]. Relevant methodological analogues deliberately train for degraded inputs: DropoutNet masks collabora-tive representations to support cold-start recommendation, while ro-bust missing-input training exposes sequential recommenders to in-complete interaction histories [26, 29]. Industrial retrieval work also shows that robust training objectives can improve generalisation, including for cold-start users, although it does not study missing prompt features directly [14]. These approaches motivate our paired QSS-present and QSS-removed views, whereas work on semantic-ID generalisation, long-tail product search, and cold-item embed-dings motivates the sparse-regime evaluation slices [13, 27, 35]. Our focus is whether a strong behavioural feature becomes a shortcut inside an LLM reranker, and whether deterministic paired feature removal reduces that reliance. Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search 
+
+## 3 System and Problem Setup 
+
+This section describes the personalised search reranking setting studied in this paper. Section 3.1 introduces the cross-encoder reranker and the production search candidates it reranks, while Section 3.2 describes how semantic, personalised, and behavioural signals are represented in the prompt. 
+
+## 3.1 Model 
+
+Our reranker is built on a pre-trained open-source language model with 0.6B parameters. The model vocabulary is extended with Se-mantic IDs, grounded in platform interaction data using a procedure similar to [5, 9]. The reranker operates over candidates retrieved by the platform’s search stack, which spans music, podcasts, and audiobooks. Ranking is formulated as a pointwise prediction problem. For each query–candidate pair, the model jointly encodes the user con-text, search query, and candidate item, and produces a relevance score used to reorder the candidate set. Personalisation is central to this setting. In personalised search, relevance is not determined by the query and candidate alone: user context provides additional evidence about intent and preference. The same query may correspond to different intents for different users, while recent and long-term behaviour, market, language, and other contextual signals can help disambiguate those intents. The cross-encoder therefore combines explicit intent from the query with implicit preference information derived from user context. This formulation also reflects a broader shift in industrial ranking systems. Traditional production rankers typically combine hetero-geneous semantic, behavioural, and contextual signals through specialised feature-engineering pipelines. In contrast, LLM-based rerankers provide a unified modelling framework in which these signals can be represented directly within the prompt and jointly processed by a single model. 
+
+## 3.2 Prompt Composition 
+
+Each scoring instance is represented as a structured prompt con-taining semantic, personalised, and behavioural information. The prompt includes the search query, user-context fields such as market and recent listening history, and candidate fields such as title, cre-ator, content type, and a learned Semantic ID. Semantic IDs provide compact discrete representations for catalogue entities, allowing item identity information to be encoded alongside natural-language metadata. Beyond semantic and contextual information, the prompt also incorporates numerical and aggregate behavioural features. Before insertion, continuous or high-cardinality values are discretised into coarse textual tiers. Item popularity and query-item success statistics are therefore represented as bucketed feature tokens rather than raw counts or rates. This allows behavioural signals such as QSS (defined in Section 4.1) to influence the reranker through the same textual interface as semantic signals. This prompt design provides a unified textual interface through which the cross-encoder can jointly model semantic content, user context, and behavioural statistics. Figure 1 illustrates the main signal groups included in the prompt. The remainder of the paper focuses on QSS, the behavioural feature at the centre of our analysis,       
+
+> Semantic evidence: query text; candidate title, creator, content type, and Semantic ID
+> User-context evidence: country and recent Semantic IDs
+> Behavioural evidence: popularity tier and QSS success-rate tier
+> Decision: predict Yif the candidate satisfies the search
+
+Figure 1: Schematic prompt composition for the cross-encoder, grouped into semantic, user-context, and be-havioural evidence. The production prompt contains addi-tional fields and formatting. 
+
+because it is both highly predictive on frequent query-item slices and potentially unreliable or unavailable in sparse regimes. 
+
+## 4 QSS-Aware Cross-Encoder Training 
+
+This section introduces the behavioural feature and training frame-work used to study shortcut learning in LLM-based rerankers. Sec-tion 4.1 defines Query Slice Stats (QSS), the historical query-item signal exposed to the cross-encoder, and explains why such features create a tension between memorisation and semantic generalisa-tion. Section 4.2 then describes the supervised fine-tuning setup and the dual-sample training objective used to control reliance on behavioural statistics. 
+
+## 4.1 Query Slice Stats (QSS) 
+
+Feature definition. Query Slice Stats (QSS) is a production be-havioural feature that captures historical search success for a query–candidate slice. The underlying feature store maintains ag-gregate interaction statistics for multiple slice definitions, includ-ing candidate item, query, query–item, and query–item–country combinations. Each slice includes counts together with click and search-success rates represented in basis points (0–10,000). In this work, QSS refers specifically to the query–item–country success-rate feature: the historical fraction of searches for the same query, candidate item, and user country that resulted in a successful interaction. This makes QSS a strong memorisation-style signal for frequently observed query-item combinations, while providing little or no useful evidence for rare or previously unseen ones. Rather than injecting raw numerical values into the prompt, the continuous success rate is discretised into ordinal tiers derived from percentiles of the historical feature distribution: very_low ,
+
+low , medium , high , and very_high . Missing values are treated as 
+
+unknown and omitted from the prompt. When present, the resulting tier is rendered as a candidate-level success_rate token, allowing the cross-encoder to condition on behavioural evidence through the same textual interface used for semantic and contextual features. 
+
+Shortcut learning. Behavioural statistics such as QSS are often highly predictive on frequent queries because they encode repeated historical interactions. However, for rare or previously unseen query-item pairs, these signals may be sparse, noisy, or entirely un-available. This issue is particularly important in personalised search, where newly introduced items and long-tail queries frequently lack sufficient historical evidence. In these sparse regimes, the reranker must rely more heavily on semantic matching and user context. If training encourages ex-cessive reliance on behavioural statistics, the model may exhibit Petrov et al. 
+
+shortcut learning: highly predictive historical signals can dominate semantic and personalised evidence needed for generalisation. The central challenge is therefore not simply how to expose behavioural statistics to an LLM reranker, but how to use them without degrad-ing performance on sparse and cold-start traffic. Our objective is to train the cross-encoder to exploit QSS when reliable while remaining effective when such signals are sparse or absent. 
+
+## 4.2 Supervised Fine Tuning 
+
+Pointwise relevance scoring. Given a search query and a candidate item, reranking is formulated as a binary relevance prediction prob-lem. The prompt presents the user context, query, and candidate features, and the causal language model predicts a single relevance token: “Y” (relevant) or “N” (not relevant). At inference time, the log-probability assigned to “Y” at the decision position is used as the relevance score for reranking. This label-token formulation follows the same principle as monoT5-style reranking [21], where relevance prediction is cast as next-token generation over a small output vocabulary. The ap-proach allows the reranker to leverage the pretrained language model directly, without introducing task-specific scoring heads. 
+
+Supervised fine-tuning loss. Training uses standard cross-entropy loss. Given a prompt 𝑥 , let s = (𝑠 1, . . . , 𝑠 𝑇 ) denote the tokenised sequence and 𝑦 the target completion token. The supervised fine-tuning (SFT) training objective is: 
+
+LSFT (𝑥, 𝑦 ) = − log 𝑝 𝜃 (𝑦 | s) (1) where 𝜃 denotes model parameters. In our setting, 𝑦 ∈ { Y, N} is a single relevance label, and loss is computed only at the label position rather than across the full prompt sequence. 
+
+Dual-sample feature-dropout loss. Throughout, we use QSS-removed to mean that QSS is intentionally removed from the prompt for training or evaluation, and QSS unavailable to mean that reli-able QSS is naturally missing or unreliable in sparse and cold-start regimes. To discourage shortcut learning, we use a deterministic paired feature-removal strategy, which we call dual-sample feature-dropout training. This is a prompt-level data-augmentation scheme rather than a new learning principle: every labelled example con-tributes a QSS-present view and a matched QSS-removed view. The two prompts are: 
+
+• 𝑥 +: the full prompt containing all features; 
+
+• 𝑥 − : a QSS-removed prompt identical to 𝑥 + except that the QSS feature is intentionally removed. Both prompts share the same target label 𝑦 . The loss is computed independently for each view and combined as 
+
+Lmixture = 𝛼 · L SFT (𝑥 +, 𝑦 ) + ( 1 − 𝛼 ) · L SFT (𝑥 −, 𝑦 ) (2) where 𝛼 ∈ [ 0, 1] controls the relative weight assigned to the QSS-present view. Unlike ordinary training with the full prompt only, this objective explicitly exposes the model to both behavioural-feature-present and behavioural-feature-removed views of every labelled query– candidate pair. The QSS-removed term therefore acts as a regulariser against excessive dependence on behavioural statistics, encouraging the reranker to remain effective when such signals are sparse, noisy, or unavailable. Evaluating both views requires additional training computation relative to a single-view update. At serving time, however, the method uses the same single cross-encoder forward pass and un-changed prompt interface as the corresponding QSS-aware model. 
+
+Relation to random QSS dropout. The QSS-removed term can be viewed as a targeted prompt-level data augmentation strategy. For each QSS-present example 𝑥 +, we construct a matched QSS-removed variant 𝑥 − while keeping the target label 𝑦 unchanged. This is similar in spirit to feature-level dropout, since the model is trained to make the correct prediction when a strongly predictive prompt feature is removed. Random QSS dropout is a stochastic variant of the same feature-removal idea: rather than evaluating both views for every labelled example, it samples one view per update. At the level of expected QSS exposure, the dropout probability 𝑝 corresponds to the QSS-removed weight 1 − 𝛼 in the dual-sample mixture. We evaluated random dropout in a separate offline sweep; it shows that stochastic feature removal can also improve QSS-removed performance, but it does not provide a matched statistical comparison establishing that either schedule is superior. We therefore treat random dropout as a supporting ablation and focus on the deterministic formulation because it makes the paired QSS-present/QSS-removed objective explicit. This should not be confused with a standard neural Dropout 
+
+layer, which randomly masks hidden activations inside the net-work during the forward pass. Here, dropout refers to removing a semantically defined prompt feature before tokenisation. The QSS-removed view must therefore be explicitly constructed by deleting the QSS feature from the input prompt. Because the paired prompts differ only by the QSS feature, the deterministic formulation may also enable shared-prefix computa-tion, for example through key-value caching in implementations that support it. In summary, QSS is exposed to the reranker as a behavioural prompt feature, while the training objective controls the model’s re-liance on that feature through paired QSS-present and QSS-removed supervision. The following section evaluates whether this design preserves the ranking gains from behavioural statistics while im-proving robustness in sparse and cold-start regimes. 
+
+## 5 Experiments 
+
+We evaluate how behavioural statistics affect ranking quality, se-mantic generalisation, and robustness in LLM rerankers. We first establish the strength of QSS as a behavioural ranking signal and examine how injecting it into the prompt affects ranking perfor-mance. We then study the trade-off between exploiting behavioural statistics and preserving semantic generalisation under the dual-sample feature-dropout objective. Finally, we analyse how these effects vary across the query and item popularity spectrum, with particular focus on sparse and cold-start regimes. 
+
+## 5.1 Experimental Setup 
+
+Dataset. Training and evaluation data are constructed from pro-duction search interaction logs collected over a two-week period at Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search 
+
+Table 1: Dataset statistics. Training frequency is the number of sessions containing a given query (or item) in the training set. Long tail / short head split at frequency 500.                                                
+
+> Training Eval
+> Sessions 1,000,000 10,000 Unique queries 452,124 8,875 Total candidates 517,311,726 5,140,399 Avg. candidates / session 517 514 Unique items 46,149,749 2,519,719 Positive items 1,303,043 12,996 Avg. positives / session 1.30 1.30
+> Eval sessions by query training frequency
+> 0 (cold start) —3,471 1–5 —2,356 6–20 —1,587 21–100 —1,518 101–500 —848
+> >500 —220
+> Long tail ( ≤500) —9,780 Short head ( >500) —220
+> Eval sessions by avg. positive-item training frequency
+> 0 (cold start) —2,803 1–5 —2,624 6–20 —1,961 21–100 —1,914 101–500 —568
+> >500 —130
+> Long tail ( ≤500) —9,870 Short head ( >500) —130
+
+a large-scale audio streaming platform. Each session corresponds to a user-issued search query paired with the candidate set returned by the first-stage retrieval system. A candidate is labelled positive if the user has a successful interaction with it, such as streaming a track, following an artist, or adding a podcast to their library. Table 1 summarises the dataset statistics. The training set contains 1M sessions spanning 452K unique queries and 46.1M unique candidate items. The held-out evalu-ation set contains 10K sessions (8.9K unique queries and 2.5M unique items) sampled from a non-overlapping time period. Candi-dates span multiple content types, including tracks, artists, albums, playlists, podcast shows, podcast episodes, and audiobooks. The task combines retrieval and recommendation characteris-tics. While the query provides an explicit intent signal, successful interactions depend not only on textual relevance but also on user preference. For example, a user searching for “workout playlist” may prefer a result aligned with their listening profile rather than the most lexically similar candidate. The reranker must therefore combine semantic query–candidate matching with personalised preference modelling. The experimental setup is heavily sparse: sessions contain on average 514 retrieved candidates but only 1.3 positive items. This sparsity is central to the shortcut-learning problem studied in this paper. Behavioural statistics such as QSS are highly informative on frequent traffic, but sparse or unavailable on rare queries and cold-start items. 
+
+Popularity distribution. Query and item popularity follow a heavy-tailed distribution, which directly shapes the shortcut-learning behaviour studied in this paper. In the evaluation set, 34.7% of queries are unseen during training (frequency 0), and the median query appears only 3 times in the training data. Only 2.2% of evaluation sessions (220 out of 10K) belong to the short head, defined as queries appearing more than 500 times during training; the remaining 97.8% form the long tail. A similar pattern holds for items: the median positive item appears 4 times in training, and only 1.6% of sessions contain positive items from the short head. Throughout the paper, we use a threshold of 500 to separate head from tail traffic. This boundary lies between the 95th and 99th percentiles of both query and item frequency distributions and cor-responds to the transition between slices with rich behavioural evi-dence and sparse regimes where the model must rely more heavily on semantic generalisation. The same threshold is used consistently across all analyses and figures. 1
+
+Metrics. Ranking quality is evaluated using NDCG@7 and Re-call@7, computed per session and averaged over the evaluation set. NDCG@7 measures ranking quality while accounting for the positions of relevant results, whereas Recall@7 measures whether relevant items appear within the top-ranked results. The cutoff of 7 corresponds to the number of results visible without scrolling in the production search interface, making it a natural production-relevant threshold. Statistical significance is assessed using paired 
+
+𝑡 -tests ( 𝑝 < .05) over session-level scores. 
+
+Training. All models initialise from the same PLUM-style [5, 9] 0.6B-parameter cross-encoder checkpoint and are fine-tuned for one epoch on the 1M-session training set. Ranking is trained pointwise, with each query–candidate pair treated as an independent training instance. Optimisation uses a batch size of 4, a learning rate of 10 −4
+
+with a warmup-stable-decay schedule, and gradient clipping at 1.0. To study the effect of dual-sample feature-dropout training, we vary the mixture weight 𝛼 ∈ { 0, 0.25 , 0.5, 0.75 , 1.0}. Each model is evaluated under two conditions: with the full production prompt including QSS (“All feat.”), and under QSS-removed evaluation, where QSS is intentionally removed from the prompt (“No QSS”). The latter directly probes semantic generalisation independent of behavioural statistics. 
+
+Diagnostic reference points. Table 2 reports four diagnostic ref-erence points evaluated on the same candidate sets as the cross-encoder variants. Random assigns candidates uniformly at random within each session. BM25 metadata performs lexical matching between the search query and candidate metadata using standard Okapi BM25 parameters ( 𝑘 1 = 1.2, 𝑏 = 0.75) without tuning [25]. monoT5 applies text-to-text reranking to the search query and candidate metadata following the standard monoT5 setup in [21]. 2
+
+BM25 metadata and monoT5 serve as lexical and pretrained text-only relevance anchors; neither is tuned or presented as a com-petitive production baseline. QSS only scores candidates using the raw query–item success statistic before discretisation into prompt tiers and assigns missing values a score of 0. It measures how much standalone ranking signal the potential shortcut carries, rather than representing a complete ranking system.   
+
+> 1For simplicity, we define cold-start queries as queries with zero training occurrences and cold-start items as items with zero positive training occurrences. Unlike cold-start queries, cold-start items may still appear as non-relevant candidates in the training data.
+> 2We use the castorini/monot5-base-msmarco-10k checkpoint. Petrov et al.
+
+## 5.2 Results 
+
+A central question in this work is whether behavioural statistics are strong enough to dominate semantic ranking signals during training. Table 2 shows that this is indeed plausible. BM25 metadata and monoT5 perform similarly, reaching NDCG@7 values of 0.105 and 0.104, respectively, with no statistically significant difference under paired 𝑡 -tests over session-level scores ( 𝑝 = 0.43). In contrast, QSS only reaches 0.494 NDCG@7 and 0.601 Recall@7, significantly exceeding both text-only diagnostic anchors ( 𝑝 < .001). However, QSS alone remains significantly below the best dual-sample model on NDCG@7: 𝛼 =0.5 reaches 0.622 with all features, a +0.128 ab-solute gain over QSS only. This demonstrates that behavioural statistics alone capture substantial ranking signal, while effective cross-encoder ranking still benefits from semantic, personalised, and contextual evidence beyond this single behavioural feature. The QSS-only diagnostic therefore serves as a direct measure of the potential shortcut’s standalone strength: because QSS is highly predictive on its own, the model may learn to rely on it dispropor-tionately when exposed to it through the prompt. 
+
+5.2.1 Effect of QSS on ranking quality. To isolate the effect of be-havioural statistics, we compare the baseline cross-encoder trained without QSS ( 𝛼 =0) against the features-only variant trained with QSS always present ( 𝛼 =1.0) in Table 2. When evaluated with the full production prompt (“All feat.”), adding QSS improves NDCG@7 by +12.6% and Recall@7 by +9.5%. Both improvements are statistically significant ( 𝑝 < .05, paired 𝑡 -test), confirming that QSS provides a strong behavioural ranking signal. However, these gains come at the expense of semantic general-isation. When the same 𝛼 =1.0 model is evaluated under the QSS-removed condition (“No QSS” in Table 2), its NDCG@7 falls to 0.526, significantly below the 𝛼 =0 baseline (0.550). This indicates that the model has learned to rely heavily on QSS rather than on semantic and personalised relevance signals. These results establish the central trade-off studied in this paper: behavioural statistics substantially improve ranking quality when available, but reliance on them degrades performance in sparse regimes where such signals are missing. We next examine whether dual-sample feature-dropout training can preserve the ranking gains from QSS while reducing this shortcut-learning behaviour. 
+
+5.2.2 Trade-off between QSS utilisation and semantic generalisation. 
+
+To study how behavioural-feature exposure affects the balance be-tween ranking quality and semantic generalisation, we sweep the dual-sample mixture weight 𝛼 ∈ { 0, 0.25 , 0.5, 0.75 , 1.0} and evalu-ate each model under full-prompt and QSS-removed evaluation at inference time (Table 2 and Figure 2). The “All feat.” curve in Figure 2 shows that ranking quality improves rapidly even with limited QSS exposure during training. NDCG@7 increases from 0.549 at 𝛼 =0 to 0.618 at 𝛼 =0.25, already recovering most of the QSS-derived gain, and reaches 0.622 at 𝛼 =0.5(+13.3% over baseline). This indicates that only modest exposure to behavioural statistics is needed for the model to exploit their ranking signal. The QSS-removed evaluation reveals the complementary ef-fect on semantic generalisation. At 𝛼 =0.5, NDCG@7 under QSS-removed evaluation remains statistically indistinguishable from 0.00 0.25 0.50 0.75 1.00 
+
+> Mixture weight
+> 0.54 0.56 0.58 0.60 0.62
+> Session NDCG@7
+> All feat. No QSS
+
+Figure 2: Offline NDCG@7 as the dual-sample mixture weight 𝛼 varies. The “No QSS” curve probes semantic gener-alisation with QSS removed from the prompt. 
+
+the model trained without QSS (0.547 vs. 0.550; 𝑝 = 0.15), whereas 
+
+𝛼 =1.0 reduces performance significantly to 0.526. The same pat-tern holds for Recall@7: 𝛼 =0.5 achieves the highest recall with all features (0.756) while preserving near-baseline recall under QSS-removed evaluation (0.684 vs. 0.686); see Table 2. Together, these results show that moderate QSS exposure cap-tures the behavioural ranking gains while preserving semantic gen-eralisation, whereas training with QSS always present encourages shortcut reliance and weakens performance under QSS-removed evaluation. Overall, 𝛼 =0.5 provides the best trade-off between exploiting behavioural statistics and preserving semantic generalisation. We next examine how these gains are distributed across the query and item popularity spectrum. 
+
+5.2.3 Distribution of improvements across the popularity spectrum. 
+
+To understand where dual-sample training provides the greatest benefit, we analyse NDCG@7 improvements over the 𝛼 =0 baseline across query- and item-frequency bins (Figure 3). Both 𝛼 =0.5 and 𝛼 =1.0 improve over the baseline across all fre-quency ranges, but their relative behaviour differs systematically. On cold-start queries (frequency 0), 𝛼 =0.5 improves NDCG@7 by approximately 0 .061 compared with 0 .055 for 𝛼 =1.0 (Figure 3a), and this advantage persists throughout the long tail up to frequency 500. The trend reverses only on the short head ( > 500), where the features-only model performs slightly better. Slicing by positive-item frequency (Figure 3b) reveals the same overall behaviour. Dual-sample training consistently outperforms features-only training across sparse and mid-frequency item ranges, with the largest gap appearing in the 101–500 frequency bin. Only on short-head items, where behavioural statistics are most reliable, does the features-only model perform comparably or slightly better. Figure 4 aggregates these effects across head and tail regions. On long-tail queries, dual-sample training improves NDCG@7 by +0.44% (95% CI: [0.12%, 0.75%]) relative to features-only training, whereas on the short head the point estimate is −0.55% but not statistically significant. Slicing by item frequency yields the same pattern: dual-sample training improves NDCG@7 by +0.42% (95% CI: [0.11%, 0.74%]) on long-tail items, while the short-head differ-ence of −0.11% is again not significant. Taken together, these results show that dual-sample training primarily improves ranking in regimes where behavioural statistics Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search 
+
+Table 2: Offline results on the 10K evaluation sessions. 
+
+NDCG@7 Recall@7 Category Method / config All feat. No QSS All feat. No QSS Diagnostic anchors Random 0.010 – 0.018 –BM25 metadata 0.105 – 0.160 –monoT5 0.104 – 0.161 –QSS only 0.494 – 0.601 –Cross-encoder variants Dual-sample, 𝛼 =0§ 0.549 † 0.550 † 0.685 † 0.686 †
+
+Dual-sample, 𝛼 =0.25 0.618 ∗ 0.547 † 0.750 ∗ 0.684 †
+
+Dual-sample, 𝛼 =0.5 0.622 ∗†‡ 0.547 † 0.756 ∗†‡ 0.684 †
+
+Dual-sample, 𝛼 =0.75 0.616 ∗ 0.539 ∗† 0.753 ∗ 0.674 ∗† 
+
+Dual-sample, 𝛼 =1 0.618 ∗ 0.526 ∗ 0.750 ∗ 0.658 ∗                
+
+> Notes. “All feat.” uses the full production prompt; “No QSS” removes QSS at evaluation time. For dual-sample rows, ∗denotes sig. diff. vs 𝛼 =0and †denotes sig. diff. vs 𝛼 =1.‡denotes sig. diff. between the best dual-sample model and QSS only. §Trained without QSS; unseen QSS tokens act as noise in the “All feat.” condition. All tests use paired 𝑡 -tests with 𝑝 <.05 .0(cold start) 1 5
+> 6 20
+> 21 100
+> 101 500
+> >500 (short head) 0.00 0.02 0.04 0.06 0.08
+> NDCG@7 (vs  =0)
+
+(a) By query frequency 0(cold start) 1 5 
+
+> 6 20
+> 21 100
+> 101 500
+> >500 (short head) 0.00 0.02 0.04 0.06 0.08 0.10
+> NDCG@7 (vs  =0)
+
+(b) By item frequency 
+
+Figure 3: NDCG@7 improvement over baseline ( 𝛼 =0) by training frequency bin, sliced by (a) query frequency and (b) positive-item frequency. 𝛼 =0.5 (dual-sample) exceeds 
+
+𝛼 =1.0 (features-only) on all but the short head queries (>500), where always seeing statistical features during train-ing is beneficial. 
+
+are sparse or unreliable. When strong historical evidence is avail-able, behavioural-feature-heavy training performs competitively or slightly better. In sparse and cold-start settings, however, explic-itly training on paired QSS-present and QSS-removed views better preserves semantic and personalised relevance modelling. Having established offline that dual-sample training improves robustness in sparse regimes while retaining most QSS-derived ranking gains, we next examine whether the same pattern appears under live production traffic. 0.04 0.02 0.00 0.02 
+
+> NDCG@7
+> Long tail (n=9,780) Short head (n=220)
+> +0.44% -0.55%
+
+(a) By query frequency 0.02 0.00 0.02 
+
+> NDCG@7
+> Long tail (n=9,870) Short head (n=130)
+> +0.42% -0.11%
+
+(b) By item frequency 
+
+Figure 4: Advantage of dual-sample training ( 𝛼 =0.5) over features-only training ( 𝛼 =1.0), measured as the difference in NDCG@7 between the two models. Sessions are split into long tail ( ≤500 training occurrences) and short head ( >500). Error bars show 95% CIs. On the long tail, 𝛼 =0.5 consistently outperforms 𝛼 =1.0; on the short head, the difference is not statistically significant. 
+
+## 6 Online Evaluation 
+
+To evaluate whether the offline robustness patterns translate to production traffic, we conduct an online A/B/C test comparing three cross-encoder variants: a control model trained without QSS features ( 𝛼 =0), dual-sample feature-dropout training ( 𝛼 =0.5), and features-only training ( 𝛼 =1.0). Since the 𝛼 =0 model never saw QSS during training, QSS was also excluded from its prompt at serving time to avoid introducing noise (see Table 2). The frontline metric is search success : whether the user has a successful interaction with a search result, such as streaming a track, following an artist, or adding a podcast to their library. All analyses below are computed at the user level. Figure 5a shows that both QSS-aware variants significantly im-prove search success relative to the 𝛼 =0 control cross-encoder. Dual-sample training improves search success by 2.05%, while features-only training improves it by 2.33%. The difference between the two QSS-aware variants is not statistically significant: even the 1 𝜎 Petrov et al. 0 1 2 3        
+
+> success rate (%)
+> Dual-sample (= 0.5 )
+> Features-only (= 1.0 )
+> +2.05% +2.33%
+> (a) QSS-aware variants vs. 𝛼 =0control -7.5 -5 -2.5 02.5
+> success rate (%)
+> Cold start 0Torso 1 500
+> Short head >500
+> +0.75% -0.34% -2.91%
+> (b) Dual-sample vs. features-only by item frequency
+
+Figure 5: Online A/B/C test results on search success. Posi-tive values indicate improvement over the 𝛼 =0 control cross-encoder in (a), and improvement of dual-sample training (𝛼 =0.5) over features-only training ( 𝛼 =1.0) in (b). Thick bars show 1𝜎 intervals and thin lines show 2𝜎 intervals, computed from per-user search success. In (b), item-frequency slices are cold start (0 training occurrences), torso (1–500), and short head ( > 500 ). 
+
+confidence intervals overlap. Thus, exposing behavioural statistics through the prompt improves online ranking performance, but ag-gregate metrics alone do not distinguish which training objective better supports semantic generalisation. To test whether the sparse-regime behaviour observed offline also appears online, we further slice traffic by item frequency (Fig-ure 5b). Each search is assigned to an item-frequency slice based on the maximum training-set frequency among the displayed items: cold start (0 occurrences), torso (1–500), and short head ( > 500). Search success is then computed independently within each slice. This sliced analysis should be interpreted directionally rather than conclusively, since the online experiment was powered for aggregate search-success effects rather than fine-grained frequency slices. Dual-sample training shows a +0.75% gain over features-only training on the cold-start slice, where displayed items are new to the training data and item-level behavioural statistics are unavailable. Although zero lies near the boundary of the 1 𝜎 interval, the pattern is consistent with the offline results and suggests that dual-sample training better preserves semantic and personalised relevance mod-elling when behavioural evidence is sparse. In contrast, the point estimates on torso and short-head items are -0.34% and -2.91%, re-spectively, where behavioural statistics are most informative. This is consistent with the features-only model 𝛼 =1.0 relying more heavily on behavioural signals in high-frequency regimes. Overall, the online results support the same qualitative pattern observed offline. Behavioural statistics substantially improve rank-ing performance, while dual-sample feature-dropout training ap-pears to better preserve robustness on sparse and cold-start traf-fic. These findings suggest that explicitly controlling reliance on behavioural statistics may improve discoverability for new or infre-quent content, while larger-scale online slice analyses remain an important direction for future work. We close by summarising what these results imply for exposing statistical features to production cross-encoders. 
+
+## 6.1 Lessons and Limitations 
+
+Signal-fusion lesson. A strong behavioural statistic is not simply another prompt token: when it is highly predictive, the reranker can learn a brittle dependency that masks whether semantic and user-context evidence remain useful. Our results suggest a practical evaluation pattern for LLM rerankers: measure the same model with the feature present and under controlled removal, then inspect head, tail, and cold-start slices. In our setting, this exposes a failure hidden by aggregate full-prompt metrics and shows that paired feature removal retains most of the QSS benefit while improving robustness in sparse regimes. 
+
+Operational lesson. Paired training moves the robustness cost to training rather than serving. Each example yields matched QSS-present and QSS-removed views, increasing training computation, but deployment still uses one model with the same architecture and inference path. In our experiments, this trade-off preserves most of the QSS gain on feature-rich traffic while reducing degradation under QSS removal. For production rerankers, the practical advan-tage is direct: robustness to an unreliable feature does not require a separate fallback ranker or an architectural change. 
+
+Evidence and scope. Focusing on QSS in one personalised-search reranker gives a controlled view of the shortcut mechanism. Complete removal is intentionally a stress test rather than a repro-duction of every partially missing, noisy, or stale feature scenario. The experiments treat user context as part of the overall prompt rather than isolating its independent contribution, and do not com-pare with a learned personalisation-aware fusion baseline. These choices sharpen the analysis of QSS reliance while leaving comple-mentary questions about alternative fusion architectures open. 
+
+Future directions. The most immediate extension is to test graded perturbations that reflect realistic variation in feature avail-ability, freshness, and noise, and to train with multiple correlated behavioural signals rather than removing one signal family com-pletely. Other useful directions include feature-specific or adap-tive mixing weights, learned gating or uncertainty-aware fusion, comparison with personalisation-aware rankers, and online exper-iments powered for cold-start and tail slices. Applying the same diagnostics across search and recommendation surfaces would help identify which robustness lessons transfer across domains and which depend on the feature or traffic regime. 
+
+## 7 Conclusion 
+
+This paper examined robust behavioural-signal fusion in an LLM cross-encoder for personalised search. The offline results estab-lish the central failure mode: injecting QSS improves full-prompt NDCG@7 by 13.3%, but QSS-always training degrades under the diagnostic QSS-removed condition. Deterministic paired feature removal preserves most of the QSS-derived gain while improving QSS-removed and long-tail performance, with its clearest advan-tages in sparse regimes. Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search 
+
+The online A/B/C test complements these findings: both QSS-aware variants improve aggregate search success by approximately 2%, confirming the production value of incorporating behavioural evidence into the reranker. In the cold-start slice, dual-sample train-ing shows a directional gain consistent with the offline robustness pattern. The practical conclusion is that strong behavioural prompt fea-tures should be evaluated both when available and under controlled removal, with explicit attention to head, tail, and cold-start traffic. Within the studied system, the results show that shortcut reliance can be diagnosed and reduced without changing the serving ar-chitecture. Extending this evaluation to richer feature families and other ranking surfaces is a natural next step. 
+
+## Acknowledgments 
+
+Use of generative AI. Generative AI tools were used during the preparation of this work as coding assistants to help write analysis code and figure-generation scripts, and to polish portions of the manuscript. All outputs were reviewed, tested, and edited by the authors, who take full responsibility for the content of this paper. 
+
+## References 
+
+[1] Arian Askari, Amin Abolghasemi, Gabriella Pasi, Wessel Kraaij, and Suzan Ver-berne. 2023. Injecting the BM25 score as text improves BERT-based re-rankers. In European Conference on Information Retrieval . Springer, 66–83. [2] Jizheng Chen, Kounianhua Du, Jianghao Lin, Bo Chen, Ruiming Tang, Weinan Zhang, and Yong Yu. 2024. ELCoRec: Enhance Language Understanding with Co-Propagation of Numerical and Categorical Features for Recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 259–269. [3] Heng-Tze Cheng, Levent Koc, Jeremiah Harmsen, Tal Shaked, Tushar Chandra, Hrishi Aradhye, Glen Anderson, Greg Corrado, Wei Chai, Mustafa Ispir, et al. 2016. Wide & deep learning for recommender systems. In Proceedings of the 1st workshop on deep learning for recommender systems . 7–10. [4] Paul Covington, Jay Adams, and Emre Sargin. 2016. Deep neural networks for youtube recommendations. In Proceedings of the 10th ACM conference on recommender systems . 191–198. [5] Edoardo D’Amico, Marco De Nadai, Praveen Chandar, Divita Vohra, Shawn Lin, Max Lefarov, Paul Gigioli, Gustavo Penha, Ilya Kopysitsky, Ivo Joel Senese, et al. 2026. Deploying Semantic ID-based Generative Retrieval for Large-Scale Podcast Discovery at Spotify. arXiv preprint arXiv:2603.17540 (2026). [6] Robert Geirhos, Jörn-Henrik Jacobsen, Claudio Michaelis, Richard Zemel, Wieland Brendel, Matthias Bethge, and Felix A Wichmann. 2020. Shortcut learning in deep neural networks. Nature Machine Intelligence 2, 11 (2020), 665–673. [7] Léo Grinsztajn, Edouard Oyallon, and Gaël Varoquaux. 2022. Why do tree-based models still outperform deep learning on typical tabular data? Advances in neural information processing systems 35 (2022), 507–520. [8] F Maxwell Harper and Joseph A Konstan. 2015. The movielens datasets: History and context. Acm transactions on interactive intelligent systems (tiis) 5, 4 (2015), 1–19. [9] Ruining He, Lukasz Heldt, Lichan Hong, Raghunandan Keshavan, Shifan Mao, Nikhil Mehta, Zhengyang Su, Alicia Tsai, Yueqi Wang, Shao-Chuan Wang, et al. 2026. Plum: Adapting pre-trained language models for industrial-scale generative recommendations. In Proceedings of the ACM Web Conference 2026 . 8093–8104. [10] Yupeng Hou, Jiacheng Li, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. 2024. Bridging Language and Items for Retrieval and Recommendation. arXiv preprint arXiv:2403.03952 (2024). [11] Samuel Humeau, Kurt Shuster, Marie-Anne Lachaux, and Jason Weston. 2020. Poly-encoders: Architectures and Pre-training Strategies for Fast and Accurate Multi-sentence Scoring. In International Conference on Learning Representations .https://openreview.net/forum?id=SkxgnnNFvH [12] Shubhra Kanti Karmaker Santu, Parikshit Sondhi, and ChengXiang Zhai. 2017. On application of learning to rank for e-commerce search. In Proceedings of the 40th international ACM SIGIR conference on research and development in information retrieval . 475–484. [13] Akshay Kekuda, Yuyang Zhang, and Arun Udayashankar. 2024. Embedding based retrieval for long tail search queries in ecommerce. In Proceedings of the 18th ACM Conference on Recommender Systems . 771–774. [14] Matthew Kolodner, Mingxuan Ju, Zihao Fan, Tong Zhao, Elham Ghazizadeh, Yan Wu, Neil Shah, and Yozen Liu. 2024. Robust Training Objectives Improve Embedding-Based Retrieval in Industrial Recommendation Systems. In Proceed-ings of the Workshop on Design, Evaluation, and Deployment of Robust Recom-mender Systems (RobustRecSys 2024) (CEUR Workshop Proceedings, Vol. 3924) .CEUR-WS.org, 30–34. https://ceur-ws.org/Vol-3924/ [15] Xiangyang Li, Bo Chen, Lu Hou, and Ruiming Tang. 2026. CTRL: Connect Collaborative and Language Model for CTR Prediction. ACM Transactions on Recommender Systems 4, 2, Article 20 (2026), 23 pages. doi:10.1145/3713080 [16] Qi Liu, Atul Singh, Jingbo Liu, Cun Mu, Zheng Yan, and Jan Pedersen. 2024. Long or short or both? an exploration on lookback time windows of behavioral features in product search ranking. arXiv preprint arXiv:2409.17456 (2024). [17] Yunus Lutz, Timo Wilm, and Philipp Duwe. 2025. Industry Insights from Com-paring Deep Learning and GBDT Models for E-Commerce Learning-to-Rank. In 
+
+Proceedings of the Nineteenth ACM Conference on Recommender Systems . 983–986. [18] Xueguang Ma, Liang Wang, Nan Yang, Furu Wei, and Jimmy Lin. 2024. Fine-tuning llama for multi-stage text retrieval. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval .2421–2425. [19] Tri Nguyen, Mir Rosenberg, Xia Song, Jianfeng Gao, Saurabh Tiwary, Rangan Majumder, and Li Deng. 2016. MS MARCO: A Human Generated MAchine Reading COmprehension Dataset. choice 2640 (2016), 660. [20] Rodrigo Nogueira and Kyunghyun Cho. 2019. Passage Re-ranking with BERT. 
+
+arXiv preprint arXiv:1901.04085 (2019). [21] Rodrigo Nogueira, Zhiying Jiang, Ronak Pradeep, and Jimmy Lin. 2020. Docu-ment ranking with a pretrained sequence-to-sequence model. In Findings of the association for computational linguistics: EMNLP 2020 . 708–718. [22] Aleksandr V Petrov, Sean MacAvaney, and Craig Macdonald. 2024. Shallow cross-encoders for low-latency retrieval. In European Conference on Information Retrieval . Springer, 151–166. [23] Ajit Puthenputhussery, Changsung Kang, Alessandro Magnani, Tian Zhang, Hongwei Shang, Nitin Yadav, Prijith Chandran, Bhavin Madhani, Yuan-Tai Fu, He Wang, et al. 2025. Large Scale Deployment of BERT Based Cross Encoder Model for Re-Ranking in Walmart Search Engine. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 4365–4369. [24] Nils Reimers and Iryna Gurevych. 2019. Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP) . Association for Computational Linguistics, Hong Kong, China, 3982–3992. doi:10.18653/v1/D19-1410 [25] Stephen E. Robertson, Steve Walker, Susan Jones, Micheline Hancock-Beaulieu, and Mike Gatford. 1994. Okapi at TREC-3. In Proceedings of the Third Text REtrieval Conference (TREC-3) . 109–126. [26] Federico Siciliano, Shoval Lagziel, Iftah Gamzu, and Gabriele Tolomei. 2024. Ro-bust Training of Sequential Recommender Systems with Missing Input Data. In 
+
+Proceedings of the Workshop on Design, Evaluation, and Deployment of Robust Rec-ommender Systems (RobustRecSys 2024) (CEUR Workshop Proceedings, Vol. 3924) .CEUR-WS.org, 41–50. https://ceur-ws.org/Vol-3924/paper1.pdf [27] Anima Singh, Trung Vu, Nikhil Mehta, Raghunandan Keshavan, Maheswaran Sathiamoorthy, Yilin Zheng, Lichan Hong, Lukasz Heldt, Li Wei, Devansh Tandon, et al. 2024. Better generalization with semantic ids: A case study in ranking for recommendations. In Proceedings of the 18th ACM Conference on Recommender Systems . 1039–1044. [28] Jack Urbanek, Angela Fan, Siddharth Karamcheti, Saachi Jain, Samuel Humeau, Emily Dinan, Tim Rocktäschel, Douwe Kiela, Arthur Szlam, and Jason Weston. 2019. Learning to Speak and Act in a Fantasy Text Adventure Game. In Proceed-ings of the 2019 Conference on Empirical Methods in Natural Language Process-ing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP) . Association for Computational Linguistics, Hong Kong, China, 673–683. doi:10.18653/v1/D19-1062 [29] Maksims Volkovs, Guangwei Yu, and Tomi Poutanen. 2017. Dropoutnet: Ad-dressing cold start in recommender systems. Advances in neural information processing systems 30 (2017). [30] Dong Wang, Kavé Salamatian, Yunqing Xia, Weiwei Deng, and Qi Zhang. 2023. Bert4ctr: An efficient framework to combine pre-trained language model with non-textual features for ctr prediction. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 5039–5050. [31] Ruoxi Wang, Rakesh Shivanna, Derek Zhiyuan Cheng, Sagar Jain, Dong Lin, Lichan Hong, and Ed H. Chi. 2021. DCN V2: Improved Deep & Cross Network and Practical Lessons for Web-Scale Learning to Rank Systems. In Proceedings of the Web Conference 2021 . 1785–1797. doi:10.1145/3442381.3450078 [32] Zhenrui Yue, Sara Rabhi, Gabriel de Souza Pereira Moreira, Dong Wang, and Even Oldridge. 2023. LlamaRec: Two-Stage Recommendation using Large Language Models for Ranking. CoRR abs/2311.02089 (2023). doi: 10.48550. arXiv preprint ARXIV.2311.02089 (2023). [33] Yang Zhang, Fuli Feng, Jizhi Zhang, Keqin Bao, Qifan Wang, and Xiangnan He. 2025. CoLLM: Integrating Collaborative Embeddings Into Large Language Models Petrov et al. 
+
+for Recommendation. IEEE Transactions on Knowledge and Data Engineering 37, 5 (2025), 2329–2340. doi:10.1109/TKDE.2025.3540912 [34] Yanzhao Zhang, Mingxin Li, Dingkun Long, Xin Zhang, Huan Lin, Baosong Yang, Pengjun Xie, An Yang, Dayiheng Liu, Junyang Lin, et al. 2025. Qwen3 embedding: Advancing text embedding and reranking through foundation models. arXiv preprint arXiv:2506.05176 (2025). [35] Yongchun Zhu, Ruobing Xie, Fuzhen Zhuang, Kaikai Ge, Ying Sun, Xu Zhang, Leyu Lin, and Juan Cao. 2021. Learning to warm up cold item embeddings for cold-start recommendation with meta scaling and shifting networks. In Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval . 1167–1176.

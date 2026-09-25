@@ -1,0 +1,121 @@
+{
+  "date": "20260925",
+  "date_label": "",
+  "generated_at": "2026-09-25 22:27:20 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.28972v1",
+      "route": "202609/25/2609.28972v1-cross-country-code-mixing-for-generative-recommendation",
+      "title": "Cross-Country Code-Mixing for Generative Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "跨国生成式推荐，共享词元空间与代码混合监督",
+      "first_seen_at": "2026-09-25 22:27:20 UTC",
+      "updated_at": "2026-09-25 22:27:20 UTC"
+    },
+    {
+      "paper_id": "2609.29180v1",
+      "route": "202609/25/2609.29180v1-x-rec-technical-report",
+      "title": "X-Rec Technical Report",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "以嵌入触发器做近邻检索的下一物品生成式推荐",
+      "first_seen_at": "2026-09-25 22:27:20 UTC",
+      "updated_at": "2026-09-25 22:27:20 UTC"
+    },
+    {
+      "paper_id": "2609.29973v1",
+      "route": "202609/25/2609.29973v1-learning-better-reasoning-for-generative-recommendation-with-semantic-ids",
+      "title": "Learning Better Reasoning for Generative Recommendation with Semantic IDs",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "生成式推荐，语义ID直接生成下一物品",
+      "first_seen_at": "2026-09-25 22:27:20 UTC",
+      "updated_at": "2026-09-25 22:27:20 UTC"
+    },
+    {
+      "paper_id": "2609.29983v1",
+      "route": "202609/25/2609.29983v1-from-interests-to-semantic-ids-retrieval-grounded-credit-assignment-for-generative-recommendation",
+      "title": "From Interests to Semantic IDs: Retrieval-Grounded Credit Assignment for Generative Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "自回归预测下一物品语义ID的生成式推荐",
+      "first_seen_at": "2026-09-25 22:27:20 UTC",
+      "updated_at": "2026-09-25 22:27:20 UTC"
+    },
+    {
+      "paper_id": "2609.28589v1",
+      "route": "202609/25/2609.28589v1-onetrans-v2-unifying-retrieval-pre-rank-and-fine-rank-with-one-transformer-in-industrial-recommender",
+      "title": "OneTrans-V2: Unifying Retrieval, Pre-rank, and Fine-rank with One Transformer in Industrial Recommender",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "单一Transformer统一工业推荐召回粗排精排",
+      "first_seen_at": "2026-09-25 22:27:20 UTC",
+      "updated_at": "2026-09-25 22:27:20 UTC"
+    },
+    {
+      "paper_id": "2609.25825v1",
+      "route": "202609/25/2609.25825v1-robust-fusion-of-semantic-and-behavioural-signals-for-llm-reranking-in-personalised-search",
+      "title": "Robust Fusion of Semantic and Behavioural Signals for LLM Reranking in Personalised Search",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "融合语义与行为信号的LLM个性化搜索重排序",
+      "first_seen_at": "2026-09-25 22:27:20 UTC",
+      "updated_at": "2026-09-25 22:27:20 UTC"
+    },
+    {
+      "paper_id": "2609.29815v1",
+      "route": "202609/25/2609.29815v1-lsf-sr-latent-semantic-fusion-for-sequential-recommendation-via-flow-based-conditional-variational-autoencoders",
+      "title": "LSF-SR: Latent Semantic Fusion for Sequential Recommendation via Flow-based Conditional Variational Autoencoders",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "融合LLM语义的序列推荐与下一物品预测",
+      "first_seen_at": "2026-09-25 22:27:20 UTC",
+      "updated_at": "2026-09-25 22:27:20 UTC"
+    }
+  ]
+}
