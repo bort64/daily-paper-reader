@@ -1,0 +1,141 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-26T21:45:58.258616+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.23877v1",
+      "source": "arxiv",
+      "title": "Explainable Recommendations at Scale: LLM Rationales for YouTube Music Artist Discovery",
+      "abstract": "Modern music streaming platforms face a persistent tradeoff: exploiting familiar content versus driving the exploration of novel items. While users frequently desire discovery, they hesitate to select unknown artists over proven favorites. Providing transparent, natural language rationales that explain why an unexplored item is recommended lowers this barrier. However, while Large Language Models (LLMs) excel at this nuanced explainability, their real-time deployment is severely bottlenecked by prohibitive inference costs and computational overhead. In this paper, we present an industry case study of a decoupled recommendation architecture that successfully scales exploration without compromising latency. Our system isolates LLM inference asynchronously offline, pre-computing personalized candidate pools of undiscovered artists alongside tailored rationales. Large-scale online A/B experiments validate our design. We demonstrate that combining LLM-backed recommendations with these explanatory rationales significantly reduces the trust barrier for new content, yielding statistically significant improvements in both user exploration and overall engagement on the discovery surfaces.",
+      "authors": [
+        "Xiao Liu",
+        "Yanwei Song",
+        "Srivaths Ranganathan",
+        "Yuan Chen",
+        "Zheyun Feng",
+        "Parker Steenburgh",
+        "Jochen Klingenhoefer",
+        "Nathan Lasche",
+        "Gergo Varady",
+        "Tim Steele"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.IR"
+      ],
+      "published": "2026-09-20T21:25:25+00:00",
+      "link": "https://arxiv.org/pdf/2609.23877v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based recommendation rationales deployed at scale",
+      "llm_evidence_cn": "基于LLM的大规模推荐理由生成",
+      "llm_evidence": "基于LLM的大规模推荐理由生成",
+      "canonical_evidence": "基于LLM的大规模推荐理由生成",
+      "llm_tldr_en": "Music streaming platforms need transparent rationales to encourage discovery, but LLM inference is costly. This industry case study decouples LLM explanation from serving to scale exploration without hurting latency.",
+      "llm_tldr_cn": "音乐流媒体平台面临探索新内容与利用熟悉内容之间的权衡，用户需要自然语言理由来解释为何推荐陌生歌手，但LLM实时推理成本过高。本文提出一种解耦的推荐架构，将LLM理由生成与在线服务分离，在保证低延迟的前提下实现大规模可解释推荐与探索。该工业案例表明生成式LLM能力可被有效整合进推荐系统而不牺牲服务效率，为规模化生成式推荐提供了实践参考。",
+      "llm_tldr": "音乐流媒体平台面临探索新内容与利用熟悉内容之间的权衡，用户需要自然语言理由来解释为何推荐陌生歌手，但LLM实时推理成本过高。本文提出一种解耦的推荐架构，将LLM理由生成与在线服务分离，在保证低延迟的前提下实现大规模可解释推荐与探索。该工业案例表明生成式LLM能力可被有效整合进推荐系统而不牺牲服务效率，为规模化生成式推荐提供了实践参考。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.27183v1",
+      "source": "arxiv",
+      "title": "When LLM-Based User Profiling Adds Value in Production Streaming Recommendation",
+      "abstract": "Personalized recommendation depends critically on how user representations are constructed from historical behavior. Two paradigms have emerged for constructing semantic user profiles in content-based recommendation. First, aggregate methods derive user representations as numerical aggregates of semantic item embeddings. Second, LLM-based methods generate natural-language summaries of user preferences and encode them through a text encoder. Each paradigm can be combined with temporal disentanglement of recent versus historical behavior. LLM-based profile generation is significantly more expensive than aggregate approaches, raising the question of when this additional cost is justified. We present a systematic comparison of four semantic user-profiling strategies, factorially crossed across representation type and temporal handling, evaluated on a real-world production dataset. The comparison reveals how these strategies differ across user behavior types, across both accuracy and beyond-accuracy dimensions of recommendation quality, and across the temporal-window setting that governs the disentanglement.",
+      "authors": [
+        "Milad Sabouri",
+        "Neeraj Sharma",
+        "Sardar Hamidian",
+        "Shaghayegh Agah"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-23T00:42:36+00:00",
+      "link": "https://arxiv.org/pdf/2609.27183v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based user profiling for production streaming recommendation",
+      "llm_evidence_cn": "基于LLM用户画像的生产流式推荐",
+      "llm_evidence": "基于LLM用户画像的生产流式推荐",
+      "canonical_evidence": "基于LLM用户画像的生产流式推荐",
+      "llm_tldr_en": "LLM-generated natural-language user profiles are far costlier than aggregate embeddings; this systematic comparison of four semantic profiling paradigms in production streaming recommendation clarifies when LLM profiling actually adds value.",
+      "llm_tldr_cn": "个性化推荐依赖用户表示构建，而LLM生成自然语言画像虽语义丰富却远比数值聚合方法昂贵，何时值得使用尚不明确。本文系统比较四种语义用户画像范式，涵盖聚合表示与LLM摘要，并结合近期与历史行为的时间解耦。生产流式推荐上的对比显示，LLM画像仅在特定条件下带来增益，可指导系统在效果与开销之间取舍。其贡献在于给出画像范式选择的实证准则。",
+      "llm_tldr": "个性化推荐依赖用户表示构建，而LLM生成自然语言画像虽语义丰富却远比数值聚合方法昂贵，何时值得使用尚不明确。本文系统比较四种语义用户画像范式，涵盖聚合表示与LLM摘要，并结合近期与历史行为的时间解耦。生产流式推荐上的对比显示，LLM画像仅在特定条件下带来增益，可指导系统在效果与开销之间取舍。其贡献在于给出画像范式选择的实证准则。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.28776v1",
+      "source": "arxiv",
+      "title": "Learned Cross-Task Relationships in Multi-Task Models",
+      "abstract": "We propose a framework that learns cross-task relationships in multi-task models by approximating the joint distribution of task labels through targeted pairwise relationships. This approach improves performance via transfer learning and enhances information extraction without the intractable complexity of modeling the full joint space. Although our framework applies to any multi-task system, we demonstrate its efficacy within YouTube's production recommendation systems. Experiments across the Notifications, Homepage, and Watch Next surfaces show improvements in both accuracy and user satisfaction metrics. Finally, we propose a workflow template to facilitate broader future implementation.",
+      "authors": [
+        "Victor Zhang",
+        "Yiping Yuan",
+        "Florian Raudies",
+        "Bosun Adeoti",
+        "Brian Y. C. Leung",
+        "Sanjay Surendranath Girija",
+        "Naijing Zhang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-23T20:40:33+00:00",
+      "link": "https://arxiv.org/pdf/2609.28776v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-task modeling in production recommendation systems",
+      "llm_evidence_cn": "生产推荐系统中的多任务建模",
+      "llm_evidence": "生产推荐系统中的多任务建模",
+      "canonical_evidence": "生产推荐系统中的多任务建模",
+      "llm_tldr_en": "Modeling full joint distributions of multi-task labels is intractable. This framework learns cross-task relationships via targeted pairwise approximations, improving accuracy and user satisfaction across YouTube's Notifications, Homepage and Watch Next surfaces.",
+      "llm_tldr_cn": "针对多任务模型中完整联合分布建模复杂且难以落地的问题，本文提出一种通过学习任务标签间成对关系来近似联合分布、从而捕捉跨任务关系的框架。该框架在YouTube生产推荐系统的通知、首页与观看下一页等多个场景中验证，准确率与用户满意度指标均有提升，并给出便于推广的实现工作流模板，为大规模推荐系统的多任务联合建模提供参考。",
+      "llm_tldr": "针对多任务模型中完整联合分布建模复杂且难以落地的问题，本文提出一种通过学习任务标签间成对关系来近似联合分布、从而捕捉跨任务关系的框架。该框架在YouTube生产推荐系统的通知、首页与观看下一页等多个场景中验证，准确率与用户满意度指标均有提升，并给出便于推广的实现工作流模板，为大规模推荐系统的多任务联合建模提供参考。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "joint modeling and serving of search, advertising, and recommendation systems at scale",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
