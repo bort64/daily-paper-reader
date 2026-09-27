@@ -1,0 +1,24 @@
+{
+  "label": "2026-09-27",
+  "date": "2026-09-27",
+  "generated_at": "2026-09-27T22:18:20",
+  "count": 1,
+  "papers": [
+    {
+      "paper_id": "202609/27/2609.30177v1-search-aware-reinforcement-learning-for-multi-component-query-understanding-in-roblox-game-search",
+      "section": "quick",
+      "title_en": "Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search",
+      "authors": "Nayoung Choi, Shengjian Chen, Xiaokai Wei, Wenzheng Zhang, Daiyao Yi, Rachit Pareek, Vincent Su, Michelle Gong, Jinho D. Choi",
+      "date": "2026-09-24",
+      "pdf": "https://arxiv.org/pdf/2609.30177v1",
+      "score": "6.0",
+      "evidence": "面向生产搜索的LLM查询理解与强化学习",
+      "tldr": "在 Roblox 游戏搜索中，查询理解负责把用户查询转为检索执行计划，但静态标签监督难以刻画各组件与搜索引擎交互后的真实收益。本文提出搜索感知强化学习框架，采用先蒸馏后强化范式：教师-学生 SFT 先获得合规策略初始化，再用组件专属的实时搜索奖励优化每个查询理解组件。实验表明，该组件级优化同时提升单组件效用与下游搜索质量，NDCG@20 较 SFT 提升 8.9，较单一端到端奖励提升 3.5。这为生产搜索多组件查询理解提供了可落地优化方案。",
+      "tags": "query:search-rec",
+      "abstract_en": "Query understanding (QU) plays a critical role in production search systems, translating raw user queries into search execution plans that drive downstream retrieval and ranking. While large language models (LLMs) have enabled QU to be framed as a structured multi-task generation problem (e.g., intent classification, query expansion), optimizing such models to produce search-engine-coupled outputs remains challenging: static, label-based supervision fails to capture how each component actually interacts with the underlying search pipeline to affect downstream performance. We present a search-aware reinforcement learning (RL) framework for QU based on a distill-then-RL paradigm. Teacher-student supervised fine-tuning (SFT) first yields a well-formed, schema-compliant policy initialization. The RL stage then optimizes each QU component with rewards derived from live interaction with the search engine, tailored to that component's operational role, rather than a single reward tied to the final search outcome. Experiments on Roblox search show that this component-specific optimization improves both per-component utility and downstream search quality, raising NDCG@20 by 8.9 points over the SFT policy and by 3.5 points over training with a single end-to-end reward.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

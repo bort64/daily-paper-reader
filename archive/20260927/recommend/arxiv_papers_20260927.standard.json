@@ -1,0 +1,60 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-27T22:17:35.713784+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 1,
+    "quick_skim_target": 11,
+    "quick_selected": 1
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.30177v1",
+      "source": "arxiv",
+      "title": "Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search",
+      "abstract": "Query understanding (QU) plays a critical role in production search systems, translating raw user queries into search execution plans that drive downstream retrieval and ranking. While large language models (LLMs) have enabled QU to be framed as a structured multi-task generation problem (e.g., intent classification, query expansion), optimizing such models to produce search-engine-coupled outputs remains challenging: static, label-based supervision fails to capture how each component actually interacts with the underlying search pipeline to affect downstream performance. We present a search-aware reinforcement learning (RL) framework for QU based on a distill-then-RL paradigm. Teacher-student supervised fine-tuning (SFT) first yields a well-formed, schema-compliant policy initialization. The RL stage then optimizes each QU component with rewards derived from live interaction with the search engine, tailored to that component's operational role, rather than a single reward tied to the final search outcome. Experiments on Roblox search show that this component-specific optimization improves both per-component utility and downstream search quality, raising NDCG@20 by 8.9 points over the SFT policy and by 3.5 points over training with a single end-to-end reward.",
+      "authors": [
+        "Nayoung Choi",
+        "Shengjian Chen",
+        "Xiaokai Wei",
+        "Wenzheng Zhang",
+        "Daiyao Yi",
+        "Rachit Pareek",
+        "Vincent Su",
+        "Michelle Gong",
+        "Jinho D. Choi"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-24T17:26:46+00:00",
+      "link": "https://arxiv.org/pdf/2609.30177v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based query understanding with RL for production web search",
+      "llm_evidence_cn": "面向生产搜索的LLM查询理解与强化学习",
+      "llm_evidence": "面向生产搜索的LLM查询理解与强化学习",
+      "canonical_evidence": "面向生产搜索的LLM查询理解与强化学习",
+      "llm_tldr_en": "LLMs frame query understanding as multi-task generation, but static label supervision ignores coupling with the search pipeline; this paper proposes a search-aware RL distill-then-RL framework for Roblox game search, improving downstream retrieval and ranking.",
+      "llm_tldr_cn": "该论文针对生产搜索系统中查询理解模型优化的问题，指出静态标签监督无法刻画各组件与搜索流水线的交互。作者提出基于蒸馏后强化学习的可感知搜索框架，用大语言模型将查询理解建模为结构化多任务生成。在Roblox游戏搜索场景中验证了下游检索与排序性能得到提升，为搜索系统中的生成式查询理解提供了新思路。",
+      "llm_tldr": "该论文针对生产搜索系统中查询理解模型优化的问题，指出静态标签监督无法刻画各组件与搜索流水线的交互。作者提出基于蒸馏后强化学习的可感知搜索框架，用大语言模型将查询理解建模为结构化多任务生成。在Roblox游戏搜索场景中验证了下游检索与排序性能得到提升，为搜索系统中的生成式查询理解提供了新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "modern transformer and generative architectures for web search and recommender systems beyond traditional statistical models",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

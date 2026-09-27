@@ -1,6 +1,9 @@
 * <a class="dpr-sidebar-root-link" href="#/">首页</a>
 * <a class="dpr-sidebar-root-link dpr-sidebar-noactive-link" href="javascript:void(0)" data-dpr-hash="#/tutorial/README">使用教程</a>
 * Daily Papers
+  * 2026-09-27 <!--dpr-date:20260927-->
+    * 速读区
+      * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202609/27/2609.30177v1-search-aware-reinforcement-learning-for-multi-component-query-understanding-in-roblox-game-search" data-sidebar-item="{&quot;title&quot;: &quot;Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2609.30177v1-search-aware-reinforcement-learning-for-multi-component-query-understanding-in-roblox-game-search&quot;, &quot;score&quot;: &quot;6.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;search-rec&quot;}], &quot;evidence&quot;: &quot;面向生产搜索的LLM查询理解与强化学习&quot;}">Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search</a>
   * 2026-09-26 <!--dpr-date:20260926-->
     * 速读区
       * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202609/26/2609.23877v1-explainable-recommendations-at-scale-llm-rationales-for-youtube-music-artist-discovery" data-sidebar-item="{&quot;title&quot;: &quot;Explainable Recommendations at Scale: LLM Rationales for YouTube Music Artist Discovery&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2609.23877v1-explainable-recommendations-at-scale-llm-rationales-for-youtube-music-artist-discovery&quot;, &quot;score&quot;: &quot;6.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;search-rec&quot;}], &quot;evidence&quot;: &quot;基于LLM的大规模推荐理由生成&quot;}">Explainable Recommendations at Scale: LLM Rationales for YouTube Music Artist Discovery</a>

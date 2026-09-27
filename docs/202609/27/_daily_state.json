@@ -1,0 +1,25 @@
+{
+  "date": "20260927",
+  "date_label": "",
+  "generated_at": "2026-09-27 22:18:16 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.30177v1",
+      "route": "202609/27/2609.30177v1-search-aware-reinforcement-learning-for-multi-component-query-understanding-in-roblox-game-search",
+      "title": "Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向生产搜索的LLM查询理解与强化学习",
+      "first_seen_at": "2026-09-27 22:18:16 UTC",
+      "updated_at": "2026-09-27 22:18:16 UTC"
+    }
+  ]
+}
