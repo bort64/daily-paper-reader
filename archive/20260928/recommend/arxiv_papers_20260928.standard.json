@@ -1,0 +1,155 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-28T23:38:38.374192+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.30576v1",
+      "source": "arxiv",
+      "title": "T-RoPE: Time-Aware Rotary Position Embedding for Sequential Recommendation",
+      "abstract": "Large-scale recommenders increasingly adopt the sequential generative recipe behind large language models, bringing the Transformer into recommendation along with design choices made for text, including Rotary Position Embedding (RoPE). In language models, RoPE encodes token indices for relative position reasoning, but in recommendation, an interaction index records only event order, saying nothing about elapsed time, behavioral cycles across scales, or calendar phase. We revisit this choice and propose T-RoPE, a time-aware RoPE for sequential generative recommendation that replaces index-only rotation with timestamp-based angles, learnable temporal coefficients, multiscale frequency banks, shifted query alignment, and non-stationary key rotation. We prove that standard RoPE, even on timestamps, remains time-translation invariant and cannot distinguish seasonal contexts, and that T-RoPE breaks this invariance while preserving the RoPE interface. Across five public benchmarks, T-RoPE achieves the best result on every metric on every dataset, improving over the strongest baseline by 78--130\\% in HR@10 on the sparse PixelRec data and 8--12\\% across metrics on Amazon Books. On an industrial-scale e-commerce dataset with more than 6B interactions, it improves every metric over the HSTU + Time RAB backbone by 13--82\\%, with ablations attributing the largest gains to multiscale frequencies ($+56\\%$ NDCG@50) and non-stationary keys ($+4\\%$). An online A/B test in the Shop app yields positive lifts in conversion rate ($+0.33\\%$) and order count ($+0.63\\%$). We also provide forward and backward algorithms whose added cost is linear in sequence length and head dimension, keeping time-aware RoPE practical for large generative recommenders.",
+      "authors": [
+        "Yang Liu",
+        "Noel Loo",
+        "Ali Khanafer",
+        "Shuying Sun",
+        "Akshay Soni",
+        "Zhong Wu",
+        "Linjun Yang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.IR",
+        "cs.LG"
+      ],
+      "published": "2026-09-24T21:39:12+00:00",
+      "link": "https://arxiv.org/pdf/2609.30576v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "time-aware RoPE for sequential generative recommendation built on the LLM generative recipe",
+      "llm_evidence_cn": "面向生成式序列推荐的时间感知旋转位置编码",
+      "llm_evidence": "面向生成式序列推荐的时间感知旋转位置编码",
+      "canonical_evidence": "面向生成式序列推荐的时间感知旋转位置编码",
+      "llm_tldr_en": "Sequential generative recommenders inherit RoPE from LLMs, but interaction indices carry no elapsed-time or cycle information. T-RoPE replaces index-only rotation with timestamp-based angles and multiscale frequencies.",
+      "llm_tldr_cn": "大规模推荐正采用类似大语言模型的序列生成式范式，但沿用的RoPE仅编码交互序号，无法表达时间间隔、跨尺度行为周期与日历相位。本文提出面向生成式序列推荐的时间感知旋转位置编码T-RoPE，用基于时间戳的角度替换纯序号旋转，并引入可学习时间系数、多尺度频率带、移位查询对齐与非平稳键旋转。该工作把位置编码从语言建模适配到推荐的时间语义，对生成式推荐的建模精度具有直接意义。",
+      "llm_tldr": "大规模推荐正采用类似大语言模型的序列生成式范式，但沿用的RoPE仅编码交互序号，无法表达时间间隔、跨尺度行为周期与日历相位。本文提出面向生成式序列推荐的时间感知旋转位置编码T-RoPE，用基于时间戳的角度替换纯序号旋转，并引入可学习时间系数、多尺度频率带、移位查询对齐与非平稳键旋转。该工作把位置编码从语言建模适配到推荐的时间语义，对生成式推荐的建模精度具有直接意义。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.30656v1",
+      "source": "arxiv",
+      "title": "Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems",
+      "abstract": "Large-scale recommendation models pose distinct, under-explored profiling challenges. Most recommendation model architectures are structurally heterogeneous, intermixing memory-bandwidth-bound operations, small compute-bound dense layers, dynamic shapes from jagged categorical features, and low-arithmetic-intensity operations. Recommendation models evolve rapidly as modeling engineers experiment with compositions, often written without visibility into hardware execution characteristics. Standard profiling tools offer either end-to-end throughput or operator-level traces, but cannot attribute performance to the submodules that practitioners reason about. We present Component Benchmark (CB), a profiling system that independently characterizes each submodule performance in a hierarchical manner, providing a tree-structured, interactive visualization that brings performance clarity to ML practitioners. At its core, CB provides a simple yet extensible, submodule-based benchmarking framework with a plugin architecture that enables hierarchical performance analysis. These large-scale recommendation models are TB-scale, run on thousands of GPUs and ingest 100B examples per day. We demonstrate CB's effectiveness on common open sourced models and discuss how CB has been leveraged to accelerate modern recommendation model performance analysis and optimization.",
+      "authors": [
+        "Dharak Kharod",
+        "Yuzhen Huang",
+        "Zhou Wang",
+        "Jackie Xu",
+        "Fuzail Khan",
+        "Jacky Zhou",
+        "Hao Yan",
+        "Lidong Zhao",
+        "Xizhou Feng",
+        "Yvonne Liu",
+        "Karthik Jayaraman",
+        "Praveen Ramachandran",
+        "Vishwa Karia",
+        "Yashasvi Makin"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-25T00:51:36+00:00",
+      "link": "https://arxiv.org/pdf/2609.30656v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "profiling large-scale recommendation models",
+      "llm_evidence_cn": "大规模推荐模型性能剖析",
+      "llm_evidence": "大规模推荐模型性能剖析",
+      "canonical_evidence": "大规模推荐模型性能剖析",
+      "llm_tldr_en": "Large-scale recommender models are structurally heterogeneous, but existing profilers only give end-to-end or operator-level views. Component Benchmark independently profiles submodules, helping attribute performance for scaling and optimization.",
+      "llm_tldr_cn": "大规模推荐模型结构异构，混合了内存带宽受限算子、小型稠密层与动态稀疏特征，现有剖析工具只能提供端到端吞吐或算子级轨迹，无法将性能归因到子模块。论文提出Component Benchmark剖析系统，可独立刻画推荐模型各子模块的硬件执行特征与性能。该工具帮助建模工程师在模型快速迭代中定位性能瓶颈，为推荐系统的规模化扩展与效率优化提供支撑。",
+      "llm_tldr": "大规模推荐模型结构异构，混合了内存带宽受限算子、小型稠密层与动态稀疏特征，现有剖析工具只能提供端到端吞吐或算子级轨迹，无法将性能归因到子模块。论文提出Component Benchmark剖析系统，可独立刻画推荐模型各子模块的硬件执行特征与性能。该工具帮助建模工程师在模型快速迭代中定位性能瓶颈，为推荐系统的规模化扩展与效率优化提供支撑。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.31045v1",
+      "source": "arxiv",
+      "title": "KuaFu: Compressing Long User Behavior into Understanding at Billion Scale",
+      "abstract": "Conversational agents, generative recommenders, and personalized advertising all rest on one capability: understanding each user from raw behavior. Prevailing industrial practice is task-specific: for each task, a relevant subsequence is extracted from the full history and a dedicated model trained on it. In production it hits two bottlenecks. First, even after filtering, a single-task sequence stays extremely long: content-interest summarization reads several hundred items per user, tens of thousands of tokens once serialized as prompt text. Second, profiles are refreshed routinely: a billion users weekly, roughly 100K QPM in aggregate, which under a fixed GPU budget sets a hard throughput floor. Compression is therefore mandatory, yet truncation or coarse compression can silently distort the profile, introducing four hallucination types (fabrication, omission, date misattribution, broken logic) that, with no way to evaluate the compressed representation itself, surface only as diffuse degradation in downstream metrics. We present KuaFu, a unified behavior-compression layer whose minimal unit is one behavior item. A two-axis projector compresses each item into 2-4 tokens of width 128-256 (about 10x along the token axis, 20x along width; per-item cache 10 KB to 0.5 KB), with fidelity-oriented four-stage training and layered intermediate evaluation. Across four production profiling tasks it matches or exceeds uncompressed single-task production models on all five headline metrics, raises per-GPU throughput by 37%-350%, and saves 190 GPUs. On public benchmarks it nearly always beats prior compressors at the same compression ratio (up to +17.7 EM on out-of-domain MRQA); on RecBench, a 4B model surpasses its 8B counterpart by 1.90 points. KuaFu has run on the Tencent advertising and recommendation platform for ten months, lifting overall GMV by 1.37%.",
+      "authors": [
+        "Jiahao Hui",
+        "Lin Zhu",
+        "Yishen Hu",
+        "Jingdong Shu",
+        "Zetai Jiang",
+        "Xining Ran",
+        "Ben Tan",
+        "Yeshou Cai",
+        "Gong Chen",
+        "Haijie Gu",
+        "Jie Jiang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.CL",
+        "cs.LG"
+      ],
+      "published": "2026-09-25T09:39:39+00:00",
+      "link": "https://arxiv.org/pdf/2609.31045v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "compressing billion-scale long user behavior for generative recommenders and advertising",
+      "llm_evidence_cn": "为生成式推荐与广告压缩十亿级超长用户行为",
+      "llm_evidence": "为生成式推荐与广告压缩十亿级超长用户行为",
+      "canonical_evidence": "为生成式推荐与广告压缩十亿级超长用户行为",
+      "llm_tldr_en": "KuaFu compresses extremely long user behavior sequences into compact representations at billion scale, supporting generative recommenders and personalized advertising under strict throughput budgets.",
+      "llm_tldr_cn": "对话智能体、生成式推荐与个性化广告都依赖从原始行为理解用户，但现有做法按任务抽取子序列并单独建模，面临序列过长与亿级用户高频刷新的吞吐瓶颈。本文提出KuaFu，将超长用户行为压缩为紧凑表示，在十亿级规模下统一支撑多任务用户理解。该工作缓解了序列长度与刷新吞吐的矛盾，为大规模生成式推荐与广告提供共享用户理解基础。",
+      "llm_tldr": "对话智能体、生成式推荐与个性化广告都依赖从原始行为理解用户，但现有做法按任务抽取子序列并单独建模，面临序列过长与亿级用户高频刷新的吞吐瓶颈。本文提出KuaFu，将超长用户行为压缩为紧凑表示，在十亿级规模下统一支撑多任务用户理解。该工作缓解了序列长度与刷新吞吐的矛盾，为大规模生成式推荐与广告提供共享用户理解基础。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

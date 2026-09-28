@@ -1,0 +1,57 @@
+{
+  "date": "20260928",
+  "date_label": "",
+  "generated_at": "2026-09-28 23:40:06 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.30576v1",
+      "route": "202609/28/2609.30576v1-t-rope-time-aware-rotary-position-embedding-for-sequential-recommendation",
+      "title": "T-RoPE: Time-Aware Rotary Position Embedding for Sequential Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向生成式序列推荐的时间感知旋转位置编码",
+      "first_seen_at": "2026-09-28 23:40:06 UTC",
+      "updated_at": "2026-09-28 23:40:06 UTC"
+    },
+    {
+      "paper_id": "2609.31045v1",
+      "route": "202609/28/2609.31045v1-kuafu-compressing-long-user-behavior-into-understanding-at-billion-scale",
+      "title": "KuaFu: Compressing Long User Behavior into Understanding at Billion Scale",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "为生成式推荐与广告压缩十亿级超长用户行为",
+      "first_seen_at": "2026-09-28 23:40:06 UTC",
+      "updated_at": "2026-09-28 23:40:06 UTC"
+    },
+    {
+      "paper_id": "2609.30656v1",
+      "route": "202609/28/2609.30656v1-component-benchmark-hierarchical-model-profiling-for-large-scale-recommendation-systems",
+      "title": "Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "大规模推荐模型性能剖析",
+      "first_seen_at": "2026-09-28 23:40:06 UTC",
+      "updated_at": "2026-09-28 23:40:06 UTC"
+    }
+  ]
+}

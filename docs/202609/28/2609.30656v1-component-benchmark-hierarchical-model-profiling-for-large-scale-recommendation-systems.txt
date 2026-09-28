@@ -1,0 +1,173 @@
+Title: Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems
+
+URL Source: https://arxiv.org/pdf/2609.30656v1
+
+Published Time: Mon, 28 Sep 2026 00:23:44 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems 
+
+Dharak Kharod *, Yuzhen Huang *, Zhou Wang, Jackie Xu, Fuzail Khan, Jacky Zhou, Hao Yan, Lidong Zhao, Xizhou Feng, Yvonne Liu, Karthik Jayaraman, Praveen Ramachandran, Vishwa Karia, Yashasvi Makin 
+
+Meta Platforms Inc , Sunnyvale, California, USA 
+
+{dharakk, yuzhenhuang, zhouwang, jackiexu0313, fuzailkhan, junqingz, haoyan17, lidong, fengx }@meta.com 
+
+{yvliu, karthikjay, pramacha, vishwakaria, yashasvi }@meta.com 
+
+Abstract —Large-scale recommendation models pose distinct, under-explored profiling challenges. Most recommendation model architectures are structurally heterogeneous, intermix-ing memory-bandwidth-bound operations, small compute-bound dense layers, dynamic shapes from jagged categorical features, and low-arithmetic-intensity operations. Recommendation mod-els evolve rapidly as modeling engineers experiment with compo-sitions, often written without visibility into hardware execution characteristics. Standard profiling tools offer either end-to-end throughput or operator-level traces, but cannot attribute performance to the submodules that practitioners reason about. We present Component Benchmark (CB), a profiling system that independently characterizes each submodule performance in a hierarchical manner, providing a tree-structured, interactive visualization that brings performance clarity to ML practitioners. At its core, CB provides a simple yet extensible, submodule-based benchmarking framework with a plugin architecture that enables hierarchical performance analysis. These large-scale recommendation models are TB-scale, run on thousands of GPUs and ingest 100B examples per day. We demonstrate CB’s effectiveness on common open sourced models and discuss how CB has been leveraged to accelerate modern recommendation model performance analysis and optimization. 
+
+Index Terms —Benchmarking, FLOPS, Profiling, Model FLOPs Utilization, Memory Snapshot, Latency, Plugins, Visualization, Model Graph 
+
+I. I NTRODUCTION 
+
+Recent advances in AI/ML have been largely driven by scaling laws that push both model size and data volume to unprecedented levels, requiring efficient training and inference on modern GPUs or accelerators. However, performance opti-mization and bottleneck analysis in modern ML systems have become increasingly complex. This is mainly due to diverse and rapidly evolving models/datasets, heterogeneous training platforms, and high-volume profiling and telemetry data. Model architecture innovation is one of the most active areas in AI/ML research. Large language models have converged to a few representative modeling backbones (e.g., Trans-former [1]); however, models for recommendation systems have not yet converged, and this remains an active research area. Modern recommendation systems have evolved from collaborative filtering / matrix factorization [2] to advanced neural networks with architectures like FM [3], DCN [4], 
+
+> *
+
+Equal contribution. 
+
+DHEN [5], Interformer [6], and HSTU [7]. Within these architectures, there are inefficiencies stemming from small operator dimensions, redundant compute, repetitive kernels, etc., requiring a generic performance profiling system to analyze the bottlenecks. Model architecture alone is insufficient for accurate perfor-mance profiling; the characteristics of training and inference data also play a critical role. For example, input sparsity in categorical features can significantly affect the performance of recommendation models, while sequence length distributions have a major impact on the efficiency of large language mod-els. Meaningful profiling, therefore, requires the use of real datasets. In addition, models and data are typically embedded within complex training and inference stacks and controlled through numerous configuration options. A practical profiling system must be platform-agnostic and capable of handling models and datasets across multiple ML frameworks. Finally, an issue with existing profiling tools is they provide either end-to-end throughput metrics or low-level operator traces, but this data is often fragmented and lacks explicit component-level semantics. In large systems, practitioners frequently observe performance hotspots in traces but can-not easily attribute them to specific model components. ML practitioners generally want to be able to directly attribute performance to model-level semantics to answer questions like what module is currently the biggest latency bottleneck or be able to visualize and break down MFU per module. To address the above challenges, we propose a unified, component-level profiling system that brings performance clarity at the module and component levels. Organizing data around these components enables user-friendly, hierarchical performance analysis. We introduce Component Benchmark (CB), a lightweight, extensible system for managing complex, heterogeneous pro-filing data that runs on a single GPU. The system follows a minimalist design, with a core of 1000 lines of code. Leverag-ing PyTorch module hooks, Component Benchmark captures submodule inputs and profiles each component independently in a hierarchical manner. This approach reconstructs a tree-structured performance view of the model, allowing users to quickly localize performance hotspots within complex model architectures. arXiv:2609.30656v1 [cs.IR] 25 Sep 2026 Beyond the core design, CB provides a plugin-based frame-work that supports extensible profiling and analysis. Users can extend CB through Component Provider to adapt to a customized training stack, Preprocessor Plugins to manage submodule and its input, Profiler Plugins to collect necessary runtime information/traces, and Result Plugins to manage and visualize final results. CB organizes and presents profiling results in an interactive, hierarchical format, enabling users to explore model performance with a significantly lesser barrier to entry and making detailed performance analysis increasingly accessible beyond performance specialists. The scale of industrial recommendation training makes effi-ciency a first-order concern. These models are terabyte-scale, train continuously on thousands of GPUs, and ingest data on the order of 10 11 examples per day. At this scale, even single-digit percentage improvements in throughput compound into fleet-wide capacity efficiencies. Realizing those improvements, however, requires knowing which component to optimize - a question that end-to-end throughput numbers cannot answer and operator-level traces answer at the wrong granularity. CB closes this gap by decomposing a model into its constituent sub-modules and its corresponding performance numbers. We discuss how Component Benchmark manages and an-alyzes profiling data hierarchically for representative DLRM-like models, illustrating how computation, memory, and exe-cution time are distributed across model components. We also share our experience on how CB can be leveraged to analyze practical performance bottlenecks and was used to achieve large-scale optimizations. II. R ELATED WORK 
+
+General-purpose GPU profilers. Tools such as NVIDIA Nsight Systems [8] and Kineto [9] provide kernel-level and operator-level GPU traces. PyTorch Profiler builds on Kineto and offers a with_modules option that attributes operators to their enclosing nn.Module . However, this attribution is performed in-situ during a full model execution: it cannot iso-late a submodule’s resource consumption from cross-module effects such as kernel scheduling overlap, cache warmth, and compiler fusions. Under PyTorch 2 compilation [10], module boundaries are further erased, making operator-to-module mapping unreliable. CB takes a different approach: it extracts each submodule with its runtime inputs and profiles it independently, preserving module-level semantics regardless of compiler transformations. 
+
+ML performance prediction and benchmarking. 
+
+MLPerf [11] provides standardized end-to-end benchmarks for comparing hardware and software stacks but does not decompose performance by model component. DeepSpeed [12] includes a FLOP profiler that reports per-module FLOP counts; however, it does not provide hierarchical multi-metric analysis (latency, memory, bandwidth, MFU) or interactive visualization. CB complements these tools by offering component-level decomposition that helps practitioners understand where within a model the bottlenecks lie, rather than only measuring aggregate throughput.  
+
+> Fig. 1. Component Benchmark architecture and end-to-end workflow
+
+Recommendation system profiling. DeepRecSys [13] bench-marks end-to-end inference latency for recommendation mod-els under realistic serving conditions, focusing on system-level metrics such as tail latency and throughput under load. This is complementary to CB, which targets training-time, submodule-level profiling to guide architecture and kernel optimization. To our knowledge, CB is the first profiling system specifically designed for hierarchical, component-level performance analysis of recommendation model architectures. III. S YSTEM OVERVIEW 
+
+A. Core Design 
+
+Component Benchmark (CB)’s architecture and workflow is shown in Figure 1, with the following subsystems: a
+
+Component Provider , which adapts CB to heterogeneous training frameworks (Section III-A3); a Submodule/Input Extraction module, which uses PyTorch hooks to capture submodules and their runtime inputs (Section III-A1); a
+
+Preprocessor , which performs data and model augmentation prior to profiling (Section III-A3); a Component Profiler ,which executes component-level profiling (Section III-A3); and a Result Visualizer , which aggregates, post-processes, and presents the profiling results (Section III-A3). 
+
+1) Leveraging PyTorch Hooks: CB is PyTorch-native and builds on the hierarchical abstraction of PyTorch modules. Although this abstraction facilitates rapid model exploration, component-level information is frequently discarded at run-time. This loss is primarily due to the tracing mechanisms employed by modern systems, such as the PyTorch 2 Com-piler [10]. Prior to CB, we explored multiple approaches to recover module-level execution information, including injecting ad-ditional trace annotations and modifying compiler internals; however, these methods were not reliable at scale. CB instead adopts a simple and robust design: it explicitly captures each and every submodule of interest together with its runtime inputs at selected component boundaries and performs local profiling at the component level. CB implements this approach with PyTorch hooks. Given a top-level model, CB registers TABLE I CB’ S EXTENSIBLE SUBSYSTEMS AND SOME SELECTED BUILT -IN FUNCTIONALITIES                
+
+> Category Concrete Examples Description
+> Component Providers PyTorchProvider Simple Provider for PyTorch model/data RecSysProvider Extract Model/data from RecSys stack Preprocessor Plugins Batch size adjustment Replicate and augment submodule input Mixed precision Apply mixed precision or low precision before profiling Profiler Plugins Flops Counter Calculate submodule FLOPs using PyTorch FlopCounterMode Memory snapshots Capture PyTorch memory snapshot for submodule Trace collection Capture Kineto traces Kernel Analysis Aggregate and analyze perf metric at kernel level Result Plugins Icicle view Generate Icicle view to provide hierarchical and interactive profiling information Model graph visualization Generate Tensorboard model graph
+
+forward hooks on submodules of interest (by default, all sub-modules). During execution, these hooks capture submodule inputs, allowing CB to reconstruct fine-grained forward and backward execution behavior for each component. 
+
+2) Recursive profiling: CB first enumerates all submodules and orders them by hierarchical depth, from the top-level model to lower-level components, and profiles them in a breadth-first manner. Users can configure the profiling depth and apply rules to filter out uninteresting submodules. For each submodule, CB captures its runtime inputs via hooks, runs Preprocessors , and executes the built-in and user-defined 
+
+Profiler Plugins .If profiling a submodule fails (e.g., when a top-level module is too large to fit on a single GPU), CB skips that module and continues profiling its child submodules. This can occur in some high-level modules of very large models. In such cases, CB estimates the parent module’s behavior by aggregating re-sults from its children; this aggregation approach reconstructs module-level information hierarchically. 
+
+3) Plugin Design: Table I summarizes CB’s extension points and some of the built-in functionalities. We adopt a simple yet extensible plugin architecture that allows users to customize and extend the system at multiple stages of the profiling pipeline. Specifically, CB supports the following extension points: 
+
+Component Providers integrate CB with different training frameworks by extracting the relevant model and its inputs from each specific stack. 
+
+Preprocessor Plugins are executed before profiling each submodule and are used to augment the module/input. Typical preprocessors include batch size and mixed-precision adjust-ment. 
+
+Profiler Plugins implement the core profiling logic. Each profiler plugin is defined as a function profile(module, input) that produces a set of profiling artifacts. CB provides several built-in profiler plugins, including trace collection and analysis, memory snapshots, and kernel-level analysis. These plugins form the core profiling capabilities of CB and also serve as reference implementations for users to develop and contribute custom plugins. 
+
+Result Plugins are executed after all target submodules have been profiled and are responsible for post-processing and aggregating profiling results. Users may define custom 
+
+# Component Provider class ComponentProviderInterface: def get_model_and_input(self): return model, input # Preprocessor class PreprocessorInterface: def preproc(self, submodule, input): return submodule, input # Profiler class ProfilerInterface: def profile(self, submodule, input): return ProfileResult # Result Visualization class ResultVisualizerInterface: def get_result(self, profiler_results): return HTML # CB workflow model, input = provider.get_model_and_input() for m in bfs_traverse(model): subinput = capture_input_with_hook( model, input, m) for preproc in preprocessor_plugins: m, subinput = preproc.preproc(m, subinput) for profiler in profiler_plugins: result = profiler.profile(m, subinput) profiler_results.append(result) for visualizer in result_visualizer_plugins: visualizer.get_result(profiler_results)          
+
+> Fig. 2. Pseudocode for the extensible Plugin interfaces in Component Benchmark subsystems and the overall workflows
+
+result plugins to support application-specific analysis and visualization. Figure 2 provides pseudo code of how these extensible components interact with each other. Fig. 3. Benchmark Result Table for the DLRM model 
+
+B. Components Management and Profiles Management 1) Components Management: We integrated CB into rec-ommendation training stacks by customizing Component Providers . CB requires a top-level module and its correspond-ing inputs in Component Providers ; we examined the training stack and implemented the logic to retrieve the model and data. The interface is simple to follow, and we observed direct contributions. To obtain real input, we leverage the data-loading logic embedded in the training stack. In most cases, loading a single batch is representative and sufficient for profiling. For other advanced use cases, the Component Provider can be extended to support multiple batches, simulating dynamic input shapes encountered in the real world. Some preprocessing is also applied to the training stack in the corresponding Component Providers . For example, in recommendation models [14], embedding table lookups before the main dense model can consume several terabytes of memory. To enable local profiling, we reduce the embedding hash size to fit within a single GPU. CB scales down the batch size during the submodule input extraction phase, reducing memory usage. After capturing representative submodule input, CB replicates tensors to match the original batch size in Preprocessor Plugins . This approach preserves the input distribution and effectively reduces out-of-memory (OOM) errors when profiling large models locally. 
+
+2) Profiles Management and Visualization: CB transforms raw profiling data into actionable insights through interactive reports. It automatically aggregates key performance metrics such as computation time, memory usage, and FLOPs, or-ganized by model hierarchy. The reports include intuitive tables and visualizations that highlight performance hotspots, allowing users to quickly identify bottlenecks. Users can filter, explore, and export results for further analysis or sharing, which supports effective collaboration and model optimization. IV. E XPERIMENTAL ANALYSIS 
+
+To illustrate the functionality and the effectiveness of Component Benchmark, we benchmark a common recom-mendation model backbone: the open source Deep FM-based [15] DLRM model [14] and a standard LLM backbone NanoGPT [16] on one Nvidia H100 GPU. We demonstrate how CB works hierarchically across a complex model and present it in a user-friendly way that facilitates model per-formance analysis. We wrap the model and data in Py-TorchProvider and invoke CB with plugins for MFU, kineto trace, memory snapshot, and our custom visualization and report generation plugins. Note that this experiment is for demonstration purposes, illustrating what CB can provide and how it benefits the performance analysis of recommendation system models. 
+
+A. Benchmark Results 1) Result table: The result table report, as depicted in Figure 3, provides a comprehensive, hierarchical view of model performance. Each row in the table corresponds to a specific submodule with the same depth, identified by its unique path. This path reflects the model’s recursive structure, allowing you to trace performance metrics from the top-level model down to the leaf submodules. This recursive structure enables detailed performance analysis at every level, helping users pinpoint bottlenecks or inefficiencies within specific submodules. The following profiling information is provided with each submodule:  
+
+> •
+
+Component name : The hierarchical name/path of the module or submodule, showing its position within the overall model structure.  
+
+> •
+
+Latency (ms) : The time taken by the module to process a batch, measured in milliseconds.  
+
+> •
+
+Model size (MB) : The static memory footprint of the module, in megabytes.  
+
+> •
+
+TFLOPS/sec : The throughput of the module, measured in teraFLOPS per second. Fig. 4. DLRM Benchmark Icicle Visualization. (Note: while the Icicle view font size may appear small in static figures, the interactive user interface allows flexible zooming.)  
+
+> •
+
+MFU% : Model FLOP Utilization, indicating how effi-ciently the module uses available compute resources.  
+
+> •
+
+CPU/GPU time total (ms) : The total time spent on CPU and GPU for the module.  
+
+> •
+
+Estimated avg BW / BW util : Estimated average band-width and its utilization.  
+
+> •
+
+Trace, GPU Snapshot, Perfetto, kernel profile, log url : Links to various profiling and visualization tools for deeper analysis. 
+
+2) Icicle View Visualization: The icicle view provides an in-teractive, hierarchical visualization of the model’s component structure and performance metrics. Each node in the icicle chart represents a submodule, organized in a tree structure from the root module to leaf submodules. Figure 4 shows the Icicle view benchmarking the DLRM model. Note that while the font size in the Icicle view figures may appear small in this paper, the interface supports interactive, flexible zooming. This Icicle enables users to quickly comprehend the overall architecture: the model consists of 4 modules: sparse arch and dense arch, which performs lookups from embedding tables, and learns from float features respectively producing output embeddings, inter arch crosses them into a wide vector per example and over arch projects and squashes that into a probability in [0,1]. More importantly, the icicle allows us to view performance numbers per sub-module. Depending on the optimization target (we chose MFU% here), the icicle is color coded accord-ingly to produce a fairly intuitive plot where the sub-modules traverse a red-green spectrum corresponding to the sub-module MFU%. Users can interactively click on any module to access detailed performance metrics. At first glance, we are able to confirm that the sparse arch module is almost entirely memory bandwidth-bound with low arithmetic intensity given low FLOPs and large bandwidth utilization per module. Diving deeper into the model, we see Figure 5 which zooms into the inter arch module. We infer the following information traversing each level:  
+
+> •
+
+The inter arch.deep fm and inter arch.fm modules are sibling sub-modules that are compute (MFU: 27.06%) and bandwidth-bound (MFU: 0.06%) respectively. This follows directly from the fact that the deep fm sub-module performs a large matrix multiplication on the sparse and dense embeddings while the fm sub-module computes the factorization-machine cross term which simplifies into 3 passes of small element-wise + reduction ops and large memory transfer.  
+
+> •
+
+The inter arch.deep fm.dense module is a ”container” sub-module that has no compute specific to its own mod-ule and has its performance aggregated as the latency-weighted mean over measured leaves. Fig. 5. Zoom-in on the inter-arch module  
+
+> •
+
+The sub-modules dense module.0 and dense module.1 are on opposite ends of the MFU spectrum due to module 0 being a torch.nn.Linear multiplication and module 1 being a ReLU operation which correctly reports 0 FLOPs performed. A similar scenario is observed in Figure 6 where we zoom into the dense arch module.  
+
+> •
+
+The dense arch sub-module is a single MLP stack whose leaves alternate between compute-bound torch.nn.Linear layers (dense module.0 at MFU: 25.91%, dense module.2 at MFU: 20.74%) and bandwidth-bound ReLU activations (dense module.1 and dense module.3, both at MFU: 0%).  
+
+> •
+
+The two Linear layers differ from each other as well (MFU: 25.91% vs 20.74%), which the hierar-chy attributes to shape rather than to any difference in kind: dense module.0 multiplies 1024x4096 while dense module.2 multiplies the narrower 4096x512. 
+
+3) Extensibility to LLMs: Another advantage of CB is that this is model agnostic and can be used to benchmark PyTorch-based models in general. CB’s provider abstraction requires only two things from a workload: a top-level nn.Module and a representative input batch. Nothing in the framework is specific to recommendation architectures - the recursive walk, the input-capture mechanism, and every analysis plugin operate on the PyTorch module tree alone. To test how far that generality holds, we applied CB unchanged to NanoGPT [16], an open-source decoder-only language model whose structure is the opposite of the recommendation architectures CB was designed around: a homogeneous stack of GEMM-dominated transformer blocks with no embedding-bag lookups, no jagged inputs, and no feature-interaction modules. The top-level icicle in Fig 7 shows the homogenous and repeated transformer blocks that are characteristic to large language models. We see 12 transformer blocks that account for the large majority of the model’s runtime where these are indistinguishable from one another. Beside them sits lm head, a single Linear layer that is the model’s only green cell (MFU%), carrying a large share of total FLOPs in one leaf while occupying a much smaller share of the width - the visual signature of high arithmetic intensity. If we zoom in on one such transformer block in Fig 8, we make the following observations:  
+
+> •
+
+The attn block has half the MFU (10%) as the MLP block (20%). This would naturally drive an investigation into the exact attention kernel being used which is possibly sub-optimal given the input Q,K,V dimensions. As men-tioned earlier, this kernel trace is easily obtainable via the ”Perfetto Trace” link that exists per sub-module and would help confirm our hypothesis.  
+
+> •
+
+The red blocks in the icicle are low-MFU (0-1%) and on interactively hovering over the module, we can see Fig. 6. Zoom-in on the dense-arch module 
+
+this makes sense since these are layer-norm, GeLU and dropout layers which by definition have a lower number of FLOPs given the memory movement. This module-level attribution might in-turn lead to fusing these opera-tions to increase overall MFU% and being more compute efficient. These are preliminary observations on open-sourced models and are purely meant for demonstration purposes. Nonetheless, the same tooling is applied on larger models where surface-level metrics and associated profiling links per module enabled bottleneck elimination and reduced barrier to entry for contrib-utors. V. R ESULTS IN PRACTICE 
+
+The following case studies demonstrate the practical benefits of CB in real world usage, while also highlighting the limitations of existing benchmarking tools. 
+
+Locally optimized kernels do not translate to globally opti-mal models : CB’s per-submodule MFU report isolated several low-utilization GEMV kernels in a given Attention-based mod-ule. Engineers found that re-authoring certain memory-bound GEMM/GEMV operations to instead dispatch elementwise kernels - even though those kernels are individually slower than the vendor library GEMM - enlarged the PT2 fusion region and improved memory access patterns, producing a net training and serving throughput gain of 3%. A whole-model trace reveals that a region is slow, but cannot test the hypothesis that making a component slower makes the model faster. 
+
+Opportunity sizing before integration : Only a over arch-based module was being compiled with PT2, leaving the benefit of extending compilation to the entire model unknown. Benchmarking the model in isolation with and without PT2 reduced iteration time from 83 ms to 50 ms, sizing the oppor-tunity before any integration effort was incurred and justifying work that delivered 34% QPS increase. The measurement is unreachable by whole-model methods, which cannot attribute compiler benefit to an uncompiled submodule. 
+
+Attributing a cross-model regression : A generative-recommender ranking model consumed 2.8× the memory and 39% more FLOPs than its predecessor, with no attribution for either. CB’s per-module memory and FLOPs breakdown localized the increase to two specific changes: a heavier event model and enlarged set-transformer blocks; restoring the baseline dimensions recovered 10% QPS and 22% memory savings. 
+
+Targeted sub-module compression : Under a resource-reallocation mandate, tracing showed the GPU stalling on both communication and computation but gave no indication of which components to shrink. CB’s joint TFLOPS-and-latency view identified two specific low-performing submodules, and Fig. 7. Top-level icicle plot of nanoGPT 
+
+after scaling down only those, the post-optimization trace shows the compute stall almost entirely eliminated. This outlines both the lack in current profiling tools that failed to answer the question and the capability of our tool that did, making it a clear demonstration of our claim. VI. P RACTICAL LESSONS LEARNED 
+
+Profiling at the right level: While existing tools like Kineto traces provide low-level execution details, in the diverse rec-ommendation model space, profiling at the submodule level is important to enable ML practitioners and performance engineers to identify performance bottlenecks accurately and take actionable optimization steps by correlating performance directly to each PyTorch module. 
+
+Importance of benchmarking in large data systems: Profil-ing tooling must be designed for the environment it measures. At scale it is important that performance can be attributed to a unit an engineer can act on and measured against real data. CB addresses this by reducing the unit of measurement from the job to the submodule. CB design components ensure we are able to replicate input data while being able to run performance analyses on one GPU. 
+
+Simple and extensible design: We found that CB can be fur-ther leveraged for use cases we had not originally envisioned, including numeric comparison: using CB to verify submodule numeric equivalence, and hardware bring-up: benchmarking submodule performance on new hardware to identify hotspots. 
+
+Visualization is important: Existing profiling tools may already provide very rich information, but we found that engineers still prefer a more illustrative, intuitive user ex-perience. Lowering the barrier for performance profiling and optimization is both important and rewarding. The hierarchical visualization, in particular, has been widely welcomed by engineers. VII. C ONCLUSION 
+
+In this paper, we presented Component Benchmark (CB), a simple yet extensible system, and a recursive submodule-level profiling mechanism to address the unique complexities of recommendation model performance analysis. With its minimalist philosophy, extensible plugin architecture, robust core implementation, and user-friendly result visualization, CB brings unique perspective to the ML infrastructure commu-nity in analyzing and optimizing large scale recommendation model training. REFERENCES [1] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. Kaiser, and I. Polosukhin, “Attention is all you need,” in Advances in Neural Information Processing Systems 30 (NIPS) , Long Beach, CA, USA, 2017, pp. 5998–6008. [2] Y. Koren, R. M. Bell, and C. Volinsky, “Matrix factorization techniques for recommender systems,” Computer , vol. 42, no. 8, pp. 30–37, 2009. [3] S. Rendle, “Factorization machines,” in Proc. 10th IEEE Int. Conf. Data Mining (ICDM) , Sydney, Australia, 2010, pp. 995–1000. Fig. 8. Zoomed-in nanoGPT transformer block [4] R. Wang, B. Fu, G. Fu, and M. Wang, “Deep & cross network for ad click predictions,” in Proc. ADKDD’17 , Halifax, NS, Canada, 2017, pp. 12:1–12:7. [5] B. Zhang, L. Luo, X. Liu, J. Li, Z. Chen, W. Zhang, X. Wei, Y. Hao, M. Tsang, W. Wang et al. , “DHEN: A deep and hierarchical ensemble network for large-scale click-through rate prediction,” arXiv preprint arXiv:2203.11014 , 2022. [6] Z. Zeng, X. Liu, M. Hang, X. Liu, Q. Zhou, C. Yang, Y. Liu, Y. Ruan, L. Chen, Y. Chen et al. , “InterFormer: Towards effective heterogeneous interaction learning for click-through rate prediction,” arXiv preprint arXiv:2411.09852 , 2024. [7] J. Zhai, L. Liao, X. Liu, Y. Wang, R. Li, X. Cao, L. Gao, Z. Gong, F. Gu, M. He et al. , “Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations,” arXiv preprint arXiv:2402.17152 , 2024. [8] NVIDIA Corporation, “NVIDIA Nsight Systems,” 2024. [Online]. Available: https://developer.nvidia.com/nsight-systems [9] The PyTorch Contributors, “Kineto: A CPU+GPU profiling li-brary,” GitHub repository, 2020. [Online]. Available: https://github.com/ pytorch/kineto [10] J. Ansel, E. Yang, H. He, N. Gimelshein, A. Jain, V. Voznesensky et al. , “PyTorch 2: Faster machine learning through dynamic compilation,” in Proc. 29th ACM Int. Conf. Architectural Support for Programming Languages and Operating Systems (ASPLOS) , 2024. [11] P. Mattson, C. Cheng, G. Diamos, C. Coleman, P. Micikevicius, D. Pat-terson, H. Tang, G.-Y. Wei, P. Bailis, V. Bittorf, D. Brooks et al. ,“MLPerf training benchmark,” in Proc. 3rd Conf. Machine Learning and Systems (MLSys) , 2020. [12] J. Rasley, S. Rajbhandari, O. Ruwase, and Y. He, “DeepSpeed: System optimizations enable training deep learning models with over 100 billion parameters,” in Proc. 26th ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining (KDD) , 2020, pp. 3505–3506. [13] U. Gupta, S. Hsia, V. Saraph, X. Wang, B. Reagen, G.-Y. Wei, H.-H. S. Lee, D. Brooks, and C.-J. Wu, “DeepRecSys: A system for optimizing end-to-end at-scale neural recommendation inference,” in Proc. 47th Annu. Int. Symp. Computer Architecture (ISCA) , 2020, pp. 982–995. [14] M. Naumov, D. Mudigere, H.-J. M. Shi, J. Huang, N. Sundaraman, J. Park, X. Wang, U. Gupta, C.-J. Wu, A. G. Azzolini et al. , “Deep learning recommendation model for personalization and recommenda-tion systems,” arXiv preprint arXiv:1906.00091 , 2019. [15] The PyTorch Contributors, “TorchRec DLRM DeepFM,” GitHub repository, 2022. [Online]. Available: https://github.com/meta-pytorch/ torchrec/blob/main/torchrec/models/deepfm.py [16] A. Karpathy, “nanoGPT: The simplest, fastest repository for train-ing/finetuning medium-sized GPTs,” GitHub repository, 2023. [Online]. Available: https://github.com/karpathy/nanoGPT

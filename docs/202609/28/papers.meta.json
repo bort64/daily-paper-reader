@@ -1,0 +1,54 @@
+{
+  "label": "2026-09-28",
+  "date": "2026-09-28",
+  "generated_at": "2026-09-28T23:40:07",
+  "count": 3,
+  "papers": [
+    {
+      "paper_id": "202609/28/2609.30576v1-t-rope-time-aware-rotary-position-embedding-for-sequential-recommendation",
+      "section": "quick",
+      "title_en": "T-RoPE: Time-Aware Rotary Position Embedding for Sequential Recommendation",
+      "authors": "Yang Liu, Noel Loo, Ali Khanafer, Shuying Sun, Akshay Soni, Zhong Wu, Linjun Yang",
+      "date": "2026-09-24",
+      "pdf": "https://arxiv.org/pdf/2609.30576v1",
+      "score": "7.0",
+      "evidence": "面向生成式序列推荐的时间感知旋转位置编码",
+      "tldr": "序列生成式推荐沿用了大语言模型的RoPE位置编码，但交互索引只记录事件顺序，丢失了时间间隔、多尺度周期与日历相位信息。作者提出T-RoPE，用时间戳角度、可学习时间系数、多尺度频率库、移位查询对齐与非平稳键旋转替代纯索引旋转，并证明标准RoPE即使输入时间戳仍具时间平移不变性、无法区分季节语境。在五个公开基准上各项指标全面最优，稀疏PixelRec的HR@10提升78–130%，Amazon Books各指标提升8–12%；工业级6B+交互数据上较HSTU+Time RAB提升13–82%，Shop线上A/B转化率与订单量均正增长，且额外开销对序列长度与头维度线性。",
+      "tags": "query:search-rec",
+      "abstract_en": "Large-scale recommenders increasingly adopt the sequential generative recipe behind large language models, bringing the Transformer into recommendation along with design choices made for text, including Rotary Position Embedding (RoPE). In language models, RoPE encodes token indices for relative position reasoning, but in recommendation, an interaction index records only event order, saying nothing about elapsed time, behavioral cycles across scales, or calendar phase. We revisit this choice and propose T-RoPE, a time-aware RoPE for sequential generative recommendation that replaces index-only rotation with timestamp-based angles, learnable temporal coefficients, multiscale frequency banks, shifted query alignment, and non-stationary key rotation. We prove that standard RoPE, even on timestamps, remains time-translation invariant and cannot distinguish seasonal contexts, and that T-RoPE breaks this invariance while preserving the RoPE interface. Across five public benchmarks, T-RoPE achieves the best result on every metric on every dataset, improving over the strongest baseline by 78--130\\% in HR@10 on the sparse PixelRec data and 8--12\\% across metrics on Amazon Books. On an industrial-scale e-commerce dataset with more than 6B interactions, it improves every metric over the HSTU + Time RAB backbone by 13--82\\%, with ablations attributing the largest gains to multiscale frequencies ($+56\\%$ NDCG@50) and non-stationary keys ($+4\\%$). An online A/B test in the Shop app yields positive lifts in conversion rate ($+0.33\\%$) and order count ($+0.63\\%$). We also provide forward and backward algorithms whose added cost is linear in sequence length and head dimension, keeping time-aware RoPE practical for large generative recommenders.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202609/28/2609.31045v1-kuafu-compressing-long-user-behavior-into-understanding-at-billion-scale",
+      "section": "quick",
+      "title_en": "KuaFu: Compressing Long User Behavior into Understanding at Billion Scale",
+      "authors": "Jiahao Hui, Lin Zhu, Yishen Hu, Jingdong Shu, Zetai Jiang, Xining Ran, Ben Tan, Yeshou Cai, Gong Chen, Haijie Gu, Jie Jiang",
+      "date": "2026-09-25",
+      "pdf": "https://arxiv.org/pdf/2609.31045v1",
+      "score": "7.0",
+      "evidence": "为生成式推荐与广告压缩十亿级超长用户行为",
+      "tldr": "对话代理、生成式推荐与个性化广告都依赖从原始行为理解用户，但工业界按任务抽取子序列并单独建模，面临超长序列与亿级用户周更的双重吞吐瓶颈，粗暴压缩还会引入虚构、遗漏等失真。KuaFu 提出统一行为压缩层，以单条行为为最小单位，用双轴投影器把每条压成 2-4 个 128-256 维 token，并配四阶段训练与分层中间评估。四个生产任务五项指标均达到或超过未压缩单任务模型，单卡吞吐提升 37%-350%，节省 190 张 GPU；公开基准同压缩率下常优于已有压缩器，腾讯广告推荐平台上线十个月提升 GMV 1.37%。",
+      "tags": "query:search-rec",
+      "abstract_en": "Conversational agents, generative recommenders, and personalized advertising all rest on one capability: understanding each user from raw behavior. Prevailing industrial practice is task-specific: for each task, a relevant subsequence is extracted from the full history and a dedicated model trained on it. In production it hits two bottlenecks. First, even after filtering, a single-task sequence stays extremely long: content-interest summarization reads several hundred items per user, tens of thousands of tokens once serialized as prompt text. Second, profiles are refreshed routinely: a billion users weekly, roughly 100K QPM in aggregate, which under a fixed GPU budget sets a hard throughput floor. Compression is therefore mandatory, yet truncation or coarse compression can silently distort the profile, introducing four hallucination types (fabrication, omission, date misattribution, broken logic) that, with no way to evaluate the compressed representation itself, surface only as diffuse degradation in downstream metrics. We present KuaFu, a unified behavior-compression layer whose minimal unit is one behavior item. A two-axis projector compresses each item into 2-4 tokens of width 128-256 (about 10x along the token axis, 20x along width; per-item cache 10 KB to 0.5 KB), with fidelity-oriented four-stage training and layered intermediate evaluation. Across four production profiling tasks it matches or exceeds uncompressed single-task production models on all five headline metrics, raises per-GPU throughput by 37%-350%, and saves 190 GPUs. On public benchmarks it nearly always beats prior compressors at the same compression ratio (up to +17.7 EM on out-of-domain MRQA); on RecBench, a 4B model surpasses its 8B counterpart by 1.90 points. KuaFu has run on the Tencent advertising and recommendation platform for ten months, lifting overall GMV by 1.37%.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202609/28/2609.30656v1-component-benchmark-hierarchical-model-profiling-for-large-scale-recommendation-systems",
+      "section": "quick",
+      "title_en": "Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems",
+      "authors": "Dharak Kharod, Yuzhen Huang, Zhou Wang, Jackie Xu, Fuzail Khan, Jacky Zhou, Hao Yan, Lidong Zhao, Xizhou Feng, Yvonne Liu, Karthik Jayaraman, Praveen Ramachandran, Vishwa Karia, Yashasvi Makin",
+      "date": "2026-09-25",
+      "pdf": "https://arxiv.org/pdf/2609.30656v1",
+      "score": "6.0",
+      "evidence": "大规模推荐模型性能剖析",
+      "tldr": "大规模推荐模型结构异构，混合内存带宽受限、小计算密集层、动态稀疏类别特征等操作，传统分析工具只能给出端到端吞吐或算子级轨迹，难以归因到实际子模块。本文提出 Component Benchmark（CB），以子模块为单位进行分层性能刻画，并通过插件架构和树状交互可视化支持可扩展的基准测试。CB 面向 TB 级、数千 GPU、每日千亿样本的模型，在开源推荐模型上验证了有效性，可加速现代推荐模型的性能分析与优化。",
+      "tags": "query:search-rec",
+      "abstract_en": "Large-scale recommendation models pose distinct, under-explored profiling challenges. Most recommendation model architectures are structurally heterogeneous, intermixing memory-bandwidth-bound operations, small compute-bound dense layers, dynamic shapes from jagged categorical features, and low-arithmetic-intensity operations. Recommendation models evolve rapidly as modeling engineers experiment with compositions, often written without visibility into hardware execution characteristics. Standard profiling tools offer either end-to-end throughput or operator-level traces, but cannot attribute performance to the submodules that practitioners reason about. We present Component Benchmark (CB), a profiling system that independently characterizes each submodule performance in a hierarchical manner, providing a tree-structured, interactive visualization that brings performance clarity to ML practitioners. At its core, CB provides a simple yet extensible, submodule-based benchmarking framework with a plugin architecture that enables hierarchical performance analysis. These large-scale recommendation models are TB-scale, run on thousands of GPUs and ingest 100B examples per day. We demonstrate CB's effectiveness on common open sourced models and discuss how CB has been leveraged to accelerate modern recommendation model performance analysis and optimization.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

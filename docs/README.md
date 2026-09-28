@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-27</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-28</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 1 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 3 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>1</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-27 22:18:16 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-28 23:40:06 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日共生成 1 篇推荐（精读 0 篇，速读 1 篇）</p>
-<p>速读：《Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search》（6.0/10）</p>
-<p>这些结果覆盖了当下较热的方向，建议先看精读区论文的关键问题与方法。</p>
+<p>今日速读3篇推荐系统论文，聚焦序列推荐与大规模行为建模。T-RoPE用时间感知旋转位置编码优化序列推荐、KuaFu将十亿级长用户行为压缩为理解表征，两篇均获7.0分值得优先看。普通读者可先读这两篇的摘要，理解“时间编码”和“行为压缩”两条思路如何提升推荐效果。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -93,12 +91,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">1 篇</strong>
+    <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search">Search-Aware Reinforcement Learning for Multi-Component Query Understanding in Roblox Game Search</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="T-RoPE: Time-Aware Rotary Position Embedding for Sequential Recommendation">T-RoPE: Time-Aware Rotary Position Embedding for Sequential Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="KuaFu: Compressing Long User Behavior into Understanding at Billion Scale">KuaFu: Compressing Long User Behavior into Understanding at Billion Scale</span></li><li><span class="dpr-home-dashboard-paper-title" title="Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems">Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
 </div>
 
