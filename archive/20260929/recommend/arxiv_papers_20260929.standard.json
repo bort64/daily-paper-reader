@@ -1,0 +1,272 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-29T22:55:47.267018+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 3,
+    "deep_cap": 6,
+    "deep_selected": 3,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [
+    {
+      "id": "2609.33745v1",
+      "source": "arxiv",
+      "title": "Beyond the Beam: Constructive Repair and Candidate Completion for Generative Recommendation",
+      "abstract": "Generative recommenders retrieve items by generating identifiers, but a valid identifier can remain outside the beam after catalog expansion. This raises two connected questions: which failures can identifier assignment repair, and how should retrieval proceed beyond the initial beam? We characterize assignment repair with a fixed generator and retained old identifiers. Output-invariance certificates identify failures shared by all admissible assignments. Under a common effective prefix, coupled support and ranking constraints give the exact feasible interval of new-item counts for target recovery. Building on this characterization, Beyond the Beam (BB) obtains minimum-replacement repairs through an integral flow formulation, selects a shared map and adapts the generator. At inference, generative likelihood and collaborative evidence define one score for ranking, candidate priority and stopping. Retained prefix bounds guide candidate completion and certify its global Top-$K$ when the stopping condition is met. Exhaustive finite-catalog evaluation confirms construction in every feasible case. Across three Amazon Reviews categories and three random seeds, the full T5 procedure improves mean Recall@10 by 15.5--46.3% and NDCG@10 by 15.2--44.4% over the best-performing evaluated generative baseline for each dataset and metric. Matched controls show that shared construction and adaptation improve new-target ranking and certification efficiency on Beauty and Toys. Combined scoring and candidate completion improve NDCG@10 across all three datasets with both T5 and decoder-only LC-Rec.",
+      "authors": [
+        "Zijun Zhao",
+        "Peng Zhang",
+        "Gang Zhang",
+        "Yuanchi Ma",
+        "Hui He",
+        "Zhendong Niu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-27T16:46:55+00:00",
+      "link": "https://arxiv.org/pdf/2609.33745v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "generative recommenders retrieve items by generating identifiers",
+      "llm_evidence_cn": "生成式推荐通过生成标识符检索物品",
+      "llm_evidence": "生成式推荐通过生成标识符检索物品",
+      "canonical_evidence": "生成式推荐通过生成标识符检索物品",
+      "llm_tldr_en": "Characterizes identifier assignment repair in generative recommendation, using output-invariance certificates and integral flow to complete candidates beyond the initial beam.",
+      "llm_tldr_cn": "论文针对生成式推荐中目录扩展后有效物品标识符可能落在束搜索之外、导致召回失败的问题，刻画了固定生成器下的标识符分配修复理论。作者用输出不变性证书识别所有可行分配共有的失败，并以整数流形式求解最小替换修复，进而实现超越初始束的候选补全。该工作给出新物品数量可行区间的精确刻画，为生成式推荐在动态目录下的检索鲁棒性提供理论与算法支撑。",
+      "llm_tldr": "论文针对生成式推荐中目录扩展后有效物品标识符可能落在束搜索之外、导致召回失败的问题，刻画了固定生成器下的标识符分配修复理论。作者用输出不变性证书识别所有可行分配共有的失败，并以整数流形式求解最小替换修复，进而实现超越初始束的候选补全。该工作给出新物品数量可行区间的精确刻画，为生成式推荐在动态目录下的检索鲁棒性提供理论与算法支撑。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.34306v1",
+      "source": "arxiv",
+      "title": "SPRINT: Single-Step Generative Recommendation via Average Probability Velocity",
+      "abstract": "Semantic ID (SID) based generative recommendation represents each item as a sequence of discrete tokens, and recommends by generating the SID of the item a user would like to interact with. Both dominant paradigms in this domain generally pay for generation token by token: autoregressive models decode the tokens left-to-right, while non-autoregressive models decode in parallel yet still need multiple rounds of refinement to stay competitive. Therefore, both generally spend multiple forward passes per item, a cost that is prohibitive in latency-sensitive recommender systems. We ask whether an item can be generated in a single forward pass, and answer it through a new perspective which we call average probability velocity. We view SID generation as a flow of token generation probabilities and characterize it by its average velocity over the whole generation process. We prove that this average velocity is fully determined by the average generation probability of each token. Therefore, we directly parameterize and learn the probabilities of all tokens in a single forward pass with a bidirectional Transformer. As these probabilities are generated independently across positions and the coherence among tokens is lost, we further design a dual-level flow contrastive objective to restore the coherence among an item's tokens. It contrasts the target SID against negative SIDs at both the token and SID levels. The token level ranks the generation probabilities of the target tokens above those of negative SIDs, while the SID level scores the tokens of each SID as a whole item for capturing token coherence of each item. Extensive experiments show that our model not only generates recommendations far more efficiently ($8.39-10.04\\times$ speedup over the second-fastest AR/NAR method) but also attains superior recommendation accuracy ($7.77\\%$ average improvement over the second-best.",
+      "authors": [
+        "Zhuo Cai",
+        "Shoujin Wang",
+        "Peilin Zhou",
+        "Min Xu",
+        "Julian McAuley",
+        "Fang Chen"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-28T04:47:34+00:00",
+      "link": "https://arxiv.org/pdf/2609.34306v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Single-step generative recommendation via semantic ID generation",
+      "llm_evidence_cn": "通过语义ID单步生成式推荐",
+      "llm_evidence": "通过语义ID单步生成式推荐",
+      "canonical_evidence": "通过语义ID单步生成式推荐",
+      "llm_tldr_en": "Semantic-ID generative recommendation usually needs multiple forward passes per item. SPRINT proposes average probability velocity to generate an item in a single forward pass, cutting latency while preserving recommendation quality for latency-sensitive recommender systems.",
+      "llm_tldr_cn": "基于语义ID的生成式推荐将物品表示为离散token序列，但自回归逐token解码与非自回归多轮细化都需多次前向计算，在延迟敏感场景代价高昂。本文提出平均概率速度视角的SPRINT方法，实现单次前向即完成物品生成。实验表明其在大幅降低推理延迟的同时保持推荐质量，为高效生成式推荐提供了新范式。",
+      "llm_tldr": "基于语义ID的生成式推荐将物品表示为离散token序列，但自回归逐token解码与非自回归多轮细化都需多次前向计算，在延迟敏感场景代价高昂。本文提出平均概率速度视角的SPRINT方法，实现单次前向即完成物品生成。实验表明其在大幅降低推理延迟的同时保持推荐质量，为高效生成式推荐提供了新范式。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.35430v1",
+      "source": "arxiv",
+      "title": "Can Generative Retrievers Learn Semantic IDs Without Forgetting How to Speak?",
+      "abstract": "Generative retrieval (GR) enables end-to-end retrieval by generating document semantic identifiers (SIDs). However, retrieval-only fine-tuning can over-specialize pretrained language models to SID prediction, substantially distorting their natural-language distribution and limiting their suitability for interactive systems that must both retrieve documents and generate natural-language responses. We introduce SpeakGR, a dual-objective framework that learns SIDs while preserving language generation. It combines supervised SID learning with speak-preserving regularization: an on-policy distillation objective that aligns the current model with a frozen copy of the original model on student-generated prefixes using forward KL over the original text vocabulary. We further propose Adaptive SpeakGR, which dynamically adjusts the preservation strength based on observed language drift. Compared with SFT-only, SpeakGR reduces WikiText-2 forward KL by 81.3-93.8% on MS MARCO and 81.2-85.2% on Natural Questions (NQ) while retaining effective retrieval across three different LLMs. Adaptive SpeakGR further improves retrieval over SpeakGR in most settings while maintaining substantially lower language drift than SFT-only.",
+      "authors": [
+        "Junchen Fu",
+        "Kleomenis Katevas",
+        "Vandana Rajan",
+        "Sofía Celi",
+        "Hamed Haddadi"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-28T15:36:03+00:00",
+      "link": "https://arxiv.org/pdf/2609.35430v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "generative retrieval that generates document semantic identifiers while preserving language ability",
+      "llm_evidence_cn": "生成式检索直接生成文档语义标识符，同时保持语言生成能力",
+      "llm_evidence": "生成式检索直接生成文档语义标识符，同时保持语言生成能力",
+      "canonical_evidence": "生成式检索直接生成文档语义标识符，同时保持语言生成能力",
+      "llm_tldr_en": "SpeakGR is a dual-objective framework that learns document semantic IDs for generative retrieval while preserving natural-language generation via on-policy distillation against a frozen pretrained model.",
+      "llm_tldr_cn": "生成式检索通过生成文档语义ID实现端到端检索，但仅面向检索的微调会让预训练语言模型过度特化于SID预测，显著扭曲其自然语言分布，难以支撑需要同时检索与自然语言回复的交互系统。本文提出SpeakGR双目标框架，将监督式SID学习与语言保持正则结合，用学生生成前缀上的前向KL对齐冻结的原始模型。该方法在学到语义ID的同时保留语言生成能力。该工作为生成式检索与对话式系统融合提供了训练范式。",
+      "llm_tldr": "生成式检索通过生成文档语义ID实现端到端检索，但仅面向检索的微调会让预训练语言模型过度特化于SID预测，显著扭曲其自然语言分布，难以支撑需要同时检索与自然语言回复的交互系统。本文提出SpeakGR双目标框架，将监督式SID学习与语言保持正则结合，用学生生成前缀上的前向KL对齐冻结的原始模型。该方法在学到语义ID的同时保留语言生成能力。该工作为生成式检索与对话式系统融合提供了训练范式。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative retrieval models that directly generate document identifiers for web search",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.32215v1",
+      "source": "arxiv",
+      "title": "DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation",
+      "abstract": "Transformers have redefined sequential recommendation by effectively modeling dynamic user behaviors and long-range dependencies. However, they remain inherently inefficient: standard architectures operate at a fixed rate, allocating comparable computation to every item in a user's history regardless of its information content. This leads to prohibitive computational overhead on long sequences and increased sensitivity to behavioral noise. To address this, practitioners often resort to lossy sequence compression, staged modeling, or truncation. This limits the model's ability to leverage the full context of long histories during inference. Inspired by the recent success of Byte Latent Transformer, we propose DP-Rec, a dynamic latent patching architecture for recommendation. DP-Rec shifts from item-level modeling to patch-level modeling by segmenting interaction sequences using contrastive entropy surprise to identify informative behavioral boundaries. A lightweight patch encoder compresses these temporally contextualized segments into a reduced set of dynamic latent behavior vectors, which are then processed by a larger latent transformer and decoded for next-item prediction. Extensive experiments show that, under constrained computational budgets, DP-Rec scales effectively to long sequences and achieves a superior efficiency-accuracy trade-off over both non-compressed and fixed-size compression baselines.",
+      "authors": [
+        "Dwipam Katariya",
+        "Thomas Caputo",
+        "Akshat Shreemali",
+        "Juan Manuel Origgi",
+        "Nikita Seleznev",
+        "Pranab Mohanty",
+        "Kalanand Mishra",
+        "Nam Nguyen",
+        "James Montgomery"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI",
+        "cs.IR"
+      ],
+      "published": "2026-09-26T04:21:40+00:00",
+      "link": "https://arxiv.org/pdf/2609.32215v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "efficient long-sequence recommendation via dynamic latent patching to reduce computation",
+      "llm_evidence_cn": "通过动态潜在分块提升长序列推荐效率、降低计算开销",
+      "llm_evidence": "通过动态潜在分块提升长序列推荐效率、降低计算开销",
+      "canonical_evidence": "通过动态潜在分块提升长序列推荐效率、降低计算开销",
+      "llm_tldr_en": "DP-Rec introduces dynamic latent patching, inspired by Byte Latent Transformer, to allocate computation adaptively over long user histories, improving long-sequence recommendation efficiency without losing full context.",
+      "llm_tldr_cn": "Transformer序列推荐对所有历史物品分配相同计算量，长序列开销巨大且对行为噪声敏感，而截断或分阶段压缩又会损失上下文信息。本文受Byte Latent Transformer启发，提出DP-Rec动态潜在分块架构，按信息量自适应地为用户历史分配计算。摘要未给出具体数据集指标，但方法目标是在保留完整历史上下文的同时降低长序列计算开销。该工作为高效长序列推荐提供了自适应建模思路。",
+      "llm_tldr": "Transformer序列推荐对所有历史物品分配相同计算量，长序列开销巨大且对行为噪声敏感，而截断或分阶段压缩又会损失上下文信息。本文受Byte Latent Transformer启发，提出DP-Rec动态潜在分块架构，按信息量自适应地为用户历史分配计算。摘要未给出具体数据集指标，但方法目标是在保留完整历史上下文的同时降低长序列计算开销。该工作为高效长序列推荐提供了自适应建模思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.30541v1",
+      "source": "arxiv",
+      "title": "AutoResearch at Production Scale: Failure Modes and a Multi-Agent Framework",
+      "abstract": "Optimizing embedding systems for production recommendation pipelines demands systematic exploration that consumes disproportionate engineering effort at scale. We apply Andrej Karpathy's AutoResearch paradigm -- a large language model that iteratively edits a training script and retains modifications that improve a held-out scalar metric -- to automate this exploration. We report on twelve weeks of running this paradigm at production scale, where iterations consume hours of multi-GPU compute, evaluation involves competing criteria, and campaigns span weeks across many training jobs. Across two independently developed representation-learning systems for a book recommendation pipeline, we ran 220+ experiments and observed five recurring failure modes absent from the original setting: infrastructure fragility, agent memory decay, search-direction stagnation, iteration-cost asymmetry, and metric fixation. We contribute a three-principle scaffolding design -- prevent, persist, redirect -- that maps each failure mode to a structural remedy and whose instantiation scales with iteration cost. The framework produced a 1.82x Recall@6 lift and a 2.1x coherence lift over hand-tuned baselines, and the agent autonomously designed a text-only fallback that expanded catalog coverage by 5.8x. The two systems span nearly three orders of magnitude in per-iteration cost yet exhibit the same failure modes, suggesting these are structural properties of production-scale autonomous research rather than artifacts of either application.",
+      "authors": [
+        "Aparajith Chandran",
+        "Juwon Kim",
+        "Saurav Jha",
+        "Pablo Castells",
+        "Florian Hottier"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.IR"
+      ],
+      "published": "2026-09-24T20:49:53+00:00",
+      "link": "https://arxiv.org/pdf/2609.30541v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "automating embedding system optimization for production recommendation pipelines at scale",
+      "llm_evidence_cn": "面向生产推荐流水线嵌入系统的大规模自动化优化",
+      "llm_evidence": "面向生产推荐流水线嵌入系统的大规模自动化优化",
+      "canonical_evidence": "面向生产推荐流水线嵌入系统的大规模自动化优化",
+      "llm_tldr_en": "Applies the AutoResearch paradigm, where an LLM iteratively edits training scripts, to production recommendation embedding optimization; twelve weeks and 220+ experiments reveal five recurring failure modes across two representation-learning systems.",
+      "llm_tldr_cn": "生产推荐流水线中嵌入系统的优化需要大量试错，在大规模场景下耗费不成比例的工程成本。本文把AutoResearch范式应用于该问题，让大语言模型迭代修改训练脚本并保留提升指标的改动，并总结出多智能体框架。作者在图书推荐的两套表示学习系统上运行十二周、完成220余次实验，归纳出五种反复出现的失效模式。该工作为推荐系统自动化调优提供了生产级经验与框架参考。",
+      "llm_tldr": "生产推荐流水线中嵌入系统的优化需要大量试错，在大规模场景下耗费不成比例的工程成本。本文把AutoResearch范式应用于该问题，让大语言模型迭代修改训练脚本并保留提升指标的改动，并总结出多智能体框架。作者在图书推荐的两套表示学习系统上运行十二周、完成220余次实验，归纳出五种反复出现的失效模式。该工作为推荐系统自动化调优提供了生产级经验与框架参考。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.35285v1",
+      "source": "arxiv",
+      "title": "Textual User Taste: Natural-Language User Context for Foundation-Model Recommender System at Scale",
+      "abstract": "Foundation model recommender systems require user context that can be consumed by large language models, reasoned over, and refined through natural-language interaction. Traditional behavioral embedding vectors remain highly effective for retrieval and ranking, but they are opaque to users and not natively expressed for language model workflows. We present Textual User Taste, a system that generates structured natural-language taste profiles from listening behavior, interaction signals, content metadata, and optional user feedback, and deploys them to millions of Spotify users. We describe the end-to-end production lifecycle required to generate, evaluate, optimize, and maintain these representations at industrial scale, including prompt development and compression, user steering, and integration with downstream personalization systems. Because no unique ground-truth taste profile exists, we introduce a multi-faceted evaluation framework to evaluate taste profiles as a production representation: they carry user-specific predictive signal independently, and when integrated with behavioral embeddings, improve MRR by 0.6% for future-track prediction and NDCG@7 by 2.2% for search ranking. Our evaluation also reveals that taste profiles support positive natural-language steering, while exposing important limitations, including challenges with negation and short-term temporal adaptation. These findings position taste profiles not as replacements for behavioral embeddings, but as an interpretable and steerable interface between evolving user context and foundation-model recommender systems.",
+      "authors": [
+        "Ghazal Fazelnia",
+        "Paul Gigioli",
+        "Eliza Klyce",
+        "Sharon Zheng",
+        "Katie Zelvin",
+        "Ye Myat Thein",
+        "Anurag Deshpande",
+        "Seda Davtyan",
+        "Kate Remeika",
+        "Maya Hristakeva",
+        "Erik Franco",
+        "Karen Banzon",
+        "Peng Ge",
+        "Jacqueline Wood",
+        "Nandini Singh",
+        "David Murgatroyd",
+        "Mounia Lalmas",
+        "Yves Raimond",
+        "Andreas Damianou"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-28T14:34:14+00:00",
+      "link": "https://arxiv.org/pdf/2609.35285v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "natural-language user context for foundation-model recommender at scale",
+      "llm_evidence_cn": "面向大规模基础模型推荐的自然语言用户上下文",
+      "llm_evidence": "面向大规模基础模型推荐的自然语言用户上下文",
+      "canonical_evidence": "面向大规模基础模型推荐的自然语言用户上下文",
+      "llm_tldr_en": "Foundation-model recommenders need LLM-consumable user context, yet behavioral embeddings are opaque to language workflows. Textual User Taste generates structured natural-language taste profiles from listening and interaction signals, deployed to millions of Spotify users with a full production lifecycle.",
+      "llm_tldr_cn": "基础模型推荐系统需要可被大语言模型消费与推理的用户上下文，但传统行为嵌入向量不透明且不适配语言模型工作流。本文提出Textual User Taste系统，从收听行为、交互信号、内容元数据与用户反馈中生成结构化自然语言品味画像。该系统已部署于数百万Spotify用户，并建立生成、评估、优化与维护的生产全流程，为工业级基础模型推荐提供了自然语言用户表示方案。",
+      "llm_tldr": "基础模型推荐系统需要可被大语言模型消费与推理的用户上下文，但传统行为嵌入向量不透明且不适配语言模型工作流。本文提出Textual User Taste系统，从收听行为、交互信号、内容元数据与用户反馈中生成结构化自然语言品味画像。该系统已部署于数百万Spotify用户，并建立生成、评估、优化与维护的生产全流程，为工业级基础模型推荐提供了自然语言用户表示方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

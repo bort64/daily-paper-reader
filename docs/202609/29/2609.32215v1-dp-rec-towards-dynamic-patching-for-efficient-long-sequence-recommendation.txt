@@ -1,0 +1,929 @@
+Title: DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.32215v1
+
+Published Time: Tue, 29 Sep 2026 00:47:44 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+# DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation 
+
+# Dwipam Katariya ∗
+
+Capital One, AI Foundations McLean, VA, USA 
+
+# Thomas Caputo ∗
+
+Capital One, AI Foundations McLean, VA, USA 
+
+# Akshat Shreemali ∗
+
+Capital One, AI Foundations New York, NY, USA 
+
+# Juan Manuel Origgi 
+
+Capital One, AI Foundations New York, NY, USA 
+
+# Nikita Seleznev 
+
+Capital One, AI Foundations Boston, MA, USA 
+
+# Pranab Mohanty 
+
+Capital One, AI Foundations Seattle, WA, USA 
+
+# Kalanand Mishra 
+
+Capital One, AI Foundations San Jose, CA, USA 
+
+# Nam Nguyen 
+
+Capital One, AI Foundations New York, NY, USA 
+
+# James Montgomery 
+
+Capital One, AI Foundations McLean, VA, USA 
+
+## Abstract 
+
+Transformers have redefined sequential recommendation by effec-tively modeling dynamic user behaviors and long-range dependen-cies. However, they remain inherently inefficient: standard architec-tures operate at a fixed rate, allocating comparable computation to every item in a user’s history regardless of its information content. This leads to prohibitive computational overhead on long sequences and increased sensitivity to behavioral noise. To address this, prac-titioners often resort to lossy sequence compression, staged mod-eling, or truncation. This limits the model’s ability to leverage the full context of long histories during inference. Inspired by the re-cent success of Byte Latent Transformer, we propose DP-Rec, a dynamic latent patching architecture for recommendation. DP-Rec shifts from item-level modeling to patch-level modeling by seg-menting interaction sequences using contrastive entropy surprise to identify informative behavioral boundaries. A lightweight patch encoder compresses these temporally contextualized segments into a reduced set of dynamic latent behavior vectors, which are then processed by a larger latent transformer and decoded for next-item prediction. Extensive experiments show that, under constrained computational budgets, DP-Rec scales effectively to long sequences and achieves a superior efficiency–accuracy trade-off over both non-compressed and fixed-size compression baselines. 
+
+## CCS Concepts 
+
+• Computing methodologies → Machine learning ; Knowledge representation and reasoning ; • Information systems → Recom-mender systems ; Temporal data .
+
+## Keywords 
+
+personalization, long user sequence modeling, transformers, rec-ommender systems 
+
+> ∗Core Contributors
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> RecSys ’26, Minneapolis, MN, USA
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2284-4/2026/09 https://doi.org/10.1145/3773078.3831823
+
+ACM Reference Format: 
+
+Dwipam Katariya, Thomas Caputo, Akshat Shreemali, Juan Manuel Origgi, Nikita Seleznev, Pranab Mohanty, Kalanand Mishra, Nam Nguyen, and James Montgomery. 2026. DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation. In 20th ACM Conference on Recommender Sys-tems (RecSys ’26), September 27-October 02, 2026, Minneapolis, MN, USA. ACM, New York, NY, USA, 14 pages. https://doi.org/10.1145/3773078.3831823 
+
+## 1 Introduction 
+
+Modern recommendation systems (RecSys) are undergoing a par-adigm shift, moving from traditional feature-based architectures toward generative sequential models capable of processing long user behavior histories. These extended contexts are critical for capturing multifaceted user preferences such as long-term season-ality and recurring interests, which are often discarded by shorter lookback windows or static user embeddings [3, 5, 16, 54, 55, 59]. Further, scaling sequence length in tandem with other parameters is essential to avoid performance plateaus [12]. Beyond raw perfor-mance gains, larger models are inherently more "sample-efficient," as they extract a higher volume of useful information from individ-ual training examples than smaller models [12, 56, 63]. However, the scalability of Transformer-based architectures is fundamentally con-strained by the quadratic computational and memory complexity, denoted as 𝑂 (𝑁 2𝑑 ), of the self-attention mechanism relative to se-quence length 𝑁 and embedding dimension 𝑑 [44, 59]. In industrial settings, where inference must be executed for every impression within a user session, this burden is often exacerbated by the in-clusion of rich item attributes (e.g., categories, brands, and textual descriptions) [24, 50, 55]. To mitigate this, practitioners often re-sort to lossy sequence compression such as embeddings [25, 35] or staged modeling. Representative industrial solutions include TWIN V2 [41], which employs hierarchical clustering to compress life-cycle behaviors. Recent works such as LONGER [3] have introduced token-merging schemes to compress sequence lengths. However, these methods often rely on fixed heuristics or static partitioning schemes that fail to account for the varying information density of user behavior. We argue that such compression is inherently de-pendent on information density; naively merging tokens based on a global length or fixed rate is sub-optimal for the varied rhythms of human behavior, requiring dynamic compression solutions as shown in Figure 1. Dynamic compression strategies have recently arXiv:2609.32215v1 [cs.LG] 26 Sep 2026 RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Katariya et al. 
+
+Figure 1: Dynamic vs Static Patching. Unlike static patching (green square), DP-Rec adaptively partitions interaction streams at contrastive entropy peaks (e.g., Interstellar, The Conjuring) (red circle). These peaks signify shifts in latent user intent. Optimized threshold 𝜏 (red dashed line) results in variable-length patching, focusing computational resources on informative behavioral boundaries rather than redundant items to maximize recommendation efficiency. 
+
+demonstrated significant potential across diverse sequential do-mains [32, 34, 47, 48]. Specifically, the Byte Latent Transformer (BLT) [34] uses a Perceiver-style architecture [22] for dynamic se-quence patching. While BLT establishes the advantage of adaptive, entropy-based patching over static (fixed-vocabulary) tokenization, it derives boundaries from a full next-token softmax that is inexpen-sive over its 256-symbol byte vocabulary but becomes prohibitive at the million-item vocabularies of production recommender systems. Similarly, PatchTST [32] utilizes patching mechanisms to capture local semantic patterns in multivariate time-series data. Despite its success in other fields, dynamic patching has yet to be investi-gated within the context of RecSys. We argue that a tailored latent architecture is essential to capture the idiosyncratic behavioral dy-namics of recommendation data, and introduce DP-Rec , which adapts dynamic latent patching for sequential recommendation. Our contributions are as follows: 
+
+• To our knowledge, we are the first to establish the viability of dynamic latent patching for sequential recommendation. Across KuaiRand , ML-1M , and ML-10M-L , DP-Rec achieves Pareto-superior trade-offs, delivering either higher infer-ence efficiency under matched accuracy, or higher accuracy within a fixed computational budget. 
+
+• Dynamic Contrastive Patching : We introduce Contrastive Entropy Surprise , a lightweight surrogate for Shannon en-tropy that resolves the computational intractability of full-vocabulary softmax in recommendations, while providing the dynamic boundary adaptability missing in static models like LONGER [3]. This formulation demonstrates a propen-sity to align boundaries with shifts in interaction patterns rather than uniform positions, effectively grouping themati-cally coherent interaction "bursts". 
+
+• Temporal-Aware Behavioral Context : We incorporate inter-event temporal signals as first-class features within the patching mechanism. By leveraging interaction rhythms and temporal gaps alongside item-ID transitions, DP-Rec 
+
+establishes temporal dynamics as an important determinant of behavioral context to detect informative segment bound-aries. 
+
+Table 1: Notations 
+
+Symbol Meaning 
+
+U Set of users 
+
+V Set of items 
+
+𝐵 Mini-batch size 
+
+𝑁 Raw sequence length ( 𝑁 max , 𝑁 raw )
+
+s𝑢 Interaction sequence of user 𝑢 , (𝑣 1, . . . , 𝑣 𝑁 )
+
+𝑣 𝑡 Item ID at position 𝑡 𝑇 𝑡 Absolute timestamp at position 𝑡 
+
+e𝑣 Latent embedding vector for item 𝑣 (∈ R𝑑 )
+
+𝜙 𝑢,𝑡 Contrastive entropy surprise score at step 𝑡 𝜏 Global boundary threshold 
+
+𝚪 Binary boundary indicator matrix ( ∈ { 0, 1}𝐵 ×𝑁 )
+
+𝝁 Sequence padding mask matrix ( ∈ { 0, 1}𝐵 ×𝑁 )
+
+P Set of behavioral patches {𝑃 1, . . . , 𝑃 𝑀 }
+
+𝑀 Realized patch count for a sequence ˆ𝑀 Target average patch budget 
+
+𝑃 𝑚 Behavioral patch 𝑚 = [𝑙 𝑚 , 𝑟 𝑚 ]
+
+𝑚 (𝑡 ) Patch index containing event 𝑡 𝑛 𝑝 Average patch size 
+
+b𝑡 Boundary detector hidden state at position 𝑡 (∈ R𝑑 bbd )
+
+h𝑡 Event state from temporal local encoder ( ∈ R𝑑 loc )
+
+z𝑚 Input latent representation for patch 𝑚 (∈ R𝑑 )
+
+g𝑚 Inter-patch representation from Latent Transformer ( ∈ R𝑑 )
+
+o𝑡 Decoded output event state at position 𝑡 (∈ R𝑑 )
+
+𝑑 Latent embedding dimension 
+
+𝑑 bbd Boundary detector hidden dimension 
+
+𝑑 ff Feed-forward expansion dimension 
+
+𝑑 loc Local module hidden dimension 
+
+𝑤 Local attention sliding window size 
+
+𝑤 𝑒 Boundary detector sliding window size 
+
+𝐿 loc Depth of local modules ( 𝐿 enc = 𝐿 dec = 𝐿 loc )
+
+𝐿 lat Layer count for Temporal Latent Transformer 
+
+𝑓 bbd Behavioral boundary detector function 
+
+𝑓 enc Temporal local encoder function 
+
+𝑓 latent Temporal latent transformer function 
+
+𝑓 dec Local decoder function DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+Figure 2: Overall architecture of DP-Rec. A frozen detector computes contrastive-entropy scores, enabling an adaptive threshold optimizer to partition sequences into 𝑀 variable-length behavioral patches. These are contextualized by a temporal local encoder and modeled via a temporal latent transformer before a local decoder projects representations back to the item space for next-item prediction. 
+
+## 2 DP-Rec 
+
+DP-Rec follows the high-level latent patching paradigm of BLT [34] and Perceiver [22], but adapts the architecture for sequential rec-ommendation. Given a raw interaction sequence of item IDs and Unix timestamps, the behavioral boundary detector identifies patch boundaries used by the temporal local encoder to compress low-surprisal, variable-length segments into latent patch representa-tions. The temporal latent transformer processes these patches, which a local decoder then projects back to item-level states for next-item prediction (Figure 2). Formally, DP-Rec maps a raw inter-action sequence to next-item scores through four stages: Boundaries: s𝑢 𝑓 bbd , Alg. 1 
+
+−−−−−−−−−→ ( 𝚪 , P) 
+
+Encode: P 𝑓 enc 
+
+−−−→ { z𝑚 }𝑀 𝑚 =1
+
+Latent: {z𝑚 } 𝑓 latent 
+
+−−−−−→ { g𝑚 }𝑀 𝑚 =1
+
+Decode: {g𝑚 } 𝑓 dec 
+
+−−−→ { o𝑡 } → ˆ𝑦 𝑢,𝑡 +1
+
+where the boundary detector ( 𝑓 bbd ) scores contrastive surprise and Algorithm 1 turns it into boundaries 𝚪 and patches P; the temporal local encoder ( 𝑓 enc ) compresses each patch into a latent z𝑚 ; the tem-poral latent Transformer ( 𝑓 latent ) models inter-patch dependencies as g𝑚 ; and the local decoder ( 𝑓 dec ) projects back to event states o𝑡 
+
+for scoring. 
+
+## 2.1 Temporal Rotary Positional Embeddings (Time-RoPE) 
+
+To encode interaction rhythms, we adapt Rotary Positional Embed-dings [42] to absolute timestamps 𝑇 𝑡 . For a latent vector x ∈ R𝑑 , the transformation R ( x,𝑇 𝑡 ) rotates 𝑑 /2 dimension pairs in the query-key space: 
+
+R ( x,𝑇 𝑡 ) = x ⊙ cos (𝚯 𝑇 𝑡 ) + ˜x ⊙ sin (𝚯 𝑇 𝑡 ), (1) where ˜ x denotes the vector obtained by rotating each (𝑥 2𝑖 −1, 𝑥 2𝑖 )
+
+pair by 90 ◦, i.e., ˜ 𝑥 2𝑖 −1 = −𝑥 2𝑖 , ˜𝑥 2𝑖 = 𝑥 2𝑖 −1, and 𝚯 = {𝜃 𝑖 = 10000 −2𝑖 /𝑑 }𝑑 /2
+
+> 𝑖 =1
+
+are the inverse frequencies. This makes the attention score between two interactions at times 𝑇 𝑡 and 𝑇 𝑡 ′ a function of their time lag 
+
+(𝑇 𝑡 −𝑇 𝑡 ′ ), giving the boundary detector, local and latent Transform-ers a continuous, lag-aware sense of behavioral timing. 
+
+## 2.2 Behavioral Boundary Detection 
+
+To capture behavioral transitions (such as shifts in user intent or interaction rhythm), we employ a lightweight boundary detector that identifies patch boundaries prior to the primary recommenda-tion model. While Byte-Latent Transformers [34] derive boundaries from full-vocabulary next-token entropy, this approach is compu-tationally prohibitive in sequential recommendation due to the massive item vocabulary |V | . Consequently, we utilize a tractable surrogate based on contrastive next-item surprise .The detector encodes the interaction sequence using a light-weight causal Transformer architecture featuring sliding-window attention and Time-RoPE applied to centered timestamps Δ𝑇 𝑡 =
+
+𝑇 𝑡 − 𝑇 1, where 𝑇 1 is the timestamp of the first event in the sequence. Let b𝑡 ∈ R𝑑 bbd denote the detector’s hidden state at step 𝑡 . The detector is a self-contained module, pre-trained then frozen, with its own parameters and item embeddings at a small hidden size 
+
+𝑑 bbd (set to 8 in our experiments); within this subsection b𝑡 and e𝑣 
+
+denote these detector-internal representations, distinct from the recommendation embeddings ( ∈ R𝑑 ) used for scoring in Eq. 4. To estimate surprise, we define a binary contrastive objective utilizing the ground-truth next item 𝑣 𝑡 +1 and a sampled negative item 𝑣 − 
+
+> 𝑡
+
+.RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Katariya et al. 
+
+Algorithm 1: Adaptive Global Threshold Optimization 
+
+Input: Surprise scores 𝜙 ∈ R𝐵 ×𝑁 , padding mask 
+
+𝝁 ∈ { 0, 1}𝐵 ×𝑁 , target average patch count ˆ𝑀 
+
+Output: Boundary indicators 𝚪 ∈ { 0, 1}𝐵 ×𝑁 , global threshold 𝜏 
+
+Φ ← { 𝜙 𝑢,𝑡 | 𝝁 𝑢,𝑡 = 1};
+
+𝑁 Φ ← | Φ|;¯𝑁 ← 𝑁 Φ/𝐵 ;
+
+𝑀 eff ← min ( ˆ𝑀, ¯𝑁 );
+
+𝜅 ← round (( 𝑀 eff − 1) · 𝐵 );
+
+𝜅 ← max (0, min (𝜅, 𝑁 Φ)) ;
+
+if 𝜅 = 0 then 
+
+𝜏 ← +∞ ;
+
+𝚪 𝑢,𝑡 ← 0 ∀( 𝑢, 𝑡 );
+
+else 
+
+Sort Φ in descending order to obtain Φ↓;
+
+𝜏 ← Φ↓ 
+
+> 𝜅
+
+;
+
+𝚪 𝑢,𝑡 ← I[𝜙 𝑢,𝑡 ≥ 𝜏 ] · 𝝁 𝑢,𝑡 ∀( 𝑢, 𝑡 );
+
+return (𝚪 , 𝜏 );
+
+Figure 3: Impact of batch size on patch budget adherence (ML-1M, ˆ𝑀 = 50 ) for 𝑁 ≥ 100 . While both configurations maintain the target mean, the Batch Size 𝐵𝑆 = 128 distribution shows the effect of cross-sequence budget reallocation within mini-batches, contrasted with the high-precision adherence of the 
+
+𝐵𝑆 = 1 case 
+
+The contrastive surprise score 𝜙 𝑢,𝑡 is calculated as: 
+
+𝜙 𝑢,𝑡 = −𝑝 + 
+
+> 𝑢,𝑡
+
+log 𝑝 + 
+
+> 𝑢,𝑡
+
+− 𝑝 − 
+
+> 𝑢,𝑡
+
+log 𝑝 − 
+
+> 𝑢,𝑡
+
+, (2) where 
+
+𝑝 + 
+
+> 𝑢,𝑡
+
+= exp (b⊤ 
+
+> 𝑡
+
+e𝑣 𝑡 +1 )
+
+exp (b⊤ 
+
+> 𝑡
+
+e𝑣 𝑡 +1 ) + exp (b⊤ 
+
+> 𝑡
+
+e𝑣 − 
+
+> 𝑡
+
+) , 𝑝 − 
+
+> 𝑢,𝑡
+
+= 1 − 𝑝 + 
+
+> 𝑢,𝑡
+
+. (3) A high 𝜙 𝑢,𝑡 indicates that the model assigns roughly equal prob-ability to the positive and negative item, signaling a behavioral boundary. Boundary selection is formulated as an Adaptive Threshold Optimization (Algorithm 1), where a global threshold 𝜏 is derived from the empirical surprise distribution to yield binary boundary indicators 𝚪 .
+
+Contextual Calibration . The optimization context varies by phase: we utilize mini-batch distributions ( 𝐵 > 1) during training and independent sequence distributions ( 𝐵 = 1) during inference. We establish a combinatorial lemma (see supplementary material for details), which characterizes this behavior; notably, batch-level calibration allows high-entropy sequences to “borrow” capacity from lower-entropy sequences within the same mini-batch. As illustrated in Figure 3, increasing the batch size introduces higher variance in per-sequence patch counts while maintaining the target mean. To ensure deterministic computational control and consistent evaluation, we employ per-sequence thresholding for all validation and test phases. We further note that while ties in surprise scores 
+
+𝜙 𝑢,𝑡 may lead to minor deviations from the exact cardinality ˆ𝑀 , the procedure serves as a robust practical mechanism for behavioral compression across varying sequence lengths. 
+
+## 2.3 Temporal Local Encoder 
+
+The local patch encoder transforms event-level sequences into compressed latent representations. We first compute event states 
+
+H = [h1, . . . , h𝑁 ] via a lightweight causal Transformer 𝑓 enc utiliz-ing sliding-window attention and Time-RoPE applied to centered timestamps Δ𝑇 𝑡 = 𝑇 𝑡 − 𝑇 1.For each behavioral patch 𝑃 𝑚 = [𝑙 𝑚 , 𝑟 𝑚 ], an initial latent patch query z(0) 
+
+> 𝑚
+
+is constructed via global max pooling over event states: 
+
+z(0) 
+
+> 𝑚
+
+= 𝑊 init 
+
+
+
+max  
+
+> 𝑡 ∈𝑃 𝑚
+
+h𝑡 
+
+
+
+.
+
+These queries are iteratively refined through 𝐿 enc patch-restricted cross-attention layers, where latent representations act as queries and event states serve as keys and values: 
+
+z(ℓ ) 
+
+> 𝑚
+
+= z(ℓ −1) 
+
+> 𝑚
+
++ CrossAttn 
+
+
+
+𝑊 𝑄 z(ℓ −1) 
+
+> 𝑚
+
+, {𝑊 𝐾 h𝑡 ,𝑊 𝑉 h𝑡 }𝑡 ∈𝑃 𝑚 
+
+
+
+.
+
+After 𝐿 enc layers, the final representation z𝑚 = z(𝐿 enc ) 
+
+> 𝑚
+
+serves as the input latent representation for patch 𝑃 𝑚 to the Temporal Latent Transformer. 
+
+## 2.4 Temporal Latent Transformer 
+
+Given the latent patch representations z1, . . . , z𝑀 , the temporal latent Transformer models dependencies across behavioral patches autoregressively. We use a causal patch-level Transformer, where each patch attends only to previous patches and the current patch. Unlike the local encoder, where time is defined at the event level, the temporal latent Transformer uses a single temporal anchor per patch. For a patch 𝑃 𝑚 = [𝑙 𝑚 , 𝑟 𝑚 ], we preserve its patch-end timestamp 𝑇 𝑟 𝑚 and use the last centered event time in that patch, 
+
+Δ𝑇 𝑟 𝑚 , in Time-RoPE. Thus, each latent patch is temporally anchored by the time of its final event. The temporal latent Transformer computes: 
+
+g1, . . . , g𝑀 = 𝑓 latent 
+
+ z1, . . . , z𝑀 ; Δ𝑇 𝑟 1 , . . . , Δ𝑇 𝑟 𝑀 
+
+ ,
+
+where g𝑚 ∈ R𝑑 is the inter-patch representation, and Time-RoPE is applied in patch-level self-attention using these patch-level tem-poral anchors. Because the temporal latent Transformer operates on the com-pressed patch sequence rather than the full interaction history, its cost scales with the number of patches 𝑀 rather than the raw sequence length 𝑁 .DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+Table 2: Dataset Summary                 
+
+> Dataset UV# Actions Avg. Actions / User
+> KuaiRand [10] 27,285 13,222,181 122,052,626 4,473 ML-1M [14] 6,040 3,416 999,611 165 ML-10M-L [14] 3,683 10,632 3,114,710 844
+
+## 2.5 Local Decoder 
+
+The local decoder projects patch representations back to event-level states for scoring. It reverses the encoder’s cross-attention roles [34], using event states as queries and patch representations 
+
+g𝑚 as keys and values. At layer ℓ ∈ { 1, . . . , 𝐿 dec }, event states o(ℓ )
+
+> 𝑡
+
+are updated via: 
+
+o(ℓ ) 
+
+> 𝑡
+
+= o(ℓ −1) 
+
+> 𝑡
+
++ CrossAttn 
+
+
+
+𝑊 𝑄 o(ℓ −1) 
+
+> 𝑡
+
+,𝑊 𝐾 g𝑚 (𝑡 ) ,𝑊 𝑉 g𝑚 (𝑡 )
+
+
+
+where 𝑚 (𝑡 ) is the patch index for event 𝑡 . This injects global con-text into the event stream before a final causal Transformer yields representations o𝑡 for prediction. 
+
+Next-item scoring. Hidden states o𝑡 are matched against the tar-get item embedding e𝑣 𝑡 +1 and a sampled negative e𝑣 − 
+
+> 𝑡
+
+via indepen-dent sigmoid scoring. We minimize the loss: 
+
+L = −∑︁    
+
+> (𝑢,𝑡 ):𝑣 𝑡 +1≠0
+
+h
+
+log 𝜎  o⊤ 
+
+> 𝑡
+
+e𝑣 𝑡 +1
+
+ + log 𝜎 
+
+
+
+−o⊤ 
+
+> 𝑡
+
+e𝑣 −
+
+> 𝑡
+
+i 
+
+, (4) where 𝜎 (·) is the sigmoid function and the sum is over all non-padding positions. 
+
+## 3 Experiments 3.1 Datasets 
+
+We evaluate DP-Rec on three datasets: ML-1M [14], ML-10M-L [14], and KuaiRand [10]. Due to the scarcity of public long-horizon bench-marks, we curated ML-10M-Long (ML-10M-L ), a long-sequence variant retaining only users with ≥ 500 interactions from ML-10M .Following standard protocols [23, 53], we apply 5-core filtering and chronological sorting. For KuaiRand , we retain only clicked interac-tions following standard implicit feedback practice, yielding 4,473 average actions per user. We adopt a leave-one-out split, reserving the final and penultimate interactions for testing and validation, respectively. Preprocessed statistics are detailed in Table 2. 
+
+## 3.2 Baselines 
+
+• GRU4Rec [17]: A standard RNN-based baseline utilizing Gated Recurrent Units for sequential modeling. 
+
+• SASRec [23]: A representative and widely adopted self-attention architecture employing a causal (unidirectional) Transformer. 
+
+• HSTU [55]: A point-wise Transducer-based model incor-porating relative temporal information. We evaluate it in a unimodal, causal configuration to maintain architectural parity. 
+
+• LONGER [3]: A hierarchical baseline that compresses se-quences into fixed-size blocks via an InnerTransformer, specif-ically designed for long-range dependency modeling. 
+
+## 3.3 Evaluation Metrics 
+
+We report widely used NDCG@K=[10, 20] and HR@K=[5, 10, 20] .Across all datasets, and for both validation and test, we adopt sam-pled evaluation: for each user we score the held-out target item against 1 ,000 uniformly sampled negatives and rank it within the resulting 1001-item candidate set. While the model is trained over all timesteps (Eq. 4), evaluation follows the leave-one-out protocol and scores a single held-out target per user. For each test user 𝑢 ,rank (𝑦 𝑢 ) denotes the rank of the held-out target 𝑦 𝑢 among these 1001 candidates under the model’s scores. We compute NDCG @ 𝐾 = 1
+
+|U| ∑︁ 𝑢 ∈ U 
+
+I[rank (𝑦 𝑢 ) ≤ 𝐾 ]
+
+log 2 (rank (𝑦 𝑢 ) + 1) ,
+
+HR @ 𝐾 = 1
+
+|U| ∑︁ 𝑢 ∈ U 
+
+I[rank (𝑦 𝑢 ) ≤ 𝐾 ].
+
+## 3.4 FLOPs Accounting 
+
+Inference efficiency is measured by FLOPs per forward pass, follow-ing [19] but excluding non-arithmetic costs (normalization, resid-uals, and embedding lookup). For a Transformer with sequence length 𝑁 , context 𝑐 , hidden dimension 𝑑 , expansion 𝑑 ff , and 𝐿 block 
+
+layers, the base complexity is defined as: FLOPs (𝑁 , 𝑐 ) = 𝑁 𝐿 block 
+
+ 4𝑑 2𝑑 ff + 8𝑑 2 + 2𝑑 (𝑐 + 1) . (5) The terms represent the feed-forward network, projections ( 𝑄 /𝐾 /𝑉 /𝑂 ), and attention aggregation, respectively. Per-user FLOPs are calcu-lated using actual sequence lengths. We set 𝑑 ff = 1 across all models. For SASRec , the quadratic causal context 𝑐 = (𝑁 + 1)/ 2 yields: FLOPs SAS = 𝑁 𝐿 block (4𝑑 2𝑑 ff + 8𝑑 2 + 𝑑 (𝑁 + 1)) . (6) 
+
+HSTU utilizes the same backbone with a 1 .1× overhead factor to account for gating operations. LONGER with compression ratio 
+
+𝑟 and 𝐺 = ⌈𝑁 /𝑟 ⌉ groups is modeled as the sum of inner-group encoding, cross-attention, and global self-attention: FLOPs LNG = 𝐺 · FLOPs (𝑟, 𝑟 ) + 2𝑁𝐺𝑑 + FLOPs (𝐺, 𝐺 ). (7) 
+
+DP-Rec Complexity: With 𝑀 latent patches, average patch size 
+
+𝑛 𝑝 , boundary window 𝑤 𝑒 , and local window 𝑤 , we decompose DP-Rec cost into boundary detection ( 𝑓 bbd ), temporal latent modeling (𝑓 latent ), local encoding/decoding ( 𝑓 loc ), and bridge cross-attention (𝑓 brg ): FLOPs DP = 𝑁 
+
+
+
+𝑓 bbd (𝑤 𝑒 ) + 𝑓 latent (𝑀 )
+
+𝑛 𝑝 
+
++ 𝑓 loc (𝑤 ) + 𝑓 brg 
+
+
+
+. (8) Each component is instantiated via Eq. 10 using its respective archi-tecture. Notably, the boundary detector cost is included in the total inference budget despite being frozen during primary training. 
+
+## 3.5 Implementation Details 
+
+Training Configuration . All models were implemented in Py-Torch and trained on an NVIDIA A100 GPU (40GB). Following established benchmarks [17, 23], we trained ML-1M and ML-10M-L for 500 epochs, while KuaiRand was trained for 200 epochs. We use Adam optimizer with a learning rate of 10 −3 and a batch size of 128. To control for confounding factors during hyperparameter optimization, we set dropout to 0 .0 and disable 𝐿 2 regularization. RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Katariya et al. 
+
+Best-performing checkpoints are selected based on the highest val-idation NDCG@10, evaluated every 10 epochs. We do not employ early stopping. 
+
+Evaluation Protocols . We adopt two complementary evalua-tion regimes: 
+
+• Headline Comparison: We report a single FLOPs-budgeted operating point per dataset, selected by the best validation 
+
+NDCG@10 under the corresponding FLOPs budget (see Ta-ble 3). 
+
+• Pareto Frontier: We characterize the efficiency–quality trade-off by sweeping architectures for models whose infer-ence cost can be varied naturally through sequence length or latent compression, namely SASRec [23], HSTU [55], LONGER [3], and DP-Rec —we perform a wide architec-ture and compression sweep to characterize the efficiency– quality frontier (see Figure 4). 
+
+Model Specifications . We adopt the training pipeline from [21] and model components from RecTools [31] for GRU4Rec and HSTU. LONGER is a custom implementation due to unavailability of open-source code. For DP-Rec , we implement the architecture as de-scribed in Section 2. 
+
+• Fixed-Horizon Models: SASRec and HSTU employ 3 blocks with hidden dimensions 𝑑 ∈ { 32 , 64 }. The maximum input length 𝑁 max is selected from {25 , 50 , 100 , 200 } for ML-1M and 
+
+{25 , 50 , 100 , 250 , 500 } for KuaiRand and ML-10M-L. HSTU specifically enables relative-time and relative-position encod-ings to give it temporal information comparable to DP-Rec. GRU4Rec utilizes {1, 3} stacks with 𝑑 = 64 and 𝑁 max = 50 for ML-1M and 𝑁 max = 100 for KuaiRand and ML-10M-L. 
+
+• Compression-Based Models: For LONGER and DP-Rec ,the input horizon 𝑁 raw and patch budget 𝑀 are swept across dataset-specific ranges: {100 , 200 } and {2, . . . , 100 } for ML-1M, and {250 , 500 } and {2, . . . , 250 } for KuaiRand and ML-10M-L. LONGER utilizes a 1-block inner and 3-block outer Transformer. DP-Rec employs a 1-block local encoder and a 3-block latent Transformer ( 𝑑 ∈ { 16 , 32 , 64 }); to maintain pa-rameter parity with SASRec, FFN expansion layer is omitted. We evaluate both max-pooling and cross-attention ( 𝑘 = 8) for patch aggregation. The boundary detector is implemented as a 1-block Transformer with a minimal 8 hidden dimension across all datasets. Both boundary detector and temporal local encoder are implemented with 𝑤 𝑒 = 𝑤 = 32 (see sup-plementary material for the full configuration details). Unless otherwise stated, all models use ReLU activation, and all reported results correspond to the best validation-selected con-figuration for each model and dataset. Total FLOPs are computed post-hoc from the realized inference configurations on the test set to ensure a precise efficiency analysis. 
+
+## 3.6 Results 
+
+Table 3 compares all models at a matched, per-dataset inference budget: we fix the FLOPs budget to the SASRec configuration with the best validation NDCG@10 (a fixed horizon of 𝑁 max = 50 on ML-1M and 100 on ML-10M-L and KuaiRand ), and report every other model at its strongest validation-selected configuration within that budget. GRU4Rec is the sole exception: because its recurrent cost is largely insensitive to horizon and already sits within the budget, we report its overall best configuration. This design places fixed-horizon truncation and latent compression on equal computational footing, and under these conditions DP-Rec is the top performer on every dataset and metric. Since it can process 4–5 × longer his-tories at the same cost, it recovers signal that truncation discards, improving over the strongest baseline by +21 .1% on ML-10M-L and 
+
++11 .0% on KuaiRand in NDCG@10. Its advantage over LONGER ,the fixed-block compression baseline, is largest on ML-1M (+24 .8% NDCG@10) consistent with the advantage of aligning patch bound-aries to behavioral shifts over uniform, static segmentation. Taken together, these results indicate that DP-Rec turns behavioral-driven compression into consistent gains across every dataset and metric we evaluate. 
+
+## 3.7 Model Efficiency 
+
+To analyze the utility–efficiency trade-off, we map test NDCG@10 
+
+against total inference FLOPs across all model configurations. We derive the Pareto frontier for each family by sorting configurations by ascending FLOPs (breaking ties with higher utility) and retain-ing only those whose NDCG@10 exceeds all lower-cost predecessors. This ensures every frontier point is non-dominated, representing the maximum achievable quality for any given computational bud-get. The plotted Pareto curves connect only these frontier points identifying non-dominated configurations for each model family. 
+
+Pareto Dominance and Efficiency Gains . As illustrated in Fig-ure 4, DP-Rec (red curve) consistently defines or expands the Pareto frontier across all benchmarks, shifting the operational envelope toward the upper-left quadrant. This dominance is characterized by two primary phenomena: 
+
+• Iso-compute Quality Gains: At equivalent FLOP budgets, 
+
+DP-Rec yields superior utility. For instance, on KuaiRand 
+
+(Figure 4c), where at 10 11 .5 FLOPs, DP-Rec achieves an NDCG@10 of ≈ 0.45, maintaining a clear lead over the near-est baseline, LONGER .
+
+• Iso-quality Efficiency Gains: Conversely, DP-Rec satisfies target utility levels at a substantially reduced computational footprint. Due to the log 10 scale of the x-axis, small horizontal shifts represent multifold reductions in FLOPs. For example, in ML-1M (Figure 4a), reaching an NDCG@10 of 0 .22 requires 
+
+≈ 7× fewer FLOPs with DP-Rec (≈ 10 9.5) compared to fixed-horizon models like SASRec or HSTU ( ≈ 10 10 .3). 
+
+Efficiency and Adaptive Data Distribution . The Pareto fron-tiers also reveal a dataset-dependent pattern: LONGER ’s uniform, fixed-block compression is far more competitive on KuaiRand than on the MovieLens variants, and DP-Rec ’s margin over it shrinks accordingly (from +24.8% on ML-1M to +21.1% on ML-10M-L to +11.0% on KuaiRand). We attribute this to how interaction struc-ture differs across domains: KuaiRand is a dense, high-frequency short-video feed in which recent context is strongly predictive, so uniformly compressed representations still capture most of the relevant signal, whereas the MovieLens variants accumulate over long time spans with sparser, more diverse engagement, spreading informative interactions throughout the history where uniform DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+Table 3: Test results under a fixed FLOPs budget matched to best-validation SASRec, reported as mean ± 95% CI across 10 seeds. Bold and underline denote the best overall and baseline performers, and Rel Impr. measures relative gain over the top baseline. 
+
+Fixed-Horizon Baselines Compression-Based Models 
+
+Dataset Metric GRU4Rec [17] SASRec [23] HSTU [55] LONGER [3] DP-Rec Rel Impr. 
+
+ML-1M (𝑁 max = 50 , 𝑁 raw = 200 )
+
+NDCG@10 0.1961 ± 0.0023 0.2176 ± 0.0031 0.2078 ± 0.0051 0.2022 ± 0.0042 0.2523 ± 0.0017 +16.0% NDCG@20 0.2308 ± 0.0026 0.2525 ± 0.0029 0.2410 ± 0.0049 0.2355 ± 0.0035 0.2883 ± 0.0013 +14.2% HR@5 0.2329 ± 0.0057 0.2628 ± 0.0045 0.2535 ± 0.0068 0.2445 ± 0.0054 0.3092 ± 0.0024 +17.7% HR@10 0.3545 ± 0.0025 0.3846 ± 0.0055 0.3696 ± 0.0080 0.3637 ± 0.0039 0.4430 ± 0.0044 +15.2% HR@20 0.4914 ± 0.0050 0.5227 ± 0.0055 0.5010 ± 0.0086 0.4956 ± 0.0047 0.5855 ± 0.0027 +12.0% 
+
+ML-10M-L (𝑁 max = 100 , 𝑁 raw = 500 )
+
+NDCG@10 0.1566 ± 0.0025 0.1474 ± 0.0022 0.1389 ± 0.0051 0.1661 ± 0.0058 0.2011 ± 0.0024 +21.1% NDCG@20 0.1863 ± 0.0020 0.1766 ± 0.0017 0.1673 ± 0.0060 0.1977 ± 0.0056 0.2322 ± 0.0032 +17.5% HR@5 0.1890 ± 0.0036 0.1766 ± 0.0027 0.1676 ± 0.0071 0.1991 ± 0.0080 0.2393 ± 0.0028 +20.2% HR@10 0.2788 ± 0.0043 0.2681 ± 0.0030 0.2534 ± 0.0070 0.2984 ± 0.0089 0.3547 ± 0.0043 +18.9% HR@20 0.3967 ± 0.0049 0.3838 ± 0.0049 0.3658 ± 0.0119 0.4238 ± 0.0090 0.4894 ± 0.0073 +15.5% 
+
+KuaiRand (𝑁 max = 100 , 𝑁 raw = 500 )
+
+NDCG@10 0.3842 ± 0.0060 0.3795 ± 0.0072 0.3825 ± 0.0100 0.3858 ± 0.0093 0.4284 ± 0.0131 +11.0% NDCG@20 0.4052 ± 0.0058 0.4012 ± 0.0067 0.4022 ± 0.0096 0.4059 ± 0.0098 0.4492 ± 0.0122 +10.7% HR@5 0.4585 ± 0.0057 0.4565 ± 0.0126 0.4619 ± 0.0143 0.4640 ± 0.0095 0.5145 ± 0.0141 +10.9% HR@10 0.5562 ± 0.0052 0.5515 ± 0.0140 0.5429 ± 0.0156 0.5534 ± 0.0087 0.6125 ± 0.0126 +10.1% HR@20 0.6387 ± 0.0047 0.6370 ± 0.0095 0.6210 ± 0.0138 0.6324 ± 0.0119 0.6941 ± 0.0102 +8.7%   
+
+> (a) ML-1M (b) ML-10M-L (c) KuaiRand
+
+Figure 4: Efficiency trends for budgeted inference FLOPs. We plot NDCG@10 against total inference FLOPs ( log 10 scale). DP-Rec (red line) consistently defines the upper-left frontier, demonstrating its ability to either (i) achieve higher recommendation quality at the same inference cost, or (ii) reach equivalent quality levels with a significantly reduced computational footprint compared to baselines. 
+
+compression more easily blurs them. DP-Rec ’s adaptive bound-aries preserve this dispersed signal, which is why its advantage over uniform compression is largest on the more heterogeneous MovieLens histories. 
+
+## 3.8 Ablations 
+
+Unless otherwise noted, all ablations fix the base architecture at 
+
+𝐿 lat = 3, 𝑑 = 64, 𝐿 loc = 1, 𝑑 loc = 32, 𝑤 = 32, 𝑘 = 8, and ˆ𝑀 = 2. 
+
+3.8.1 Local Module Capacity . The local encoder and decoder fa-cilitate long-horizon compression via sliding-window attention. To examine how local capacity affects quality and efficiency, we ablate hidden size ( 𝑑 loc ) and depth ( 𝐿 loc ) while fixing all other parameters to the base configuration above. Reducing 𝑑 loc to 16 causes sub-stantial degradation across all datasets ( −14 .70%, −6.05%, −5.72%), confirming that a minimum local capacity is necessary for effec-tive patch compression. Expanding to 𝑑 loc = 64 yields meaningful gains on ML-1M (+6.75%) and ML-10M-L (+2.78%) and modest gains RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Katariya et al. 
+
+Table 4: Ablation on local module capacity. Bold denotes the base configuration ( 1.00 × compute). Parentheses denote relative change ( Δ%) for NDCG and compute scale for TFLOPs. 
+
+𝑑 loc 𝐿 loc #Params ML-1M ML-10M-L KuaiRand 
+
+(non-emb) NDCG@10 ↑ TFLOPs ↓ NDCG@10 ↑ TFLOPs ↓ NDCG@10 ↑ TFLOPs ↓
+
+32 1 137,920 0.2238 0.0284 ( 1.00 ×) 0.2051 0.0740 ( 1.00 ×) 0.4368 0.5431 ( 1.00 ×)
+
+16 1 99,616 0.1909 (-14.70%) 0.0100 (0 .35 ×) 0.1927 (-6.05%) 0.0235 (0 .32 ×) 0.4118 (-5.72%) 0.1729 (0 .32 ×)64 1 224,768 0.2389 (+6.75%) 0.0989 (3 .48 ×) 0.2108 (+2.78%) 0.2663 (3 .60 ×) 0.4405 (+0.85%) 1.9523 (3 .59 ×)32 2 159,168 0.2219 (-0.85%) 0.0543 (1 .91 ×) 0.2095 (+2.15%) 0.1447 (1 .96 ×) 0.4383 (+0.34%) 1.0606 (1 .95 ×)32 3 180,416 0.2145 (-4.16%) 0.0800 (2 .82 ×) 0.2010 (-2.00%) 0.2153 (2 .91 ×) 0.4407 (+0.89%) 1.5782 (2 .91 ×)
+
+Table 5: Architectural ablations under extreme compression ( ˆ𝑀 = 2). Parentheses denote relative change ( Δ%) from the base configuration.                                      
+
+> Variant ML-1M ML-10M-L KuaiRand DP-Rec (baseline) 0.2238 0.2051 0.4368
+> w/o Time-RoPE 0.2018 (-9.83%) 0.1933 (-5.75%) 0.4281 (-1.99%) w/o cross-attn 0.2424 (+8.31%) 0.2026 (-1.22%) 0.4444 (+1.74%)
+> 𝑘 =20.2158 (-3.57%) 0.2016 (-1.71%) 0.4389 (+0.48%)
+> 𝑘 =32 0.2302 (+2.86%) 0.2012 (-1.90%) 0.4344 (-0.55%)
+> 𝑤 =80.1956 (-12.60%) 0.1916 (-6.58%) 0.4006 (-8.29%)
+> 𝑤 =16 0.2162 (-3.40%) 0.1988 (-3.07%) 0.4253 (-2.63%)
+> 𝑤 =64 0.2243 (+0.22%) 0.2065 (+0.68%) 0.4527 (+3.64%)
+
+on KuaiRand (+0.85%), though at roughly 3 .5× the compute cost. Increasing depth reveals a dataset-dependent pattern: 𝐿 loc = 2and 𝐿 loc = 3 cause mild degradation on ML-1M (−0.85%, −4.16%) and ML-10M-L (+2.15%, −2.00%), but provide marginal gains on 
+
+KuaiRand (+0.34%, +0.89%), suggesting that denser interaction se-quences can leverage deeper local context. Together, 𝑑 loc = 32 with 
+
+𝐿 loc = 1 offers the best quality-efficiency trade-off across datasets, though higher capacity configurations may be worth exploring for dense, high-frequency domains. 
+
+3.8.2 Architectural Ablations . We evaluate the sensitivity of 
+
+DP-Rec to local design choices under extreme compression ( ˆ 𝑀 = 2), fixing all other parameters to the base configuration above. 
+
+Time-RoPE removal causes consistent degradation across all datasets (Table 5), with losses of −9.83% and −5.75% on ML-1M and 
+
+ML-10M-L , and a smaller −1.99% on KuaiRand , confirming that con-tinuous temporal encoding is important for capturing interaction timing, particularly on sparser MovieLens sequences. 
+
+Cross-attention aggregator (𝑘 , the number of latent queries per patch): its effect is consistently dataset-dependent at extreme compression. On ML-1M , removing cross-attention in favour of max-pooling yields +8.31%, and on KuaiRand it similarly yields 
+
++1.74%, suggesting that at ˆ𝑀 = 2 with only two coarse patches, max-pool aggregation is sufficient or preferable for both short and dense sequences. Only on ML-10M-L does cross-attention remain beneficial ( −1.22% without it). Varying 𝑘 shows small, inconsistent effects across datasets at ˆ𝑀 = 2, with marginal gains for 𝑘 = 32 on 
+
+ML-1M (+2.86%) and near-neutral results elsewhere, confirming 
+
+Table 6: Patching-scheme ablation (Random, Fixed, Contrastive-Entropy) at ˆ𝑀 = 50 for ML-1M and ˆ𝑀 = 100 
+
+for ML-10M-L and KuaiRand , varying only the boundary selection rule. Single-seed NDCG@10 scores are reported; bold marks the best per dataset. Dataset Random Fixed CE 
+
+ML-1M 0.2400 0.2437 0.2540 
+
+ML-10M-L 0.1946 0.1982 0.2029 
+
+KuaiRand 0.4588 0.4634 0.4761 
+
+𝑘 = 8 as a reasonable default but suggesting cross-attention capacity matters more at higher patch budgets. 
+
+Sliding-window size (𝑤 ) exhibits a clear threshold effect: 𝑤 = 8causes substantial utility loss across all datasets (up to −12 .60% on ML-1M and −8.29% on KuaiRand ), as insufficient local context prevents accurate resolution of behavioral shifts. 𝑤 = 64 yields consistent gains across all three datasets ( +0.22%, +0.68%, +3.64%) but at higher computational cost; 𝑤 = 32 offers the best efficiency trade-off. 
+
+3.8.3 Impact of Patching Scheme . To isolate whether DP-Rec’s gains stem from dynamic boundary placement rather than se-quence compression alone, we vary only the boundary selection rule: Random (uniform random), Fixed (equal-sized blocks, match-ing LONGER’s chunking [3]), and Contrastive Entropy (CE) 
+
+(boundaries at high-surprisal transitions; Section 2.2). We evaluate at ˆ𝑀 = 50 for ML-1M and ˆ𝑀 = 100 for ML-10M-L and KuaiRand ,providing sufficient patch granularity for the three boundary rules to express meaningful behavioral differences. CE consistently out-performs both baselines across all three datasets (Table 6). Fixed improves over Random on all three datasets ( +1.5%/ +1.8%/ +1.0% on ML-1M/ML-10M-L/KuaiRand) by preserving temporal locality. CE adds a further +4.2%/ +2.4%/ +2.7% over Fixed by aligning bound-aries with genuine intent shifts, confirming that high-surprisal boundary detection captures meaningful behavioral transitions across all three domains. Note that these configurations are not constrained to the headline FLOPs budget and are thus not directly comparable to Table 3. DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA 
+
+Table 7: Mean test NDCG@10 vs. target patch budget ˆ𝑀 , at fixed 𝑁 raw = 50 for ML-1M and 𝑁 raw = 100 for ML-10M-L and 
+
+KuaiRand . Cross-attention is disabled to isolate patch budget sensitivity from cross-attention capacity effects. Bold marks best per dataset.                       
+
+> Target Patches ( ˆ𝑀 )ML-1M ML-10M-L KuaiRand
+> 20.2346 0.2050 0.4405 50.2446 0.2026 0.4414 10 0.2414 0.2070 0.4504 50 0.2499 0.1996 0.4578
+> 100 0.2486 0.1949 0.4502 250 –0.2088 0.4417
+
+Figure 5: Qualitative analysis of contrastive entropy surprise (red) and item views (blue) for ML-1M . Entropy remains low during stable genre engagement but spikes sharply at out-of-distribution transitions, demonstrating how DP-Rec adap-tively allocates boundaries to salient behavioral shifts. 
+
+## 3.9 Sensitivity to Target Patch Budget 
+
+The target patch budget ˆ𝑀 controls the bottleneck between local interaction processing and the temporal latent transformer. Table 7 reports test NDCG@10 at each budget, at fixed 𝑁 raw = 50 for ML-1M and 𝑁 raw = 100 for ML-10M-L and KuaiRand . Cross-attention aggregation is disabled for this ablation to isolate patch budget sensitivity from the confounding effect of cross-attention capacity becoming degenerate when 𝑘 > 𝑛 𝑝 at high ˆ𝑀 (Section 3.8.2). Both 
+
+ML-1M and KuaiRand peak at ˆ𝑀 = 50, while ML-10M-L continues to improve up to ˆ𝑀 = 250, consistent with its longer interaction histories requiring finer-grained segmentation. Despite this vari-ation, DP-Rec is highly resilient to aggressive compression: even at ˆ𝑀 = 2 it retains ∼94% of peak NDCG@10 on ML-1M , ∼98% on 
+
+ML-10M-L , and ∼96% on KuaiRand , confirming that the contrastive boundary detector packs the most salient behavioral shifts into very few patches. 
+
+## 4 Qualitative Analysis 
+
+Visualizations of interaction sequences in Figure 5 confirm that DP-Rec functions as an adaptive segmentation module, partitioning user histories into variable-length behavioral patches. We observe that contrastive entropy surprise serves as a robust proxy for these latent transitions: scores remain suppressed during thematically stable episodes, such as consistent genre engagement in ML-1M ,allowing the local encoder to condense redundant interactions. Conversely, sharp entropy spikes occur during “out-of-distribution” events, including abrupt genre shifts or changes in interaction rhythm. This dynamic alignment ensures that latent representations are allocated according to behavioral complexity rather than fixed temporal intervals. 
+
+## 5 Limitations and Future Work 
+
+While DP-Rec demonstrates strong efficiency gains under FLOPs-matched comparisons, several limitations remain. First, a gap exists between theoretical complexity and practical throughput, as the patch aggregation kernels require further low-level optimization to match highly optimized fixed-length serving systems. Second, in our staged training pipeline, the boundary detector is pre-trained and frozen. While this approach to staged training is effective, learn-ing patch boundaries jointly with the recommendation objective is a promising direction. Third, hardware constraints precluded study of ultra-long horizons (N > 500), where compression benefits may be even more pronounced. We hypothesize that richer multi-channel behavioral signals would provide more informative boundaries for contextual segmentation. More broadly, our contrastive-entropy detector is one effective instantiation of the boundary module, and identifying the best boundary-detection design (spanning alterna-tive surprise signals, temporal cues, and training objectives) remains an open direction for future work. 
+
+## 6 Conclusions 
+
+In this study we introduced DP-Rec, a dynamic latent patching architecture with temporally adaptive boundary detection. DP-Rec couples item-level processing with explicit temporal modeling, combining temporal signals with contrastive entropy surprise to adaptively determine patch boundaries. This allows the model to overcome the quadratic constraints of standard Transformers while preserving high-fidelity representations of extended user histories. Experiments across three widely known public benchmarks confirm a superior computational efficiency–accuracy trade-off over both uncompressed and fixed-rate compression baselines, demonstrat-ing that computation can follow the information density of user behavior rather than the arbitrary constraints of fixed boundaries. We invite future research to build upon this work to explore the potential of adaptive sequence modeling in recommender systems. 
+
+> 1
+
+## Acknowledgments 
+
+We sincerely thank Giri Iyengar and Bayan Bruss for their sponsor-ship, productive discussions, and critical reviews of this work. 
+
+> 1In preparing this paper, the authors utilized Gemini to improve the clarity, grammar, and presentation of the manuscript. No AI tools were used for model design, exper-imentation, or analysis; all technical contributions remain exclusively those of the authors.
+
+RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Katariya et al. 
+
+## References 
+
+[1] Abeywickrama, S., Eldele, E., Wu, M., Li, X., and Yuen, C. Entrope: Entropy-guided dynamic patch encoder for time series forecasting. arXiv preprint arXiv:2509.26157 (2025). [2] Cao, Y., Tian, Z., Guo, W., and Liu, X. Mspatch: A multi-scale patch mix-ing framework for multivariate time series forecasting. Expert Systems with Applications 273 (2025), 126849. [3] Chai, Z., Ren, Q., Xiao, X., Yang, H., Han, B., Zhang, S., Chen, D., Lu, H., Zhao, W., Yu, L., et al. Longer: Scaling up long sequence modeling in industrial recommenders. In Proceedings of the Nineteenth ACM Conference on Recommender Systems (2025), pp. 247–256. [4] Chang, J., Zhang, C., Fu, Z., Zang, X., Guan, L., Lu, J., Hui, Y., Leng, D., Niu, Y., Song, Y., et al. Twin: Two-stage interest network for lifelong user behavior modeling in ctr prediction at kuaishou. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (2023), pp. 3785–3794. [5] Chitlangia, S., Kesari, K. R., and Agarwal, R. Scaling generative pre-training for user ad activity sequences. [6] Chitsazan, N., Sharpe, S., Katariya, D., Cheng, Q., and Rajasethupathy, K. Dynamic customer embeddings for financial service applications. arXiv preprint arXiv:2106.11880 (2021). [7] Deng, J., Wang, S., Cai, K., Ren, L., Hu, Q., Ding, W., Luo, Q., and Zhou, G. Onerec: Unifying retrieve and rank with generative recommender and iterative preference alignment. arXiv preprint arXiv:2502.18965 (2025). [8] Ding, K., Fan, F., Hou, C., Wang, Z., Wang, L., Yang, Z., and Zhan, J. Timemosaic: Temporal heterogeneity guided time series forecasting via adaptive granularity patch and segment-wise decoding. In Proceedings of the AAAI Conference on Artificial Intelligence (2026), vol. 40, pp. 20790–20798. [9] Fan, Z., Ou, D., Gu, Y., Fu, B., Li, X., Bao, W., Dai, X.-Y., Zeng, X., Zhuang, T., and Liu, Q. Modeling users’ contextualized page-wise feedback for click-through rate prediction in e-commerce search. In Proceedings of the fifteenth ACM international conference on web search and data mining (2022), pp. 262–270. [10] Gao, C., Li, S., Zhang, Y., Chen, J., Li, B., Lei, W., Jiang, P., and He, X. Kuairand: An unbiased sequential recommendation dataset with randomly exposed videos. In Proceedings of the 31st ACM international conference on information & knowledge management (2022), pp. 3953–3957. [11] Guan, L., Yang, J.-Q., Zhao, Z., Zhang, B., Sun, B., Luo, X., Ni, J., Li, X., Qi, Y., Fan, Z., et al. Make it long, keep it fast: End-to-end 10k-sequence modeling at billion scale on douyin. arXiv preprint arXiv:2511.06077 (2025). [12] Guo, W., Wang, H., Zhang, L., Chin, J. Y., Liu, Z., Cheng, K., Pan, Q., Lee, Y. Q., Xue, W., Shen, T., et al. Scaling new frontiers: Insights into large recommenda-tion models. arXiv preprint arXiv:2412.00714 (2024). [13] Hansen, C., Hansen, C., Maystre, L., Mehrotra, R., Brost, B., Tomasi, F., and Lalmas, M. Contextual and sequential user embeddings for large-scale music recommendation. In Proceedings of the 14th ACM Conference on Recommender Systems (2020), pp. 53–62. [14] Harper, F. M., and Konstan, J. A. The movielens datasets: History and context. 
+
+Acm transactions on interactive intelligent systems (tiis) 5 , 4 (2015), 1–19. [15] He, X., Liao, L., Zhang, H., Nie, L., Hu, X., and Chua, T.-S. Neural collaborative filtering. In Proceedings of the 26th international conference on world wide web 
+
+(2017), pp. 173–182. [16] He, Z., Liu, W., Guo, W., Qin, J., Zhang, Y., Hu, Y., and Tang, R. A survey on user behavior modeling in recommender systems. arXiv preprint arXiv:2302.11087 
+
+(2023). [17] Hidasi, B., Karatzoglou, A., Baltrunas, L., and Tikk, D. Session-based rec-ommendations with recurrent neural networks. arXiv preprint arXiv:1511.06939 
+
+(2015). [18] Hidasi, B., Karatzoglou, A., Baltrunas, L., and Tikk, D. Session-based rec-ommendations with recurrent neural networks. arXiv preprint arXiv:1511.06939 
+
+(2015). [19] Hoffmann, J., Borgeaud, S., Mensch, A., Buchatskaya, E., Cai, T., Rutherford, E., Casas, D., Hendricks, L. A., Welbl, J., Clark, A., et al. Training compute-optimal large language models. arXiv preprint arXiv:2203.15556 10 (2022). [20] Huang, Q., Shen, L., Zhang, R., Cheng, J., Ding, S., Zhou, Z., and Wang, Y. Hdmixer: Hierarchical dependency with extendable patch for multivariate time series forecasting. In Proceedings of the AAAI conference on artificial intelligence 
+
+(2024), vol. 38, pp. 12608–12616. [21] Huang, Z. Sasrec.pytorch, 2020. [22] Jaegle, A., Gimeno, F., Brock, A., Vinyals, O., Zisserman, A., and Carreira, J. Perceiver: General perception with iterative attention. In International conference on machine learning (2021), PMLR, pp. 4651–4664. [23] Kang, W.-C., and McAuley, J. Self-attentive sequential recommendation. In 2018 IEEE international conference on data mining (ICDM) (2018), IEEE, pp. 197–206. [24] Katariya, D., Origgi, J. M., Wang, Y., and Caputo, T. Timesync: Temporal intent modelling with synchronized context encodings for financial service applications. 
+
+arXiv preprint arXiv:2410.12825 (2024). [25] Katariya, D., Varma, S., Shreemali, A., Wu, B., Mishra, K., and Mohanty, P. Fintrec: Transformer based unified contextual ads targeting and personalization for financial applications. arXiv preprint arXiv:2511.14865 (2025). [26] Liu, K., Duan, Z., Chen, C., Wang, Y., Cheng, D., and Liang, Y. Adapatch: Adaptive patch-level modeling for non-stationary time series forecasting. In Pro-ceedings of the 34th ACM International Conference on Information and Knowledge Management (2025), pp. 1882–1891. [27] Liu, X., Qiu, X., Wu, X., Li, Z., Guo, C., Hu, J., and Yang, B. Rethinking irregular time series forecasting: A simple yet effective baseline. In Proceedings of the AAAI Conference on Artificial Intelligence (2026), vol. 40, pp. 23873–23881. [28] Lu, H., Chai, Z., Zheng, Y., Chen, Z., Xie, D., Xu, P., Zhou, X., and Wu, D. Large memory network for recommendation. In Companion Proceedings of the ACM on Web Conference 2025 (2025), pp. 1162–1166. [29] Lv, F., Li, M., Guo, T., Yu, C., Sun, F., Jin, T., and Ng, W. Xdm: Improving sequential deep matching with unclicked user behaviors for recommender system. In International Conference on Database Systems for Advanced Applications (2022), Springer, pp. 364–376. [30] Lv, X., Cao, J., Guan, S., Zhou, X., Qi, Z., Zang, Y., Li, M., Wang, B., Gai, K., and Zhou, G. Marm: Unlocking the future of recommendation systems through memory augmentation and scalable complexity. arXiv preprint arXiv:2411.09425 
+
+(2024). [31] MobileTeleSystems. Rectools: Library to build recommendation systems. https: //github.com/MobileTeleSystems/RecTools, 2024. [32] Nie, Y., Nguyen, N. H., Sinthong, P., and Kalagnanam, J. A time series is worth 64 words: Long-term forecasting with transformers. arXiv preprint arXiv:2211.14730 (2022). [33] Ouyang, W., Zhang, X., Li, L., Zou, H., Xing, X., Liu, Z., and Du, Y. Deep spatio-temporal neural networks for click-through rate prediction. In Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining (2019), pp. 2078–2086. [34] Pagnoni, A., Pasunuru, R., Rodriguez, P., Nguyen, J., Muller, B., Li, M., Zhou, C., Yu, L., Weston, J. E., Zettlemoyer, L., et al. Byte latent transformer: Patches scale better than tokens. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) (2025), pp. 9238–9258. [35] Pancha, N., Zhai, A., Leskovec, J., and Rosenberg, C. Pinnerformer: Sequence modeling for user representation at pinterest. In Proceedings of the 28th ACM SIGKDD conference on knowledge discovery and data mining (2022), pp. 3702–3712. [36] Pi, Q., Bian, W., Zhou, G., Zhu, X., and Gai, K. Practice on long sequential user behavior modeling for click-through rate prediction. In Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining 
+
+(2019), pp. 2671–2679. [37] Pi, Q., Zhou, G., Zhang, Y., Wang, Z., Ren, L., Fan, Y., Zhu, X., and Gai, K. Search-based user interest modeling with lifelong sequential behavior data for click-through rate prediction. In Proceedings of the 29th ACM International Conference on Information & Knowledge Management (2020), pp. 2685–2692. [38] Qin, J., Zhang, W., Wu, X., Jin, J., Fang, Y., and Yu, Y. User behavior retrieval for click-through rate prediction. In Proceedings of the 43rd international ACM SIGIR conference on research and development in information retrieval (2020), pp. 2347–2356. [39] Rendle, S., Freudenthaler, C., Gantner, Z., and Schmidt-Thieme, L. Bpr: Bayesian personalized ranking from implicit feedback. arXiv preprint arXiv:1205.2618 (2012). [40] Rendle, S., Freudenthaler, C., and Schmidt-Thieme, L. Factorizing personal-ized markov chains for next-basket recommendation. In Proceedings of the 19th international conference on World wide web (2010), pp. 811–820. [41] Si, Z., Guan, L., Sun, Z., Zang, X., Lu, J., Hui, Y., Cao, X., Yang, Z., Zheng, Y., Leng, D., et al. Twin v2: Scaling ultra-long user behavior sequence modeling for enhanced ctr prediction at kuaishou. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management (2024), pp. 4890–4897. [42] Su, J., Ahmed, M., Lu, Y., Pan, S., Bo, W., and Liu, Y. Roformer: Enhanced transformer with rotary position embedding. Neurocomputing 568 (2024), 127063. [43] Sun, F., Liu, J., Wu, J., Pei, C., Lin, X., Ou, W., and Jiang, P. Bert4rec: Sequential recommendation with bidirectional encoder representations from transformer. In 
+
+Proceedings of the 28th ACM international conference on information and knowledge management (2019), pp. 1441–1450. [44] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., and Polosukhin, I. Attention is all you need. Advances in neural information processing systems 30 (2017). [45] Woo, G., Liu, C., Kumar, A., Xiong, C., Savarese, S., and Sahoo, D. Unified train-ing of universal time series forecasting transformers. In Forty-first International Conference on Machine Learning (2024). [46] Wu, X., Qiu, X., Cheng, H., Li, Z., Hu, J., Guo, C., and Yang, B. Enhancing time series forecasting through selective representation spaces: A patch perspective. 
+
+arXiv preprint arXiv:2510.14510 (2025). [47] Wu, X., Qiu, X., Cheng, H., Li, Z., Hu, J., Guo, C., and Yang, B. Enhancing time series forecasting through selective representation spaces: A patch perspective. In The Thirty-ninth Annual Conference on Neural Information Processing Systems 
+
+(2026). [48] Wu, Y., Ankireddy, S. K., Sharpe, S., Seleznev, N., Yuan, D., Kim, H., and DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA                             
+
+> Nguyen, N. H. Dynamic tokenization via reinforcement patching: End-to-end training and zero-shot transfer. arXiv preprint arXiv:2603.26097 (2026). [49] Xia, X., Eksombatchai, P., Pancha, N., Badani, D. D., Wang, P.-W., Gu, N., Joshi, S. V., Farahpour, N., Zhang, Z., and Zhai, A. Transact: Transformer-based realtime user action model for recommendation at pinterest. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (2023), pp. 5249–5259. [50] Xia, X., Joshi, S., Rajesh, K., Li, K., Lu, Y., Pancha, N., Badani, D., Xu, J., and Eksombatchai, P. Transact v2: Lifelong user action sequence modeling on pinterest recommendation. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management (2025), pp. 6881–6882. [51] Xie, R., Ling, C., Wang, Y., Wang, R., Xia, F., and Lin, L. Deep feedback network for recommendation. In Proceedings of the twenty-ninth international conference on international joint conferences on artificial intelligence (2021), pp. 2519–2525. [52] Xin, H., Sun, Y., Wang, C., and Xiong, H. Llmcdsr: Enhancing cross-domain sequential recommendation with large language models. ACM Transactions on Information Systems 43 , 5 (2025), 1–33. [53] Yang, J., Li, Y., Zhao, J., Wang, H., Ma, M., Ma, J., Ren, Z., Zhang, M., Xin, X., Chen, Z., et al. Uncovering selective state space model’s capabilities in lifelong sequential recommendation. arXiv preprint arXiv:2403.16371 (2024). [54] YongjiWu, L. Y., Lian, D., Yin, M., Gong, N. Z., Zhou, J., and Yang, H. Rethinking lifelong sequential recommendation with incremental multi-interest attention.
+> arXiv preprint arXiv:2105.14060 (2021). [55] Zhai, J., Liao, L., Liu, X., Wang, Y., Li, R., Cao, X., Gao, L., Gong, Z., Gu, F., He, M., et al. Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations. arXiv preprint arXiv:2402.17152
+> (2024). [56] Zhang, G., Hou, Y., Lu, H., Chen, Y., Zhao, W. X., and Wen, J.-R. Scaling law of large sequential recommendation models. In Proceedings of the 18th ACM Conference on Recommender Systems (2024), pp. 444–453. [57] Zhang, H., Meng, C., Guo, W., Guo, H., Zhu, J., Zhao, G., Tang, R., and Li, X. Time-aligned exposure-enhanced model for click-through rate prediction. arXiv preprint arXiv:2308.09966 (2023). [58] Zhang, L., Song, K., Lee, Y. Q., Guo, W., Wang, H., Li, Y., Guo, H., Liu, Y., Lian, D., and Chen, E. Killing two birds with one stone: Unifying retrieval and ranking with a single generative recommendation model. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (2025), pp. 2224–2234. [59] Zhang, Q., Yu, H., Ji, I., Yuan, C., Zhang, Y., Liu, C., Wang, X., Lambert, C. E., Chen, R., Kovacs, C., et al. Efficient sequential recommendation for long term user interest via personalization. In 2025 IEEE International Conference on Data Mining (ICDM) (2025), IEEE, pp. 913–922. [60] Zhang, W., Li, D., Liang, C., Zhou, F., Zhang, Z., Wang, X., Li, R., Zhou, Y., Huang, Y., Liang, D., et al. Scaling user modeling: Large-scale online user representations for ads personalization in meta. In Companion Proceedings of the ACM Web Conference 2024 (2024), pp. 47–55. [61] Zhou, G., Mou, N., Fan, Y., Pi, Q., Bian, W., Zhou, C., Zhu, X., and Gai, K. Deep interest evolution network for click-through rate prediction. In Proceedings of the AAAI conference on artificial intelligence (2019), vol. 33, pp. 5941–5948. [62] Zhou, R., Jia, Q., Chen, B., Xu, P., Sun, Y., Lou, S., Fu, C., Fu, M., Shen, G., Zhou, Z., et al. A survey of user lifelong behavior modeling: Perspectives on efficiency and effectiveness. [63] Zivic, P., Vazqez, H., and Sánchez, J. Scaling sequential recommendation models with transformers. In Proceedings of the 47th international ACM SIGIR conference on research and development in information retrieval (2024), pp. 1567– 1577.
+
+## A Relevant Work A.1 Long Sequential Recommendation 
+
+Sequential recommendation has attracted substantial attention in both academia and industry [7, 11, 13, 25, 35, 49, 50, 52, 55, 58]. Transformer based models, especially SASRec [23] and BERT4Rec [43], have become foundational in this area by demonstrating the ef-fectiveness of self attention for modeling user behavior sequences. These methods significantly advanced the state of the art over earlier sequential models such as GRU4Rec [18], FPMC [40], and CASER, as well as non sequential approaches including BPR-MF [39] and NCF [15]. Nevertheless, most existing methods are de-signed for relatively short or truncated interaction histories. Scaling these architectures to lifelong user logs is restricted not only by the quadratic complexity of self-attention but also by the increasing heterogeneity of user interests. These factors render assumptions of signal homogeneity and limited temporal scope increasingly unrealistic in large-scale settings [62]. Early work in this area fo-cused primarily on explicit feedback, such as numerical ratings. Subsequent studies, however, established that Click-Through Rate (CTR) prediction—the estimation of a user’s probability of engage-ment—benefits from jointly modeling heterogeneous behavioral signals. Specifically, these models incorporate both positive signals, such as successful clicks, and negative signals, such as unclicked impressions where an item was exposed to the user but failed to elicit an interaction. In particular, DSTN [33], DFN [51], DIEN [61], and XDM [29] demonstrated the importance of incorporating such multi-feedback information. Because implicit signals such as views and impressions are substantially more abundant than clicks, their inclusion greatly increases sequence length and makes full long-range sequence modeling computationally infeasible. To bet-ter exploit richer behavioral information, RACP [9] introduced a hierarchical attention architecture that captures both intra-page dependencies among co displayed items and inter-page interest tran-sitions across sessions. Despite these advances, prior studies largely overlook the impact of sequence truncation in multi-feedback set-tings, where truncation can weaken cross-signal dependencies and limit the joint modeling of different feedback types. TEM4CTR [57] addresses this issue through a three-stage framework that first re-trieves unclicked records near clicked ones, then applies attention to identify relevant exposure information, and finally jointly extracts latent user interests from clicked and unclicked sequences for CTR prediction. Hence, recent practice increasingly favors integrating a broader range of user behavioral signals into recommendation models. While this enriches user representation, it also leads to sub-stantial sequence length growth, thereby making efficient sequence processing a critical requirement. 
+
+## A.2 Sequence Compression in RecSys 
+
+Under strict inference budget constraints, industrial RecSys often rely on staged compression pipelines to make long behavioral his-tories tractable. These include two stage retrieval methods such as TWIN [4], TWIN V2 [41], and SIM [37], pre trained embed-ding approaches such as PINNERFORMER [35], SUM [60], DCE [6], CoSeRNN [13], and FinTRec [25], as well as memory augmented methods such as LMN [28], Marm [30], MIMN [36]. While these methods differ in design, they share a common goal of reducing sequence length before downstream modeling. For example, TWIN V2 [41] compresses histories through clustering, whereas TWIN [4], UBR4CTR [38], SIM [37], and TransAct [49] retrieve a target relevant subset of interactions followed by lightweight self atten-tion. Although effective in reducing computation, these strategies often sacrifice signal fidelity. Because compression is performed upstream, they are typically not optimized end-to-end with down-stream item relevance, and may therefore miss important real-time behavioral signals [50]. This separation between compression and recommendation also limits the model’s ability to preserve the fine-grained structure of long behavioral histories. In addition, staged designs introduce operational overhead by requiring coordination between upstream retraining and downstream serving. Recent work has attempted to address these limitations more directly. TransAct RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Katariya et al. 
+
+V2 [50] demonstrates the benefit of combining lifelong histories with real time signals, but restricts the lifelong component to high signal explicit interactions, keeping the final sequence length at approximately 10 2 and still discarding fine-grained information. Another direction explores generative architectures such as HSTU [55], though these often require extremely large models and sub-stantial compute budgets [49]. LONGER [3] reduces computation through fixed window token merging followed by a lightweight Transformer over adjacent tokens. While this lowers FLOPs with-out hurting baseline accuracy, fixed-rate merging cannot adapt to the uneven information density of heterogeneous user behaviors. Recently, PerRec [59] introduced learnable tokens for sequence com-pression; however, it still relied on a fixed set of learnable tokens. In contrast, DP-Rec processes raw long-range sequences directly with Transformer architecture, reducing reliance on aggressive upfront compression and fixed set of assumed windows and/or learnable tokens. 
+
+## A.3 Sequence Compressions in Other Domains 
+
+Recent research has increasingly focused on relaxing fixed-length constraints through adaptive or multi-scale segmentation strate-gies. Frameworks such as MSPatch [2] and HDMixer [20] leverage multi-resolution patching and extendable interpolation, respec-tively, while MOIRAI [45] determines patch granularity within the frequency domain. Other approaches address sequence non-stationarity and irregular intervals; for example, AdaPatch [26] introduces patch-level normalization, and APN [27] employs time-aware aggregation driven by data-density regularization. More granular architectures like SRSNet [46] and TimeMosaic [8] utilize selective reassembly or motif-based adaptation to enhance represen-tation efficiency and decoding specialization. EntroPE[1], recently explored application of BLT to timeseries demonstrating strong efficiency and performance gains. 
+
+## B Temporal Rotary Positional Embeddings (Time-RoPE) 
+
+To encode interaction rhythms, we adapt Rotary Positional Embed-dings [42] to absolute timestamps 𝑇 𝑡 . For a latent vector x ∈ R𝑑 , the transformation R ( x,𝑇 𝑡 ) rotates 𝑑 /2 dimension pairs in the query-key space: 
+
+R ( x,𝑇 𝑡 ) = x ⊙ cos (Θ𝑇 𝑡 ) + ˜x ⊙ sin (Θ𝑇 𝑡 ) (9) where Θ = {𝜃 𝑖 = 10000 −2𝑖 /𝑑 }𝑑 /2 
+
+> 𝑖 =1
+
+are the inverse frequencies. This makes the attention score between two interactions at times 𝑇 𝑡 and 
+
+𝑇 𝑡 ′ a function of their time lag (𝑇 𝑡 −𝑇 𝑡 ′ ), giving both the local and la-tent Transformers a continuous, density-aware sense of behavioral timing. 
+
+## C Lemma - Patch-count calibration under distinct scores 
+
+The following lemma formalizes the calibration property of the proposed thresholding rule under an idealized no-tie condition. Specifically, it shows that when all valid surprise scores are distinct, selecting the threshold as the 𝑘 -th largest valid score yields exactly the intended number of detected boundaries, and hence matches the target average patch budget up to rounding. The result is purely combinatorial and serves to justify the thresholding mechanism, rather than the semantic quality of the resulting boundaries. Lemma C.1 (Patch-count calibration under distinct scores). 
+
+Let 𝜙 ∈ R𝐵 ×𝑁 denote the surprise scores, 𝝁 ∈ { 0, 1}𝐵 ×𝑁 the padding mask, and Φ = {𝜙 𝑢,𝑡 | 𝝁 𝑢,𝑡 = 1} the multiset of valid scores. Let 
+
+ˆ𝑀 be the target average number of patches, ¯𝑁 = |Φ|/ 𝐵 the average sequence length, and 𝑀 eff = min ( ˆ𝑀, ¯𝑁 ). Define the boundary budget as: 
+
+𝑘 = round (( 𝑀 eff − 1)𝐵 ).
+
+Assume all values in Φ are distinct and 0 ≤ 𝑘 ≤ | Φ|. Let 𝜏 be the 
+
+𝑘 -th largest element of Φ, and 𝚪 𝑢,𝑡 = I[𝜙 𝑢,𝑡 ≥ 𝜏 ] · 𝝁 𝑢,𝑡 . Then the total number of detected boundaries is exactly 𝑘 , and the total number of patches is: Total Patches = 𝑘 + 𝐵 = round (𝑀 eff 𝐵 ).
+
+Consequently, the average number of patches per sequence equals 
+
+𝑀 eff .
+
+Proof. Since all scores in Φ are distinct, the 𝑘 -th largest value 𝜏 
+
+is unique. By definition of the 𝑘 -th order statistic, there are exactly 
+
+𝑘 elements in Φ with 𝜙 𝑢,𝑡 ≥ 𝜏 . Thus the total boundary count is: 
+
+> 𝐵
+
+∑︁ 
+
+> 𝑢 =1
+> 𝑁
+
+∑︁ 
+
+> 𝑡 =1
+
+𝚪 𝑢,𝑡 = 𝑘. 
+
+Each sequence 𝑢 ∈ { 1, . . . , 𝐵 } is partitioned into 𝑀 𝑢 = 𝛾 𝑢 +1 patches, where 𝛾 𝑢 = Í𝑡 𝚪 𝑢,𝑡 is its boundary count. The total number of patches across the batch is: 
+
+> 𝐵
+
+∑︁ 
+
+> 𝑢 =1
+
+𝑀 𝑢 =
+
+> 𝐵
+
+∑︁ 
+
+> 𝑢 =1
+
+(𝛾 𝑢 + 1) =
+
+> 𝐵
+
+∑︁ 
+
+> 𝑢 =1
+
+𝛾 𝑢 
+
+!
+
++ 𝐵 = 𝑘 + 𝐵. 
+
+Substituting 𝑘 = round (( 𝑀 eff − 1)𝐵 ) = round (𝑀 eff 𝐵 − 𝐵 ) and using that 𝐵 is an integer: 
+
+𝑘 + 𝐵 = round (𝑀 eff 𝐵 ) − 𝐵 + 𝐵 = round (𝑀 eff 𝐵 ).
+
+Dividing by 𝐵 yields the average patch count 𝑀 eff , which equals the target ˆ 𝑀 whenever the average sequence length ¯ 𝑁 is sufficient. □
+
+## D Robustness to Item Popularity Tiers 
+
+The analysis of recommendation utility across item frequency tiers reveals that while all models benefit from increased interaction density, their ability to handle "tail" versus "head" items varies significantly. Across all three datasets, we observe a monotonic increase in NDCG@10 as item frequency rises, confirming that higher-resolution signals for popular items naturally facilitate more accurate predictions. DP-Rec consistently establishes the perfor-mance ceiling across the entire popularity spectrum. Specifically, in low-frequency bins ( < 25 interactions), DP-Rec exhibits greater re-silience than standard baselines, suggesting that its adaptive bound-ary detection effectively extracts meaningful patterns even from sparse interaction data where fixed-horizon models like SASRec 
+
+and HSTU struggle to isolate a clear signal. In the high-frequency regime ( > 100 interactions), the advan-tage of compression-based architectures becomes even more pro-nounced. In ML-10M-Long and KuaiRand , both DP-Rec and LONGER 
+
+significantly outperform fixed-horizon baselines. This indicates that for popular items, relevant behavioral context is likely distributed DP-Rec: Towards Dynamic Patching for Efficient Long-Sequence Recommendation RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA   
+
+> (a) ML-1M (b) ML-10M-LONG (c) KuaiRand
+
+Figure 6: Recommendation Quality (NDCG@10) by Item Popularity across three benchmark datasets. 
+
+across a much longer temporal window; while fixed-horizon models are limited by rigid truncation, the adaptive patching of DP-Rec 
+
+allows it to aggregate information from the entire user history without signal dilution. Notably, in KuaiRand , LONGER performs exceptionally well, closely trailing DP-Rec , whereas in ML-1M ,
+
+DP-Rec maintains a wider margin over all competitors in the mid-to-head tiers. Collectively, these results demonstrate that DP-Rec 
+
+provides a robust architectural advantage that scales effectively from sparse tail items to dense head items, outperforming both traditional attention-based models and uniform compression strate-gies. 
+
+## E Performance across Temporal Lag Bins 
+
+Temporal analysis across the experimental suite clarifies how the distribution of target signals modulates model performance over time. In ML-1M and KuaiRand , we observe a significant recency bias, where predictive utility for all models effectively collapses by the most distal bin (T3). In these scenarios, DP-Rec demon-strates superior peak performance in the immediate temporal bin (T1), indicating its efficacy in capturing high-entropy signals within recent interactions. However, model behavior diverges in the tran-sition to T2: while LONGER maintains a slight edge in ML-1M , it suffers a catastrophic collapse to zero in KuaiRand , whereas HSTU 
+
+exhibits higher middle-range robustness. This suggests that while uniform compression or fixed horizons can occasionally capture spe-cific temporal windows, they are inherently prone to failure when the underlying signal density shifts. The results for ML-10M-Long 
+
+provide the most compelling evidence for DP-Rec ’s architectural advantage in long-range scenarios. Unlike the other datasets, ML-10M-Long exhibits remarkable signal persistence, with significant utility maintained even in the T3 bin. Here, DP-Rec consistently defines the performance ceiling across the entire temporal spec-trum, maintaining a nearly flat and dominant trajectory compared to baselines. Its ability to preserve distal signals—while models like SASRec and LONGER struggle to close the gap—confirms that the entropy-driven boundary detector successfully identifies and retains informative behavioral shifts regardless of their sequence position. Collectively, these results highlight that while baseline models are often constrained by a dataset’s inherent temporal decay, 
+
+DP-Rec ’s adaptive patching provides a robust efficiency advantage across both high-recency and signal-persistent environments. Long-sequence recommendation is particularly relevant in sparse and long-tail settings, where a user’s older interactions may still contain useful preference signal. We therefore analyze performance stratified by item popularity to assess whether DP-Rec is especially beneficial for long-tail recommendation. Because adaptive patching preserves informative intent transitions rather than truncating the sequence uniformly, DP-Rec demonstrates gains across all the item popularity cohorts(refer Figure 6). 
+
+## F Experimental Configuration 
+
+Table 8 provides a comprehensive overview of the experimental configurations and hyperparameter search spaces across all models. 
+
+## G Detailed FLOPs Accounting 
+
+Inference efficiency is measured by FLOPs per forward pass, fol-lowing [19] but excluding non-arithmetic costs (normalization, residuals, and lookups). For a Transformer with sequence length 
+
+𝑛 , average attention context 𝑚 , hidden dimension ℎ, feed-forward expansion 𝑑 ff , and ℓ layers: FLOPs (𝑛, 𝑚 ) = 𝑛ℓ  4ℎ2𝑑 ff + 8ℎ2 + 2ℎ(𝑚 + 1) . (10) The three terms correspond to the FFN (4 ℎ2𝑑 ff ), the 𝑄 /𝐾 /𝑉 /𝑂 pro-jections (8 ℎ2), and attention score computation plus value aggre-gation (2 ℎ(𝑚 + 1)). For full causal self-attention, 𝑚 = 𝑛 (each of the 𝑛 positions attends on average to (𝑛 + 1)/ 2 tokens, giving 4ℎ · 𝑛 +12 ≡ 2ℎ(𝑚 + 1) with 𝑚 = 𝑛 ). For sliding-window attention with window 𝑤 , the bounded context gives 𝑚 = 𝑤 . We set 𝑑 ff = 4throughout. 
+
+SASRec. Full causal attention over 𝑛 tokens ( 𝑚 = 𝑛 ): FLOPs SAS = 𝑛ℓ  4ℎ2𝑑 ff + 8ℎ2 + 2ℎ(𝑛 + 1) . (11) 
+
+HSTU.. Same causal backbone with a 1 .1× overhead for gating: FLOPs HSTU = 1.1 × FLOPs SAS . (12) 
+
+LONGER.. Let 𝑘 be the group size, 𝐺 = ⌈𝑛 /𝑘 ⌉ the number of groups, ℎℓ , ℓ ℓ the local (inner-transformer) hidden size and layers, and ℎ𝑔 , ℓ 𝑔 the global hidden size and layers. Inner-group encoding uses full causal attention over 𝑘 tokens ( 𝑚 = 𝑘 ); global reasoning uses full causal attention over 𝐺 groups ( 𝑚 = 𝐺 ): FLOPs LNG = 𝐺 · 𝑓 ℓℓ ,ℎ ℓ (𝑘, 𝑘 ) + 2𝑛𝐺ℎ 𝑔 + 𝑓 ℓ𝑔 ,ℎ 𝑔 (𝐺, 𝐺 ), (13) where 𝑓 ℓ,ℎ (𝑛, 𝑚 ) = ℓ (4ℎ2𝑑 ff + 8ℎ2 + 2ℎ(𝑚 + 1)) is the per-token cost from Eq. 10, and 2 𝑛𝐺ℎ 𝑔 is the token-to-group cross-attention cost. RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Katariya et al. 
+
+(a) ML-1M (b) ML-10M-LONG (c) KuaiRand 
+
+Figure 7: Recommendation Quality(NDCG@10) by Time Lag between the last item and the item in the test to be ranked. Table 8: Summary of experimental configurations and hyperparameter search spaces. For direct efficiency comparisons, Iso-capacity variants utilize a 1/1/1 block structure ( 𝑑 = 64 ) to parameter-match SASRec ( 𝑑 = 64 , 𝐿 = 3). 
+
+Configuration Fixed-Horizon Models Compression-Based Models 
+
+SASRec [21] HSTU [31] GRU4Rec [31] LONGER DP-Rec 
+
+Blocks ( 𝐿 ) 3 3 {1, 3} 𝐿 inner , 𝐿 outer ∈ { 1, 3} 𝐿 enc = 1, 𝐿 dec = 1, 𝐿 lat ∈ { 1, 3}
+
+Hidden size ( 𝑑 ) {32 , 64 } 64 64 {16 , 32 , 64 } {16 , 32 , 64 }
+
+Seq. length ( 𝑁 ) {25 , . . . , 500 } Matched {50 , 100 } {100 , . . . , 500 } {100 , . . . , 500 }
+
+Patch Budget ( ˆ 𝑀 ) – – – {2, . . . , 250 } {2, . . . , 250 }
+
+Pool Initialization True True True True True Attention Heads 1 1 – 1 1
+
+Architecture Specifics 
+
+Iso-capacity 𝐿 – – – 𝐿 inner = 𝐿 outer = 1 𝐿 enc = 𝐿 dec = 𝐿 lat = 1Bridge Mechanism – – – Cross-Attn Cross-Attn / Gather-Add Boundary Detector – – – – 𝑑 bbd = 8, 𝐿 bbd = 1, 𝑤 𝑒 = 32 
+
+Training Specifics (Common to all models) 
+
+Optimizer Adam (Learning Rate = 10 −3, Weight Decay = 0) Batch Size 128 Max Epochs 500 Validation Interval 10 epochs Early Stopping No Gradient Clipping No 
+
+Table 9: Concrete FLOPs at 𝑛 = 200 , 𝑑 ff = 4. SASRec/HSTU: 
+
+𝑑 = 64 , ℓ = 3. LONGER: 𝑑 = 𝑑 loc = 64 , 𝐿 lat = 𝐿 loc = 1, 𝑘 = 4,
+
+𝐺 = 50 . DP-Rec: 𝑑 = 𝑑 loc = 64 , 𝐿 lat = 𝐿 loc = 1, 𝑤 = 32 , 𝑑 bbd = 8,
+
+𝐿 bbd = 1, 𝑤 𝑒 = 32 , 𝑀 = 10 .Model FLOPs vs. SASRec Complexity 
+
+SASRec 74 ,419 ,200 1.00 × 𝑂 (𝑛 2ℎℓ )
+
+HSTU 81 ,861 ,120 1.10 × 𝑂 (𝑛 2ℎℓ )
+
+LONGER 26 ,310 ,400 0.35 × 𝑂 (𝑛𝑘𝑑 loc 𝐿 loc + 𝐺 2𝑑𝐿 lat )
+
+DP-Rec 42 ,421 ,120 0.57 × 𝑂 (𝑛𝑤 𝑑 loc · 2𝐿 loc + 𝑀 2𝑑 𝐿 lat )
+
+DP-Rec. Let 𝑛 𝑝 be the average patch size, 𝑀 = ⌈𝑛 /𝑛 𝑝 ⌉ the num-ber of latent patches, 𝑑 bbd , 𝐿 bbd , 𝑤 𝑒 the boundary detector hidden size, layers, and window, 𝑑, 𝐿 lat the latent transformer hidden size and layers, 𝑑 loc , 𝐿 loc , 𝑤 the local encoder/decoder hidden size, layer count, and sliding window. The total per-sequence cost decomposes as: FLOPs DP = 𝑛 
+
+
+
+𝑓 bbd + 𝑓 lat 
+
+𝑛 𝑝 
+
++ 𝑓 enc + 𝑓 dec + 𝑓 brg 
+
+
+
+, (14) where each per-token term is an instance of Eq. 10: 
+
+𝑓 bbd = 𝐿 bbd 
+
+ 4𝑑 2bbd 𝑑 ff + 8𝑑 2bbd + 2𝑑 bbd (𝑤 𝑒 + 1) , (15) 
+
+𝑓 lat = 𝐿 lat 
+
+ 4𝑑 2𝑑 ff + 8𝑑 2 + 2𝑑 (𝑀 + 1) , (16) 
+
+𝑓 enc = 𝐿 loc 
+
+ 4𝑑 2loc 𝑑 ff + 8𝑑 2loc + 2𝑑 loc (𝑤 + 1) , (17) 
+
+𝑓 dec = 𝐿 loc 
+
+ 4𝑑 2loc 𝑑 ff + 8𝑑 2loc + 2𝑑 loc (𝑤 + 1) . (18) The global cost 𝑓 lat is amortised over 𝑛 𝑝 tokens per patch (the 1 /𝑛 𝑝 
+
+factor in Eq. 14). The bridge term 𝑓 brg = 0 under the default gather-add bridge. Although the behavioral boundary detector is frozen during training, its cost is included in the total inference budget.
