@@ -1,0 +1,73 @@
+{
+  "date": "20260930",
+  "date_label": "",
+  "generated_at": "2026-09-30 23:15:34 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.34229v1",
+      "route": "202609/30/2609.34229v1-measuring-and-mitigating-identity-cue-preference-drift-in-llm-based-recommender-systems",
+      "title": "Measuring and Mitigating Identity-Cue Preference Drift in LLM-based Recommender Systems",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "基于大语言模型的推荐系统，分析与缓解身份线索偏好漂移",
+      "first_seen_at": "2026-09-30 23:15:34 UTC",
+      "updated_at": "2026-09-30 23:15:34 UTC"
+    },
+    {
+      "paper_id": "2609.32533v1",
+      "route": "202609/30/2609.32533v1-llmadbench-a-human-preference-benchmark-for-advertising-in-llm-responses",
+      "title": "LLMAdBench: A Human Preference Benchmark for Advertising in LLM Responses",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向大模型生成内容中广告投放的偏好基准",
+      "first_seen_at": "2026-09-30 23:15:34 UTC",
+      "updated_at": "2026-09-30 23:15:34 UTC"
+    },
+    {
+      "paper_id": "2609.33045v1",
+      "route": "202609/30/2609.33045v1-overview-and-analysis-of-the-recsys-challenge-2026-conversational-music-recommendation",
+      "title": "Overview and Analysis of the RecSys Challenge 2026: Conversational Music Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "对话推荐中的联合检索与生成",
+      "first_seen_at": "2026-09-30 23:15:34 UTC",
+      "updated_at": "2026-09-30 23:15:34 UTC"
+    },
+    {
+      "paper_id": "2609.34404v1",
+      "route": "202609/30/2609.34404v1-eval4direc-a-unified-and-systematic-evaluation-framework-for-diffusion-based-recommender-systems",
+      "title": "Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向扩散生成式推荐系统的评测框架",
+      "first_seen_at": "2026-09-30 23:15:34 UTC",
+      "updated_at": "2026-09-30 23:15:34 UTC"
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-30T23:12:54.375343+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 4,
+    "quick_skim_target": 11,
+    "quick_selected": 4
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.34229v1",
+      "source": "arxiv",
+      "title": "Measuring and Mitigating Identity-Cue Preference Drift in LLM-based Recommender Systems",
+      "abstract": "In large language model-based recommender systems, identity cues embedded in prompts can steer recommendations toward group-level patterns even when the underlying behavioral evidence remains unchanged. We introduce PromptShift, an interpretable, training-free framework for quantifying and mitigating such identity-cue preference drift. We define Drift as the divergence, in both item membership and ranking order, between a recommendation list generated under an identity-cued prompt and the reference list produced from the same user's interaction history alone. SliceShift then measures the extent to which a cued list gravitates, relative to the history-only reference, toward items that are more popular within the cued slice than among the global user population. Beyond conventional accuracy, we propose DifHitRate, a difficulty-weighted hit metric that credits only relevant items, assigning higher credit to hits that are less popular within the cued slice and ranked higher in the list. All components are supported by an identity-slice-by-item table constructed from positive interactions, which further enables an adaptive post-hoc reranking strategy: the reranker interpolates between the original LLM ranking and inverse slice-popularity, with personalized interpolation weight. Experiments on two datasets with three LLMs show that identity-cued prompts incur higher mean Drift than identity-free paraphrase controls, an effect beyond generic wording sensitivity, and that SliceShift is positive across all six dataset-model settings. PromptShift consistently reduces both Drift and SliceShift, lowering macro-mean SliceShift by 62.42%, while improving DifHitRate, HitRate and MRR. These results demonstrate that identity-cue preference drift can be measured and mitigated without any model training, albeit with a modest, metric-dependent utility cost.",
+      "authors": [
+        "Zhuoxiong Gan",
+        "Qiang Dong"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.SI"
+      ],
+      "published": "2026-09-28T03:35:06+00:00",
+      "link": "https://arxiv.org/pdf/2609.34229v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "LLM-based recommender system analysis and mitigation of prompt identity-cue drift",
+      "llm_evidence_cn": "基于大语言模型的推荐系统，分析与缓解身份线索偏好漂移",
+      "llm_evidence": "基于大语言模型的推荐系统，分析与缓解身份线索偏好漂移",
+      "canonical_evidence": "基于大语言模型的推荐系统，分析与缓解身份线索偏好漂移",
+      "llm_tldr_en": "PromptShift is a training-free framework that quantifies identity-cue preference drift in LLM-based recommenders by comparing cued and history-only lists, while SliceShift measures and mitigates drift toward slice-popular items.",
+      "llm_tldr_cn": "基于大语言模型的推荐系统中，提示中的身份线索会使用户推荐偏向群体模式，即使行为证据未变。本文提出PromptShift，一种可解释、免训练的框架，从物品归属与排序顺序两方面定义提示诱导列表与仅基于历史列表之间的漂移，并用SliceShift度量列表向被提示群体热门物品的偏移并进行缓解。实验表明该方法能有效量化并降低身份线索带来的偏好漂移，提升LLM推荐的公平性与可信度。",
+      "llm_tldr": "基于大语言模型的推荐系统中，提示中的身份线索会使用户推荐偏向群体模式，即使行为证据未变。本文提出PromptShift，一种可解释、免训练的框架，从物品归属与排序顺序两方面定义提示诱导列表与仅基于历史列表之间的漂移，并用SliceShift度量列表向被提示群体热门物品的偏移并进行缓解。实验表明该方法能有效量化并降低身份线索带来的偏好漂移，提升LLM推荐的公平性与可信度。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.32533v1",
+      "source": "arxiv",
+      "title": "LLMAdBench: A Human Preference Benchmark for Advertising in LLM Responses",
+      "abstract": "Inserting advertisements (ads) into consumer-facing LLM output is emerging as a new business model, but there is little shared evidence on how such ad insertion should be evaluated or how it affects user preferences. We introduce LLMAdBench, a human-preference benchmark for studying advertising in LLM-generated content. The benchmark isolates a simple but practically important decision: given a user conversation, an LLM response, and a matched advertisement, where should the ad be placed? Our dataset compares pairs of responses that differ only in ad position while holding all other conditions fixed including the user query, base answer, advertisement, and disclosure condition. Human annotators evaluate each pair based on six criteria from both advertiser's and user's perspectives. The resulting benchmark contains more than 18000 human judgments across two disclosure conditions: explicitly labeling the ad as sponsored and merging it into the response without disclosure. We use LLMAdBench to evaluate eight frontier LLMs as preference judges and find that they are not reliable substitutes for human evaluation. Even the most stable models reverse roughly one quarter of their decisions when the presentation order is swapped, agreement across models is low, and their placement preferences differ systematically from those of human annotators. Moreover, LLMAdBench contains substantial learnable signal. In particular, a Qwen3-8B model fine-tuned on the human preferences improves substantially over its base model and outperforms all zero-shot frontier judges on the held-out prediction task. Beyond model evaluation, LLMAdBench provides quantitative evidence on the advertiser-user trade-off and shows that the sponsorship disclosure systematically changes users' preference over ad placement.",
+      "authors": [
+        "Rui Ai",
+        "Yuqing Liu",
+        "Sitao Qiu",
+        "Yun Qiao",
+        "Yuhan Wang",
+        "Jessica Xiwen Wang",
+        "Yiqi Yang",
+        "Lihong Huang",
+        "Ruiyao Sun",
+        "Kaifeng Zhang",
+        "Shengze Ding",
+        "Jiaqi He",
+        "Xinman Wang",
+        "Tianhao Gao",
+        "Jimmy Qin",
+        "Jianghao Lin",
+        "Chonghuan Wang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-26T12:14:49+00:00",
+      "link": "https://arxiv.org/pdf/2609.32533v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "benchmark for ad placement in LLM-generated content",
+      "llm_evidence_cn": "面向大模型生成内容中广告投放的偏好基准",
+      "llm_evidence": "面向大模型生成内容中广告投放的偏好基准",
+      "canonical_evidence": "面向大模型生成内容中广告投放的偏好基准",
+      "llm_tldr_en": "LLMAdBench is a human-preference benchmark studying where to place ads inside LLM responses, comparing paired outputs that differ only in ad position under fixed query, answer and disclosure.",
+      "llm_tldr_cn": "将广告插入面向用户的LLM输出正成为新兴商业模式，但广告应置于何处、如何影响用户偏好尚缺乏共享证据。本文提出LLMAdBench，一个研究LLM生成内容中广告投放的人类偏好基准，构造仅在广告位置不同而查询、答案、广告与披露条件完全一致的成对回复。标注者依据六项标准进行偏好评价。该基准为LLM原生广告的投放策略与效果评估提供了可复用的评测框架。",
+      "llm_tldr": "将广告插入面向用户的LLM输出正成为新兴商业模式，但广告应置于何处、如何影响用户偏好尚缺乏共享证据。本文提出LLMAdBench，一个研究LLM生成内容中广告投放的人类偏好基准，构造仅在广告位置不同而查询、答案、广告与披露条件完全一致的成对回复。标注者依据六项标准进行偏好评价。该基准为LLM原生广告的投放策略与效果评估提供了可复用的评测框架。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative models for ad retrieval, ad ranking, and sponsored content generation",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.33045v1",
+      "source": "arxiv",
+      "title": "Overview and Analysis of the RecSys Challenge 2026: Conversational Music Recommendation",
+      "abstract": "The RecSys Challenge 2026 studies conversational music recommendation as a joint item recommendation and response generation problem: given a multi-turn dialogue, systems must retrieve relevant tracks from a large catalog and produce a grounded natural-language response. This paper presents the challenge task, dataset, evaluation protocol, and official results. Beyond the leaderboard, we analyze the 16 accepted systems through a common retrieve--rerank--generate framework and examine how recommendation performance varies across users, requests, and dialogue contexts. Strong systems commonly combine heterogeneous candidate sources and preserve source-specific evidence for learned reranking. Across the system papers and our organizer-side analysis, robust design also means 1) grounding cold-start retrieval in multi-turn conversation and item signals, 2) using intent detectors, and 3) modeling the full multi-turn context rather than the current query alone. We further identify limitations of the benchmark and evaluation protocol, including single-ground-truth relevance and teacher-forced evaluation of synthetic dialogues. Together, these findings provide practical guidance for future conversational recommender systems and shared evaluation efforts.",
+      "authors": [
+        "Seungheon Doh",
+        "Sergio Oramas",
+        "Bruno Sguerra",
+        "Abhinav Bohra",
+        "Claudio Pomo",
+        "Francesco Barile"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.MM",
+        "cs.SD"
+      ],
+      "published": "2026-09-27T00:20:31+00:00",
+      "link": "https://arxiv.org/pdf/2609.33045v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "conversational recommendation as joint retrieval and generation",
+      "llm_evidence_cn": "对话推荐中的联合检索与生成",
+      "llm_evidence": "对话推荐中的联合检索与生成",
+      "canonical_evidence": "对话推荐中的联合检索与生成",
+      "llm_tldr_en": "The RecSys Challenge 2026 frames conversational music recommendation as joint item retrieval and grounded response generation, analyzing 16 systems via a retrieve-rerank-generate framework.",
+      "llm_tldr_cn": "针对对话式音乐推荐中既要从大曲库检索曲目又要生成有依据回复的问题，本文介绍RecSys Challenge 2026的任务、数据集、评测协议与官方结果。作者以检索-重排-生成统一框架分析16个参赛系统，考察推荐性能如何随用户、请求与对话上下文变化。结果显示强系统普遍融合异构候选来源并保留来源特定证据供学习式重排，为生成式推荐评测提供了基准与洞见。",
+      "llm_tldr": "针对对话式音乐推荐中既要从大曲库检索曲目又要生成有依据回复的问题，本文介绍RecSys Challenge 2026的任务、数据集、评测协议与官方结果。作者以检索-重排-生成统一框架分析16个参赛系统，考察推荐性能如何随用户、请求与对话上下文变化。结果显示强系统普遍融合异构候选来源并保留来源特定证据供学习式重排，为生成式推荐评测提供了基准与洞见。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.34404v1",
+      "source": "arxiv",
+      "title": "Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems",
+      "abstract": "Leveraging the strong generative capabilities and stable training dynamics of diffusion models, diffusion-based recommender systems (RSs) have recently emerged as a novel recommendation paradigm, attracting increasing attention from both academia and industry. However, despite the rapid growth of diffusion-based RSs, a critical issue has emerged: the lack of a unified and systematic quantitative evaluation benchmark, which often results in irreproducible experimental results and unfair comparisons across studies due to inconsistent data processing, training configurations, inference procedures, and evaluation protocols. To address this challenge, we propose Eval4DiRec, the first unified and open-source evaluation framework specifically designed for diffusion-based RSs. Eval4DiRec supports 14 representative diffusion-based RS models across five different recommendation scenarios, providing consistent and reproducible experimental settings to systematically assess their performance. Built upon this framework, we conduct extensive empirical studies to benchmark these models under unified protocols. The results highlight the strong potential of diffusion models for recommendation while also revealing key factors and practical challenges that substantially affect their performance, thereby establishing a solid foundation to facilitate fair evaluation and guide future research in this promising field. Our code and data are available at: https://github.com/wangcong2001/Eval4DiRec.",
+      "authors": [
+        "Cong Wang",
+        "Shoujin Wang",
+        "Yishuo Li",
+        "Qi Zhang",
+        "Liang Hu",
+        "Wenpeng Lu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-09-28T06:16:44+00:00",
+      "link": "https://arxiv.org/pdf/2609.34404v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "evaluation framework for diffusion-based generative recommender systems",
+      "llm_evidence_cn": "面向扩散生成式推荐系统的评测框架",
+      "llm_evidence": "面向扩散生成式推荐系统的评测框架",
+      "canonical_evidence": "面向扩散生成式推荐系统的评测框架",
+      "llm_tldr_en": "Eval4DiRec is the first unified open-source evaluation framework for diffusion-based recommender systems, standardizing data processing, training, inference and evaluation for fair comparison.",
+      "llm_tldr_cn": "扩散模型凭借强生成能力与稳定训练动态，成为一类新的推荐范式，但缺乏统一量化评测，导致数据处理、训练配置、推理流程与评测协议不一致，实验难以复现且比较不公平。本文提出Eval4DiRec，首个面向扩散推荐系统的统一开源评测框架，规范全流程评测。该框架使不同扩散推荐方法可在统一协议下公平比较，为生成式推荐研究提供标准化基准。",
+      "llm_tldr": "扩散模型凭借强生成能力与稳定训练动态，成为一类新的推荐范式，但缺乏统一量化评测，导致数据处理、训练配置、推理流程与评测协议不一致，实验难以复现且比较不公平。本文提出Eval4DiRec，首个面向扩散推荐系统的统一开源评测框架，规范全流程评测。该框架使不同扩散推荐方法可在统一协议下公平比较，为生成式推荐研究提供标准化基准。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

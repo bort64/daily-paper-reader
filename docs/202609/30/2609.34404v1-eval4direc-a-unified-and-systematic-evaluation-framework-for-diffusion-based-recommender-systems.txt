@@ -1,0 +1,922 @@
+Title: Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems
+
+URL Source: https://arxiv.org/pdf/2609.34404v1
+
+Published Time: Tue, 29 Sep 2026 04:07:13 GMT
+
+Number of Pages: 33
+
+Markdown Content:
+> Unpublished working draft. Not for distribution.
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 
+
+CONG WANG, Key Laboratory of Computing Power Network and Information Security, Ministry of Education, Shandong Computer Science Center (National Supercomputer Center in Jinan), Qilu University of Technology (Shandong Academy of Sciences); Shandong Provincial Key Laboratory of Computing Power Internet and Service Computing, Shandong Fundamental Research Center for Computer Science, China 
+
+SHOUJIN WANG, University of Technology Sydney, Australia 
+
+YISHUO LI, Department of Computer Science and Technology, Tongji University, China 
+
+QI ZHANG, Department of Computer Science and Technology, Tongji University, China 
+
+LIANG HU, Department of Computer Science and Technology, Tongji University, China 
+
+WENPENG LU ∗, Key Laboratory of Computing Power Network and Information Security, Ministry of Education, Shandong Computer Science Center (National Supercomputer Center in Jinan), Qilu University of Technology (Shandong Academy of Sciences); Shandong Provincial Key Laboratory of Computing Power Internet and Service Computing, Shandong Fundamental Research Center for Computer Science; Shandong Academy of Artificial Intelligence, China Leveraging the strong generative capabilities and stable training dynamics of diffusion models, diffusion-based recommender systems (RSs) have recently emerged as a novel recommendation paradigm, attracting increasing attention from both academia and industry. However, despite the rapid growth of diffusion-based RSs, a critical issue has emerged: the lack of a unified and systematic quantitative evaluation benchmark, which often results in irreproducible experimental results and unfair comparisons across studies due to inconsistent data processing, training configurations, inference procedures, and evaluation protocols. To address this challenge, we propose Eval4DiRec, the first unified and open-source evaluation framework specifically designed for diffusion-based RSs. Eval4DiRec supports 14 representative diffusion-based RS models across five different recommendation scenarios, providing consistent and reproducible experimental settings to systematically assess their performance. Built upon this framework, we conduct extensive empirical studies to benchmark these models under unified protocols. The results highlight the strong potential of diffusion models for 
+
+∗Corresponding author. Authors’ Contact Information: Cong Wang, Key Laboratory of Computing Power Network and Information Security, Ministry of Education, Shandong Computer Science Center (National Supercomputer Center in Jinan), Qilu University of Technology (Shandong Academy of Sciences); Shandong Provincial Key Laboratory of Computing Power Internet and Service Computing, Shandong Fundamental Research Center for Computer Science, Jinan, Shandong, China, cong.wang2024@gmail.com; Shoujin Wang, University of Technology Sydney, Sydney, NSW, Australia, shoujin.wang@uts.edu.au; Yishuo Li, Department of Computer Science and Technology, Tongji University, Shanghai, China, yishuo.li@foxmail.com; Qi Zhang, Department of Computer Science and Technology, Tongji University, Shanghai, China; Liang Hu, Department of Computer Science and Technology, Tongji University, Shanghai, China; Wenpeng Lu, Key Laboratory of Computing Power Network and Information Security, Ministry of Education, Shandong Computer Science Center (National Supercomputer Center in Jinan), Qilu University of Technology (Shandong Academy of Sciences); Shandong Provincial Key Laboratory of Computing Power Internet and Service Computing, Shandong Fundamental Research Center for Computer Science; Shandong Academy of Artificial Intelligence, Jinan, Shandong, China, wenpeng.lu@qlu.edu.cn. 
+
+Unpublished working draft. Not for distribution. 
+
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org. © 2026 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM 1556-472X/2026/9-ART https://doi.org/XXXXXXX.XXXXXXX ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. arXiv:2609.34404v1 [cs.IR] 28 Sep 2026 Unpublished working draft. Not for distribution. 
+
+2 Wang et al. 
+
+recommendation while also revealing key factors and practical challenges that substantially affect their performance, thereby establishing a solid foundation to facilitate fair evaluation and guide future research in this promising field. Our code and data are available at: https://github.com/wangcong2001/Eval4DiRec. CCS Concepts: • Information systems → Recommender systems ; Evaluation of retrieval results .Additional Key Words and Phrases: Diffusion Model, Recommender Systems, Reproducible Evaluation, Bench-marks 
+
+ACM Reference Format: 
+
+Cong Wang, Shoujin Wang, Yishuo Li, Qi Zhang, Liang Hu, and Wenpeng Lu. 2026. Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems. ACM Trans. Knowl. Discov. Data. 1, 1 (September 2026), 33 pages. https://doi.org/XXXXXXX.XXXXXXX 
+
+1 Introduction 
+
+The rapid development of the Internet and the continuous growth of the online user population have resulted in an exponential increase in digital information, bringing significant challenges to data management and information filtering [11, 15, 18, 35, 74–76, 89]. To alleviate information overload and improve the user experience, recommender systems (RSs) have become a fundamental component of modern information services. They have been widely adopted across diverse domains such as e-commerce [26, 98] and streaming media [17], demonstrating their capability to enhance user engagement and deliver substantial commercial value [1, 36, 70]. In recent years, the emergence of generative recommender systems (Gen-RSs) has introduced a new paradigm in recommendation research. Unlike traditional discriminative models that directly predict user–item interactions, Gen-RSs aim to learn the underlying data distribution and generate personalized recommendation results, enabling a more accurate and adaptive recommendation process. Early studies in this direction primarily employed variational autoencoders (VAEs) [72, 87] and generative adversarial networks (GANs) [14] to model user preference generation. These models have shown the capability to dynamically capture the evolution of user preferences [12, 62, 107]. However, despite their promising potential, both paradigms exhibit inherent drawbacks: VAEs often suffer from the issue of posterior collapse [64], while GANs are prone to training instability and mode collapse [2, 83]. Such challenges limit their scalability, robustness, and reproducibility in large-scale recommendation scenarios. To address these challenges, two emerging generative paradigms have recently been explored in recommender systems: large language model (LLM)-based RSs and diffusion-based RSs. LLM-based generative RSs leverage the reasoning and knowledge integration capabilities of LLMs to enhance recommendation quality through natural language understanding and generation [37, 44, 71, 73]. Meanwhile, diffusion-based RSs have shown even greater promise due to their strong probabilistic modeling capacity and training stability [7]. By progressively perturbing and denoising data distributions, diffusion models are capable of capturing complex user–item interaction patterns and generating high-fidelity recommendation signals. They have achieved remarkable success across multiple generative domains such as image, text, and video synthesis [38], and are now emerging as a transformative foundation for next-generation recommendation architectures [32, 84]. As illustrated in Figure 1, diffusion-based RSs have attracted rapidly increasing research attention in recent years. The application of diffusion models in recommender systems has advanced rapidly, extending across various recommendation tasks and demonstrating their versatility in modeling complex user–item relationships. In particular, diffusion-based RSs have been successfully applied—but are not limited—to the following representative tasks. Collaborative filtering (CF) remains 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 32021 2022 2023 2024 2025 2026 Year 020 40 60 80 Number of Papers 
+
+(a) Paper Count Arxiv WWW RecSys SIGIR AAAI WSDM TOIS CIKM ICML KDD (b) Paper Distribution 
+
+Fig. 1. (a) The number of papers published annually on diffusion-based recommender systems. (b) The distribution of diffusion-based recommender systems across different venues, showing only the top 10 venues. 
+
+a fundamental paradigm in recommendation, where user preferences are inferred from the be-havior of similar users. In this context, diffusion models are applied to reconstruct and denoise user–item interaction matrices, thereby mitigating sparsity and enhancing representation robust-ness [4, 8, 41, 97, 104]. For instance, CODIGEM [69] employs a diffusion process to reconstruct user–item interaction vectors, where the test user’s history is diffused forward and subsequently denoised through reverse sampling to generate ranking scores for recommendation. Sequential recommendation aims to predict the next item a user will interact with based on their historical sequence [6, 50, 51, 53, 82]. Diffusion models capture the temporal dynamics of user behaviors by perturbing sequence embeddings and progressively recovering them in reverse, thus modeling long-term dependencies and behavioral uncertainty. A representative example, DiffuRec [40] is the first work to adapt diffusion models to sequential recommendation by representing items as adaptive distributions rather than fixed vectors, enabling uncertainty-aware modeling of user interests and item aspects. In multimodal recommendation , diffusion models integrate heterogeneous modali-ties—such as visual, textual, and acoustic signals—into unified representations to enhance semantic alignment and personalization [9, 34, 55, 94]. For example, DiffMM [27] proposes a multi-modal graph diffusion model that integrates modality-aware graph diffusion with cross-modal contrastive learning to better align multi-modal features with collaborative relations for sparse multi-modal recommendation. For Point-of-interest (POI) recommendation [46, 99], diffusion models are used to model spatiotemporal dependencies by learning diffusion trajectories over geographical and temporal embeddings. Diff-POI [61] introduces a diffusion-based model that captures users’ spatial visiting trends through tailored graph encoders and a diffusion-based sampling strategy to enhance next POI recommendation, particularly in novel geographic areas. In Cross-domain recommendation [79], diffusion models facilitate knowledge transfer between rich and cold-start domains through conditional generation and embedding alignment. For instance, DiffCDR [90] diffuses user embeddings in the target domain and conditions on source-domain embeddings in the reverse process, effectively generating informative representations that mitigate negative transfer and enhance cold-start performance. Overall, these task-specific implementations highlight the adaptability and generative capability of diffusion models in addressing various recommendation challenges, demonstrating their potential as a robust foundation for next-generation recommender systems. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+4 Wang et al. 
+
+Despite significant advancements in diffusion-based RSs across various tasks and scenarios, the lack of a unified evaluation benchmark remains a critical challenge. Existing studies primarily focus on qualitative reviews and comparisons but fail to establish a standardized framework for systematic experimental evaluation for diffusion-based RSs [43, 83]. As a result, researchers cannot obtain fair and reliable performance comparisons due to the lack of unified datasets and evaluation protocols, which exacerbates inconsistencies across studies [33]. These inconsistencies stem from the use of different datasets, diverse data processing strategies, splitting methods, and evaluation metrics. Without standardized evaluation, comparisons become unreliable, ultimately hindering progress in diffusion-based RSs research [67]. Although several general recommendation frame-works such as RecBole [67] and ReChorus [33] provide standardized environments for evaluating conventional models, they exhibit inherent limitations when applied to diffusion-based RSs. This limitation stems from the fundamental paradigm shift between discriminative and generative modeling. Unlike traditional recommenders that rely on single-step prediction or embedding opti-mization to predict user–item interaction scores, diffusion-based recommender systems formulate recommendation as an iterative generative inference process. They denoise interaction signals over multiple timesteps and involve stochastic sampling, so the inference process must be explicitly specified via diffusion-related settings. In particular, the number of diffusion steps and the noise schedule can systematically affect both the accuracy and diversity of the resulting recommendations. Importantly, they fundamentally determine how a diffusion model generates recommendation signals and therefore should be explicitly standardized as part of the evaluation protocol. However, existing evaluation frameworks typically do not expose or unify such diffusion-specific configura-tions in a principled manner, making comparisons across studies easily confounded by inconsistent inference settings. In such a context, constructing a robust evaluation framework for fair and reproducible benchmarking has become a critical prerequisite for advancing the research in the field of diffusion-based RSs. In order to address this significant gap, we propose a novel and the first unified Evaluation Framework for Diffusion-based Recommendation, named Eval4DiRec . Eval4DiRec aims to en-able fair, reproducible, and comprehensive benchmarking of diffusion-based RS algorithms un-der consistent experimental protocols, by standardizing data processing and splitting, exposing diffusion-related configurations through a unified interface, and providing consistent training and evaluation pipelines. The current release supports 14 representative diffusion models across five major recommendation scenarios, serving as a standardized platform for performance evaluation and comparative analysis. Specifically, Eval4DiRec is composed of four main modules: (1) Data 
+
+module, which loads raw datasets, records basic statistics, performs data splitting, and transforms inputs into a unified format for efficient training and evaluation; (2) DiRec module, which integrates diffusion-based recommendation algorithms across five scenarios, and is designed with strong extensibility, allowing easy incorporation of new models for future expansion; (3) Execution 
+
+module, which manages the entire pipeline of model training, validation, and testing; (4) Utils 
+
+module, which provides essential utilities such as configuration parsing, hyperparameter man-agement, logging, and performance evaluation. Eval4DiRec facilitates reliable benchmarking and thorough analysis of diffusion-based recommendation models under consistent and reproducible experimental settings. In summary, the work’s key contributions are as follows: 
+
+• We propose Eval4DiRec, the first unified and open-source evaluation framework dedicated to diffusion-based recommender systems, which standardizes the evaluation pipeline, train-ing protocol, inference procedure, and metric computation to enable fair, transparent, and reproducible comparisons. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 5
+
+• We implement 14 representative diffusion-based recommender models across five recom-mendation scenarios within a unified codebase, providing consistent interfaces, configurable components, and an extensible design that facilitates reliable evaluation and future model integration. 
+
+• We conduct extensive experiments under standardized settings to benchmark diffusion-based recommender systems from multiple perspectives, and further provide systematic analyses on key design choices and robustness under challenging data conditions, yielding empirical findings and practical insights for diffusion-based recommendation research. 
+
+2 Related Work 2.1 Diffusion Model 
+
+Diffusion models have recently been explored in recommender systems across a variety of recom-mendation scenarios, including but not limited to collaborative filtering [28, 30, 42, 77], sequential recommendation [5, 85, 86, 95], multimodal recommendation [9, 31, 59, 88], point-of-interest recom-mendation [46, 60, 108], and cross-domain recommendation [13, 29, 100]. These studies suggest that diffusion models can not only serve as generative models, but also serve as denoising, augmentation, representation learning, and sampling mechanisms for recommendation. We summarize several representative scenarios as follows. 
+
+• Collaborative filtering: Collaborative filtering (CF) remains a fundamental paradigm in recommendation, where user preferences are inferred from the behaviors of similar users [28, 30, 42, 77]. In this context, diffusion models are commonly adopted to reconstruct and denoise sparse user–item interaction signals, such as interaction vectors or matrices, thereby mitigating sparsity and improving the robustness of preference representations. For example, DDRM [101] leverages diffusion-style multi-step denoising to robustify user and item embeddings against noisy implicit feedback, guided by collaborative signals and initial-ized from personalized historical-item representations. In contrast, DiffRec [78] performs denoising generation over user interaction vectors and avoids fully corrupting interactions into pure noise to preserve personalization, with extensions such as latent-space diffusion and temporal reweighting for large-scale and dynamic recommendation. 
+
+• Sequential recommendation: Sequential recommendation aims to predict the next item a user will interact with based on historical interaction sequences [5, 85, 86, 95]. Diffusion-based methods capture temporal dynamics by perturbing sequence representations and progressively recovering them in the reverse process, which helps model long-range depen-dencies and behavioral uncertainty. For example, CaDiRec [10] proposes a context-aware diffusion model to generate semantically consistent alternative items for specific positions in a user sequence, producing more reasonable augmented views for contrastive learning. By aligning generated items with local context and training the diffusion and recommenda-tion components end-to-end with shared item embeddings, CaDiRec improves sequential recommendation performance compared with random augmentation strategies. 
+
+• Multimodal recommendation: In multimodal recommendation, diffusion models inte-grate heterogeneous modalities, such as visual, textual, and acoustic signals, into unified representations to enhance semantic alignment and personalization under sparse interac-tions [9, 31, 59, 88]. For instance, CCDRec [94] proposes a curriculum-conditioned diffusion framework that aligns multimodal features with collaborative signals and leverages the reverse diffusion process to progressively synthesize and select informative negative samples for multimodal recommendation. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+6 Wang et al. 
+
+• Point-of-interest recommendation: For point-of-interest (POI) recommendation, diffusion models are used to model spatiotemporal dependencies by learning diffusion trajectories over geographical and temporal representations, thereby improving next-POI prediction under complex mobility patterns [46, 60, 108]. Diff-POI [61] introduces a diffusion-based approach that captures users’ spatial visiting trends through tailored graph encoders and a diffusion-based sampling strategy, which is particularly beneficial in novel geographic areas. 
+
+• Cross-domain recommendation: In cross-domain scenarios, diffusion models facilitate knowledge transfer between data-rich and cold-start domains through conditional gen-eration and embedding alignment, aiming to alleviate data scarcity and reduce negative transfer [13, 29, 100]. For example, DiffCDR [90] diffuses user embeddings in the target do-main and conditions the reverse process on source-domain embeddings, effectively generating informative representations to enhance cold-start performance. Overall, diffusion-based recommender systems differ substantially in their target scenarios, model inputs, conditioning signals, sampling procedures, and evaluation settings. This diversity highlights their potential, but also makes it difficult to compare results across studies under inconsistent experimental protocols. Therefore, a unified evaluation framework is needed to assess diffusion-based recommendation methods fairly and reproducibly across representative scenarios. 
+
+2.2 Survey of Diffusion-based Recommender Systems 
+
+The growing interest in diffusion-based RSs has led to several survey efforts. Lin et al. [43] were the first to provide a comprehensive review of diffusion models for recommendation, organizing the literature from a pipeline perspective that mirrors real-world recommender system deployment. Their discussion separates prior work into three stages: data engineering, recommender modeling, and content presentation. Under this view, diffusion models are examined according to the functional role they play in each stage, offering an integrated understanding of the emerging field. Wei and Fang [83] presented a complementary survey that categorizes diffusion-based recommen-dation methods from the perspective of recommendation scenarios. Their taxonomy emphasizes the recommendation task itself and structures the literature according to the scenario being addressed. This task-oriented viewpoint helps readers understand how diffusion modeling is adapted across diverse recommendation settings. Beyond survey efforts, Benigni et al. [3] examined the reproducibility and conceptual suitabil-ity of nine DDPM-based recommendation algorithms published at SIGIR 2023 and 2024. Their controlled study reports that only a minority of the original results could be fully reproduced and that well-tuned simpler baselines often outperformed the reported diffusion-based results. It also questions the fit between conventional DDPM generation and Top-𝑁 recommendation. Eval4DiRec complements this critical analysis by providing reusable infrastructure for controlled and reproducible comparisons across multiple recommendation scenarios, together with explicit management of diffusion-specific configurations. Existing surveys [43, 83] organize the field, and the reproducibility analysis of Benigni et al. [3] establishes the importance of controlled baselines and transparent protocols. A reusable, multi-scenario framework that standardizes data processing, evaluation, and diffusion-specific settings across integrated models nevertheless remains absent. Eval4DiRec addresses this infrastructure gap and evaluates diffusion-based recommendation without assuming its superiority over non-diffusion methods. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 7
+
+Table 1. Comparison of representative recommendation frameworks and evaluation studies. ✓, ▲, and 
+
+✗denote native, partial or model-specific, and no explicitly documented support, respectively. CF, Seq., MM, POI, and CDR denote collaborative filtering, sequential, multimodal, point-of-interest, and cross-domain recommendation. Diffusion-aware support covers process configuration, sampling protocols, and diagnostic analyses. 
+
+Framework Recommendation Scenario Coverage Diffusion-aware Support 
+
+CF Seq. MM POI CDR Process Config Sampling Protocol Diffusion Diagnostics ReChorus [33] ✓ ✓ ✗ ✗ ✗ ✗ ✗ ✗
+
+DaisyRec [67] ✓ ✗ ✗ ✗ ✗ ✗ ✗ ✗
+
+RecBole [102] ✓ ✓ ✓ ✗ ✓ ▲ ▲ ✗
+
+Ludewig & Jannach [48] ✓ ✓ ✗ ✗ ✗ ✗ ✗ ✗
+
+NewsRecLib [25] ✗ ✓ ✓ ✗ ✗ ✗ ✗ ✗
+
+OpenRec [93] ✓ ✓ ✓ ✗ ✗ ✗ ✗ ✗
+
+EasyRL4Rec [96] ✓ ✓ ✗ ✗ ✗ ✗ ✗ ✗
+
+Eval4DiRec ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓
+
+2.3 Evaluation for Recommender Systems 
+
+With the rapid development of RSs, increasing attention has been paid to ensuring reproducibility and fairness in experimental evaluation. In response, several frameworks have been proposed [25, 47, 48, 57, 93, 96]. For instance, ReChorus adopts a modular and task-flexible design that supports multiple recom-mendation scenarios and encourages consistent implementation across tasks [33]. RecBole provides a unified framework with extensive model collections and benchmark datasets, together with a configuration-driven workflow that facilitates fair comparisons under consistent settings [102]. DaisyRec emphasizes rigorous evaluation by analyzing key hyperparameters and offering stan-dardized evaluation pipelines for reproducible research [67]. In addition, EasyRL4Rec offers a user-friendly library for reinforcement learning-based recommendation with unified evaluation interfaces [96]. Although existing recommendation frameworks provide standardized support for conventional model implementation, training, and evaluation, two important gaps remain when they are ap-plied to diffusion-based recommender systems. Gap 1: Lack of Unified Evaluation Protocols. 
+
+Existing frameworks provide only limited or model-specific support for diffusion-based models. Consequently, these models are often evaluated using different datasets, data processing strate-gies, splitting methods, training procedures, and metric implementations, making the reported results difficult to compare fairly and reliably. Gap 2: Lack of Standardized Diffusion-Specific Inference Configurations. Unlike conventional recommenders based mainly on single-step pre-diction, diffusion-based recommenders rely on iterative denoising and stochastic sampling. Their performance can be substantially affected by settings such as the number of diffusion steps, noise schedule, noise distribution, and reverse-sampling procedure. However, existing frameworks generally embed these settings within individual model imple-mentations rather than exposing and standardizing them as part of a shared evaluation protocol. These gaps cannot be addressed simply by adding individual diffusion-based models to an existing library, because fair benchmarking requires both consistent general evaluation protocols and unified management of diffusion-specific configurations across models and recommendation scenarios. As summarized in Table 1, Eval4DiRec addresses these gaps by standardizing data processing, splitting, training, inference, and metric computation, while exposing diffusion-process and reverse-sampling configurations as framework-level components for 14 models across five recommendation scenarios. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+8 Wang et al. 
+
+3 Preliminaries of Diffusion Models 
+
+Diffusion models have recently emerged as a powerful generative paradigm for recommendation, showing strong capability in modeling complex data distributions via forward diffusion process and reverse denoising process [39, 68]. For completeness, we summarize diffusion modeling under two commonly used formulations: denoising diffusion probabilistic models (DDPMs) and score-based diffusion models (SDEs). 
+
+3.1 Denoising Diffusion Probabilistic Models (DDPMs) 
+
+As the most typical type of diffusion models, Denoising Diffusion Probabilistic Models (DDPMs) [23] are established on a well-defined probabilistic framework, where the forward diffusion and reverse denoising processes operate as two Markov chains. In the forward process, predefined noise is progressively injected into data samples through a Markovian transition kernel, while the reverse process employs neural networks to reconstruct the original data distribution by iteratively eliminating the injected noise. 
+
+Forward diffusion process . Forward diffusion process involves sampling initial data 𝑥 0 from a given data distribution 𝑞 (𝑥 ), and gradually adding noise to obtain a pure noise sample 𝑥 𝑇 .The noise addition is controlled by a variance schedule { 𝛽 1, 𝛽 2, · · · , 𝛽 𝑇 }, which follows predefined schedules [19, 81] such as linear or cosine to regulate the noise injection magnitude. Formally, this process is modeled as a Markov chain where each transition 𝑥 𝑡 −1 to 𝑥 𝑡 , introduces Gaussian noise with variance 𝛽 𝑡 , progressively corrupting the data until it becomes indistinguishable from random noise. The transition kernels are defined as: 
+
+𝑞 (𝑥 𝑡 |𝑥 𝑡 −1) = N ( 𝑥 𝑡 ;√︁ 1 − 𝛽 𝑡 𝑥 𝑡 −1, 𝛽 𝑡 I), (1) where I denotes the identity matrix with the same dimensionality as 𝑥 𝑡 −1, and N ( 𝑥 ; 𝜇, 𝜎 I) represents the Gaussian distribution of 𝑥 with mean 𝜇 and covariance matrix 𝜎 I. We can directly obtain 𝑥 𝑡 
+
+from 𝑥 0 through a series of transition kernels, as shown below: 
+
+𝑞 (𝑥 𝑡 |𝑥 0) =
+
+𝑡 Ö
+
+𝑘 =1
+
+𝑞 (𝑥 𝑘 |𝑥 𝑘 −1)
+
+= N ( 𝑥 𝑡 ; √ ¯𝛼 𝑡 𝑥 0, √1 − ¯𝛼 𝑡 I),
+
+(2) where 𝛼 𝑡 = 1 − 𝛽 𝑡 and ¯ 𝛼 𝑡 = Î𝑡 𝑖 =1 𝛼 𝑖 .
+
+Reverse denoising process . Reverse denoising process iteratively reconstructs the original data sample 𝑥 0 through a Markov chain. Specifically, the process begins by sampling initial noise 𝑥 𝑇 
+
+from a standard Gaussian distribution N ( 0, I), and then generates data samples through learnable Gaussian kernels 𝑝 𝜃 (𝑥 𝑡 −1 |𝑥 𝑡 ):
+
+𝑝 𝜃 (𝑥 𝑡 −1 |𝑥 𝑡 ) = N ( 𝑥 𝑡 −1; 𝜇 𝜃 (𝑥 𝑡 , 𝑡 ), 𝜎 𝜃 (𝑥 𝑡 , 𝑡 )I), (3) where 𝜇 𝜃 and 𝜎 𝜃 are learnable mean and variance of the reverse Gaussian kernels. 
+
+Training . The training objective of diffusion models is to optimize the negative log-likelihood by minimizing the variational lower bound. The loss function consists of three components: the prior loss 𝐿 𝑇 , the reconstruction loss 𝐿 0, and the KL divergence loss 𝐿 𝑡 −1 at intermediate timesteps 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 9
+
+as follows: 
+
+E[− log 𝑝 𝜃 (𝑥 0)] ≤ E𝑞 [𝐷 𝐾𝐿 (𝑞 (𝑥 𝑇 |𝑥 0)|| 𝑝 (𝑥 𝑇 )) 
+
+| {z }
+
+𝐿 𝑇 
+
++∑︁ 
+
+𝑡 >1
+
+𝐷 𝐾𝐿 (𝑞 (𝑥 𝑡 −1 |𝑥 𝑡 , 𝑥 0)|| 𝑝 𝜃 (𝑥 𝑡 −1 |𝑥 𝑡 )) 
+
+| {z }
+
+𝐿 𝑡 −1
+
+− log 𝑝 𝜃 (𝑥 0 |𝑥 1)
+
+| {z }
+
+𝐿 0
+
+].
+
+(4) 
+
+𝐿 𝑇 is a prior loss that is minimized when the final latent distribution matches the Gaussian prior; it requires no optimization as it has no trainable parameters. 𝐿 0 is used to predict the log probability of the original data sample given the first-step latent. 𝐿 𝑡 −1 ensures that the intermediate distribution remains consistent between the forward and backward processes [49]. For simplification [23], it can also be formulated as: 
+
+𝐿 𝑠𝑖𝑚𝑝𝑙𝑒 = E𝑡,𝑥 0,𝜖 
+
+h
+
+∥𝜖 − 𝜖 𝜃 (√ ¯𝛼 𝑡 𝑥 0 + √1 − ¯𝛼 𝑡 𝜖, 𝑡 )∥ 2i
+
+. (5) 
+
+Inference . Given noisy data 𝑥 𝑇 , we iteratively generate the data 𝑥 0 through 𝑇 steps reverse denoising process, as follows: 
+
+𝑝 𝜃 (𝑥 𝑡 −1 |𝑥 𝑡 ) = N ( 𝑥 𝑡 −1; 𝜇 𝜃 (𝑥 𝑡 , 𝑡 ), 𝜎 𝜃 (𝑥 𝑡 , 𝑡 )I)
+
+= 1
+
+√𝛼 𝑡 
+
+(𝑥 𝑡 − 𝛽 𝑡 
+
+√1 − ¯𝛼 𝑡 
+
+𝜖 𝜃 (𝑥 𝑡 , 𝑡 )) + 𝜎 𝜃 (𝑥 𝑡 , 𝑡 )z, (6) where 𝑧 ∼ N ( 0, I), and 𝛽 𝑡 ≈ 𝜎 2
+
+𝜃 .
+
+3.2 Score-based Diffusion Models (SDEs) 
+
+Score-based diffusion models further generalize the discrete-time diffusion process in DDPMs to a continuous-time framework based on stochastic differential equations (SDEs) [65]. Instead of a finite sequence {𝑥 0, . . . , 𝑥 𝑇 }, the diffusion process is modeled as a continuous-time stochastic process 𝑥 (𝑡 ) with 𝑡 ∈ [ 0,𝑇 ].
+
+Forward diffusion process . The forward diffusion process is defined by a SDE: d𝑥 = 𝑓 (𝑥, 𝑡 )d𝑡 + 𝑔 (𝑡 )d𝑤, 𝑡 ∈ [ 0,𝑇 ], (7) where 𝑓 (𝑥, 𝑡 ) is the drift term, 𝑔 (𝑡 ) is the diffusion coefficient, and 𝑤 denotes the standard Wiener process. A commonly used instantiation is the variance-preserving SDE (VP-SDE), which can be viewed as the continuous-time counterpart of DDPMs: d𝑥 = − 12 𝛽 (𝑡 )𝑥 d𝑡 +√︁ 𝛽 (𝑡 ) d𝑤 . (8) With an appropriate schedule 𝛽 (𝑡 ), the forward process gradually transforms the data distribution into a simple prior distribution. 
+
+Reverse denoising process . Sampling is performed by solving the reverse-time SDE associated with the forward process: d𝑥 = 𝑓 (𝑥, 𝑡 ) − 𝑔 2 (𝑡 )∇ 𝑥 log 𝑝 𝑡 (𝑥 ) d𝑡 + 𝑔 (𝑡 )d ¯ 𝑤, (9) where ¯ 𝑤 is the reverse-time Wiener process and 𝑝 𝑡 (𝑥 ) is the marginal density of 𝑥 (𝑡 ). The term 
+
+𝑠 ∗ (𝑥, 𝑡 ) = ∇𝑥 log 𝑝 𝑡 (𝑥 ) is referred to as the score function . In practice, a neural network 𝑠 𝜃 (𝑥, 𝑡 ) is 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+10 Wang et al. 
+
+trained to approximate 𝑠 ∗ (𝑥, 𝑡 ), enabling the reverse-time dynamics. Given the forward SDE, the score network can be learned via denoising score matching by minimizing: 
+
+L = E𝑡,𝑥 0,𝑥 𝑡 
+
+h
+
+𝜆 (𝑡 ) 𝑠 𝜃 (𝑥 𝑡 , 𝑡 ) − ∇ 𝑥 𝑡 log 𝑝 (𝑥 𝑡 |𝑥 0) 22
+
+i
+
+, (10) where 𝑡 ∈ [ 0,𝑇 ] is sampled from a predefined distribution, 𝑥 0 is sampled from the data distribution, and 𝑥 𝑡 is obtained by running the forward diffusion process up to time 𝑡 , i.e., 𝑥 𝑡 ∼ 𝑝 (· | 𝑥 0).
+
+𝜆 (𝑡 ) is a positive weighting function to balance the contributions of different time regions during optimization. For many commonly used SDEs, the forward transition density 𝑝 (𝑥 𝑡 | 𝑥 0) is Gaussian, making ∇𝑥 𝑡 log 𝑝 (𝑥 𝑡 | 𝑥 0) tractable. By learning 𝑠 𝜃 (𝑥 𝑡 , 𝑡 ) in this way, we avoid directly estimating the intractable score ∇𝑥 𝑡 log 𝑝 𝑡 (𝑥 𝑡 ) of the unknown marginal distribution. 
+
+4 Eval4DiRec 
+
+Eval4DiRec is a unified evaluation framework tailored for diffusion-based recommender systems. As illustrated in Figure 2, it standardizes the end-to-end experimental pipeline, including data processing, model training and inference, and evaluation protocols, to minimize comparison bias caused by inconsistent dataset splits, preprocessing choices, metric implementations, and sampling configurations. The current release supports 14 representative methods spanning five recommen-dation scenarios, providing a reproducible benchmark for future research. Eval4DiRec is composed of four modules. The Data module converts raw datasets into a unified, trainable format, including basic statistics reporting, basic preprocessing and standardization, and scenario-specific splitting and sample construction. The DiRec module integrates diffusion-based recommendation algorithms through a standardized interface and an extensible registry, and treats the sampling process as an explicit, configurable component so that the number of steps, noise schedule, and sampling-related settings are consistently managed and recorded. The Execution module orchestrates a standard-ized workflow for training, validation, and testing, supports consistent early stopping and tuning routines, and outputs structured logs and evaluation results. The Utils module provides essential utilities for configuration management, randomness control, logging, and metric computation, ensuring that all methods are compared under the same evaluation implementation. Figure 2 presents the workflow and input–output contracts of Eval4DiRec. The Data module pro-cesses raw interaction records and optional side information into scenario-aware train/validation/test loaders and records metadata such as the numbers of users and items and the feature dimensions. The DiRec module consumes these standardized batches and instantiates the recommendation backbone and diffusion process from a shared configuration. The Execution module constructs the data and model objects, runs training, selects checkpoints using validation metrics, evaluates the se-lected model on the test split, and saves logs and metadata. The Utils module supplies configuration parsing, registry lookup, random seed initialization, metric computation, and result logging across the other modules. Together, these contracts map raw datasets to standardized batches, training losses, ranking scores, and reproducible evaluation outputs. To ensure fairness and reproducibility, Eval4DiRec standardizes key factors that can affect evaluation outcomes, including data preprocessing and splitting rules, training and validation procedures, metric implementations, random seed control, and inference configurations. The framework outputs standardized experiment configurations and logs, enabling results to be fully traceable and reproducible while reducing uncertainty caused by environment differences and implementation details. Meanwhile, its modular design lowers the cost of extension, allowing new models or datasets to be integrated by implementing unified interfaces and providing configuration files without altering the established evaluation protocol. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 11 Utils  Data 
+
+Reader Reader 
+
+Formatter Formatter 
+
+Loader Loader 
+
+Reader 
+
+Formatter 
+
+Loader Configuration Configuration 
+
+DiRec 
+
+Rec Model     
+
+> CF CF Sequential Sequential Multimodal Multimodal POI POI Cross-Domain Cross-Domain
+
+Rec Model     
+
+> CF Sequential Multimodal POI Cross-Domain
+
+Diffusion Model     
+
+> Stepwise noising toward noise distribution
+> Neural network denoises to reconstruct data
+> Forward Process
+> Reverse Process
+> …
+> Gaussian Gaussian Poisson Uniform
+> …
+> Unet Bert MLP
+
+Diffusion Model     
+
+> Stepwise noising toward noise distribution
+> Neural network denoises to reconstruct data
+> Forward Process
+> Reverse Process
+> …
+> Gaussian Poisson Uniform
+> …
+> Unet Bert MLP
+
+DiRec 
+
+Rec Model     
+
+> CF Sequential Multimodal POI Cross-Domain
+
+Diffusion Model     
+
+> Stepwise noising toward noise distribution
+> Neural network denoises to reconstruct data
+> Forward Process
+> Reverse Process
+> …
+> Gaussian Poisson Uniform
+> …
+> Unet Bert MLP
+
+Execution 
+
+Training 
+
+Evaluation 
+
+> Validation
+> Testing
+
+Logger Logger 
+
+Metrics Metrics 
+
+Fig. 2. Overview of Eval4DiRec. The framework standardizes the end-to-end evaluation pipeline for diffusion-based recommender systems, including data preprocessing/splitting, model integration, training and inference, and metric reporting. It consists of four modules: Data prepares unified inputs and scenario-specific splits; 
+
+DiRec integrates diffusion-based recommenders and manages sampling-related configurations; Execution 
+
+orchestrates training, validation, and testing with structured outputs; and Utils provides utilities for configu-ration, randomness control, logging, and metric computation to support fair and reproducible comparisons. 
+
+4.1 Data Module 
+
+The data module is designed to provide flexible, scalable, and consistent data processing across diverse recommendation tasks. Its primary goal is to reduce the integration cost of new datasets by adopting a simple yet highly adaptable input format, thereby facilitating both reproducibility and extensibility. Specifically, it transforms raw datasets into a unified structure optimized for efficient training and evaluation. During this transformation, it automatically computes and logs dataset statistics such as interaction sparsity and the number of users and items, which are instrumental for dataset analysis, model diagnostics, and reproducibility. To accommodate different recommendation settings, the module offers customized processing pipelines tailored to five recommendation sce-narios. Each scenario is equipped with a standardized input specification to ensure consistency and compatibility across models and tasks. Following preprocessing, the module produces standardized data loaders dedicated to training, validation, and testing phases, ensuring seamless integration into the model execution pipeline. With minimal configuration, users can flexibly incorporate new datasets into existing workflows, making the framework suitable not only for replicating prior research but also for enabling future extensions. More concretely, the customized processing pipelines refer to the scenario-specific procedures that convert raw files into the supervision signals required by each task. For collaborative filtering, the pipeline reads user-item interaction records, remaps raw identifiers to contiguous indices, constructs train/validation/test interactions, and provides candidate item sets for Top-𝐾 ranking. For sequential recommendation, the pipeline additionally sorts interactions by timestamp and constructs prefix-target samples under the leave-one-out protocol. For multimodal recommendation, the pipeline aligns interaction records with item-side visual, textual, or acoustic features and checks that feature tensors are indexed consistently with item identifiers. For POI recommendation, the pipeline preserves temporal and spatial check-in information so that models can use mobility-related signals. For cross-domain recommendation, the pipeline loads source-domain and target-domain interactions, keeps the user and item spaces for each domain, and prepares the transfer setting used by the corresponding model. Although preprocessing and sample construction follow the assumptions of each scenario, all pipelines expose a common training, validation, and testing interface to the downstream Execution module. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+12 Wang et al. 
+
+The standardized input specification defines the data contract between the Data module and the remaining components of Eval4DiRec. At the file level, processed interaction records are organized using user and item identifiers, together with scenario-dependent attributes such as timestamps, ratings, domain labels, POI coordinates, and paths to modality features. At runtime, scenario-specific data loaders transform these records into batches with consistent field names and tensor structures, including user and item identifiers, historical interaction sequences, target items, candidate or negative items, masks, and optional multimodal or spatiotemporal features. This design enables models within the same recommendation scenario to share the same processed data and evaluation protocol, while methods requiring specialized sample construction can be supported through registered data-processing profiles. Concrete input examples and configuration details are available in the public repository. The grouped YAML files under configs/ specify dataset paths, recommendation scenarios, data splitters, and data loaders, while eval4direc/data/ contains the corresponding data contracts and scenario-specific loader implementations. 
+
+4.1.1 Datasets. Table 2 reports the statistics of the processed datasets used in Eval4DiRec, rather than the raw dataset statistics. Before model training and evaluation, all datasets are converted into unified implicit-feedback recommendation data through scenario-specific preprocessing, including rating-threshold filtering, duplicate interaction handling, user/item filtering, and train–validation– test splitting. Therefore, the reported number of interactions may differ from the original dataset size. For example, ML-1M originally contains about one million explicit ratings, while the processed version used in our experiments contains 223,456 implicit interactions after applying the unified preprocessing protocol. Reporting processed statistics ensures that the dataset scale is consistent with the actual data used by all evaluated models. 
+
+Collaborative Filtering and Sequential : Yelp 1 is released by Yelp as a public collection of real-world data from its platform. It includes information about businesses and users, along with user-generated content such as reviews, ratings, photos, and check-ins. Beauty is a subset of the Amazon review data 2 [21, 56], collected from the Amazon e-commerce platform. The 
+
+Amazon review data is a large-scale public corpus of user-generated product reviews and ratings on Amazon, accompanied by rich item metadata such as titles, categories, and related-product links. 
+
+MovieLens [20] is released by the GroupLens research group and contains user-provided movie ratings and related metadata collected from the MovieLens website. ML-1M 3 is the most widely used version which contains 1M movie ratings. 
+
+Multimodal : TikTok [27] is a multimodal dataset built from user interactions with short-video content, where each item is associated with visual, acoustic, and textual information. The textual modality is typically derived from video captions and related user-generated text, providing complementary semantic signals alongside the video and audio features. Baby and Sports are category-specific subsets of the Amazon review data that pair user-item interactions with multimodal item content. Each product is associated with textual descriptions and product images, enabling the use of both textual and visual modalities in addition to interaction data. 
+
+Point of Interest : TKY (Tokyo) and NYC (New York City) are subsets of a public Foursquare 4
+
+check-in collection, which records users’ visits to venues on the platform [91, 92]. Each record typically consists of user and venue identifiers along with temporal information, providing a real-world trace of user mobility and venue visits. Gowalla 5 is a public check-in dataset released by 
+
+> 1
+
+https://www.yelp.com/dataset 
+
+> 2
+
+https://cseweb.ucsd.edu/~jmcauley/datasets/amazon/links.html 
+
+> 3
+
+https://grouplens.org/datasets/movielens/1m/ 
+
+> 4
+
+https://sites.google.com/site/yangdingqi/home/foursquare-dataset 
+
+> 5
+
+https://snap.stanford.edu/data/loc-gowalla.html ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 13 
+
+Table 2. Statistics of processed datasets used in Eval4DiRec 
+
+Dataset #User #Item #Interactions Sparsity Yelp 37,232 47,744 359,330 99.98% 
+
+Beauty 9,895 8,455 73,528 99.91% 
+
+ML-1M 5,652 2,468 223,456 98.40% 
+
+TikTok 9,319 6,710 59,541 99.90% 
+
+Baby 19,445 7,050 139,110 99.89% 
+
+Sports 35,598 18,357 256,308 99.96% 
+
+NYC 1,083 9,989 179,468 98.34% 
+
+TKY 2,293 15,177 494,807 98.58% 
+
+Gowalla 10,162 24,237 456,820 99.81% 
+
+Video 123,960 50,052 1,697,533 99.97% 
+
+Music 75,258 64,443 1,097,592 99.98% 
+
+Book 603,668 367,982 8,898,041 99.99% SNAP, containing location-sharing traces from the Gowalla platform. It provides user check-in records to locations, and is often accompanied by the corresponding friendship network information from the same platform. 
+
+Cross-domain : Following previous works [105], we use three real-world category subsets from the Amazon review data , namely Video (Movies and TV), Music (CDs and Vinyl), and Book (Books), each of which contains user-generated reviews and ratings together with associated item metadata. Based on these three domains, we construct cross-domain recommendation tasks by treating one domain as the source and another as the target, and evaluate domain transfer under three settings: Video →Music, Book →Video, and Book →Music [105]. To ensure consistency in evaluation, all datasets are first processed under scenario-specific but unified preprocessing protocols and are subsequently split according to the corresponding recommendation setting. Collaborative filtering and sequential recommendation share the same preprocessing pipeline. For the explicit-feedback datasets used in these two scenarios, we first con-vert ratings into positive implicit-feedback interactions by retaining only interactions with a rating of 5. We then apply 5-core filtering, ensuring that every retained user and item is associated with at least five interactions. After filtering, the interactions of each user are arranged in chronological order, and the original user and item identifiers are remapped to consecutive integer indices. For collaborative filtering, each user’s chronologically ordered interaction history is partitioned into training, validation, and test sets using a 7:1:2 ratio. For sequential recommendation, we adopt a leave-one-out protocol: the last interaction in each user’s chronological sequence is held out for testing, the second-to-last interaction is used for validation, and all preceding interactions are used for training. This design ensures that model training and validation rely only on interactions that occur before the test interaction, thereby preventing future information from leaking into the training process. For multimodal recommendation [27, 54], we align item-side features with the processed interaction data using consistent item indices. TikTok provides 128-dimensional visual, 128-dimensional acoustic, and 768-dimensional textual features, whereas Amazon Baby and Sports provide 4,096-dimensional visual and 1,024-dimensional textual features. All modalities are stored in their original feature spaces, with dimensional alignment and multimodal fusion performed by model-specific projection layers. All multimodal models share the same processed user–item interactions, item-index mapping, and candidate sets to ensure fair comparison. For POI recommendation [61], we apply 5-core filtering to remove users and POIs with fewer than 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+14 Wang et al. 
+
+five check-ins while retaining timestamps and geographical coordinates. Each user’s check-ins are chronologically divided into training, validation, and test sets using a 7:1:2 ratio on the Tokyo, New York City, and Gowalla datasets, thereby preventing future-information leakage. The validation set is used for model selection, and the selected checkpoint is evaluated on the test set. All POIs are considered as candidates during evaluation instead of sampled negatives. For cross-domain recommendation [90], we preserve separate source- and target-domain item spaces and construct the Video →Music, Book →Video, and Book →Music tasks using overlapping users. These users are divided into training, validation, and test sets with a 7:1:2 ratio. We further convert explicit ratings into implicit interactions and evaluate target-domain predictions as a Top-𝐾 ranking task. The code and datasets are available at https://github.com/wangcong2001/Eval4DiRec. 
+
+4.2 DiRec Module 
+
+The DiRec module is the core component of Eval4DiRec, responsible for integrating and eval-uating diffusion-based recommendation algorithms under a unified protocol. It consists of two submodules: Rec Model and Diffusion Model . The Rec Model defines the backbone recommendation architecture and representation learning strategy, such as user-item embedding learning, sequential encoding, or multimodal fusion, while the Diffusion Model implements the key mechanisms of the diffusion process in the recommendation architecture, including the forward process, reverse process, and the noise schedule. These components jointly determine the model’s sampling process and can substantially affect the quality and stability of the resulting recommendation signals. By decoupling the recommendation backbone from the diffusion process, DiRec enables a unified training, sampling, and evaluation workflow across different recommendation scenarios, and unifies diffusion configurations and sampling procedures via standardized interfaces, facilitating consistent integration of new models and continuous expansion of the model library. In practice, this module is driven by the Rec Model and Diffusion Model sections of a grouped YAML configuration. The Rec Model section selects a registered recommender and its hyperparameters, while the Diffusion Model section specifies the number of training timesteps, inference steps, noise schedule, noise distribution, prediction type, sampler, and process-specific parameters. The registry then resolves these declarations into a recommender object and a diffusion process object. The standardized model interface requires each recommender to expose a training-loss function and an inference function that produces ranking scores, so the execution module does not need method-specific training scripts. Meanwhile, diffusion schedules, samplers, noise distributions, and process implementations are separately registered, which makes it possible to compare sampling choices or add a new diffusion variant without rewriting the recommender backbone. In our current release, we have systematically collected and reviewed nearly 90 relevant research papers and implemented 14 representative diffusion-based recommendation models across 5 distinct recommendation scenarios, with T-DiffRec treated as a time-aware sequential variant. Our implementation covers both recently proposed models (e.g., CCDRec [94]) and earlier foundational baselines that have significantly shaped the diffusion-based recommendation paradigm (e.g., CODIGEM [69], DiffRec [78]). 
+
+4.2.1 Supported Models. The implemented models were selected to provide representative rather than exhaustive coverage of diffusion-based recommendation research. Specifically, we considered scenario coverage, methodological diversity, research development, and reproducibility. The bench-mark includes 14 models spanning five major recommendation scenarios, namely collaborative filtering, sequential, multimodal, point-of-interest, and cross-domain recommendation. These meth-ods cover diverse uses of diffusion, including interaction reconstruction, representation denoising, conditional generation, sequence augmentation, multimodal graph modeling, and cross-domain 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 15 
+
+Table 3. Summary and selection rationale of the 14 diffusion-based recommendation models implemented in Eval4DiRec. 
+
+Scenario Model Reason for Selection 
+
+Collaborative Filtering CODIGEM [69] An early diffusion-based model for reconstructing user–item interaction vectors. DiffRec [78] A representative interaction-vector diffusion model for collaborative filtering. CF-Diff [24] Represents the use of high-order collaborative signals in diffusion-based RSs. DDRM [101] Represents diffusion-based denoising of user and item representations. Sequential Recommendation DiffuRec [40] An early diffusion-based model designed for sequential recommendation. DiffuASR [45] Represents the use of diffusion models for sequence augmentation. T-DiffRec [78] Represents time-aware interaction modeling in diffusion-based RSs. CaDiRec [10] Represents context-aware diffusion augmentation for sequential recommendation. CDDRec [80] Represents conditional diffusion guided by historical interaction sequences. Multimodal Recommendation MCDRec [54] Represents multimodal representation learning and graph denoising. DiffMM [27] Represents diffusion-based multimodal user–item graph generation. CCDRec [94] Represents multimodal alignment and adaptive negative sampling. POI Recommendation Diff-POI [61] Provides representative coverage of diffusion-based POI recommendation. Cross-Domain Recommendation DiffCDR [90] Provides representative coverage of diffusion-based cross-domain knowledge transfer. 
+
+transfer. By including both foundational approaches and recent task-specific developments with suf-ficiently detailed descriptions or publicly available implementations, the benchmark suite captures the main research directions of the field while remaining suitable for unified evaluation. To make the coverage and representativeness of the selected models more explicit, Table 3 summarizes the 14 models according to their recommendation scenarios and the main reasons for their inclusion. For models with publicly available official implementations, we used their official repositories as the primary references. The integrated versions preserve the core model architectures. To enable unified evaluation, we standardized noise schedules, diffusion steps, noise distributions, and sam-pling configurations, and adapted repository-specific data processing, splitting, training, metric computation, and logging to Eval4DiRec. Because these settings, datasets, and data-splitting proto-cols differ from those used in the original studies, the resulting scores are not directly comparable with the originally reported values, and numerical differences are expected. Such differences cannot be attributed solely to model implementation. The results are intended for controlled comparisons among models within Eval4DiRec rather than for direct numerical reproduction of the original studies. 
+
+• Collaborative Filtering: We implement four representative diffusion-based CF models: CODIGEM [69], DiffRec [78], CF-Diff [24], and DDRM [101], which incorporate diffusion mechanisms into traditional user-item interaction modeling. 
+
+• Sequential Recommendation: This category includes five models that incorporate dif-fusion processes into sequence modeling: DiffuRec [40], DiffuASR [45], CaDiRec [10], and CDDRec [80]. Additionally, T-DiffRec [78], which extends DiffRec with time-aware modeling, is included as a sequential recommendation variant. 
+
+• Multimodal Recommendation: For multimodal tasks, we support three diffusion-based models: MCDRec [54], DiffMM [27], and CCDRec [94], which leverage multimodal diffusion to enhance recommendation quality. 
+
+• POI Recommendation: We include Diff-POI [61], a diffusion-based recommendation model tailored for spatial and temporal modeling in point-of-interest recommendation. 
+
+• Cross-Domain Recommendation: We implement DiffCDR [90], which employs a diffusion model to transfer knowledge across domains. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+16 Wang et al. 
+
+All supported models are implemented following a consistent architectural interface, making it straightforward to reproduce experiments within Eval4DiRec, conduct fair comparisons, and extend to new methods. 
+
+4.3 Execution Module 
+
+The execution module is designed to manage the training and evaluation processes of diffusion-based recommendation models in a unified and systematic manner. It coordinates the end-to-end workflow, including model training on the training split, model selection on the validation split, and final reporting on the test split, while keeping the protocol consistent across models. To support the five recommendation scenarios covered in Eval4DiRec, the module provides dedicated execution routines for each scenario. These routines are aligned with the corresponding data format and supervision signals, and the module also exposes configurable options for optimization and sampling during evaluation. Through these features, the execution module enables comprehensive and reproducible benchmarking of various diffusion-based recommendation methods within a unified experimental environment, thereby promoting research and facilitating fair comparisons across models and tasks in the field. More specifically, the execution process follows a unified train–validation–test protocol. Given a grouped YAML configuration, the Execution module first initializes the experimental context, including the random seed, computing device, dataset setting, model setting, diffusion configuration, optimization hyperparameters, and evaluation metrics. It then constructs the corresponding data loaders, recommendation model, diffusion process, optimizer, trainer, and evaluator according to the specified recommendation scenario. During training, the model is optimized on the training split under the configured recommendation and diffusion objectives, while its performance is periodically monitored on the validation split. The best checkpoint is selected according to a predefined validation criterion, such as Recall or NDCG, and is subsequently used for final evaluation on the test split. The module reports Top-𝐾 recommendation metrics under the same evaluation protocol and records configurations, checkpoints, logs, metadata, and final results for reproducibility. This design standardizes the experimental lifecycle while still allowing model-specific optimization and sampling settings to be specified through configuration files. 
+
+4.4 Utils Module 
+
+The Execution module is further supported by the Utils module, which provides shared utilities for the entire pipeline. These utilities include configuration parsing, component registration, random seed and device management, logging, and metric computation. By centralizing these common functions, Eval4DiRec prevents different models from silently using inconsistent metric definitions, seed initialization rules, logging formats, or configuration conventions. New datasets, models, trainers, evaluators, and metrics can be connected through the registry mechanism, which improves extensibility while preserving a common evaluation protocol. 
+
+4.4.1 Metrics. To ensure fair and comprehensive comparisons among models, we adopt four widely used Top-𝐾 ranking metrics, including Recall, Normalized Discounted Cumulative Gain (NDCG), Hit Ratio (HR), and Mean Reciprocal Rank (MRR) [53, 106]. We report all metrics with 𝐾 =20 in our experiments. Recall@K is defined as the fraction of ground-truth relevant items that appear in the Top-𝐾 recommendation list. It primarily measures retrieval effectiveness, reflecting how well a model can cover relevant items within a limited recommendation list. NDCG@K is defined as a position-aware ranking metric that discounts gains at lower ranks, assigning higher weights to relevant items placed earlier in the list. It measures ranking quality by accounting for both relevance and position, and the normalization makes scores comparable across users. HR@K is 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 17 
+
+defined as an indicator of whether at least one relevant item is retrieved within the Top-𝐾 list for a user. It measures hit-based success, capturing whether the model can provide at least one correct recommendation under the Top-𝐾 cutoff. MRR@K is defined as the reciprocal rank of the first relevant item in the Top-𝐾 list, averaged over users. It measures how early the first correct recommendation appears, and is therefore sensitive to the topmost ranks in the recommendation list. 
+
+4.5 Extensibility to Custom Models 
+
+One of the key design goals of Eval4DiRec is to allow researchers to incorporate newly developed diffusion-based recommender models without changing the established evaluation protocol. To achieve this, Eval4DiRec adopts a modular architecture that decouples model implementation from data processing, training routines, and evaluation workflows. As a result, integrating a new model mainly requires implementing its core modeling logic, without repeatedly writing common components such as data reading, training loops, or metric computation. More importantly, this decoupling helps keep data inputs, training procedures, and evaluation implementations consistent across models, reducing discrepancies introduced by implementation details. Eval4DiRec achieves extensibility through configuration-driven component composition. A grouped YAML configuration specifies the dataset, recommendation scenario, model, diffusion process, optimizer, evaluation metrics, and output settings. At runtime, the registry maps these entries to the corresponding data loaders, scenario adapters, recommenders, diffusion processes, trainers, and evaluators. This design decouples experiment specification from component imple-mentation, allowing new methods to reuse the existing data processing, training, evaluation, and logging pipeline while extending only the components with method-specific functionality. For a new model that follows an existing recommendation scenario, the developer typically implements only a recommender class under eval4direc/models/ and provides a YAML con-figuration under configs/ . The recommender inherits the scenario-aware base interface and implements calculate_loss and predict . The calculate_loss interface consumes standard-ized batches from the Data module and returns the training objective, while predict produces user-item scores or ranking signals for unified Top-𝐾 evaluation. The data splitting, batching, training loop, validation-based model selection, checkpoint management, metric computation, and result logging are reused from the framework. Therefore, developers do not need to create method-specific dataset classes, trainers, or evaluators unless the original algorithm introduces a real behavioral difference. When method-specific differences are necessary, Eval4DiRec supports localized extension through registries. For example, a model with special sample construction can register a data profile while reusing the scenario-level loader; a method with a customized denoising procedure can register its diffusion process, sampler, schedule, or noise distribution without changing the recommendation backbone; and a new task protocol can be introduced through a scenario adapter while retaining the common trainer and evaluator. This mechanism confines method-specific changes to the relevant components, thereby reducing boilerplate code and avoiding unnecessary modifications to data processing, training logic, configuration parsing, and evaluation scripts. Eval4DiRec adopts a modular architecture to decouple the major stages of diffusion-based recom-mendation evaluation. Under eval4direc/ , runtime contracts, data abstractions, scenario adapters, recommender models, diffusion processes, samplers, trainers, and evaluators are implemented as separate modules with registry-based component instantiation. This design provides a unified interface for heterogeneous diffusion-based recommenders, while allowing scenario-specific data 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+18 Wang et al. 
+
+processing, model training, reverse sampling, and metric computation to be configured indepen-dently. As a result, new models and scenarios can be incorporated without changing the shared evaluation protocol. As a concrete example, we integrated T-DiffRec into Eval4DiRec as a time-aware sequential recom-mendation model without introducing a model-specific trainer, evaluator, metric implementation, or experiment entry point. The recommender is registered under eval4direc/models/sequential/t-diffrec.py and implements the same calculate_loss and predict interfaces used by the shared execution pipeline. Because T-DiffRec differs from standard sequential models in its construction of time-weighted interaction vectors, this behavior is isolated in a model-specific data profile under 
+
+eval4direc/data/profiles/sequential/tdiffrec.py . The profile reuses the common sequen-tial data loader and leave-one-out protocol, while assigning weights to each user’s chronologically ordered training interactions. Dataset-specific settings, including the model name, data path, diffu-sion process, optimization parameters, and evaluation metrics, are declared in grouped YAML files under configs/tdiffrec/ . All remaining functionality, including data loading, training orches-tration, validation-based checkpoint selection, Top-𝐾 evaluation, metric computation, and result logging, is inherited from the shared framework. This example demonstrates that a method-specific extension can be confined to the recommender, the data profile required by its distinctive input construction, and the corresponding configurations, without modifying the common training and evaluation infrastructure. 
+
+5 Experiment Evaluation 
+
+The experiments are designed to evaluate not only the performance of diffusion-based recommender systems, but also the effectiveness of Eval4DiRec as a unified evaluation framework. Specifically, we examine whether Eval4DiRec can support fair comparison under consistent data processing, splitting, training, inference, and metric protocols; manage diffusion-specific configurations such as noise schedules, diffusion steps, noise distributions, and sampling settings; and provide diagnostic analyses on efficiency, robustness, and long-tail recommendation. In this section, to comprehensively explore the potential of diffusion-based recommender systems, we conduct a systematic and thorough evaluation aimed at addressing the following research questions: 
+
+RQ1 : How is the overall performance of diffusion-based RSs? 
+
+RQ2 : What are the key factors influencing the performance of diffusion-based RSs? 
+
+RQ3 : How robust are diffusion-based RSs when exposed to noisy data and missing interactions? 
+
+RQ4 : Can diffusion-based RSs alleviate the popularity bias and improve the recommendation performance for long-tail items? 
+
+5.1 Experiment Settings 
+
+5.1.1 Baselines. To ensure a rigorous performance benchmark, we incorporate both state-of-the-art diffusion-based models and representative non-diffusion baselines for each scenario. 
+
+Collaborative Filtering : BPR-MF [63] is a classical collaborative filtering method that learns user and item embeddings through matrix factorization. LightGCN [22] is a graph-based method that learns representations via linear neighborhood aggregation on the user–item interaction graph. CODIGEM [69] models users’ historical interactions through the forward process and generates item ratings in the reverse process to achieve ranking prediction. DiffRec [78] takes binary user interaction vectors as input, optimizes performance by reducing the noise scale and decreasing the number of forward diffusion steps, and directly predicts the target from interaction history. CF-Diff [24] incorporates multi-hop neighbor information and cross-attention mechanisms during the reverse denoising process to deeply mine high-order collaborative signals. DDRM [101] 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 19 
+
+enhances the robustness of user and item embeddings through multi-step denoising, starting with the average embedding of users’ historical interactions and using collaborative information to guide the denoising process. 
+
+Sequential : BERT4Rec [66] improves sequential recommendation by using a bidirectional Transformer with a cloze task, addressing the limitations of uni-directional models like SASRec. 
+
+STOSA [16] enhances self-attention with a Wasserstein-based mechanism to capture pairwise item correlations and introduces uncertainty through stochastic Gaussian modeling. DiffuRec [40] models target items as probability distributions and leverages diffusion models to generate diverse item representations. DiffuASR [45] generates high-quality pseudo-sequences based on histori-cal sequences, enhancing generation performance through a sequential U-Net architecture and guidance strategies. T-DiffRec [78] extends DiffRec with time-aware interaction modeling for sequential recommendation. CaDiRec [10] proposes a context-aware diffusion contrastive learning method, fusing contextual information to create augmented views, thereby improving the model’s representation capabilities. CDDRec [80] designs a conditional denoising diffusion model that uses historical sequences to guide the denoising process and incorporates cross-attention mechanisms to generate high-quality representations. 
+
+Multimodal : BM3 [103] employs a multi-modal contrastive learning strategy, incorporating inter- and intra-modality contrastive losses to strengthen representation learning. MCDRec [54] integrates modality features to generate item representations and denoises the user-item graph using a diffusion model. DiffMM [27] leverages a diffusion model to generate multimodal-aware user-item graphs and optimizes user representations through cross-modal contrastive learning. 
+
+CCDRec [94] employs a diffusion model to align multimodal features with collaborative signals and progressively generates adaptive negative samples for optimized training. 
+
+Point of Interest : STAN [52] captures sequential patterns via a spatio-temporal attention network, incorporating personalized item frequency for recommendation. Diff-POI [61] explores user visitation patterns through diffusion sampling and optimizes the scoring function to generate recommendations. 
+
+Cross-domain : PTUPCDR [105] is a meta-learning-based cross-domain recommendation method that generates user-specific mapping functions to transfer knowledge across domains. 
+
+DiffCDR [90] uses a diffusion model to generate user embeddings in the target domain, conditioned on the source domain embeddings. It optimizes cross-domain recommendation performance through similarity alignment. 
+
+5.1.2 Implementation Details. Our experiments are conducted on a deep learning server running Ubuntu 22.04, equipped with an NVIDIA RTX 3090 GPU, Python 3.10, and PyTorch 2.6. To ensure fair comparisons, we tune hyperparameters for both diffusion-based models and non-diffusion baselines according to validation performance, and run all methods under the same data pro-cessing, training, and evaluation pipeline implemented in our unified framework. We start from the hyperparameter settings reported in the original papers and further refine them within a predefined search space to obtain the best validation performance across datasets [27, 80]. We employ AdamW for optimization. The learning rate is selected from {1e −5, 5e −5, 1e −4, 5e −4, 1e −3},and the L2 regularization coefficient is selected from {0, 1e −5, 1e −4}. The hidden dimension is tuned from {64 , 128 , 256 }. For sequential models, the maximum user history length is chosen from 
+
+{10 , 20 , 30 , 50 , 100 , 200 } depending on the dataset. For diffusion-based models, we examine multiple noise schedules, including linear , exponential , sqrt , and cosine . The number of diffusion steps is selected from {2, 3, 5, 10 , 20 , 50 , 100 , 200 , 500 , 1000 }, depending on the design choices of each model. Throughout the diffusion process, we use a standard Gaussian noise distribution. We train each model for up to 1000 epochs with early stopping on the validation set, stopping if the validation 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+20 Wang et al. 
+
+performance does not improve for 20 consecutive checks. Each experiment is repeated with five different random seeds, and we report the average performance. 
+
+Table 4. Overall Performance Comparison. Different recommendation tasks are evaluated on their respective datasets. All metrics are reported @20 and shown as percentages (%). Bold and underlined values indicate the best and second-best results on each dataset, respectively. Results marked with * are statistically significant based on a paired 𝑡 -test ( 𝑝 < 0.05 ). Models marked with † are non-diffusion baselines. 
+
+Method Recall NDCG MRR HR Recall NDCG MRR HR Recall NDCG MRR HR 
+
+CF Yelp Beauty ML-1M BPR-MF† 1.81 1.03 1.12 6.71 4.49 2.73 2.84 9.43 9.75 6.63 11.57 42.16 
+
+LightGCN† 3.31 1.79 2.14 9.09 6.32 3.55 3.61 11.86 12.31 8.74 14.06 48.28 
+
+CODIGEM 4.12 2.24 2.61 10.93 6.90 4.02 4.09 13.67 15.56 10.97 17.07 57.46 
+
+DiffRec 4.82* 2.66* 3.16* 12.69* 7.13 4.08 4.06 14.04 15.67* 11.05* 18.49* 58.02* CF-Diff 3.36 1.91 2.34 9.28 7.18 3.94 3.89 14.21 15.52 10.76 17.62 57.72 
+
+DDRM 4.01 2.13 2.22 10.21 7.60* 4.21* 4.26* 14.45* 15.03 10.32 15.71 54.72 
+
+Sequential Yelp Beauty ML-1M BERT4Rec† 0.73 0.42 0.31 0.73 1.14 0.72 0.59 1.14 3.55 1.31 0.69 3.55 
+
+STOSA† 1.32 0.75 0.59 1.32 3.51 1.54 1.27 3.51 4.77 2.03 1.12 4.77 
+
+DiffuRec 2.51 1.24 1.03 2.51 4.85 1.98 1.31 4.85 7.89 3.28 2.07 7.89 
+
+DiffuASR 0.94 0.67 0.53 0.94 1.47 0.83 0.64 1.47 3.79 1.43 0.75 3.79 
+
+T-DiffRec 4.03 1.65 0.98 4.03 6.38 2.07 1.65 6.38 10.13 4.16 2.42 10.13 
+
+CaDiRec 4.12 1.97 1.14 4.12 6.41 2.14 1.37 6.41 9.16 4.13 2.39 9.16 
+
+CDDRec 5.19* 2.13* 1.34* 5.19* 7.29* 2.76* 1.71* 7.29* 10.60* 4.51* 2.67* 10.60* 
+
+Multimodal TikTok Baby Sports BM3† 7.31 2.97 2.01 7.31 6.22 2.65 1.54 6.46 4.48 1.95 1.28 4.98 
+
+MCDRec 7.47 3.29 2.12 7.47 6.41 2.63 1.64 6.41 4.92 2.07 1.39 5.23 
+
+DiffMM 10.99* 4.72* 3.01* 10.99* 9.14 3.81 2.41 9.51 9.02 4.03 2.69 9.47 
+
+CCDRec 9.41 3.77 2.25 9.41 9.22* 3.93* 2.53* 9.59* 9.49* 4.14* 2.77* 9.93* 
+
+POI TKY NYC Gowalla STAN† 67.51 58.76 54.92 67.51 64.17 60.94 59.16 64.17 30.17 22.46 20.74 30.17 
+
+Diff-POI 70.10* 62.76* 60.41* 70.10* 66.44* 62.61* 61.51* 66.44* 35.21* 26.79* 24.37* 35.21* 
+
+Cross-Domain Video - Music Book - Video Book - Music PTUPCDR† 1.46 1.54 4.13 18.35 1.74 1.28 2.76 14.15 1.69 1.71 3.12 16.98 
+
+DiffCDR 1.88* 1.94* 4.54* 19.01* 1.86* 1.44* 2.98* 15.09* 1.88* 1.75* 3.55* 17.55* 
+
+5.2 Overall Performance Comparison (RQ1) 
+
+This experiment is designed to validate whether Eval4DiRec can support fair and comparable evaluation across heterogeneous diffusion-based recommender models. All methods are evaluated under the same data preprocessing, splitting strategy, metric implementation, and Top-𝐾 evaluation protocol within each recommendation scenario. The overall performance is shown in Table 4. We report the experimental results of Recall, NDCG, MRR, and HR. In collaborative filtering, diffusion-based methods generally outperform the non-diffusion base-lines, with DiffRec and DDRM showing the strongest results across the three datasets. Specifically, DiffRec achieves the best performance on Yelp and ML-1M, while DDRM performs best on Beauty. This trend may be attributed to the fact that both methods cast collaborative filtering as a pro-gressive denoising generation process, which can more reliably recover user preference signals from sparse or noisy interactions. Moreover, they adopt inference designs that are better aligned with recommendation than standard diffusion setups, such as avoiding fully corrupting signals into pure noise or injecting collaborative information as guidance during denoising, which helps preserve personalization and improves ranking quality. In contrast, CODIGEM and CF-Diff remain 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 21 
+
+competitive but exhibit less consistent advantages across datasets, suggesting that the configuration of the sampling process and the inference procedure can substantially influence performance in collaborative filtering. In the sequential recommendation setting, CDDRec achieves the best performance on all three datasets, while CaDiRec and T-DiffRec are also highly competitive. T-DiffRec outperforms DiffuRec and DiffuASR on most metrics and obtains the second-best performance on ML-1M, suggesting that time-aware interaction information can help diffusion-based models better capture temporal preference patterns. This pattern aligns with the fact that sequential recommendation is particularly sensitive to how conditional information is incorporated, as stronger methods typically leverage sequential context to constrain the denoising process, making the sampled signals more consistent with users’ recent interests and behavioral patterns. In addition, approaches that employ context-aware diffusion augmentation or combine diffusion with contrastive learning can improve the discriminability and robustness of sequence representations, leading to more stable gains on Top-𝐾 
+
+ranking metrics. By contrast, if the denoising process is not sufficiently guided by sequence context, the model may underutilize long-term signals or fail to adapt to preference changes, leading to worse ranking performance. In the multimodal recommendation setting, DiffMM achieves the best performance on TikTok, while CCDRec performs best on Baby and Sports, and both methods outperform the non-diffusion baseline as well as the other diffusion models. This outcome is consistent with the fact that multi-modal recommendation largely hinges on how multimodal features are aligned with collaborative signals. Stronger methods tend to explicitly capture cross-modal correlations during diffusion mod-eling and integrate multimodal semantics with interaction structure through denoising objectives or contrastive learning. In addition, CCDRec further strengthens training by introducing more effective negative sampling strategies or difficulty scheduling, which helps sharpen the decision boundary and yields more stable ranking results. Overall, these results suggest that diffusion can contribute not only through generation or reconstruction, but also by serving as a training mechanism that enhances multimodal representation learning. In the POI recommendation setting, Diff-POI consistently outperforms the non-diffusion baseline across all three datasets. A likely reason is that POI data couples spatial proximity with temporal de-pendency, and the progressive denoising sampling process can better integrate such spatiotemporal signals to produce more faithful recommendation scores than one-shot prediction. In the cross-domain recommendation setting, DiffCDR achieves better results than the non-diffusion baseline on all three transfer tasks. This trend may be attributed to formulating target-domain representation recovery as conditional sampling guided by source-domain information, which supports representation alignment and mitigates cold-start effects; meanwhile, the condi-tioning design and sampling configuration can materially influence the final performance. Across collaborative filtering, sequential, multimodal, POI, and cross-domain recommendation, the unified protocol yields directly comparable results within each scenario. Diffusion-based methods are often competitive with or superior to the selected non-diffusion baselines, although the gains vary across scenarios, datasets, and model designs. 
+
+5.2.1 Computational Cost Analysis. To provide a holistic view of the deployability of diffusion-based recommenders, we visualize the efficiency comparison in Figure 3, reporting both the training time per epoch and the total inference time. Overall, diffusion-based recommenders tend to be more time-consuming than non-diffusion baselines, since they introduce additional computation from the multi-step denoising component and diffusion-related operations during training. Meanwhile, the cost varies noticeably across models and scenarios: when the diffusion process is coupled with a backbone with higher computational complexity, or when the scenario itself requires more 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+22 Wang et al. BPR-MF LightGCN CODIGEM CF-Diff DiffRec DDRM 010 20 30 40 
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+010 20 30 40 50 
+
+> Inference Time (Total s)
+
+(a) CF - Yelp BPR-MF LightGCN CODIGEM CF-Diff DiffRec DDRM 012345
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+012345 
+
+> Inference Time (Total s)
+
+(b) CF - Beauty BPR-MF LightGCN CODIGEM CF-Diff DiffRec DDRM 01234
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+01234 
+
+> Inference Time (Total s)
+
+(c) CF - ML-1M BERT4Rec STOSA DiffuRec DiffuASR T-DiffRec CaDiRec CDDRec 010 20 30 40 
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+0510 15 20 
+
+> Inference Time (Total s)
+
+(d) Sequential - Yelp BERT4Rec STOSA DiffuRec DiffuASR T-DiffRec CaDiRec CDDRec 0246810 12 
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+0246810 12  
+
+> Inference Time (Total s)
+
+(e) Sequential - Beauty BERT4Rec STOSA DiffuRec DiffuASR T-DiffRec CaDiRec CDDRec 0246810 
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+0.0 2.5 5.0 7.5 10.0 12.5 15.0  
+
+> Inference Time (Total s)
+
+(f) Sequential - ML-1M BM3 MCDRec DiffMM CCDRec 010 20 30 40 50 60 
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+0.0 0.5 1.0 1.5 2.0 2.5 
+
+> Inference Time (Total s)
+
+(g) Multimodal - TikTok BM3 MCDRec DiffMM CCDRec 020 40 60 80 
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+02468 
+
+> Inference Time (Total s)
+
+(h) Multimodal - Baby BM3 MCDRec DiffMM CCDRec 0100 200 300 400 500 
+
+> Training Time (s/epoch)
+
+Training Inference 
+
+0510 15 20 25 30 35  
+
+> Inference Time (Total s)
+
+(i) Multimodal - Sports STAN Diff-POI STAN Diff-POI STAN Diff-POI 
+
+0500 1000 1500 2000 2500 3000 
+
+> Training Time (s/epoch)
+
+TKY NYC Gowalla 
+
+Training Inference 
+
+0250 500 750 1000 1250 1500 1750 2000 
+
+> Inference Time (Total s)
+
+(j) POI PTUPCDR DiffCDR PTUPCDR DiffCDR PTUPCDR DiffCDR 
+
+020 40 60 80 100 120 140 
+
+> Training Time (s/epoch)
+
+Video-Music Book-Video Book-Music 
+
+Training Inference 
+
+025 50 75 100 125 150 175 200  
+
+> Inference Time (Total s)
+
+(k) Cross-Domain 
+
+Fig. 3. Efficiency Analysis. The left axis (Red bars) represents the Training Time per epoch, while the right axis (Blue hashed bars) denotes the Total Inference Time. Note that absolute inference time is dataset-dependent (e.g., number of users/items), thus we focus on within-dataset comparisons. 
+
+complex encoders and larger candidate spaces, the training overhead typically becomes more pronounced. In contrast, comparatively lightweight diffusion designs can be more efficient, but they may still incur extra cost relative to conventional single-pass scoring models. These results indicate that the empirical gains of diffusion-based methods often come with a non-negligible efficiency overhead, which is particularly important for large-scale or real-time recommendation settings. Therefore, beyond reporting ranking accuracy, a benchmark should also surface efficiency-related measurements to enable a more complete comparison and practical trade-off analysis. This observation further motivates future research on accelerating the sampling process, reducing the number of denoising steps, and developing more efficient parameterizations or distillation strategies to improve the deployability of diffusion-based recommenders in practical systems. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 23 
+
+5.3 Diffusion Configuration Analysis (RQ2) 
+
+To systematically investigate the key factors influencing the performance of diffusion-based RSs and to provide meaningful guidance for future research, we conduct targeted analyses from the following three perspectives. In this section, we report experimental results in the collaborative filtering scenario for diffusion-based methods. This analysis also validates the diffusion-aware diagnostic capability of Eval4DiRec. Unlike conventional recommendation frameworks that mainly compare final ranking metrics, Eval4DiRec explicitly exposes and records diffusion-specific configurations, including noise schedules, diffusion steps, noise distributions, and reverse-sampling settings. By varying these configurations under the same data processing, training, and evaluation protocol, we can examine how diffusion design choices affect recommendation quality and computational cost in a controlled manner. CODIGEM DiffRec CF-Diff DDRM 0.02 0.04 0.06 
+
+> R@20
+> Linear Exp Sqrt Cosine
+
+(a) Yelp CODIGEM DiffRec CF-Diff DDRM 0.02 0.04 0.06 0.08 0.10  
+
+> R@20
+> Linear Exp Sqrt Cosine
+
+(b) Beauty CODIGEM DiffRec CF-Diff DDRM 0.10 0.12 0.14 0.16 0.18  
+
+> R@20
+> Linear Exp Sqrt Cosine
+
+(c) ML-1M 
+
+Fig. 4. Impact of noise schedule on diffusion-based recommendation performance on three datasets (Re-call@20). 
+
+5.3.1 Noise Schedules and Recommendation Quality. The noise schedule controls the noise magni-tude injected at each diffusion timestep and therefore directly shapes the difficulty and behavior of the reverse denoising process [19]. To examine its impact on recommendation performance, we compare four commonly used noise schedules under the same training and evaluation settings. As shown in Figure 4, the linear and exponential schedules achieve the most stable and strongest performance overall, and the exponential schedule further surpasses the linear one on certain datasets. A plausible explanation is that these two schedules allocate noise across timesteps in a smoother and more structured manner, allowing the reverse process to progressively recover preference signals without either overwhelming personalization early on with overly aggressive perturbations or providing an insufficient learning signal at later stages due to too little corruption. By contrast, an ill-suited noise allocation may blur key personalized interaction patterns too quickly in the forward process, or make the denoising task overly easy, both of which can weaken the model’s learning and generation capability and ultimately lead to poorer ranking metrics. Overall, these results indicate that the noise schedule can substantially affect diffusion-based recommen-dation performance, suggesting that generic schedules may not always align well with the signal characteristics and learning objectives of recommendation tasks. This motivates future work on designing noise schedulers that are better tailored to recommendation scenarios. 
+
+5.3.2 Diffusion Steps: Quality–Cost Trade-off. As part of our factor analysis, we examine how the number of diffusion steps affects the recommendation performance in the collaborative filtering scenario. The number of training diffusion steps defines the diffusion horizon used for the forward noising process and denoising objective during training. During inference, the forward process is not executed; instead, the independently configured number of inference steps determines the number of reverse denoising steps used to generate recommendation scores. As shown in Figure 5, 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+24 Wang et al. 2 3 5 10 20 50 100 200 500 1000 0.02 0.03 0.04 0.05 0.06 
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM
+
+(a) Yelp 2 3 5 10 20 50 100 200 500 1000 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.10  
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM
+
+(b) Beauty 2 3 5 10 20 50 100 200 500 1000 0.10 0.12 0.14 0.16 0.18  
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM
+
+(c) ML-1M 
+
+Fig. 5. Impact of diffusion steps on diffusion-based recommendation performance on three datasets (Re-call@20). 
+
+the best results are typically achieved with a relatively small number of steps; increasing the step count further often leads to diminishing returns and, in some cases, a noticeable performance drop. This trend can be attributed to the interaction between the recommendation signals and the multi-step denoising mechanism. Increasing the number of inference steps makes the sampling procedure longer and the reverse denoising process more computationally demanding, but it does not necessarily improve ranking quality. More prolonged perturbations can weaken discriminative preference cues, making it harder for the reverse process to recover ranking-relevant structure under limited supervision, and additional reverse steps may also accumulate errors during sampling, causing the generated signal to drift away from what ranking metrics favor. Overall, these results indicate that the number of diffusion steps should be treated as a key inference configuration that requires systematic tuning, rather than being increased by default, and that strong ranking performance often comes from carefully designed inference with a small number of steps. CODIGEM DiffRec CF-Diff DDRM 0.01 0.02 0.03 0.04 0.05 0.06 0.07 
+
+> R@20
+> Gaussian Uniform Poisson Anisotropic
+
+(a) Yelp CODIGEM DiffRec CF-Diff DDRM 0.02 0.04 0.06 0.08 0.10  
+
+> R@20
+> Gaussian Uniform Poisson Anisotropic
+
+(b) Beauty CODIGEM DiffRec CF-Diff DDRM 0.10 0.12 0.14 0.16 0.18  
+
+> R@20
+> Gaussian Uniform Poisson Anisotropic
+
+(c) ML-1M 
+
+Fig. 6. Impact of noise distribution on diffusion-based recommendation performance on three datasets (Recall@20). 
+
+5.3.3 Noise Distributions and Recommendation Quality. Noise distributions determine how the forward process perturbs recommendation signals, which in turn affects the difficulty and error char-acteristics of reverse denoising. Motivated by prior findings in the image domain, where alternatives from the exponential family have been explored [58], we compare four noise distributions under the same training and evaluation settings: Gaussian, uniform, Poisson, and anisotropic Gaussian. As shown in Figure 6, Gaussian noise provides the most consistent and stable performance across configurations, while alternative distributions do not dominate universally but can offer noticeable gains in particular datasets or inference settings. A plausible explanation is that recommendation data and representations can exhibit discrete, long-tailed, or anisotropic patterns that vary across scenarios; Gaussian perturbations tend to align with standard denoising assumptions and yield stable optimization, whereas uniform, Poisson, or anisotropic Gaussian noise may better match cer-tain data regimes or feature geometries, leading to scenario-dependent benefits. Overall, the results 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 25 
+
+indicate that noise distribution is a non-trivial design choice for diffusion-based recommendation and merits more systematic, task-aware investigation. Taken together, the above results reveal that diffusion configurations jointly shape recommenda-tion quality and computational cost by determining how recommendation signals are perturbed and recovered. Specifically, the noise schedule and noise distribution control the rate and form of information corruption, while the number of diffusion and reverse-sampling steps affects both the granularity of the recovery process and the required computational overhead. For sparse implicit-feedback data, a finer or longer diffusion process does not necessarily yield better recommendation performance. Excessive perturbation may weaken limited personalized signals, while additional reverse steps may accumulate recovery errors. This helps explain why recommendation quality changes non-monotonically with the number of diffusion steps, whereas inference cost generally increases with the length of the reverse process. 
+
+5.4 Robustness Analysis of Diffusion-Based RSs (RQ3) 
+
+Diffusion models excel at capturing complex data distributions, which may contribute to enhanced robustness in recommendation tasks. To systematically evaluate this property, we design two experiments targeting robustness under missing and noisy data conditions. 10% 20% 30% 40% 50% 0.02 0.04 0.06 
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM MF LightGCN
+
+(a) Yelp 10% 20% 30% 40% 50% 0.02 0.04 0.06 0.08 0.10  
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM MF LightGCN
+
+(b) Beauty 10% 20% 30% 40% 50% 0.05 0.10 0.15 0.20  
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM MF LightGCN
+
+(c) ML-1M 
+
+Fig. 7. Robustness to missing data: performance under different missing ratios across three datasets (Re-call@20). 
+
+5.4.1 Robustness to Missing Data. To evaluate robustness under missing training signals, we simulate increasing sparsity by randomly removing a portion of user–item interactions from the training set, with the removal ratio ranging from 10% to 50%. As shown in Figure 7, performance degrades for all methods as the available supervision decreases, which is expected given the reduced amount of preference evidence for learning. Notably, diffusion-based models exhibit a consistently milder drop than non-diffusion baselines, indicating stronger resilience to sparse supervision. A plausible explanation is that diffusion-based recommendation models are trained with an intrinsic perturbation and reconstruction objective. This learning paradigm encourages the model to recover preference-relevant latent signals from corrupted observations, which can partially alleviate representation degradation when interactions are missing. As a result, when supervision becomes limited, diffusion-based models tend to maintain more stable preference estimation, leading to better robustness in Top-𝐾 ranking metrics. 
+
+5.4.2 Robustness to Noisy Data. Beyond missing data, real-world implicit feedback is often con-taminated by noise, such as accidental clicks, exposure bias, or logging errors. To assess robustness to noisy supervision, we inject randomly sampled negative items into the training set at the same rate, with the noise ratio also varying from 10% to 50%. Figure 8 shows that increasing noise consistently harms ranking performance across all methods, while diffusion-based models again exhibit noticeably less severe degradation than non-diffusion baselines. 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+26 Wang et al. 10% 20% 30% 40% 50% 0.02 0.04 0.06 
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM MF LightGCN
+
+(a) Yelp 10% 20% 30% 40% 50% 0.02 0.04 0.06 0.08 0.10  
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM MF LightGCN
+
+(b) Beauty 10% 20% 30% 40% 50% 0.075 0.100 0.125 0.150 0.175 0.200  
+
+> R@20
+> CODIGEM DiffRec CF-Diff DDRM MF LightGCN
+
+(c) ML-1M 
+
+Fig. 8. Robustness to noisy data: performance under different noise ratios across three datasets (Recall@20). 
+
+This behavior can be attributed to the denoising-oriented modeling principle of diffusion methods. By learning to reverse controlled perturbations, diffusion-based recommendation models are encouraged to capture stable and structured preference patterns rather than overfitting spurious correlations introduced by random noise. Consequently, under corrupted supervision, the denoising generation process can provide an implicit error-correction effect, mitigating the negative impact of noisy interactions on the final ranking quality. The robustness results provide a complementary perspective. Diffusion-based recommenders often exhibit smaller performance degradation under missing or noisy interactions, which may be related to the regularizing effect of learning to recover stable preference structures from perturbed inputs. However, this observation should not be interpreted as evidence that diffusion models are inherently robust to all forms of real-world noise. The artificial perturbations used in diffusion training differ from accidental clicks, exposure bias, logging errors, and non-randomly missing interactions in practical recommendation systems. Therefore, the robustness benefit depends on how well the learned denoising process matches the actual corruption patterns in the data. Taken together, the analyses show that recommendation quality, computational cost, and ro-bustness should be considered jointly when evaluating diffusion-based recommenders. Strong performance on clean data does not necessarily imply low inference cost or limited degradation under data corruption. Accordingly, diffusion-based models and configurations should not be selected solely according to a single accuracy metric. Instead, they should be evaluated under a unified protocol that jointly considers recommendation quality, computational efficiency, and robustness, with model-specific diffusion and sampling settings fully reported. G1 G2 G3 G4 G5 0.00 0.02 0.04 0.06 0.08 
+
+> R@20
+> BPR-MF LightGCN CODIGEM DiffRec CF-Diff DDRM
+
+(a) Yelp G1 G2 G3 G4 G5 0.000 0.025 0.050 0.075 0.100 0.125  
+
+> R@20
+> BPR-MF LightGCN CODIGEM DiffRec CF-Diff DDRM
+
+(b) Beauty G1 G2 G3 G4 G5 0.00 0.05 0.10 0.15 0.20 0.25 0.30  
+
+> R@20
+> BPR-MF LightGCN CODIGEM DiffRec CF-Diff DDRM
+
+(c) ML-1M 
+
+Fig. 9. Long-tail item analysis across different popularity groups on three datasets (Recall@20). 
+
+5.5 Analysis of Long-tail Items (RQ4) 
+
+As illustrated in Figure 9, we partition items into popularity groups according to their interaction frequency in the training data, ordered from head to long-tail. A clear disparity can be observed for non-diffusion baselines across these groups: they achieve relatively strong performance on 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 27 
+
+head items with abundant interactions, but their accuracy drops substantially as item popularity decreases, and recall becomes particularly weak for long-tail groups. In contrast, diffusion-based methods exhibit a noticeably milder degradation on less popular items and produce smoother performance curves, indicating that they can maintain more usable ranking signals under weaker supervision and deliver more consistent gains in the long-tail region. A plausible explanation is that the two families of methods exploit training signals in different ways. Non-diffusion models typically rely on directly observed interactions to learn item repre-sentations and scoring functions. When an item has few interactions, the effective supervision for parameter updates becomes limited, and the model can be dominated by high-frequency items, which often leads to inferior representation quality and reduced discriminability for long-tail items. Diffusion-based methods, in comparison, optimize a progressive perturbation and recovery objective. During training, the model repeatedly observes the same signal under different noise levels and learns to recover consistent structure from incomplete or corrupted inputs. This learning mechanism can implicitly strengthen sparse supervision, giving the model more opportunities to capture latent associations between users and long-tail items, and thereby alleviating performance collapse in tail groups. We also observe heterogeneous gains among diffusion-based methods. Some models yield larger improvements on long-tail groups, while others preserve stronger advantages on head items, suggesting that diffusion does not automatically bring uniform benefits across all popularity levels. The actual effect depends on diffusion configurations, the sampling procedure, and how the diffusion process is coupled with the recommendation backbone. Overall, this long-tail analysis not only highlights the potential of diffusion-based recommendation under low-frequency supervision, but also motivates future work to better balance tail coverage and head accuracy, and to develop diffusion modeling and sampling strategies that are more aligned with the characteristics of recommendation data. 
+
+6 Conclusion and Future Work 
+
+Diffusion-based recommendation has advanced rapidly in recent years, yet empirical studies re-main difficult to reproduce and compare fairly due to inconsistent practices in data processing, dataset splitting, metric implementation, and inference settings. To address these issues, we propose Eval4DiRec, a unified and reproducible evaluation framework for diffusion-based recommender systems. Eval4DiRec provides an end-to-end standardized pipeline with a modular implementa-tion, enabling consistent benchmarking under unified protocols. Based on this framework, we integrate 14 representative diffusion-based model implementations across five recommendation scenarios and conduct systematic experiments on ranking performance, efficiency, diffusion con-figurations, robustness under missing and noisy interactions, and long-tail behavior. The results demonstrate that diffusion-based recommenders can be competitive, but their gains are scenario-and configuration-dependent and often come with additional computational cost. This variability reinforces the need for standardized and transparent evaluation. Although Eval4DiRec provides standardized benchmarking for diffusion-based recommender systems, its current coverage remains representative rather than exhaustive. Emerging paradigms, such as bridge-based generation and spectral-space diffusion, may involve substantially different state spaces, training objectives, and conditioning mechanisms that have not yet been incorporated into the current framework. In addition, the existing evaluation suite mainly focuses on rank-ing quality, computational time, robustness, and long-tail performance, while reliability-oriented dimensions, such as diversity, calibration, and fairness, have not yet been systematically evaluated. Future work will address these limitations from both architectural and evaluation perspectives. At the architectural, we plan to further decouple the diffusion process into reusable components, including state representations, perturbation kernels, noise schedulers, conditioning mechanisms, 
+
+ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+28 Wang et al. 
+
+training objectives, and reverse samplers. This component-level design will facilitate the integration of emerging diffusion architectures without requiring substantial redesign of the existing training and evaluation pipeline. At the evaluation, we will extend the benchmark beyond accuracy-centered comparisons toward a more comprehensive analysis of the trade-offs among recommendation quality, efficiency, and robustness across different data scales. We will also investigate reduced-step inference, lightweight samplers, and knowledge distillation to lower deployment costs while preserving recommendation quality. Finally, we will strengthen reproducibility and long-term maintainability through more complete configuration and environment records and community-driven model integration. 
+
+Acknowledgments 
+
+This work was supported by National Natural Science Foundation of China (No. 62376130), Program of New Twenty Policies for Universities of Jinan (Grant No.202333008), and the Pilot Project for Integrated Innovation of Science, Education, and Industry of Qilu University of Technology (Shandong Academy of Sciences) (No.2025ZDZX01). 
+
+References 
+
+[1] Vineeta Anand and Ashish Kumar Maurya. 2025. A Survey on Recommender Systems Using Graph Neural Network. 
+
+ACM Transactions on Information Systems 43, 1 (2025), 1–49. [2] Evan Becker, Parthe Pandit, Sundeep Rangan, and Alyson K Fletcher. 2022. Instability and Local Minima in GAN Training with Kernel Discriminators. Advances in Neural Information Processing Systems 35 (2022), 20300–20312. [3] Michael Benigni, Maurizio Ferrari Dacrema, and Dietmar Jannach. 2026. Diffusion Recommender Models and the Illusion of Progress: A Concerning Study of Reproducibility and a Conceptual Mismatch. ACM Transactions on Recommender Systems 4, 3 (2026), 69 pages. [4] Tuan-Nghia Bui, Huy-Son Nguyen, Cam-Van Thi Nguyen, Hoang-Quynh Le, and Duc-Trong Le. 2025. Personalized Diffusion Model Reshapes Cold-Start Bundle Recommendation. In Companion Proceedings of the 34th ACM on Web Conference . 3088–3091. [5] Zhuo Cai, Shoujin Wang, Victor W Chu, Usman Naseem, Yang Wang, and Fang Chen. 2025. Unleashing the Potential of Diffusion Models Towards Diversified Sequential Recommendations. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 1476–1486. [6] Zhuo Cai, Shoujin Wang, Jin Li, Peilin Zhou, Victor W. Chu, Fang Chen, Tianqing Zhu, and Charu C. Aggarwal. 2026. Steering Diffusion Models Towards Credible Content Recommendation. In Proceedings of the 14th International Conference on Learning Representations .[7] Hanqun Cao, Cheng Tan, Zhangyang Gao, Yilun Xu, Guangyong Chen, Pheng-Ann Heng, and Stan Z Li. 2024. A Survey on Generative Diffusion Models. IEEE Transactions on Knowledge and Data Engineering 36, 7 (2024), 2814–2830. [8] Mengru Chen, Lianghao Xia, Yong Xu, and Ronghua Luo. 2025. Collaborative Diffusion Models for Recommendation. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval .1975–1984. [9] Xiaoxi Cui, Weihai Lu, Yu Tong, Yiheng Li, and Zhejun Zhao. 2025. Multi-Modal Multi-Behavior Sequential Recom-mendation with Conditional Diffusion-Based Feature Denoising. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . 1593–1602. [10] Ziqiang Cui, Haolun Wu, Bowei He, Ji Cheng, and Chen Ma. 2024. Context Matters: Enhancing Sequential Recom-mendation with Context-aware Diffusion-based Contrastive Learning. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 404–414. [11] Xinyi Dai, Jianghao Lin, Weinan Zhang, Shuai Li, Weiwen Liu, Ruiming Tang, Xiuqiang He, Jianye Hao, Jun Wang, and Yong Yu. 2021. An Adversarial Imitation Click Model for Information Retrieval. In Proceedings of the 30th ACM on Web Conference . 1809–1820. [12] Yashar Deldjoo, Zhankui He, Julian McAuley, Anton Korikov, Scott Sanner, Arnau Ramisa, René Vidal, Maheswaran Sathiamoorthy, Atoosa Kasirzadeh, and Silvia Milano. 2024. A Review of Modern Recommender Systems Using Generative Models (Gen-RecSys). In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 6448–6458. [13] Pham Minh Thu Do, Qian Zhang, Guangquan Zhang, and Jie Lu. 2026. Graph Contrastive Learning With Diffusion-Based Transfer for Cross-Domain Recommender System. IEEE Transactions on Systems, Man, and Cybernetics: Systems 
+
+56, 1 (2026), 375–386. ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 29 
+
+[14] Yingpeng Du, Di Luo, Rui Yan, Xiaopei Wang, Hongzhi Liu, Hengshu Zhu, Yang Song, and Jie Zhang. 2024. Enhancing job recommendation through llm-based generative adversarial networks. In Proceedings of the 38th AAAI conference on artificial intelligence . 8363–8371. [15] Ocheme Anthony Ekle and William Eberle. 2024. Anomaly Detection in Dynamic Graphs: A Comprehensive Survey. 
+
+ACM Transactions on Knowledge Discovery from Data 18, 8, Article 192 (2024), 44 pages. [16] Ziwei Fan, Zhiwei Liu, Yu Wang, Alice Wang, Zahra Nazari, Lei Zheng, Hao Peng, and Philip S Yu. 2022. Sequential Recommendation via Stochastic Self-Attention. In Proceedings of the 31st ACM on Web Conference . 2036–2047. [17] Mahesh Goyani and Neha Chaurasiya. 2020. A Review of Movie Recommendation System: Limitations, Survey and Challenges. Electronic Letters on Computer Vision and Image Analysis 19, 3 (2020), 18–37. [18] Huilin Gu, Shoujin Wang, Jin Li, Zhuo Cai, Lina Yao, and Longbing Cao. 2026. A Survey on Trustworthy LLM-based Recommender Systems. (2026). [19] Tiankai Hang, Shuyang Gu, Xin Geng, and Baining Guo. 2024. Improved Noise Schedule for Diffusion Training. arXiv preprint arXiv:2407.03297 (2024). [20] F Maxwell Harper and Joseph A Konstan. 2015. The Movielens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems 5, 4 (2015), 1–19. [21] Ruining He and Julian McAuley. 2016. Ups and Downs: Modeling the Visual Evolution of Fashion Trends with One-Class Collaborative Filtering. In Proceedings of the 25th ACM on Web Conference . 507–517. [22] Xiangnan He, Kuan Deng, Xiang Wang, Yan Li, Yongdong Zhang, and Meng Wang. 2020. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation. In Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval . 639–648. [23] Jonathan Ho, Ajay Jain, and Pieter Abbeel. 2020. Denoising Diffusion Probabilistic Models. Advances in Neural Information Processing Systems 33 (2020), 6840–6851. [24] Yu Hou, Jin-Duk Park, and Won-Yong Shin. 2024. Collaborative Filtering Based on Diffusion Models: Unveiling the Potential of High-Order Connectivity. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval . 1360–1369. [25] Andreea Iana, Goran Glavaš, and Heiko Paulheim. 2023. NewsRecLib: A PyTorch-Lightning Library for Neural News Recommendation. In Proceedings of the 28th Conference on Empirical Methods in Natural Language Processing . 296–310. [26] Houye Ji, Junxiong Zhu, Xiao Wang, Chuan Shi, Bai Wang, Xiaoye Tan, Yanghua Li, and Shaojian He. 2021. Who You Would Like to Share With? A Study of Share Recommendation in Social E-commerce. In Proceedings of the 35th AAAI Conference on Artificial Intelligence . 232–239. [27] Yangqin Jiang, Lianghao Xia, Wei Wei, Da Luo, Kangyi Lin, and Chao Huang. 2024. DiffMM: Multi-Modal Diffusion Model for Recommendation. In Proceedings of the 32nd ACM International Conference on Multimedia . 7591–7599. [28] Yangqin Jiang, Yuhao Yang, Lianghao Xia, and Chao Huang. 2024. DiffKG: Knowledge Graph Diffusion Model for Recommendation. In Proceedings of the 17th ACM International Conference on Web Search and Data Mining . 313–321. [29] Ke Jin, Weihao Yu, Yingchao Long, Nanhui Lai, and Jin Huang. 2025. A Diffusion Multi-interest Framework for Cross-domain Recommendation. Expert Systems with Applications 294 (2025), 128738. [30] Mengyuan Jing, Yanmin Zhu, Zhaobo Wang, Jiadi Yu, and Feilong Tang. 2026. Interest-Aware Graph Contrastive Learning for Recommendation With Diffusion-Based Augmentation. IEEE Transactions on Knowledge and Data Engineering 38, 1 (2026), 414–427. [31] Nikhat Khan and Dilip Singh Sisodia. 2025. Exploiting Diffusion-based Structured Learning for Item Interactions Representations in Multimodal Recommender Systems. Information Processing & Management 62, 3 (2025), 104075. [32] Chaejeong Lee, Jeongwhan Choi, Hyowon Wi, Sung-Bae Cho, and Noseong Park. 2025. SCONE: A Novel Stochastic Sampling to Generate Contrastive Views and Hard Negative Samples for Recommendation. In Proceedings of the 18th ACM International Conference on Web Search and Data Mining . 419–428. [33] Jiayu Li, Hanyu Li, Zhiyu He, Weizhi Ma, Peijie Sun, Min Zhang, and Shaoping Ma. 2024. ReChorus2.0: A Modular and Task-Flexible Recommendation Library. In Proceedings of the 18th ACM Conference on Recommender Systems .454–464. [34] Jin Li, Shoujin Wang, Qi Zhang, Shui Yu, and Fang Chen. 2025. Generating with Fairness: A Modality-Diffused Counterfactual Framework for Incomplete Multimodal Recommendations. In Proceedings of the 34th ACM on Web Conference . 2787–2798. [35] Yishuo Li, Cong Wang, shoujin wang, Qi Zhang, Liang Hu, Defu Lian, Lei Guo, and Wenpeng Lu. 2026. Disease Spectrum-aware and Time-evolving Dependency Learning for Medication Recommendation. ACM Transactions on Information Systems (2026). [36] Yishuo Li, Qi Zhang, Wenpeng Lu, Xueping Peng, Weiyu Zhang, et al. 2025. Time-aware Medication Recommendation via Intervention of Dynamic Treatment Regimes. In Proceedings of the 34th ACM Web Conference . 5161–5172. [37] Yishuo Li, Qi Zhang, Shoujin Wang, Weiyu Zhang, Jiasheng Si, Hu Zhang, and Wenpeng Lu. 2026. Medication Mapping and Diagnosis Enhancement for Fine-grained Medication Recommendation. Information Sciences 757 (2026), ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+30 Wang et al. 
+
+123930. [38] Yifan Li, Kun Zhou, Wayne Xin Zhao, and Ji-Rong Wen. 2023. Diffusion Models for Non-autoregressive Text Generation: A Survey. In Proceedings of the 32nd International Joint Conference on Artificial Intelligence . 6692–6701. [39] Yifan Li, Kun Zhou, Wayne Xin Zhao, and Ji-Rong Wen. 2023. Diffusion Models for Non-autoregressive Text Generation: A Survey. arXiv preprint arXiv:2303.06574 (2023). [40] Zihao Li, Aixin Sun, and Chenliang Li. 2023. DiffuRec: A Diffusion Model for Sequential Recommendation. ACM Transactions on Information Systems 42, 3 (2023), 1–28. [41] Zongwei Li, Lianghao Xia, Hua Hua, Shijie Zhang, Shuangyang Wang, and Chao Huang. 2025. DiffGraph: Hetero-geneous Graph Diffusion Model. In Proceedings of the 18th ACM International Conference on Web Search and Data Mining . 40–49. [42] Zongwei Li, Lianghao Xia, and Chao Huang. 2024. Recdiff: Diffusion Model for Social Recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 1346–1355. [43] Jianghao Lin, Jiaqi Liu, Jiachen Zhu, Yunjia Xi, Chengkai Liu, Yangtian Zhang, Yong Yu, and Weinan Zhang. 2024. A Survey on Diffusion Models for Recommender Systems. arXiv:2409.05033 [cs.IR] [44] Kangjun Liu, Zhenyu Li, Jianlei Wang, Hongjiao Guan, Ying Lian, Guoqiang Chen, Tao Xin, and Wenpeng Lu. 2026. JointCoder: Exploring Automated ICD Coding on Real-World Chinese EHRs with a Multi-Agent Framework. In 
+
+Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics . 263–274. [45] Qidong Liu, Fan Yan, Xiangyu Zhao, Zhaocheng Du, Huifeng Guo, Ruiming Tang, and Feng Tian. 2023. Diffusion Augmentation for Sequential Recommendation. In Proceedings of the 32nd ACM International Conference on Information and Knowledge Management . 1576–1586. [46] Jing Long, Guanhua Ye, Tong Chen, Yang Wang, Meng Wang, and Hongzhi Yin. 2024. Diffusion-Based Cloud-Edge-Device Collaborative Learning for Next POI Recommendations. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 2026–2036. [47] Wenpeng Lu, Kangjun Liu, Jianlei Wang, Xueping Peng, Tao Shen, Fa Zhu, Weiyu Zhang, Jiabing Zhu, Tao Xin, and Athanasios V Vasilakos. 2025. Advancing Chinese Conversation-based Patient Guidance with a Benchmark and Knowledge-Evolvable Assistant. IEEE Journal of Biomedical and Health Informatics (2025), 1–12. [48] Malte Ludewig and Dietmar Jannach. 2018. Evaluation of Session-Based Recommendation Algorithms. User Modeling and User-Adapted Interaction 28, 4 (2018), 331–390. [49] Calvin Luo. 2022. Understanding Diffusion Models: A Unified Perspective. arXiv:2208.11970 [cs.LG] [50] Mingxuan Luo, Yang Li, and Chen Lin. 2025. Enhancing Sequential Recommendation with Global Diffusion. In 
+
+Proceedings of the 39th AAAI Conference on Artificial Intelligence , Vol. 39. 12309–12318. [51] Mingxuan Luo, Yang Li, and Chen Lin. 2025. Enhancing Sequential Recommendation with Global Diffusion. In 
+
+Proceedings of the 39th AAAI Conference on Artificial Intelligence . 12309–12318. [52] Yingtao Luo, Qiang Liu, and Zhaocheng Liu. 2021. STAN: Spatio-Temporal Attention Network for Next Location Recommendation. In Proceedings of the 30th ACM on Web Conference . 2177–2185. [53] Haokai Ma, Ruobing Xie, Lei Meng, Xin Chen, Xu Zhang, Leyu Lin, and Zhanhui Kang. 2024. Plug-In Diffusion Model for Sequential Recommendation. In Proceedings of the 38th AAAI Conference on Artificial Intelligence . 8886–8894. [54] Haokai Ma, Yimeng Yang, Lei Meng, Ruobing Xie, and Xiangxu Meng. 2024. Multimodal Conditioned Diffusion Model for Recommendation. In Proceedings of the 33rd ACM on Web Conference . 1733–1740. [55] Wenze Ma, Chenyu Sun, Yanmin Zhu, Zhaobo Wang, Xuhao Zhao, Mengyuan Jing, Jiadi Yu, and Feilong Tang. 2025. Generating Difficulty-aware Negative Samples via Conditional Diffusion for Multi-modal Recommendation. In 
+
+Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval .979–988. [56] Julian McAuley, Christopher Targett, Qinfeng Shi, and Anton Van Den Hengel. 2015. Image-Based Recommendations on Styles and Substitutes. In Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval . 43–52. [57] Xiangwu Meng, Yulu Du, Yujie Zhang, and Xiaofeng Han. 2022. A Survey of Context-Aware Recommender Systems: From an Evaluation Perspective. IEEE Transactions on Knowledge and Data Engineering 35, 7 (2022), 6575–6594. [58] Alessandro Micheli, Mélodie Monod, and Samir Bhatt. 2025. Diffusion Models for Inverse Problems in the Exponential Family. arXiv:2502.05994 [stat.ML] [59] Xian Mo, Fei Liu, Rui Tang, Jin-Tao Gao, and Hao Liu. 2025. Knowledge-Aware Diffusion-Enhanced Multimedia Recommendation. IEEE Transactions on Multimedia 27 (2025), 9136–9146. [60] Yinchen Pan, Jun Zeng, Ziwei Wang, Haoran Tang, Junhao Wen, and Min Gao. 2025. HGDRec:Next POI Recommen-dation Based on Hypergraph Neural Network and Diffusion Model. IEEE Transactions on Services Computing 18, 3 (2025), 1445–1458. [61] Yifang Qin, Hongjun Wu, Wei Ju, Xiao Luo, and Ming Zhang. 2023. A Diffusion Model for POI Recommendation. 
+
+ACM Transactions on Information Systems 42, 2 (2023), 1–27. ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 31 
+
+[62] Aditya Ramesh, Prafulla Dhariwal, Alex Nichol, Casey Chu, and Mark Chen. 2022. Hierarchical Text-Conditional Image Generation with CLIP Latents. arXiv preprint arXiv:2204.06125 1, 2 (2022), 3. [63] Steffen Rendle, Christoph Freudenthaler, Zeno Gantner, and Lars Schmidt-Thieme. 2009. BPR: Bayesian Personalized Ranking from Implicit Feedback. In Proceedings of the 25th Conference on Uncertainty in Artificial Intelligence . 452–461. [64] Te Song, Lianyong Qi, Weiming Liu, Fan Wang, Xiaolong Xu, Xuyun Zhang, Amin Beheshti, Xiaokang Zhou, and Wanchun Dou. 2025. Enhancing Diffusion Model with Auxiliary Information Mining-Exploration and Efficient Sampling Mechanism for Sequential Recommendation. In Proceedings of the 39th AAAI Conference on Artificial Intelligence . 12568–12576. [65] Yang Song, Jascha Sohl-Dickstein, Diederik P Kingma, Abhishek Kumar, Stefano Ermon, and Ben Poole. 2021. Score-Based Generative Modeling through Stochastic Differential Equations. In International Conference on Learning Representations .[66] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer. In Proceedings of the 28th ACM International Conference on Information and Knowledge Management . 1441–1450. [67] Zhu Sun, Hui Fang, Jie Yang, Xinghua Qu, Hongyang Liu, Di Yu, Yew-Soon Ong, and Jie Zhang. 2022. DaisyRec 2.0: Benchmarking Recommendation for Rigorous Evaluation. IEEE Transactions on Pattern Analysis and Machine Intelligence 45, 7 (2022), 8206–8226. [68] Mario Villaizán-Vallelado, Matteo Salvatori, Carlos Segura, and Ioannis Arapakis. 2025. Diffusion Models for Tabular Data Imputation and Synthetic Data Generation. ACM Transactions on Knowledge Discovery from Data 19, 6, Article 125 (2025), 32 pages. [69] Joojo Walker, Ting Zhong, Fengli Zhang, Qiang Gao, and Fan Zhou. 2022. Recommendation via Collaborative Diffusion Generative Model. In Proceedings of the 15th International Conference on Knowledge Science, Engineering and Management . 593–605. [70] Cong Wang, Jin Li, Shoujin Wang, Yishuo Li, Huilin Gu, and Wenpeng Lu. 2026. RES-MR: Risk-Aware Reasoning for Explainable and Safe Medication Recommendation. In Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval . 1834–1845. [71] Enming Wang, Jianlei Wang, Xueping Peng, Hongjiao Guan, Yinglong Wang, Sibo Wei, Jianbin Guo, Ruifeng Xu, and Wenpeng Lu. 2026. SOAPTriage: SOAP-Guided Multi-View Clinical Text Modeling Framework for Automated ESI Prediction. In Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics . 34813–34837. [72] Fan Wang, Chaochao Chen, Weiming Liu, Minye Lei, Jintao Chen, Yuwen Liu, Xiaolin Zheng, and Jianwei Yin. 2025. DR-VAE: Debiased and Representation-enhanced Variational Autoencoder for Collaborative Recommendation. In 
+
+Proceedings of the 39th AAAI Conference on Artificial Intelligence . 12703–12711. [73] Jianlei Wang, Jiasheng Si, Xueping Peng, Mingxia Liu, Shoujin Wang, Qi Zhang, and Wenpeng Lu. 2026. RMS-MDD: A Real-World Benchmark for Medical Dialogue Diagnosis with Symptom-Prompt Modeling. IEEE Journal of Biomedical and Health Informatics (2026), 1–14. [74] Nan Wang, Shoujin Wang, Yan Wang, Quan Z. Sheng, and Mehmet Orgun. 2020. Modelling Local and Global Dependencies for Next-Item Recommendations. In Proceedings of the 21st Web Information Systems Engineering .285–300. [75] Nan Wang, Shoujin Wang, Yan Wang, Quan Z. Sheng, and Mehmet A. Orgun. 2022. Exploiting intra- and inter-session dependencies for session-based recommendations. World Wide Web 25, 1 (2022), 425–443. [76] Shoujin Wang, Wentao Wang, Xiuzhen Zhang, Yan Wang, Huan Liu, and Fang Chen. 2024. A Hierarchical and Disentangling Interest Learning Framework for Unbiased and True News Recommendation. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . 3200–3211. [77] Wenjie Wang, Fuli Feng, Xiangnan He, Liqiang Nie, and Tat-Seng Chua. 2021. Denoising Implicit Feedback for Recommendation. In Proceedings of the 14th ACM International Conference on Web Search and Data Mining . 373–381. [78] Wenjie Wang, Yiyan Xu, Fuli Feng, Xinyu Lin, Xiangnan He, and Tat-Seng Chua. 2023. Diffusion Recommender Model. In Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval . 832–841. [79] Yuhao Wang, Ziru Liu, Yichao Wang, Xiangyu Zhao, Bo Chen, Huifeng Guo, and Ruiming Tang. 2024. Diff-MSR: A Diffusion Model Enhanced Paradigm for Cold-Start Multi-Scenario Recommendation. In Proceedings of the 17th ACM International Conference on Web Search and Data Mining . 779–787. [80] Yu Wang, Zhiwei Liu, Liangwei Yang, and Philip S Yu. 2024. Conditional Denoising Diffusion for Sequential Recommendation. In Proceedings of the 28th Pacific-Asia Conference on Knowledge Discovery and Data Mining . 156– 169. [81] Yunke Wang, Xiyu Wang, Anh-Dung Dinh, Bo Du, and Charles Xu. 2023. Learning to Schedule in Diffusion Probabilistic Models. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining .2478–2488. ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+32 Wang et al. 
+
+[82] Yihan Wang, Fei Xiong, Zhexin Han, Qi Song, Kaiqiao Zhan, and Ben Wang. 2025. Unleashing the Potential of Two-Tower Models: Diffusion-Based Cross-Interaction for Large-Scale Matching. In Proceedings of the 34th ACM on Web Conference . 304–312. [83] Ting-Ruen Wei and Yi Fang. 2025. Diffusion Models in Recommendation Systems: A Survey. arXiv:2501.10548 [cs.IR] [84] Rui Xia, Yanhua Cheng, Yongxiang Tang, Xiaocheng Liu, Xialong Liu, Lisong Wang, and Peng Jiang. 2025. S-Diff: An Anisotropic Diffusion Model for Collaborative Filtering in Spectral Domain. In Proceedings of the 18th ACM International Conference on Web Search and Data Mining . 70–78. [85] Wenjia Xie, Hao Wang, Luankang Zhang, Rui Zhou, Defu Lian, and Enhong Chen. 2024. Breaking determinism: Fuzzy modeling of sequential recommendation using discrete state space diffusion model. Advances in Neural Information Processing Systems 37 (2024), 22720–22744. [86] Wenjia Xie, Rui Zhou, Hao Wang, Tingjia Shen, and Enhong Chen. 2024. Bridging User Dynamics: Transform-ing Sequential Recommendations with Schrödinger Bridge and Diffusion Models. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . 2618–2628. [87] Yudi Xiong, Yongxin Guo, Weike Pan, Qiang Yang, Zhong Ming, Xiaojin Zhang, Han Yu, Tao Lin, and Xiaoying Tang. 2025. Camouflaged Variational Graph AutoEncoder against Attribute Inference Attacks for Cross-Domain Recommendation. IEEE Transactions on Knowledge and Data Engineering 37, 7 (2025), 3916–3932. [88] Yuhan Xiu and Xiangrong Tong. 2026. Dual-layer Cross-modal Alignment Recommendation Based on the Diffusion model. Information Fusion 125 (2026), 103472. [89] Lanling Xu, Junjie Zhang, Bingqian Li, Jinpeng Wang, Sheng Chen, Wayne Xin Zhao, and Ji-Rong Wen. 2025. Tapping the Potential of Large Language Models as Recommender Systems: A Comprehensive Framework and Empirical Analysis. ACM Transactions on Knowledge Discovery from Data 19, 5, Article 105 (2025), 51 pages. [90] Yuner Xuan. 2024. Diffusion Cross-domain Recommendation. arXiv:2402.02182 [cs.IR] [91] Dingqi Yang, Daqing Zhang, Longbiao Chen, and Bingqing Qu. 2015. NationTelescope: Monitoring and Visualizing Large-scale Collective Behavior in LBSNs. Journal of Network and Computer Applications 55 (2015), 170–180. [92] Dingqi Yang, Daqing Zhang, and Bingqing Qu. 2016. Participatory Cultural Mapping Based on Collective Behavior Data in Location-Based Social Networks. ACM Transactions on Intelligent Systems and Technology 7, 3 (2016), 1–23. [93] Longqi Yang, Eugene Bagdasaryan, Joshua Gruenstein, Cheng-Kang Hsieh, and Deborah Estrin. 2018. Openrec: A Modular Framework for Extensible and Adaptable Recommendation Algorithms. In Proceedings of the 11th ACM International Conference on Web Search and Data Mining . 664–672. [94] Yimeng Yang, Haokai Ma, Lei Meng, Shuo Xu, Ruobing Xie, and Xiangxu Meng. 2025. Curriculum Conditioned Diffusion for Multimodal Recommendation. In Proceedings of the 39th AAAI Conference on Artificial Intelligence .13035–13043. [95] Zhengyi Yang, Jiancan Wu, Zhicai Wang, Xiang Wang, Yancheng Yuan, and Xiangnan He. 2023. Generate What You Prefer: Reshaping Sequential Recommendation via Guided Diffusion. Advances in Neural Information Processing Systems 36 (2023), 24247–24261. [96] Yuanqing Yu, Chongming Gao, Jiawei Chen, Heng Tang, Yuefeng Sun, Qian Chen, Weizhi Ma, and Min Zhang. 2024. EasyRL4Rec: An Easy-to-use Library for Reinforcement Learning Based Recommender Systems. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval . 977–987. [97] Meng Yuan, Yutian Xiao, Wei Chen, Chou Zhao, Deqing Wang, and Fuzhen Zhuang. 2025. Hyperbolic Diffusion Recommender Model. In Proceedings of the 34th ACM on Web Conference . 1992–2006. [98] Qian Zhang, Shoujin Wang, Longbing Cao, Defu Lian, Haibo Zhang, and Wenpeng Lu. 2025. Semantic Relation Guided Dual-view Contrastive Learning for Session-based Recommendations. ACM Transactions on Information Systems 43, 6 (2025), 36 pages. [99] Qianru Zhang, Peng Yang, Junliang Yu, Haixin Wang, Xingwei He, Siu-Ming Yiu, and Hongzhi Yin. 2025. A Survey on Point-of-Interest Recommendation: Models, Architectures, and Security. IEEE Transactions on Knowledge and Data Engineering 37, 6 (2025), 3153–3172. [100] Chu Zhao, Enneng Yang, Yuliang Liang, Jianzhe Zhao, Guibing Guo, and Xingwei Wang. 2025. Distributionally Robust Graph Out-of-Distribution Recommendation via Diffusion Model. In Proceedings of the 34th ACM on Web Conference . 2018–2031. [101] Jujia Zhao, Wang Wenjie, Yiyan Xu, Teng Sun, Fuli Feng, and Tat-Seng Chua. 2024. Denoising Diffusion Recommender Model. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval . 1370–1379. [102] Wayne Xin Zhao, Shanlei Mu, Yupeng Hou, Zihan Lin, Yushuo Chen, Xingyu Pan, Kaiyuan Li, Yujie Lu, Hui Wang, Changxin Tian, et al. 2021. RecBole: Towards a Unified, Comprehensive and Efficient Framework for Recommendation Algorithms. In Proceedings of the 30th ACM International Conference on Information and Knowledge Management .4653–4664. ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026. Unpublished working draft. Not for distribution. 
+
+Eval4DiRec: A Unified and Systematic Evaluation Framework for Diffusion-based Recommender Systems 33 
+
+[103] Xin Zhou, Hongyu Zhou, Yong Liu, Zhiwei Zeng, Chunyan Miao, Pengwei Wang, Yuan You, and Feijun Jiang. 2023. Bootstrap Latent Representations for Multi-modal Recommendation. In Proceedings of the 32nd ACM on Web Conference . 845–854. [104] Wenqiao Zhu, Lulu Wang, and Jun Wu. 2025. Addressing Cold-Start Problem in Click-Through Rate Prediction via Supervised Diffusion Modeling. In Proceedings of the 39th AAAI Conference on Artificial Intelligence , Vol. 39. 13455–13463. [105] Yongchun Zhu, Zhenwei Tang, Yudan Liu, Fuzhen Zhuang, Ruobing Xie, Xu Zhang, Leyu Lin, and Qing He. 2022. Personalized Transfer of User Preferences for Cross-domain Recommendation. In Proceedings of the 15th ACM International Conference on Web Search and Data Mining . 1507–1515. [106] Yunqin Zhu, Chao Wang, Qi Zhang, and Hui Xiong. 2024. Graph Signal Diffusion Model for Collaborative Filtering. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval .1380–1390. [107] Yuansong Zhu and Yu Zhao. 2023. Diffusion Models in NLP: A Survey. arXiv preprint arXiv:2303.07576 (2023). [108] Jiankai Zuo, Zihao Yao, and Yaying Zhang. 2026. Bridging User Dynamic Preferences: A Unified Bridge-Based Diffusion Model for Next POI Recommendation. IEEE Transactions on Big Data 12, 1 (2026), 261–275. ACM Trans. Knowl. Discov. Data., Vol. 1, No. 1, Article . Publication date: September 2026.
