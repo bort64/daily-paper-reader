@@ -1,0 +1,283 @@
+Title: Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.30568v1
+
+Published Time: Mon, 28 Sep 2026 00:24:21 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation 
+
+# Matt Sandler 
+
+Feed.fm San Francisco, California, USA matt@feed.fm 
+
+## Abstract 
+
+A deployed B2B music-discovery platform serves both query-driven search (semantic-text prompts, vibe-tag selection) and seed-driven recommendation (seed-track and artist stations) over one licensed catalog, one LAION-CLAP joint audio–text embedding space, one candidate-generation filter, and one ranking head — and neither path consumes end-listener behavioral signal. In this content-only regime, professional curator judgment is the principal feedback signal available for maintaining the shared stack, and offline co-sine similarity predicts it poorly: 38% of cosine-nearest neighbors are rejected by curators. Inspecting the rejections reveals a clean partition: a majority (55%) are sound failures the encoder could in principle address (style, tempo, mood mismatch), and a substantial minority (37%) are context failures orthogonal to the waveform (wrong language, holiday content, devotional content, rights and lyric flags). We deploy this sound-vs-context decomposition as feed-back infrastructure over the shared stack, routing each failure mode to the layer that can absorb it: context failures to a constraint filter at the candidate-generation layer, sound failures to an embedding reweighting head at the representation layer — both layers sitting 
+
+below the search/recommendation split, so a single curator loop maintains both experiences. On 1,200 curator judgments collected over two production rounds one month apart, the combined in-tervention reduces rejection rate from 38.17% to 28.83% ( −24.5% relative , McNemar 𝜒 2=22 .4, 𝑝 = 2.2 × 10 −6). An accounting decom-position attributes 4.08 pp of the drop to filter-eligible categories and 5.25 pp to non-filter categories; the deployment was unblinded and compound, so this is a production accounting bound, not a clean causal estimate. We present this as an industrial case study of a shared feedback loop rather than a validated general method, and close with lessons for unified discovery in the content-only regime: the failure partition is orthogonal to the paradigm partition, corrections land in layers shared by both paradigms, and a small in-house curator panel can maintain both when behavioral signal is unavailable. 
+
+## Keywords 
+
+unified search and recommendation, music recommendation, au-dio embeddings, curator feedback, content-only retrieval, shared infrastructure, deployed systems 
+
+## 1 Introduction 
+
+A Spanish-language Latin-pop seed retrieves an English-language alt-pop track at cosine similarity 0 .83. The encoder captured the mid-tempo build, the bright vocal timbre, and the verse–chorus dynamics; a curator rejects it outright for wrong_language . An English-language pop seed retrieves a Spanish-language ballad at 0.85 in the opposite direction — same airy production, same melodic register, rejected for the same reason. A modern electro-funk seed retrieves a traditional Christmas standard at 0 .79 — same warm horns, same syncopated groove, rejected for holiday . The audio encoder did exactly what it was asked to do in each case; the nearest neighbor really is acoustically close. A curator rejects every one — and in the content-only regime described below, curator judgment is the available proxy for listener suitability. These rejections sit at a specific, named failure surface. A pro-duction music recommender embeds tracks as vectors and returns nearest neighbors — a pipeline that is cheap, scales, and is increas-ingly common in production [19]. Its candidates are, in practice, misaligned with curator suitability judgments more often than cosine similarity alone reveals. Nothing in this failure pattern is specific to our deployment: it is the predictable result of asking an audio encoder to satisfy judgments that partly live outside the audio, and any content-only system built on nearest-neighbor retrieval inherits it. The system we report on is a deployed music-discovery stack, run by Feed.fm, a B2B licensed-music platform that powers third-party apps under a content-only regime: the retrieval stack learns from catalog content and curator judgment, not from listener in-teractions. Per-listener skip and like events do exist, but spread across many small third-party apps they are sparse and unevenly distributed, and the discovery stack described here does not con-sume them; there is no collaborative-filtering substrate beneath it. The stack is unified from the bottom up: a single licensed catalog, a single LAION-CLAP joint audio–text embedding space, a single candidate-generation filter, and a single ranking head serve both query-driven entry points (semantic-text prompts, vibe-tag selec-tion) and seed-driven ones (seed-track and artist stations). The sys-tem serves four constituencies — rightsholders licensing the catalog, third-party apps consuming discovery results, in-house curators producing judgment data, and listeners receiving the results — with no behavioral signal from the last feeding the retrieval stack. This data regime is more common than the literature typically assumes — DMCA-compliant radio, in-app ambient music, curated corpo-rate audio, cold-start catalogs, and long-tail discovery all share it — and it withholds from retrieval exactly the signal that most unified search-and-recommendation architectures lean on hardest: logged user interactions. In a content-only regime, curator judgment is not one signal among many; it is the principal judgment signal available, and it arrives as a single stream regardless of which entry point produced the result being judged. Recent industry evidence arXiv:2609.30568v1 [cs.IR] 24 Sep 2026 Matt Sandler 
+
+shows enriched metadata materially improves downstream listener behavior: a DDEX report on Amazon Music and Universal Music Group [5] measured a 4.6% lift in streams (11.9% on algorithmic stations) and a 7.8% drop in skip rate from delivering richer genre and mood data on streaming platforms that do have behavioral signal. The corresponding upstream question — how a content-only system identifies and corrects nearest-neighbor failures before metadata is even attached — has received less attention. This paper reports a deployed answer. We inspected 458 thumbs-down judgments from 1,200 production recommendations and found a clean partition. A majority of rejections (55.2%) are sound 
+
+failures the encoder could in principle address (style, tempo, mood mismatch). A substantial minority (36.9%) are context failures or-thogonal to the waveform: wrong language, holiday content, devo-tional content, children’s catalog, content-rights restrictions. The two groups share almost nothing: same high cosine similarity, same audio plausibility, totally different engineering levers. 
+
+Contribution. We propose and deploy a sound-vs-context fail-ure decomposition for embedding-based music retrieval, treated as feedback infrastructure rather than as an academic taxonomy. The decomposition routes each curator thumbs-down to a distinct production mechanism at a distinct layer of the shared stack: a constraint filter handles Cctx at the candidate-generation layer, an embedding reweighting head handles Csound at the represen-tation layer. Both layers sit below the point where the stack forks into search-shaped and recommendation-shaped experiences, so corrections apply to every entry point; the curator evaluation in this paper measures the seed-track path. On the deployed system, the combined intervention reduces nearest-neighbor rejection rate from 38.17% to 28.83% — a −24.5% relative drop , McNemar paired 
+
+𝜒 2 = 22 .37, 𝑝 = 2.2 × 10 −6 — with an accounting decomposition attributing 4.08 pp of the drop to filter-eligible ( Cctx ) categories and 5.25 pp to non-filter ( Csound ∪ C other ) categories. The cost asymme-try is the practical surprise: the constraint filter is days of catalog work, the reweighting head is weeks of model work, and the two mechanisms account for comparable shares of the gap. 
+
+Scope of the claim. This is an industrial case study, not a val-idated general method. The mechanisms are deliberately simple — a SQL predicate and a linear projection — and the evidence is one compound production deployment measured on the seed-track path by a four-curator panel. What we claim is narrower and, we think, more useful to practitioners: that the sound-vs-context par-tition is a sound routing criterion for expert feedback in a shared content-only stack, that the cheap half of the routing buys as much as the expensive half, and that the loop is operable by a small in-house team. §5 states what the design cannot separate and what measurements would. The title’s pun captures the failure pattern: cosine similarity finds neighbors that are nearest in audio space, but closeness in audio is not what makes a curator hold them dear. 
+
+## 2 Related Work 
+
+Embedding-based music retrieval. Audio encoders such as LAION-CLAP [26], MERT [12], MULE [13], and MusicFM [25] are typically evaluated on tagging benchmarks [2, 11]; direct nearest-neighbor usefulness against curator or listener judgment receives less atten-tion. 
+
+Beyond accuracy in recommender evaluation. The RecSys community has long argued that accuracy metrics correlate imper-fectly with what users actually want [4, 8, 14]. Music adds genre-, language-, and context-specific failure modes that have no clean analogue in news or e-commerce [7, 19, 23]. Our contribution is concrete and operational: a partition of music-retrieval failures by which engineering lever resolves them. 
+
+Unified search and recommendation. Joint modeling of search and recommendation has been argued for on both theoretical and empirical grounds [28, 29], deployed industrially as a single con-textual model serving both tasks [1], and renewed by generative retrieval over semantic IDs [18] — where whether joint training helps or hurts each task remains an active question [17]. That line of work unifies primarily at the model layer and presumes logged user interactions from at least one paradigm. Our deployment unifies further down the stack — shared catalog, shared joint audio–text embedding space, shared candidate filter — and operates where nei-ther paradigm’s retrieval draws on behavioral logs. The unification question then inverts: not how to co-train on joint logs, but how a single expert-feedback loop maintains retrieval quality for both entry points at once. 
+
+Joint and multimodal search–recommendation models. Asecond line of work unifies the two paradigms at the user-behavior layer, modeling interleaved search and browsing sequences in one model: USER [27] integrates the two behavior streams into a single sequence; SESRec [21] learns disentangled search representations to improve recommendation; UniSAR [20] models user transitions between the two modes. Multimodal sequential recommenders such as MISSRec [24] bring pretrained image–text encoders into the item tower so that content, not only IDs, carries the representation. Our system is closest in spirit to the latter — a pretrained joint audio– text encoder is the item tower, and it is what lets text queries and seed tracks share one space — but it has no user-behavior sequence to model, so the sequence-level unification of USER, SESRec, and UniSAR is unavailable. On the ranking side, cross-encoders [15] and late-interaction models [9] score a query–item pair jointly rather than through two independent vectors; we use only a bi-encoder with a learned projection, and return to cross-encoding as future work in §5. 
+
+Industry deployments and metadata-driven lift. Recent Rec-Sys 2025 work describes deployed audio recommenders driven by listener behavior at scale, including content-type calibration [6] and synthetic query generation for cold-start audiobooks [16]. The DDEX/MEAD [5] report quantifies the downstream lift of richer genre and mood metadata on streaming platforms with behavioral signal. We complement these on the upstream side: how to iden-tify and correct retrieval failures before metadata enrichment, in a regime where retrieval has no listener-level signal to draw on. Nearest but Not Dearest 
+
+## 3 The Decomposition 3.1 Deployed system: one stack, four entry points 
+
+The recommendable catalog comprises 57,758 rights-cleared tracks; a separate reference catalog of 98,789 popular tracks supports query-side seed lookup but is not served. Track audio is embedded with LAION-CLAP [26] (HTSAT-base backbone, 512-d joint audio-text space, music-pretrained checkpoint). Vectors are stored in Post-greSQL with the pgvector extension; retrieval is exact cosine via a stored procedure. End-to-end query latency is 85 ms mean and 201 ms p95. Four entry points share this stack in production, spanning the query-driven/seed-driven divide. Two are search-shaped: semantic-text prompt (decomposed by a lightweight LLM into keyword to-kens, then CLAP-encoded into the joint audio–text space) and vibe-tag selection. Two are recommendation-shaped: seed-track and artist (mapped to the artist’s mean embedding). All four resolve to the same operation — nearest-neighbor retrieval in the shared CLAP space, over the same catalog, through the same candidate filter — differing only in how the query vector is constructed. The joint audio–text encoder is what makes this collapse possible: a text prompt and a seed track land in the same space, so “search” and “recommendation” differ at the interface layer, not the retrieval layer. The curator evaluation in this paper uses seed-track queries exclusively; §5 discusses what the shared-stack structure implies for the other entry points. A subset of context-aware rules pre-filters the candidate pool before cosine ranking; the rejections analyzed below survive that pre-filter. Contextual metadata used by both the pre-filter and the constraint filter we deploy in §4.3 — holiday and seasonal flags, devotional tags, per-track language — is sourced from third-party metadata and DDEX deliveries and stored at the audio-file level. 
+
+## 3.2 The sound-vs-context partition 
+
+Curators use a structured rejection interface that records, for each thumbs-down, a single failure-mode code from the production schema. We partition the schema into two disjoint sets, plus an explicit residual: 
+
+Csound = {tempo , style , mood },
+
+Cctx = {holiday , wrong_language , explicit ,
+
+lyrics , not_popular , bad_quality ,
+
+childrens , devotional },
+
+Cother = {other }.
+
+The partition is operational, not metaphysical: a code lands in Cctx 
+
+when the metadata that resolves it is non-acoustic and stored sepa-rately from the audio file (typically delivered by the rightsholder or surfaced from a tag dictionary). Cother captures codes the cura-tor could not cleanly attribute; in the accounting analysis (§4.3) we conservatively allocate Cother to the non-filter group alongside 
+
+Csound . The three derived shares are: 
+
+𝜙 𝑔 = #{𝑖 : 𝑐 𝑖 ∈ C 𝑔 }
+
+#{𝑖 : 𝑦 𝑖 = −} for 𝑔 ∈ { sound , ctx , other }, (1) with 𝜙 sound + 𝜙 ctx + 𝜙 other = 1. 
+
+Algorithm 1 Curator-feedback routing for a single thumbs-down 
+
+Input: seed 𝑠 , retrieved neighbor 𝑛 , failure-mode code 𝑐  
+
+> 1:
+
+if 𝑐 ∈ C ctx then  
+
+> 2:
+
+constraint filter: queue (𝑠, 𝑛, 𝑐 ) for catalog rule update  
+
+> 3:
+
+else ⊲ 𝑐 ∈ C sound ∪ C other (non-filter path)  
+
+> 4:
+
+for each curator-accepted neighbor 𝑛 + of seed 𝑠 do  
+
+> 5:
+
+reweighting head: emit triplet (𝑠, 𝑛 +, 𝑛 ) 
+
+> 6:
+
+end for  
+
+> 7:
+
+end if Why the partition matters. The two halves of the partition are addressed by qualitatively different engineering work. Csound 
+
+rejections call for adjusting where the encoder places neighbors — a representation-side intervention. Cctx rejections do not respond to representation work at all: the audio is plausibly close, the rejection depends on metadata orthogonal to the waveform. They call for fil-tering, gating, or candidate-pool restriction — catalog-infrastructure interventions. A retrieval system with a 38% expert-rejection rate that does not know whether the rejections are sound or context will spend its budget on the wrong levers. 
+
+## 3.3 Routing failures to mechanisms 
+
+The deployed loop is shown in Figure 1. Each curator thumbs-down with a code 𝑐 is dispatched as Algorithm 1. 
+
+Constraint filter (handles Cctx ). A rule-based filter applied at candidate generation, before cosine ranking. New Cctx codes from curator feedback are batched into rule updates: a recurring 
+
+wrong_language flag against a specific source catalog drives a language-tag audit; a holiday flag during off-season prompts a seasonal-tag review; a devotional flag against a non-religious sta-tion prompts a devotional-tag rule. The filter is implemented as SQL predicates over the same metadata table that feeds the existing pre-filter; updates ship the same day they are reviewed. Cost is days of catalog work per rule cluster. Because the filter applies at candidate generation — upstream of query-vector construction — a rule learned from seed-track feedback (a corrected language tag, a seasonal flag) constrains text-prompt and vibe-tag retrieval as well. 
+
+Reweighting head (handles Csound ). A standard metric-learning head trained on curator-derived positive/negative pairs. Curator thumbs-up pairs (seed, accepted neighbor) supply positives; thumbs-down pairs labeled Csound supply negatives. The head is a single linear projection over the frozen 512-dimensional LAION-CLAP audio embedding, preserving dimensionality, 𝐿 2-normalized at out-put. Training uses a Euclidean triplet margin loss with margin 0 .2over the 𝐿 2-normalized projections, optimized with AdamW (learn-ing rate 10 −4, weight decay 10 −4, batch size 32 triplets) for up to 50 epochs with early stopping (patience 5) on a seed-level 80/20 train/validation split. The projection is initialized near identity and trained with an additional regularizer penalizing deviation from the identity; both choices counter overfitting, since a 512 × 512 pro-jection carries roughly 262k parameters against the few hundred curator-derived triplets available. We construct triplets (𝑠, 𝑛 +, 𝑛 − )
+
+where 𝑛 + is a curator-accepted neighbor of seed 𝑠 and 𝑛 − is a Csound -rejected neighbor of the same seed, so the projection learns what Matt Sandler   
+
+> Seed track LAION-CLAP
+> embedding
+> Constraint filter Reweighting head Top-𝑘
+> recs Curator judgment
+> 𝑐 ∈ C ctx ?
+> yes no
+
+Figure 1: The curator-feedback loop. A rejection categorized as Cctx is routed to the constraint filter (catalog-side intervention); a rejection in Csound ∪ C other is routed to the reweighting head along the non-filter path (representation-side intervention). The two mechanisms address disjoint failure modes and update on different cadences. 
+
+curators consider a sonic match relative to that seed rather than in absolute terms. 
+
+Training-evaluation relationship. The reweighting head was trained on the Round-1 curator feedback. The Round-2 aggregate is therefore a production deployment result on the same evaluation workload that fed the training feedback — not a held-out generaliza-tion benchmark. To reduce leakage during model selection, we used a seed-level validation split: 20% of training seeds were held out, with all their neighbors excluded from the training set. The paired Round-1 →Round-2 comparison reported in §4.3 therefore measures the change in curator rejection rate on the production evaluation workload after feedback from that workload was incorporated into the reweighting head and the constraint filter. We report this as a production feedback-loop result rather than a held-out generaliza-tion benchmark; quantifying generalization to a never-judged seed population is left to future work. At ranking time, retrieval uses cosine in the projected space only — no blend with original cosine. The head is light enough to score candidates at query time without re-encoding the 57,758-track catalog; updates ship without recomputing the underlying CLAP embeddings. Cost is weeks of model and pipeline work per training cycle. The projection likewise lives in the shared space: any entry point whose query resolves to a CLAP vector can be scored through it, so a head trained on seed-track feedback is structurally available to the search-shaped paths; whether it improves them is a measurement question we return to in §5. The decomposition is what makes the routing well-defined. Both interventions are standard in isolation; the contribution here is the principled partition that decides which one each thumbs-down feeds. 
+
+## 4 Evaluation 4.1 Curator panel and protocol 
+
+The panel comprises four professional in-house music curators with combined expertise spanning hip-hop, Latin music, pop, R&B, classical, electronic dance, and metal. Each curator was assigned a disjoint slice of approximately 100 seed tracks (400 unique seeds to-tal), sampled uniformly at random from the recommendable catalog. For each seed, the production recommender returned 𝑘 = 3 nearest neighbors, yielding 𝑁 = 1,200 judgments per round. Round 1 was conducted on the baseline LAION-CLAP system (pre-filter only, no reweighting head); Round 2 was conducted approximately one month later, targeting the same 400-seed evaluation set after the constraint filter and reweighting head described in §3.3 had been deployed. Curators recorded a binary thumbs-up / thumbs-down judgment and, for thumbs-downs, a single failure-mode code from the schema in §3.2. 
+
+Paired-seed coverage. The aggregate rejection-rate comparison in §4.3 uses the full 𝑁 = 1,200 judgments per round. The seed-level paired test is restricted to the 269 of 400 seeds for which complete judgments exist in both rounds; the remaining 131 seeds had partial coverage (catalog availability, curator scheduling, or seeds that became ineligible under the new constraint filter and were therefore not served in Round 2). Reporting both statistics — the marginal proportion comparison on all 1,200 judgments per round, and the paired McNemar test on the 269-seed paired subset — guards against the residual concern that the marginal effect is driven by between-round seed-set differences. 
+
+## 4.2 Baseline failure-mode breakdown 
+
+Of 𝑁 = 1,200 Round-1 recommendations, 458 (38.17%) received a thumbs-down with a recorded failure-mode code; the remainder were accepted or did not have a code recorded. Table 1 reports the breakdown of the 458 rejections. Both halves of the partition are substantial: 𝜙 sound = 55 .2%, 𝜙 ctx =
+
+36 .9%, 𝜙 other = 7.9%. Even under the conservative assumption that the entire other bucket is sound-related, 𝜙 ctx remains a structurally significant share of failures and is unaddressable by encoder work alone. 
+
+Worked examples. High-similarity rejections in the Round-1 tail include: a synth-pop seed retrieving an obscure sound-alike at 𝜎 = 0.927 ( not_popular ); a country-pop ballad retrieving a religious-country devotional at 𝜎 = 0.892 ( devotional ); a Spanish-language seed retrieving an English-language alt-pop track at 𝜎 =
+
+0.83 ( wrong_language ); a modern electro-funk seed retrieving a Christmas standard at 𝜎 = 0.79 ( holiday ). All four are sound-plausible; none are encoder-addressable. 
+
+Cosine carries weak signal across categories. As a sanity check on the partition’s value, we treated cosine similarity as a binary classifier of curator judgment on Round-1, restricted to the 1,149 judgments with both a binary outcome and (for rejections) a recorded failure-mode code (positive class good_match : 𝑛 + = 691 thumbs-up; negative class: 𝑛 − = 458 thumbs-down; the remaining 51 of the 1,200 judgments are excluded). The resulting AUC is 0 .644 (95% bootstrap CI [0.613, 0.675]) — a real lift over chance, but far too weak to act as a rejection detector on its own, and notably similar across rejection categories. Figure 2 shows the cosine similarity distribution by curator judgment; the two distributions overlap Nearest but Not Dearest 
+
+Table 1: Round-1 (baseline) rejection breakdown over 𝑁 =
+
+1,200 recommendations, 𝑛 = 458 thumbs-downs with a recorded failure-mode code. Zero-count Cctx categories (e.g., 
+
+bad_quality ) are omitted from the table. other is reported as a separate row because the curator interface does not dis-aggregate sound-related from contextual “other” selections; the accounting analysis in §4.3 conservatively allocates Cother 
+
+to the non-filter group alongside Csound .                                       
+
+> Failure mode Count % rej.
+> Csound 253 55.2%
+> style 168 36.7%
+> tempo 52 11.4%
+> mood 33 7.2%
+> Cctx 169 36.9%
+> holiday 68 14.8%
+> wrong_language 67 14.6%
+> explicit 14 3.1%
+> not_popular 81.7%
+> childrens 71.5%
+> lyrics 30.7%
+> devotional 20.4%
+> other (uncategorized) 36 7.9% Total 458 100% 0.75 0.80 0.85 0.90 0.95 Cosine similarity (seed, retrieved neighbor) 0.0 2.5 5.0 7.5 10.0 12.5 15.0 Density
+> 0.881 0.897
+> AUC = 0.644
+> Accepted (thumbs-up, n= 691) Rejected (thumbs-down, n= 458)
+
+Figure 2: Cosine similarity distribution by curator judgment on Round-1 ( 𝑁 = 1,149 judgments with a clear binary out-come and recorded failure-mode code). Accepted (thumbs-up, 
+
+𝑛 = 691 ) and rejected (thumbs-down, 𝑛 = 458 ) distributions overlap heavily; the small mean shift (0.897 vs. 0.881, dashed lines) yields AUC = 0.644 , the empirical basis for the partition-as-routing-criterion argument in §3.3. 
+
+heavily despite a small mean shift ( ¯ 𝜎 + = 0.897, ¯ 𝜎 − = 0.881). Sound-related rejection means ( ¯ 𝜎 : style 0.877, tempo 0.880, mood 0.880) fall in the same band as most context categories ( ¯ 𝜎 : holiday 0.883, 
+
+wrong_language 0.879, devotional 0.884). Cosine does not predict 
+
+which kind of rejection a curator will make; it only weakly predicts that one will occur. This is the empirical fact that makes the routing in §3.3 necessary in the first place: the encoder cannot tell the two halves apart. 
+
+Table 2: Round-1 baseline vs. Round-2 (constraint filter + reweighting head) on 𝑁 = 1,200 judgments per round. Two-proportion pooled 𝑧 = 4.84 , 𝑝 = 1.3 × 10 −6.                     
+
+> Metric R1 R2 ΔRel. Seeds 400 400 ——Judged recs 1,200 1,200 ——Thumbs-downs 458 346 −112 —Rejection rate 𝜌 38.17% 28.83% −9.33 pp −24 .5%
+
+Table 3: Round-over-round accounting decomposition by cat-egory group. “Filter-eligible” contains Cctx ; “Non-filter” con-tains Csound and other . The deployment was unblinded and compound; this attribution is arithmetic across categories, not a controlled per-mechanism causal estimate.                  
+
+> Category group R1 TD R2 TD Δpp contrib. Filter-eligible ( Cctx )169 120 −49 −4.08 pp Non-filter ( Csound ∪ C other )289 226 −63 −5.25 pp Total 458 346 −112 −9.33 pp
+
+## 4.3 Round-2 intervention 
+
+Round 2 deployed the constraint filter and reweighting head de-scribed in §3.3 on the same seed set. Table 2 reports the headline result. 
+
+Seed-level paired test. Of the 269 seeds judged in both rounds, 76 improved (had thumbs-downs in R1, none in R2) versus 27 wors-ened (the inverse), a 2 .81:1 ratio. McNemar’s 𝜒 2 on the paired discor-dant cells (continuity-corrected): 𝜒 2 = 22 .37, df =1, 𝑝 = 2.25 × 10 −6.The seed-level effect is consistent with the marginal proportion test in Table 2 and is not driven by between-round seed-set differences. This treats the seed (not the individual 𝑘 = 3 recommendation) as the unit of analysis, addressing the within-seed clustering of the three retrieved candidates per query. 
+
+Per-curator stability. Each of the four curators judged a disjoint slice of approximately 100 seeds. Per-curator rejection rates moved consistently across rounds (all four curators within ±5 pp of the aggregate change), ruling out a single-curator effect driving the headline drop. 
+
+Accounting decomposition by category group. Table 3 re-ports the round-over-round breakdown by category group. The deployment was unblinded and the filter and reweighting head shipped together, so this is an arithmetic accounting across category groups, not a clean causal ablation. With that caveat, filter-eligible categories ( holiday , wrong_language , explicit , not_popular ,
+
+childrens , lyrics , devotional ) drop from 169 thumbs-downs to 120 (49 fewer, 4.08 pp of the aggregate). Non-filter categories (Csound ∪ C other : style , tempo , mood , other ) drop from 289 to 226 (63 fewer, 5.25 pp of the aggregate). The two contributions sum to 9.33 pp, matching the observed 9.33 pp drop. 
+
+The cost asymmetry is the practitioner takeaway. The con-straint filter is days of catalog and rule work; the reweighting head is weeks of model and pipeline work. Under the accounting in Ta-ble 3, their contributions to the aggregate win are within 1 pp of Matt Sandler R1 baseline Filter-eligible (ctx )Non-fi lter (sound ∪ other )R2 result  
+
+> 010 20 30 40
+> Curator rejection rate (%)  38.17% −4.08 pp
+> −5.25 pp 28.83%
+
+Figure 3: Rejection-rate waterfall, R1 baseline → R2 re-sult. Filter-eligible categories ( Cctx ) account for −4.08 pp of the drop; non-filter categories ( Csound ∪ C other ) account for 
+
+−5.25 pp. The two mechanisms shipped together (unblinded compound deployment); this is an arithmetic accounting de-composition, not a controlled per-mechanism ablation. 
+
+each other. A team that routes all curator-feedback work into a re-train cycle is leaving comparable gain on the table for the price of writing SQL predicates against a metadata table. 
+
+What the accounting can and cannot separate. Table 3 splits the drop by rejection category , not by mechanism , and the two do not coincide. Leakage runs in both directions. The filter removes candidates before ranking, so the neighbors that surface in Round 2 are drawn from a different pool; a track that replaces a filtered-out holiday standard can itself be rejected for style , or accepted, which moves the non-filter count without the head having done anything. Conversely, the head reorders the survivors, and a re-ranked top-3 can surface or bury a wrong_language track that the filter’s rules did not yet cover, which moves the filter-eligible count without the filter having done anything. Two structural facts bound the leakage. First, the head is trained only on Csound negatives, so it has no signal that would target context categories; any Cctx movement it causes is incidental. Second, the filter is a deterministic predicate over metadata, so it cannot distinguish two candidates on sound; any Csound movement it causes is through pool composition alone. The 4.08 pp / 5.25 pp split is therefore best read as “the filter’s share is at most the filter-eligible drop plus whatever pool-composition effect it had on the rest,” and symmetrically for the head. Two measurements would close the gap and are the ones we would run first (§5): a counterfactual replay of the Round-1 candidate lists through the Round-2 predicates, which the filter’s determinism makes exact and cheap, and a staged rollout with a curator round between shipping the filter and shipping the head. 
+
+## 4.4 Inter-rater agreement: a brief note 
+
+A two-curator pair re-judged 𝑛 = 134 shared seed-neighbor pairs in Round 1, yielding Cohen’s 𝜅 [3] = 0.451 (95% bootstrap CI 
+
+[0.30 , 0.60 ]; Landis-Koch [10] “moderate”). Decomposing the 36 disagreements: 75% are Csound (style 50%, tempo 19%, mood 6%), only 22% are Cctx . Curators agree more readily on whether a track is contextually unsuitable than on whether a sonic match is good enough. Practically, 𝜙 ctx is a more rater-robust signal than 𝜙 sound ,and reweighting-head training data should account for the larger label-noise component on the sound side. 
+
+## 5 Lessons and Limitations 
+
+The partition is the contribution; the mechanisms are com-modity. A constraint filter is a SQL predicate. A metric-learning head is a textbook component. What is not commodity is knowing which thumbs-down feeds which mechanism — and that decision is exactly what the partition makes well-defined. Teams that bun-dle all feedback into a single retraining loop wash the two halves together and dilute both signals. 
+
+𝜙 ctx is the cheaper half of the gain. On our system, the filter-eligible group ( Cctx ) accounts for 4.08 pp of the rejection-rate reduction at days-of-engineering cost. The non-filter group (Csound ∪ C other , addressed by the reweighting head) accounts for 5.25 pp at weeks-of-engineering cost. The cost-per-pp ratio favors the filter heavily. Practitioners with limited modeling capacity should route to Cctx first. 
+
+A small in-house panel is enough. Four curators producing 1,200 judgments was sufficient to drive a deployable, statistically robust intervention without consuming listener behavioral data. The content-only regime is not a death sentence for measured improvement; it just shifts the judgment source from listeners to professionals. Curators are a proxy for listeners, and the proxy is unvalidated here: no behavioral loop is closed here to confirm that curator-approved retrieval is listener-preferred retrieval. We treat this as a structural property of the regime rather than a fixable gap, and note that the round-over-round drop is robust to any fixed curator-listener offset. 
+
+The failure partition is orthogonal to the paradigm parti-tion. Sound-vs-context is not search-vs-recommendation. A Christ-mas standard is wrong for a March seed track and equally wrong for a March text prompt; a tempo mismatch is a tempo mismatch regardless of how the query vector was constructed. Because both correction mechanisms live in layers shared by every entry point — the filter at candidate generation, the head at representation — feed-back collected on one paradigm’s workload structurally propagates to the other. This is the content-only analogue of cross-task transfer in unified models: transfer happens through shared infrastructure rather than through parameters co-trained on joint interaction logs. A team maintaining separate feedback loops per entry point would pay for the same correction up to four times; routing by failure mode instead of by entry point collects each correction once and amortizes it across the stack. 
+
+Limitations. (i) The Round-1 →Round-2 production deployment was unblinded and the intervention was compound (filter + head); the per-mechanism decomposition in §4.3 is an arithmetic bound, not a clean per-mechanism causal estimate. (ii) Scope is one de-ployed system on one catalog; generalization to other catalogs and other audio encoders is left to future work. (iii) Curators are in-house professionals; calibration drift relative to an external curator pool would limit generalization of the absolute rejection-rate levels, though the round-over-round drop is measured paired-seed and is robust to that drift. (iv) The four-curator panel is small; the inter-rater statistics make this size scrutable, but a larger pool is desirable. (v) Cross-entry-point transfer follows from the architecture (shared Nearest but Not Dearest 
+
+filter, shared representation) but is not yet measured: the curator protocol evaluated the seed-track path only, and the text-prompt and vibe-tag paths await an equivalent evaluation. (vi) The result is a change in curator rejection rate on the workload that fed the feedback, not a change on unseen seeds and not a change in listener satisfaction; the paper shows the feedback loop closes, not that it generalizes. 
+
+Future work. We list the measurements in the order we would run them. 
+
+Measure the search path. The nearest measurement is the one limitation (v) names: rerun the §4 protocol with query-driven entry points in place of seed tracks. The concrete protocol is already determined by the shared stack: for each of the 400 evaluation seeds, derive a text prompt (curator-written, or the seed’s own vibe tags), retrieve 𝑘 = 3 through the same filter and head, and have the same panel judge with the same rejection schema. Because the filter is a predicate on metadata, its Cctx corrections apply to text-prompt retrieval by construction; the open quantity is the head, whose projection was fit to seed-track triplets and may or may not improve neighbors of a text-derived query vector. That number — how much of the seed-path lift transfers across the paradigm split for free — is, to our knowledge, unmeasured in any content-only deployment, and it is the measurement that would turn the shared-infrastructure argument of this paper from structural into empirical. 
+
+Disentangle the mechanisms. The counterfactual filter replay and the staged rollout described in §4.3 would replace the accounting bound with a per-mechanism estimate. 
+
+Add a third judge. The panel is the bottleneck: 1,200 judgments per round is what four curators can produce alongside their regular work, and it is why Round 2 targets the same seeds rather than a held-out set. An LLM judge [22, 30] is the obvious way to scale, but the partition predicts where it will and will not help. Context failures are resolved by metadata the model can read — language, seasonal and devotional tags, explicit flags, lyrics — and are the categories on which human curators already agree (§4.4); an LLM auditor over Cctx could plausibly extend filter-rule discovery to the full catalog and to seeds no curator has judged. Sound failures are the categories on which curators disagree most, and a text-only judge does not hear the audio; an audio-capable judge would need to be calibrated against the panel on exactly the style /tempo /mood 
+
+disagreements in §4.4 before its labels could feed the head. We therefore see LLM judgment as a way to scale the cheap half of the loop first, and as a third rater whose agreement with the panel is itself a result worth reporting. 
+
+Cross-encode the sound side. The reweighting head compresses each track into one vector and asks cosine to carry every aspect of the match. A cross-encoder [15] over the (seed, candidate) pair — or a late-interaction model [9] over frame-level audio tokens — can attend to the specific aspect on which two tracks agree or differ, which is what tempo and mood rejections at 𝜎 > 0.88 suggest a single vector cannot. The curator data is already in the right shape: every judgment is a labeled (seed, candidate) pair. The 85 ms mean latency budget rules out cross-encoding the catalog, but not re-scoring a bi-encoder shortlist of a few dozen candidates, which is the standard retrieve-then-rerank arrangement. Whether a few hundred curator pairs suffice to train one is the open question; the identity-regularized linear head was chosen for the same data-scarcity reason. 
+
+Validate against listeners. The discovery stack does not consume listener behavior, which is why curators stand in; skip and like events do exist, sparse and uneven across apps. Comparing ag-gregate skip rates on stations built from Round-2 versus Round-1 neighbors, where an app’s volume permits, would test whether cura-tor rejection tracks listener rejection, and is the only way to convert the result from an expert-proxy improvement into a listener-facing one. 
+
+Replicate across encoders. Replicating the partition across addi-tional encoders (including masked-token-trained alternatives such as MERT [12]) is a natural follow-up; whether the sound-vs-context split is paradigm-level or encoder-specific is an open empirical ques-tion. 
+
+## 6 Conclusion 
+
+We described a sound-vs-context failure decomposition for embedding-based music retrieval and reported its deployment as curator-feedback infrastructure on a production discovery stack that serves search-shaped and recommendation-shaped entry points from one em-bedding space, one catalog, and one candidate filter. The partition routes each curator thumbs-down to one of two mechanisms — a constraint filter for context failures or an embedding reweighting head for sound failures — at two layers of the shared stack that sit below the paradigm split, on disjoint engineering cadences. The combined intervention reduces production rejection rate by 24.5% relative ( 𝑝 = 2.2 × 10 −6) on 1,200 judgments per round; an account-ing decomposition over filter-eligible and non-filter category groups shows comparable reductions on each side, with a substantial cost asymmetry favoring the filter on a cost-per-percentage-point basis. The decomposition is the contribution; the mechanisms are off-the-shelf, and the evidence is a single production case study whose per-mechanism and cross-paradigm claims remain to be measured. For content-only discovery systems whose retrieval does not draw on behavioral signal in either paradigm, this is a low-overhead pat-tern for converting professional curator judgment into measurable retrieval improvement — collected once, applied to every entry point the stack serves. 
+
+## Ethics Statement 
+
+The evaluation involved four in-house professional music curators compensated as part of regular employment; no external or crowd-sourced raters participated, and no end-listener data is used. The taxonomy names categories (e.g., wrong_language , devotional ,
+
+childrens ) that, applied asymmetrically, could risk algorithmic bias against non-dominant languages, cultural traditions, or listener communities. The taxonomy is context-aware: a category fires only when a seed’s context and a retrieved neighbor’s properties mismatch, not as a standing judgment on any music category. We recommend practitioners audit protocol outputs by seed-context to detect and correct systematic under-service of non-dominant contexts. Matt Sandler 
+
+## AI Usage Statement 
+
+AI assistants were used for grammar, style, and copy-editing of author-drafted prose, and for LaTeX formatting (table layout, figure placement, bibliography hygiene). All research ideas, experimental design choices, data analyses, statistical computations, and figures are the authors’ own. 
+
+## References 
+
+[1] Moumita Bhattacharya, Vito Ostuni, and Sudarshan Lamkhede. 2024. Joint Mod-eling of Search and Recommendations Via an Unified Contextual Recommender (UniCoRn). In Proc. of the 18th ACM Conf. on Recommender Systems (RecSys) .[2] Dmitry Bogdanov, Minz Won, Philip Tovstogan, Alastair Porter, and Xavier Serra. 2019. The MTG-Jamendo Dataset for Automatic Music Tagging. In Machine Learning for Music Discovery Workshop, Int. Conf. on Machine Learning (ICML) .[3] Jacob Cohen. 1960. A Coefficient of Agreement for Nominal Scales. Educational and Psychological Measurement 20, 1 (1960), 37–46. [4] Paolo Cremonesi, Yehuda Koren, and Roberto Turrin. 2010. Performance of Recommender Algorithms on Top-N Recommendation Tasks. In Proc. of the ACM Conf. on Recommender Systems (RecSys) .[5] DDEX. 2022. Early Test of MEAD at Amazon Music and Universal Music Group Leads to an Increase in Active and Passive Streaming Behavior. DDEX BIG Summit industry report. Reported 4.6% increase in streams, 11.9% increase on algorithmic stations and playlists, and 7.8% decrease in skip rate over a 90-day window following delivery of enriched genre and mood metadata. [6] Diego Feijer, Himan Abdollahpouri, Sanket Gupta, Alexander Clare, Yuxiao Wen, Todd Wasson, Maria Dimakopoulou, Zahra Nazari, Kyle Kretschman, and Mounia Lalmas. 2025. Calibrated Recommendations with Contextual Bandits. In 
+
+CONSEQUENCES Workshop at the ACM Conf. on Recommender Systems (RecSys) .arXiv:2509.05460. [7] Arthur Flexer and Dominik Schnitzer. 2010. Effects of Album and Artist Filters in Audio Similarity Computed for Very Large Music Databases. Computer Music Journal 34, 3 (2010), 20–28. [8] Jonathan L. Herlocker, Joseph A. Konstan, Loren G. Terveen, and John T. Riedl. 2004. Evaluating Collaborative Filtering Recommender Systems. ACM Transac-tions on Information Systems 22, 1 (2004), 5–53. [9] Omar Khattab and Matei Zaharia. 2020. ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT. In Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval .[10] J. Richard Landis and Gary G. Koch. 1977. The Measurement of Observer Agree-ment for Categorical Data. Biometrics 33, 1 (1977), 159–174. [11] Edith Law, Kris West, Michael I. Mandel, Mert Bay, and J. Stephen Downie. 2009. Evaluation of Algorithms Using Games: The Case of Music Tagging. In Proc. of the Int. Society for Music Information Retrieval Conf. (ISMIR) .[12] Yizhi Li, Ruibin Yuan, Ge Zhang, Yinghao Ma, Xingran Chen, Hanzhi Yin, Cheng-hao Xiao, Chenghua Lin, Anton Ragni, Emmanouil Benetos, Norbert Gyenge, Roger Dannenberg, Ruibo Liu, Wenhu Chen, Gus Xia, Yemin Shi, Wenhao Huang, Zili Wang, Yike Guo, and Jie Fu. 2024. MERT: Acoustic Music Understanding Model with Large-Scale Self-supervised Training. In Proc. of the Int. Conf. on Learning Representations (ICLR) .[13] Matthew C. McCallum, Filip Korzeniowski, Sergio Oramas, Fabien Gouyon, and Andreas F. Ehmann. 2022. Supervised and Unsupervised Learning of Audio Representations for Music Understanding. In Proc. of the Int. Society for Music Information Retrieval Conf. (ISMIR) .[14] Sean M. McNee, John Riedl, and Joseph A. Konstan. 2006. Being Accurate is Not Enough: How Accuracy Metrics Have Hurt Recommender Systems. In Extended Abstracts of the SIGCHI Conf. on Human Factors in Computing Systems (CHI) .[15] Rodrigo Nogueira and Kyunghyun Cho. 2019. Passage Re-ranking with BERT. 
+
+arXiv preprint arXiv:1901.04085 (2019). [16] Enrico Palumbo, Gustavo Penha, Alva Liu, Marcus Eltscheminov, Jefferson Car-valho dos Santos, Alice Wang, Hugues Bouchard, Humberto Jesús Corona Pampin, and Michelle Tran Luu. 2025. AudioBoost: Increasing Audiobook Retrievability in Spotify Search with Synthetic Query Generation. In EARL Workshop at the ACM Conf. on Recommender Systems (RecSys) . arXiv:2509.06452. [17] Gustavo Penha, Ali Vardasbi, Enrico Palumbo, Marco de Nadai, and Hugues Bouchard. 2024. Bridging Search and Recommendation in Generative Retrieval: Does One Task Help the Other?. In Proc. of the 18th ACM Conf. on Recommender Systems (RecSys) .[18] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Q. Tran, Jonah Samost, Maciej Kula, Ed H. Chi, and Maheswaran Sathiamoorthy. 2023. Recommender Systems with Generative Retrieval. In Advances in Neural Information Processing Systems (NeurIPS) .[19] Markus Schedl, Hamed Zamani, Ching-Wei Chen, Yashar Deldjoo, and Mehdi Elahi. 2018. Current Challenges and Visions in Music Recommender Systems Research. Int. Journal of Multimedia Information Retrieval 7, 2 (2018), 95–116. [20] Teng Shi, Zihua Si, Jun Xu, Xiao Zhang, Xiaoxue Zang, Kai Zheng, Dewei Leng, Yanan Song, and Yang Niu. 2024. UniSAR: Modeling User Transition Behaviors between Search and Recommendation. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval .[21] Zihua Si, Zhongxiang Sun, Xiao Zhang, Jun Xu, Xiaoxue Zang, Yang Song, Kun Gai, and Ji-Rong Wen. 2023. When Search Meets Recommendation: Learning Disentangled Search Representation for Recommendation. In Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval .[22] Paul Thomas, Seth Spielman, Nick Craswell, and Bhaskar Mitra. 2024. Large Language Models can Accurately Predict Searcher Preferences. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval .[23] Julián Urbano, Markus Schedl, and Xavier Serra. 2013. Evaluation in Music Information Retrieval. Journal of Intelligent Information Systems 41, 3 (2013), 345–369. [24] Jinpeng Wang, Ziyun Zeng, Yunxiao Wang, Yuting Wang, Xingyu Lu, Tianxiang Li, Jun Yuan, Rui Zhang, Hai-Tao Zheng, and Shu-Tao Xia. 2023. MISSRec: Pre-training and Transferring Multi-modal Interest-aware Sequence Representation for Recommendation. In Proceedings of the 31st ACM International Conference on Multimedia .[25] Minz Won, Yun-Ning Hung, and Duc Le. 2024. A Foundation Model for Music Informatics. In Proc. IEEE Int. Conf. on Acoustics, Speech and Signal Processing (ICASSP) .[26] Yusong Wu, Ke Chen, Tianyu Zhang, Yuchen Hui, Taylor Berg-Kirkpatrick, and Shlomo Dubnov. 2023. Large-Scale Contrastive Language-Audio Pretraining with Feature Fusion and Keyword-to-Caption Augmentation. In Proc. IEEE Int. Conf. on Acoustics, Speech and Signal Processing (ICASSP) .[27] Jing Yao, Zhicheng Dou, Jun Xu, and Ji-Rong Wen. 2021. USER: A Unified Information Search and Recommendation Model based on Integrated Behavior Sequence. In Proceedings of the 30th ACM International Conference on Information & Knowledge Management (CIKM) .[28] Hamed Zamani and W. Bruce Croft. 2018. Joint Modeling and Optimization of Search and Recommendation. In Proc. of the First Biennial Conference on Design of Experimental Search & Information Retrieval Systems (DESIRES) .[29] Hamed Zamani and W. Bruce Croft. 2020. Learning a Joint Search and Recom-mendation Model from User-Item Interactions. In Proc. of the 13th ACM Int. Conf. on Web Search and Data Mining (WSDM) .[30] Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric P. Xing, Hao Zhang, Joseph E. Gonzalez, and Ion Stoica. 2023. Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena. In Advances in Neural Information Processing Systems (NeurIPS) .

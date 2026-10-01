@@ -1,0 +1,54 @@
+{
+  "label": "2026-10-01",
+  "date": "2026-10-01",
+  "generated_at": "2026-10-01T23:00:10",
+  "count": 3,
+  "papers": [
+    {
+      "paper_id": "202610/01/2609.30568v1-nearest-but-not-dearest-shared-curator-feedback-infrastructure-for-content-only-search-and-recommendation",
+      "section": "quick",
+      "title_en": "Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation",
+      "authors": "Matt Sandler",
+      "date": "2026-09-24",
+      "pdf": "https://arxiv.org/pdf/2609.30568v1",
+      "score": "6.0",
+      "evidence": "共享候选生成与排序基础设施统一服务搜索与推荐",
+      "tldr": "面向已部署 B2B 音乐发现平台，搜索与推荐共享同一 CLAP 音文嵌入、候选过滤和排序头，且不依赖终端行为信号。离线余弦相似度与策展人判断偏差大，38% 最近邻被拒；作者将拒因分为音质失败与语境失败，分别路由到候选约束过滤和嵌入重加权头，共用一条策展反馈回路。两轮 1200 条判断中，拒绝率从 38.17% 降至 28.83%，相对降 24.5%。这为内容冷启动发现提供失败分层与共享反馈层案例。",
+      "tags": "query:search-rec",
+      "abstract_en": "A deployed B2B music-discovery platform serves both query-driven search (text prompts, vibe tags) and seed-driven recommendation (seed-track and artist stations) over one licensed catalog, one LAION-CLAP joint audio-text embedding space, one candidate-generation filter, and one ranking head -- and neither path consumes end-listener behavioral signal. In this content-only regime, curator judgment is the principal feedback signal available, and offline cosine similarity predicts it poorly: 38% of cosine-nearest neighbors are rejected by curators. The rejections reveal a clean partition: a majority (55%) are sound failures the encoder could address (style, tempo, mood mismatch), and a substantial minority (37%) are context failures orthogonal to the waveform (wrong language, holiday content, devotional content, rights and lyric flags). We deploy this sound-vs-context decomposition as feedback infrastructure, routing each failure mode to the layer that can absorb it: context failures to a constraint filter at candidate generation, sound failures to an embedding reweighting head at the representation layer -- both below the search/recommendation split, so a single curator loop maintains both experiences. On 1,200 curator judgments collected over two production rounds one month apart, the combined intervention reduces rejection rate from 38.17% to 28.83% (-24.5% relative, McNemar chi-squared = 22.4, p = 2.2e-6). An accounting decomposition attributes 4.08 pp of the drop to filter-eligible categories and 5.25 pp to the rest; the deployment was unblinded and compound, so this is a production accounting bound, not a causal estimate. We present this as an industrial case study rather than a validated general method, and close with lessons for content-only discovery: the failure partition is orthogonal to the paradigm partition, and corrections land in layers shared by both paradigms.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/01/2609.31002v1-zoowork-shopranker-an-open-preference-aligned-e-commerce-reranker",
+      "section": "quick",
+      "title_en": "ZooWork-ShopRanker: An Open, Preference-Aligned E-Commerce Reranker",
+      "authors": "Siqiao Xue, Shuxuan Liu, Ning Hu",
+      "date": "2026-09-25",
+      "pdf": "https://arxiv.org/pdf/2609.31002v1",
+      "score": "6.0",
+      "evidence": "面向电商搜索排序的LLM偏好对齐重排器",
+      "tldr": "通用网页检索的开放重排器难以适配电商场景，因为排序不仅看主题相关性，还依赖用户偏好、商品约束与商品间比较适配，而真实搜索流量缺少干净成对偏好标签。ZooWork-ShopRanker 用多家族推理大模型作偏好裁判，结合位置去偏与一致性分层生成监督标签，训练 0.6B/4B/8B 电商重排器，并由对齐后的 8B 旗舰蒸馏 4B 与 0.6B。作者发布约一万条私有流量双格式偏好对的 ShopRank-Bench；8B 与 4B 显著超越最强开放重排基线，各模型也均优于未对齐底座，0.6B 胜过同尺寸同类，增益在双格式及 MTEB 上成立。",
+      "tags": "query:search-rec",
+      "abstract_en": "Open rerankers trained for general web retrieval transfer imperfectly to e-commerce, where ranking decisions depend not only on topical relevance but also on user preferences, product constraints, and comparative product fit. These preference signals are difficult to supervise at scale: real search traffic provides authentic queries and candidates but no clean pairwise labels. We present ZooWork-ShopRanker, a family of e-commerce rerankers (0.6B, 4B, and 8B) aligned to judge-labeled shopping preference. Training pairs are labeled by a panel of reasoning large language models (LLMs) from different families acting as a preference oracle, with position-debiased judgments and agreement tiers, and the rerankers are trained on these labels. The aligned 8B flagship then serves as a distillation teacher for the efficient 4B and 0.6B models, which are fit to its scores and sharpened on judged pairs. To measure progress, we introduce ShopRank-Bench, a contamination-limited benchmark of ~10,000 private-traffic preference pairs in both text formats, tiered by how many judge families committed to each label. ZooWork-ShopRanker-8B and -4B significantly outperform the strongest open reranker baseline, every model significantly beats its own un-aligned base, and ZooWork-ShopRanker-0.6B beats its size peer; the gains hold in both formats and extend to common MTEB benchmarks. We release the models and the dual-format ShopRank-Bench to facilitate further research.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/01/2609.31166v1-agentrecommender-llm-agents-enable-customizable-recommender-systems-on-the-user-side",
+      "section": "quick",
+      "title_en": "AgentRecommender: LLM Agents Enable Customizable Recommender Systems on the User Side",
+      "authors": "Ryoma Sato",
+      "date": "2026-09-25",
+      "pdf": "https://arxiv.org/pdf/2609.31166v1",
+      "score": "6.0",
+      "evidence": "基于LLM智能体的用户侧可定制推荐系统",
+      "tldr": "传统推荐系统由平台主导，易带来标题党、信息茧房与假新闻等问题，用户侧推荐系统被视为摆脱平台利益控制的新范式。但用户自建推荐系统并不容易，个性化定制通常还需额外数据。AgentRecommender 利用 LLM 智能体的调查能力与内部知识，无需额外数据即可灵活构建用户侧推荐系统。它让用户能够轻松创建符合自身偏好的推荐系统，推动推荐控制权向用户转移。",
+      "tags": "query:search-rec",
+      "abstract_en": "Recommender systems have traditionally been developed for platforms. However, this has given rise to many phenomena that may be advantageous for platform lock-in but are a nuisance to users, such as clickbait, filter bubbles, and the spread of fake news. Recently, user-side recommender systems have been proposed as a new paradigm for solving this problem. If users deploy their own recommender systems, they are no longer at the mercy of the platform's interests. However, building a user-side recommender system is not trivial; in particular, customizing one for oneself requires additional data. We propose AgentRecommender, a method that leverages the investigation capability and internal knowledge of LLM agents to flexibly build user-side recommender systems without additional data. AgentRecommender allows users to easily create recommender systems tailored to their own preferences.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

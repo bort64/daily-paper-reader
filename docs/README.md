@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-30</span>
+      <span class="dpr-home-dashboard-kicker">2026-10-01</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 4 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 3 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>4</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-30 23:15:34 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-10-01 23:00:09 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日速读4篇推荐系统与大模型交叉论文，聚焦LLM推荐中的偏好漂移与广告/音乐对话推荐评测。</p>
-<p>最值得看的是《Measuring and Mitigating Identity-Cue Preference Drift in LLM-based Recommender Systems》（7.0分），以及两份新基准——LLM广告人类偏好基准LLMAdBench和RecSys 2026对话式音乐推荐挑战赛分析。</p>
-<p>普通读者可先了解&quot;身份线索&quot;如何让LLM推荐结果偏移，再对照这两个基准思考评测自己场景时的偏差与广告体验问题。</p>
+<p>今日速读3篇推荐系统论文，均分6.0，涵盖共享策展反馈、电商重排与用户侧LLM智能体。最值得看的是《AgentRecommender》提出的用户侧可定制推荐，以及《ZooWork-ShopRanker》的偏好对齐电商重排思路。普通读者可先关注LLM智能体如何让推荐由用户自己掌控这一方向。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -93,12 +91,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">4 篇</strong>
+    <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Measuring and Mitigating Identity-Cue Preference Drift in LLM-based Recommender Systems">Measuring and Mitigating Identity-Cue Preference Drift in LLM-based Recommender Systems</span></li><li><span class="dpr-home-dashboard-paper-title" title="LLMAdBench: A Human Preference Benchmark for Advertising in LLM Responses">LLMAdBench: A Human Preference Benchmark for Advertising in LLM Responses</span></li><li><span class="dpr-home-dashboard-paper-title" title="Overview and Analysis of the RecSys Challenge 2026: Conversational Music Recommendation">Overview and Analysis of the RecSys Challenge 2026: Conversational Music Recommendation</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation">Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="ZooWork-ShopRanker: An Open, Preference-Aligned E-Commerce Reranker">ZooWork-ShopRanker: An Open, Preference-Aligned E-Commerce Reranker</span></li><li><span class="dpr-home-dashboard-paper-title" title="AgentRecommender: LLM Agents Enable Customizable Recommender Systems on the User Side">AgentRecommender: LLM Agents Enable Customizable Recommender Systems on the User Side</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>4</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
 </div>
 

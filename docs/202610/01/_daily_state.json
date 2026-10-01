@@ -1,0 +1,57 @@
+{
+  "date": "20261001",
+  "date_label": "",
+  "generated_at": "2026-10-01 23:00:09 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.30568v1",
+      "route": "202610/01/2609.30568v1-nearest-but-not-dearest-shared-curator-feedback-infrastructure-for-content-only-search-and-recommendation",
+      "title": "Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "共享候选生成与排序基础设施统一服务搜索与推荐",
+      "first_seen_at": "2026-10-01 23:00:09 UTC",
+      "updated_at": "2026-10-01 23:00:09 UTC"
+    },
+    {
+      "paper_id": "2609.31002v1",
+      "route": "202610/01/2609.31002v1-zoowork-shopranker-an-open-preference-aligned-e-commerce-reranker",
+      "title": "ZooWork-ShopRanker: An Open, Preference-Aligned E-Commerce Reranker",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向电商搜索排序的LLM偏好对齐重排器",
+      "first_seen_at": "2026-10-01 23:00:09 UTC",
+      "updated_at": "2026-10-01 23:00:09 UTC"
+    },
+    {
+      "paper_id": "2609.31166v1",
+      "route": "202610/01/2609.31166v1-agentrecommender-llm-agents-enable-customizable-recommender-systems-on-the-user-side",
+      "title": "AgentRecommender: LLM Agents Enable Customizable Recommender Systems on the User Side",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "基于LLM智能体的用户侧可定制推荐系统",
+      "first_seen_at": "2026-10-01 23:00:09 UTC",
+      "updated_at": "2026-10-01 23:00:09 UTC"
+    }
+  ]
+}
