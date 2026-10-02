@@ -1,0 +1,552 @@
+Title: GRP v0.1 Technical Report
+
+URL Source: https://arxiv.org/pdf/2609.36688v1
+
+Published Time: Wed, 30 Sep 2026 00:55:19 GMT
+
+Number of Pages: 26
+
+Markdown Content:
+GRP v0.1 Technical Report 
+
+# GRP v0.1 Technical Report 
+
+GRP Team 
+
+Snap Inc. 
+
+Contributors are listed in Appendix A. 
+
+End-to-end (E2E) generative recommendation replaces the multi-stage cascade of retrieval, ranking, and re-ranking models that powers today’s industrial recommenders with a single model that 
+
+generates the next item’s identifier. Early industrial systems such as OneRec have shown that the paradigm is viable, yet in our experiments, attempts to replace a production cascade overnight 
+
+produced negative online results, and for structural reasons. A mature cascade embeds thousands of granular optimizations accumulated over a decade—per-source freshness rules, eligibility filters, calibration layers, diversity controls—that a bare generator does not reproduce; generative retrieval alone rarely matches the cascade’s ranking capability; and on a fast-churning catalog a frozen generator’s exact-item recall collapses within days. A head-to-head swap therefore measures the absence of those optimizations more than the quality of the generator, and it offers no signal about which gap to close first. We instead propose a progressive path. First, deploy the E2E model as one retrieval source among the existing ones and benchmark it against every incumbent source on the same recommendation metrics for the same users—any shortfall pinpoints the bottleneck that blocks replacement. Second, retire the sources it beats, reassign their quota to the model, and grow that quota as the model improves. Third, let a growing portion of its candidates bypass the early-stage and eventually the late-stage rankers on the model’s own ordering, until the rankers no longer change the served slate. Every step is independently measurable and shippable, and the comparison is always made on the incumbent system’s own terms. This path places requirements on the model itself: it must rank as well as it retrieves, it must be steerable toward business value, and it must serve inside a live feed’s latency budget. GRP , Snap’s 
+
+Generative Recommendation Paradigm, is a single encoder–decoder model built to meet them: it (i) generates multimodal Semantic IDs as its retrieval output, (ii) scores generated candidates with a jointly-trained multi-head prediction (MHP) module as its ranking output, and (iii) reuses that same frozen MHP module as the reward model for reinforcement-learning post-training. The report describes the methodology at each stage: 1. Architecture and pre-training. The strategy is to unify retrieval and ranking in one model without letting the two objectives interfere: an encoder–decoder trunk decodes a slate of Semantic IDs block-wise and independently, while a ranking module is trained jointly but through a stop-gradient path, so it can score any candidate without touching the generative representation. The pre-training recipe addresses history length, computational cost, and event selection by compressing each history item to one token so long histories fit, moving dense capacity from the long-input encoder to the decoder, and reserving history slots for sparse explicit actions that a recency cap would discard. 2. Reward-guided post-training. The strategy is to reuse the model’s own frozen ranking module as the reward and to treat reinforcement learning as steering that must not erode what pre-training learned. This requires a reward that actually distinguishes a single user’s candidates, which we obtain by redesigning how candidates enter the ranking module, and an objective that 
+
+> The designation v0.1 reflects our assessment of the progress made so far toward end-to-end generative recommen-dation and the substantial work that remains.
+
+1arXiv:2609.36688v1 [cs.IR] 29 Sep 2026 GRP v0.1 Technical Report 
+
+protects recall: mGRPO adds to GRPO a one-sided, reference-anchored margin that activates only when the policy begins to trade a logged target away for a higher-reward sample. 3. Serving. The strategy is to keep the served model minimal and to slot it behind the existing funnel so it can be introduced progressively. The inference path combines the encoder, block-wise decoder, and ranking module; catalog freshness is handled off the hot path by an asynchronously refreshed Semantic-ID-to-item catalog; and a configurable bypass of the existing ranking stages controls how far the generative candidates travel on their own scores. KV-cached, graph-captured decoding brings the path within a live feed’s latency budget. Online, as one retrieval source among many, the post-trained GRP configuration with early-ranking bypass delivers strong completion and sharing alongside above-average watch time. Reinforcement learning can optimize selected objectives: with view time as the sole reward, RL improves view time by +0.45% over the SFT model, and a larger per-request decode budget yields a +0.39% view-time gain with no ranking bypass. Replacing lower-performing retrieval sources with GRP yields +0.82% view time and +2.56% shares on the short-video surface with neutral platform-level guardrails. We close with the limitations that separate today’s system from the fully end-to-end goal. 
+
+> 2GRP v0.1 Technical Report
+
+# Contents 
+
+1 Introduction 42 A Progressive Path to End-to-End Generative Recommendation 5
+
+2.1 Three phases . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 52.2 Measurement protocol . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+
+3 Model Architecture and Pre-training 6
+
+3.1 Overview . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 63.2 Tokenization: Qwen3-VL Semantic IDs . . . . . . . . . . . . . . . . . . . . . . . . . . . 83.3 Generation module (encoder–decoder) . . . . . . . . . . . . . . . . . . . . . . . . . . . 83.4 Ranking module (MHP) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10 3.5 Training objective and optimizers . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11 3.6 Empirical results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11 
+
+4 Post-training: Reward-Guided Alignment 13 
+
+4.1 GRPO against a frozen in-model reward . . . . . . . . . . . . . . . . . . . . . . . . . . 14 4.2 Making the reward discriminate between candidates . . . . . . . . . . . . . . . . . . 15 4.3 mGRPO: stopping reward optimization from collapsing recall . . . . . . . . . . . . . 16 
+
+5 Deployment and Serving 17 
+
+5.1 Serving architecture . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17 5.2 Reducing end-to-end latency . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18 
+
+6 Online A/B Test 19 
+
+6.1 Setup . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19 6.2 Axis 1: GRP as a retrieval source . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19 6.3 Axis 2: bypassing early ranking . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20 6.4 Axis 3: bypass with retirement of weaker sources . . . . . . . . . . . . . . . . . . . . . 21 6.5 Where the path stands . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21 
+
+7 Conclusion, Limitations, and Future Directions 22 Appendix 25 A Contributions 25 B Extended Related Work 25 
+
+> 3GRP v0.1 Technical Report
+
+# 1 Introduction 
+
+Generative AI has reshaped recommender-system research by making generation rather than scoring 
+
+the primitive: instead of maintaining a retrieval index followed by a cascade of ranking and value models—often four or more stages, each its own codebase, training pipeline, and feature set—a single sequence model consumes a user’s interaction history and generates the identifier of the next item directly. TIGER (Rajput et al., 2023) introduced Semantic IDs and generative retrieval; HSTU (Zhai et al., 2024) demonstrated trillion-parameter scaling of generative transducers; OneRec and OneRec-V2 (Deng et al., 2025; Zhou et al., 2025; OneRec Team, Kuaishou, 2025) showed a production encoder–decoder generative recommender aligned with preference signals; and UniPinRec (Li et al., 2026), GPR (Zhang et al., 2025), PLUM (He et al., 2026), and Gryphon (Tikhonovich et al., 2026) have since pushed the paradigm toward unified retrieval-plus-ranking at industrial scale. Appendix B positions GRP against each of these in detail. Despite this progress, fully end-to-end (E2E) generative recommendation remains a research objective with few successful replacements of production cascades. In our own experiments, direct head-to-head replacements produced negative online results, and our reading is that they share a cause: the attempt to replace a multi-stage cascade with a single model overnight . A mature cascade embeds thousands of granular optimizations—per-source freshness rules, eligibility filters, calibration layers, diversity controls—that a bare generator does not reproduce, and comparing the two head-to-head measures the absence of those optimizations more than the quality of the generator. Three obstacles recur in our own experience: 1. Ranking remains critical. Generative retrieval produces coarse “next-item” predictions; a single generated Semantic ID can map to multiple concrete items, and the raw generative ordering is far from a good final ordering. Applying a downstream ranker on top of items retrieved from the generator materially improves view time in our system. 2. The catalog is non-stationary. On a fast-churning short-video surface the watch catalog turns over almost completely day-over-day, so a frozen model’s exact-item hit rate collapses within days as fresh items fall out of vocabulary (Section 3.6.5). 3. Alignment needs a reward that generalizes to generated candidates. Steering the generator toward business value rather than imitation requires a reward signal, and a reward model that ranks generated (not just logged) candidates is itself a hard modeling problem (Section 4.2). 
+
+Our approach. GRP addresses these obstacles with one modeling decision and one deployment decision. The modeling decision is to fold ranking and reward modeling into the generative model: a jointly-trained multi-head prediction (MHP) module scores generated candidates through a detached, serving-safe input path, and the same frozen module is reused as the reward for reinforcement-learning (RL) post-training (Sections 3–4). The deployment decision is to be progressive 
+
+(Section 2): GRP first enters production as an additional retrieval source, is benchmarked against every incumbent source on the same recommendation metrics, and receives more traffic where the evaluation supports expansion—replacing weaker sources, then growing its quota, and eventually bypassing downstream rankers. This approach evaluates E2E generative recommendation through a sequence of measurable, individually deployable changes and identifies the remaining gaps to full replacement. 
+
+> 4GRP v0.1 Technical Report
+
+Contributions. This report documents the technical work behind that path: 1. A unified generative recommender and its pre-training recipe (Section 3). GRP couples an encoder–decoder trunk that generates Qwen3-VL Semantic IDs with block-wise-independent target decoding, variable-length attention over long user histories, and a jointly-trained MHP ranking module whose inputs are detached from the trunk. We show that item-level history fusion accommodates several times more history at similar computational cost, that rebalancing dense layers from the encoder to the decoder is a Pareto win, improving both accuracy and throughput, and that giving rare explicit actions their own reserved slice of the history—rather than letting abundant passive watches crowd them out—materially lifts reward-weighted recall. 2. Reward-guided post-training (Section 4). We show that the MHP reward of a naively trained model is nearly candidate-indifferent, trace this to a cross-attention layer that had learned to ignore the candidate, and redesign the module so candidates enter it through a residual path, which makes the heads substantially more discriminative. We then propose mGRPO , which adds a one-sided, reference-anchored margin to GRPO so that reward optimization cannot erode the base model’s recall of logged targets: reward-weighted recall improves with recall held, where vanilla GRPO is flat on reward and loses recall. 3. A production serving path (Section 5). The inference path runs the encoder, block-wise decoder, and MHP scorer per request, backed by an asynchronously refreshed Semantic-ID →item catalog and configurable ranking-stage bypass; KV caching, CUDA-graph capture, C++ preprocessing, and a batched reverse lookup cut end-to-end retrieval-stage latency by roughly two-thirds. 4. Online results and a per-source gap analysis (Section 6). In online A/B tests, GRP as a retrieval source ranks near the top on completion and sharing and above the all-source average on almost every engagement axis; RL lifts its view-time contribution over the supervised model, and a larger decode budget lifts view time over production on its own; and replacing lower-performing sources with GRP yields significant gains in views, view time, and shares on the surface with neutral guardrails. The remainder of the report is organized as follows. Section 2 lays out the progressive path and its measurement protocol. Section 3 presents the architecture and pre-training results, Section 4 the post-training method, and Section 5 the serving stack. Section 6 reports the online A/B test, and Section 7 discusses limitations and the next steps toward full replacement. 
+
+# 2 A Progressive Path to End-to-End Generative Recommendation 
+
+We pursue E2E generative recommendation through a staged migration from the production cascade to a unified model. We therefore stage the migration so that every step is an independently measurable, shippable change, and so that the comparison against the incumbent system is always made on the incumbent’s own terms. 
+
+2.1 Three phases 
+
+Phase 1: deploy as a retrieval source and benchmark. The generative model enters the production funnel as one more retrieval source , alongside many incumbent retrieval sources. It receives a fixed retrieval quota and its candidates flow through the unchanged downstream rankers. Because every 
+
+> 5GRP v0.1 Technical Report
+
+source is measured on the same recommendation metrics for the same users, this immediately tells us which incumbent sources the generator already outperforms and where it falls short—and any inferiority pinpoints the specific bottleneck that must be solved before full replacement is plausible. 
+
+Phase 2: replace weaker sources and grow the quota. Sources that the generator dominates on the axes that matter are retired and their quota is reassigned to the generator. As the model improves, its quota grows until only a minimal set of auxiliary sources is needed to preserve properties the generator does not yet provide (e.g., exploration or freshness). This is the phase the present report reaches (Section 6). 
+
+Phase 3: bypass the rankers. Because GRP emits its own calibrated candidate scores, a growing fraction of its candidates can bypass first the early-stage and eventually the late-stage rankers. When the bypassed fraction reaches a threshold at which the rankers no longer change the served slate, they become obsolete and the migration is complete. The serving stack already exposes the control needed for this phase (Section 5.1), and the online experiments of Section 6 already exercise its first step by letting a portion of GRP candidates bypass early ranking. 
+
+2.2 Measurement protocol 
+
+The protocol has three tiers, all computed on the treatment arm. • Surface-level evaluation metrics on the short-video surface: views, view time, and shares. Views and view time describe content consumption; shares measure use of the sharing feature. These metrics are interpreted together. • Topline guardrails , such as DAUs and app-level engagement, to check for adverse platform-level effects. • Per-source performance , which is what makes the progressive path navigable: source rate (the share of served views attributed to a source), ranking pass rate (the share of a source’s candidates that survive the ranking stages), and the source’s engagement profile (completion ratio, skip rate, average watch time, favorite rate, and send rate). 
+
+# 3 Model Architecture and Pre-training 
+
+3.1 Overview 
+
+GRP is a single model with two heads over a shared encoder–decoder trunk (Figure 1). The encoder 
+
+ingests a long, heterogeneous user-context and event-history sequence and produces contextual hidden states 𝐻 . The decoder generates the Semantic ID of the next item—this is the retrieval output. The MHP ranking module takes the generated (or ground-truth, at training time) Semantic-ID candidates, cross-attends them against 𝐻 and the user context, and emits a vector of calibrated engagement predictions—this is the ranking output. In post-training, a fixed weighted mixture of the frozen MHP heads becomes the reward model for reinforcement-learning fine-tuning of the decoder. Training proceeds in two phases. Pre-training (this section) jointly learns generation (next-Semantic-ID cross-entropy) and ranking (per-engagement classification and regression), with 
+
+> 6
+
+GRP v0.1 Technical Report (a) Unified generative recommender — pre-training (b) Reward-guided post-training (mGRPO) (c) Online serving — progressive deployment behind the existing funnel         
+
+> user context event history: explicit ∪watch target items s₁s₂s₃s₁
+
+…Tokenizer (Qwen3-VL Semantic ID) … B s₁ s₂ s₃ s₁ s₂ s₃ 
+
+> one fused token per item one independent block per item
+
+Encoder × N Varlen FlashAttention + RoPE FFN shallow: the long user history is the cost centre 
+
+Decoder × M Block-wise self-attention Cross-attention to H FFN → SID vocab 
+
+H  
+
+> ŝ₁ ŝ₂ ŝ₃
+
+ℒgen next-code CE 
+
+MHP ranking module 
+
+Cross-attention candidate ↔ history DCNv2 h₁ h₂ … h_N engagement heads Reward weighted sum of heads residual path: q enters the cross network directly 
+
+> qK, V
+
+ℒMHP ranking loss  
+
+> sg
+
+H
+
+> sg
+> candidates q: decoded SIDs (targets at training)
+> sg
+> ctx
+
+Policy decoder π_θ  
+
+> the only trainable part sample G = 64
+> ŷ₁ …ŷ_G
+
+Frozen MHP reward  
+
+> r₁… r_G
+
+Group-relative advantage A_i 
+
+β · KL( π_θ ‖ π_ref) anchor to frozen π_ref 
+
+ℒGRPO PPO-clipped surrogate 
+
+λ · ℒmargin protects logged targets 
+
+π_ref frozen snapshot T(u) logged targets 
+
+Σ
+
+ℒmGRPO = ℒGRPO + β · KL + λ · ℒmargin 
+
+> ∇θ
+> encoder, embeddings, MHP frozen same weights initialise
+
+User features no item features 
+
+> GRP service (gRPC)
+
+Encoder Block-wise beam search KV cache · CUDA graphs MHP scoring SIDs SID → item catalog async refresh Retrieval service ~50 sources + GRP Early ranker Late ranker Slate bypass early ranking (configurable fraction) end state: bypass both rankers trainable frozen encoder sg stop-gradient weights copied / shared 
+
+Figure 1 | Overall architecture of GRP. (a) Pre-training. User context and the merged explicit-plus-watch event history are tokenized into Qwen3-VL Semantic IDs and fused into one encoder token per item; target items form independent per-item code blocks for the decoder. The encoder (shallow) produces 𝐻 ; the decoder (deep) cross-attends 𝐻 and generates the next item’s Semantic ID block-wise (generation loss ℒgen ). The MHP ranking module receives 𝐻 , the user context, and the candidate query 𝑞 through stop-gradient (sg) paths: 𝑞 cross-attends the history and also enters the DCNv2 cross network directly (the residual path); per-head predictions give the ranking loss ℒMHP and a weighted-sum reward. At training time the candidates are the logged targets; at serving time they are the decoded Semantic IDs. (b) Post-training. Only the decoder trains as the policy 𝜋 𝜃 : it samples 𝐺 Semantic IDs per user, the frozen MHP (same weights as in (a)) scores them, and the group-relative advantage feeds the PPO-clipped surrogate; a KL term anchors the policy to the frozen snapshot 𝜋 ref and the one-sided, reference-anchored margin protects the logged targets 𝒯 ( 𝑢 ) (mGRPO, Section 4.3). (c) Online serving. The inference path runs the encoder, block-wise beam search (KV cache, CUDA graphs), and MHP scoring per request and returns Semantic IDs with scores; an asynchronously refreshed catalog maps them to items, which enter the existing retrieval service as an additional source. A configurable fraction of GRP candidates bypasses early ranking on the model’s own scores; the end state bypasses both rankers (Section 2). 
+
+the ranking module’s inputs detached so it cannot perturb the generation trunk. Post-training 
+
+(Section 4) freezes the encoder, the embedding tables, the normalization statistics, and the MHP module, and optimizes only the decoder against the frozen reward. 
+
+7GRP v0.1 Technical Report 
+
+3.2 Tokenization: Qwen3-VL Semantic IDs 
+
+Items are represented by Semantic IDs (SIDs) : each item is quantized into a short sequence of hierarchical discrete codes by a residual-quantization variational autoencoder (RQ-VAE) (Zeghidour et al., 2021; Rajput et al., 2023). The production tokenizer is the Qwen3-VL SID (Qwen Team, 2025): a Qwen3-VL vision–language embedding (natively video-aware, Matryoshka-truncated for a large storage/compute saving) is residual-quantized into three hierarchy levels of decreasing codebook size. Beyond the usual reconstruction and commitment terms, the tokenizer adds an auxiliary 
+
+co-engagement contrastive objective—items that are co-engaged by similar users are pulled together— which improves codebook utilization and item uniqueness over the prior tokenizer. Codebook collapse is mitigated with a straight-through estimator and post-quantization normalization. All SID codes share a single embedding table : levels are laid out contiguously by cumulative offset and a separator/BOS token is appended, so the vocabulary size is the sum of the per-level codebook sizes plus one. Each item therefore occupies one fixed-length block of codes (one per hierarchy level) followed by a separator, in both the history and the target—a structure the decoder exploits for block-wise independence (Section 3.3). Multiple SID versions coexist in the feature store as version-tagged, variable-width records, so the generative vocabulary can be upgraded without re-ingesting content. 
+
+3.3 Generation module (encoder–decoder) 
+
+The trunk is a T5-style encoder–decoder (Raffel et al., 2020). The decoder is intentionally deeper than the encoder (a 1:2 encoder-to-decoder layer ratio in the reported configuration); Section 3.6.2 shows this decoder-heavy allocation is a Pareto improvement in both accuracy and throughput. All attention modules are replaced in place by a custom FlashAttention-based implementation. 
+
+User-context tokenization. The encoder input is built from two parts. The user-context vector concatenates a universal user-model embedding with static dense and sparse-feature embeddings, and is projected into a few context tokens of width 𝑑 model . The event history is grouped into two sequences: an explicit-engagement group (high-intent actions such as favoriting or resharing a video, each carrying a learned action-type embedding) and a watch group (passive views). Each group’s features are fused with its SID embeddings, projected per group, and concatenated. 
+
+Item-level history encoding. We encode the history at the item level: the hierarchy codes and side features of each history item are fused into a single encoder token, so an encoder token corresponds to an item while a decoder token corresponds to one SID code. Let 𝐵 ref denote the reference history budget, defined as the number of history items accommodated by the reported item-level configuration. SID-level encoding used four encoder positions per item and accommodated 𝐵 ref /4history items; item-level fusion accommodates 𝐵 ref items within the same encoder-token budget. Section 3.6.1 shows this is effectively free on quality. 
+
+Per-user event sampling. Histories are capped at a fixed total budget 𝐵 of events, split between the two groups so that scarce high-intent events are not crowded out by abundant passive views— without such a rule, watch events alone fill the budget. The split cannot be a fixed per-type quota, however: the mix of event types varies substantially from user to user, so any fixed allocation leaves slots empty for users who rarely take a given action while truncating the history of users who take 
+
+> 8
+
+GRP v0.1 Technical Report  
+
+> 𝑎 𝑎 𝑏 𝑏 𝑐 𝑐
+> SS
+> 𝑎 𝑎 𝑏 𝑏 𝑐 𝑐
+> SSitem 1 item 2 key position (attended) query position
+
+Figure 2 | The decoder’s block-wise self-attention mask: causal within each item’s code block (shaded lower-triangle) and blocked across blocks, so the target items are decoded independently. 
+
+it often, and the total budget goes underused. We therefore allocate slots per user, from that user’s own event counts. The explicit-engagement group is given a protected budget 𝐵 𝑒 < 𝐵 , allocated across its event types by a sublinear rule with a per-type floor: for event type 𝑡 with raw count 𝑛 𝑡 ,
+
+𝑠 𝑡 = max 
+
+
+
+𝑓 , 
+
+j
+
+𝐵 𝑒 · 𝑛 𝑝 𝑡 
+
+Í𝑡 ′ 𝑛 𝑝 𝑡 ′
+
+k  
+
+, 𝑝 ∈ ( 0, 1), (1) and the watch group elastically fills the remaining 𝐵 − Í𝑡 𝑠 𝑡 slots. The sublinear exponent 𝑝 and floor 𝑓 keep rare but valuable actions represented while a high-volume type cannot monopolize the budget. Within each group events are kept most-recent-first. Section 3.6.3 quantifies the effect. 
+
+Positional encoding. We use rotary position embeddings (RoPE) (Su et al., 2021), applied only to encoder self-attention . Decoder self-attention operates within per-item blocks where local ordering suffices, and cross-attention spans two different semantic spaces (history vs. SID), so RoPE is deliberately disabled for both. The relative-position bias of the base transformer is discarded. 
+
+Block-wise decoding. A defining design choice is to decode the target items in a request 
+
+independently . We represent the recommendation slate as a set of next-item candidates and impose no causal dependency from one predicted item to the next (Figure 2). We enforce this in decoder self-attention by partitioning the target sequence into one block per candidate item and attending 
+
+independently within each block . This keeps the decoding of each target item independent and, both during training and during beam search, avoids broadcasting the encoder states across the full set of targets (or beams) until they are actually needed—a naive broadcast bloats activation memory and readily exhausts GPU memory at production sequence lengths. The net effect is that generation cost scales with the number of targets rather than their cross-product, and the same forward pass emits a whole slate of independent candidates. 
+
+Variable-length attention. Encoder self-attention and decoder cross-attention use variable-length FlashAttention (Dao et al., 2022) kernels with input packing, so padded positions in the highly 
+
+9GRP v0.1 Technical Report 
+
+variable-length user histories incur no compute; decoder self-attention is causal within blocks. 
+
+Generation loss. Generation is trained with token-level cross-entropy over the shared code vocabulary under teacher forcing: 
+
+ℒgen = − 1
+
+|ℳ| 
+
+Õ
+
+> 𝑡 ∈ℳ
+
+log 𝑝 𝜃 
+
+
+
+𝑦 𝑡 | 𝑦 blk  
+
+> <𝑡
+
+, 𝐻 
+
+
+
+, (2) where 𝐻 are the encoder hidden states, 𝑦 blk  
+
+> <𝑡
+
+the teacher-forced codes preceding position 𝑡 within its target block, and ℳ the set of content-code positions—every per-item separator position (and padding) is masked out. The objective is thus next-code prediction over the hierarchy levels of each target item. 
+
+3.4 Ranking module (MHP) 
+
+The ranking module is a multi-head prediction (MHP) network that turns candidates into calibrated engagement scores while remaining serving-safe : it never consumes decoder outputs, so it can score arbitrary candidates at serving time, including candidates that were not generated by the decoder. 
+
+Detached input. All three inputs to the MHP module—the candidate SID embeddings, the encoder hidden states, and the user-context features—are detached (stop-gradient) before entering the module. Consequently the ranking loss trains only the MHP’s own parameters and never backpropagates into the encoder, decoder, or shared SID table. This is the mechanism that lets us train ranking jointly with generation without the ranking objective distorting the generative representation. 
+
+Architecture. For each candidate item, its hierarchy SID embeddings are pooled into a candidate query 𝑞 . The query cross-attends (multi-head attention) against the encoded user history to form a 
+
+candidate-aware user vector ; this vector, the broadcast user-context features, and the candidate query itself are concatenated and passed through a DCNv2 cross network (Wang et al., 2021) for explicit feature interaction. Each engagement label then gets its own small MLP prediction head. The direct (residual) path from 𝑞 into the cross network is essential: Section 4.2 shows that without it the module learns to ignore the candidate altogether. The cross-network and head widths are matched to the production second-stage ranker, each head’s output bias is initialized from its label’s base rate, and classification logits are clamped for numerical stability. 
+
+Ranking loss. Each head is trained against its own engagement label, masked to valid target positions: 
+
+ℒMHP =
+
+Õ
+
+> ℎ∈𝒞
+
+BCE   ˆ𝑦 ℎ , 𝑦 ℎ
+
+ +
+
+Õ
+
+> ℎ∈ℛ
+
+MSE   ˆ𝑦 ℎ , 𝑦 ℎ
+
+ , (3) where 𝒞 are binary classification heads over positive engagements (e.g., completing, favoriting, or resharing an item) and negative signals (e.g., skipping or dismissing it), and ℛ is a regression head for (log) watch time. Each head is weighted equally. Calibration of these heads is a first-class concern: because the frozen module later serves as the RL reward, a miscalibrated head directly distorts that reward, so we monitor head calibration continuously. 
+
+> 10 GRP v0.1 Technical Report
+
+3.5 Training objective and optimizers 
+
+The total pre-training objective is a plain sum of the generation loss and every ranking-head loss: 
+
+ℒpretrain = ℒgen + ℒ MHP . (4) There is no learned or uncertainty-based task weighting. Because the MHP inputs are detached, the head losses do not propagate into the generation trunk—the sum is a bookkeeping convenience, and the two objectives are decoupled at the gradient level while sharing one forward pass and one set of features. Dense parameters are optimized by a single hybrid optimizer. Weight matrices ( ≥ 2-D) are updated by Muon (Jordan et al., 2024)—momentum followed by a few steps of Newton–Schulz orthogonalization of the update—while 1-D parameters (biases, norms) are updated by Lamb (You et al., 2020). Sharded sparse embeddings are excluded and handled by a row-wise adaptive optimizer in the embedding path. Both branches use fused, batched kernels (one stacked orthogonalization per parameter-shape group), which improve training throughput by more than 30% and are what make Muon practical at this scale. Learning rates follow square-root scaling with the global batch size 𝐵 𝑔 , 𝜂 = 𝜂 0
+
+p𝐵 𝑔 /𝐵 0, with a per-branch base rate 𝜂 0 at reference batch 𝐵 0, under linear warmup followed by cosine annealing. Training uses bf16 mixed precision. 
+
+3.6 Empirical results 
+
+Unless noted, offline metrics are computed on held-out user sessions from the production short-video surface, evaluated on a future date no model trained on, over a large session population. We report HR@ 𝐾 (hit rate: the ground-truth next item’s Semantic ID appears among the top-𝐾 
+
+generated SIDs), Recall@ 𝐾 (the fraction of a user’s held-out engaged items retrieved within the top-𝐾 candidates), and Reward Recall@ 𝐾 (recall weighted by each retrieved item’s reward under the specified reward function; this metric measures alignment with the post-training objective). Each study below is a one-factor comparison against its own baseline. 
+
+3.6.1 Scaling the user-history length with item-level fusion 
+
+Encoding each history item as a single fused token rather than one token per SID code shortens the encoder sequence 4 × at a fixed number of history items. Table 1 isolates this factor at a matched encoder-token length: item-level encoding fits 4 × the history ( 𝐵 ref vs. 𝐵 ref /4 items) at essentially unchanged throughput and a slightly higher hit rate (HR@10 +1.7%, HR@20 +0.9%). Extending the history a further 2 × (to 2 𝐵 ref ) stops helping retrieval and halves throughput; 𝐵 ref is the sweet spot at this model capacity, a result later reconfirmed on independent seven-day data (Section 3.6.3). 
+
+3.6.2 Rebalancing dense capacity toward the decoder 
+
+Item-level fusion makes history encoding cheap, which raises the question of where dense capacity is best spent. Because the encoder sequence (the long user history) is far longer than the decoder sequence (a short SID target), the encoder runs full attention over the cost center while the decoder runs over a cheap target. Shifting layers from the encoder to the decoder is therefore a Pareto win (Table 2): as the encoder/decoder layer split moves 2:1 → 1:1 → 1:2 at a fixed total depth, HR@5/10/20 and validation loss improve monotonically and throughput rises by 21%. The reported model therefore uses a 1:2 encoder-to-decoder ratio.                                                       
+
+> 11 GRP v0.1 Technical Report Table 1 |History encoding, one-factor comparison on a common held-out evaluation (a 2:1 encoder-to-decoder layer ratio; throughput in training steps/s). At a matched encoder-token length, item-level encoding fits 4 ×
+> the history at essentially the same throughput and a slightly higher hit rate; extending to 8 ×(2 𝐵 ref items) does not improve retrieval and halves throughput. History budgets are reported relative to 𝐵 ref .Representation Relative history budget HR@5 HR@10 HR@20 Steps/s SID-level 0.25 ×0.1207 0.1734 0.2272 0.58 Item-level fusion 1×0.1217 0.1764 0.2293 0.57 Item-level fusion 2×0.1214 0.1751 0.2304 0.32 Change, 1 ×vs. SID-level +300% +0.83% +1.73% +0.92% −1.72% Table 2 |Encoder/decoder rebalancing at a fixed 𝐵 ref -item history and total depth. Moving layers from the encoder to the decoder improves retrieval (HR@ 𝐾 ) and training throughput simultaneously. Encoder : decoder layer ratio HR@5 HR@10 HR@20 Steps/s 2:1 0.1217 0.1764 0.2293 0.57 1:1 0.1232 0.1771 0.2318 0.63 1:2 0.1241 0.1783 0.2332 0.69 Change, 1:2 vs. 2:1 +1.97% +1.08% +1.70% +21 .05%
+
+3.6.3 Preserving sparse explicit actions in longer histories 
+
+A longer history is only useful if it contains the right events. Three observations about the pre-trained model drive the sampling policy of Equation (1). First, retrieval quality counterintuitively falls as a user’s history grows: the longest-history segment is the hardest, because long, diverse histories make the next item less predictable and a plain recency cap discards earlier interactions. Second, the generator over-concentrates on popular head content, whereas explicitly engaged items are markedly more niche. Third, anchoring the history to the passive-watch stream lost many scarce high-intent events to that stream’s truncation cap. We therefore merge the explicit-engagement events (favorites, shares, replies, and other high-intent actions) into one ordered stream with reserved capacity, so abundant watches cannot crowd them out, and let the watch history fill the remaining budget. Table 3 is a clean one-factor ladder on seven-day training data with filter-free held-out targets. Item-level encoding alone is a small negative here (the history is longer but still watch-dominated); adding the merged explicit stream is the step that moves reward-recall; and budget scaling past 𝐵 ref is flat to down (2 𝐵 ref is slightly worse), which we attribute to insufficient model capacity for longer sequences rather than to truncation—we verified that 87% of the window is utilized and that the most recent events are always kept. The merge design mainly benefits reward-weighted recall: against the item-level baseline it improves reward-recall@20 by 20% with a smaller gain in raw recall@20 ( +7%). The reported configuration reserves 25% of its total history budget 𝐵 ref for explicit events. 
+
+3.6.4 A higher-resolution Semantic ID improves retrieval 
+
+The tokenizer is one of the highest-leverage design choices, because the generative vocabulary is 
+
+the SID space: the model can only retrieve items whose Semantic ID it can generate, so a tokenizer that packs more distinct, semantically coherent items into the codebook directly raises the retrieval ceiling. We therefore measure a tokenizer by the downstream model’s retrieval quality, not by                                       
+
+> 12 GRP v0.1 Technical Report Table 3 |Event-selection ladder (seven-day training, one change per row). Merged-stream rows show the explicit-event fraction of the total budget, followed by the total budget relative to 𝐵 ref . Merging explicit events into a protected stream is the only step that moves reward-recall materially. Configuration Reward Recall@20 Recall@20 HR@20 (a) SID-level history, recency window 0.0252 0.0521 0.1356 (b) Item-level history, no merged explicit stream 0.0245 0.0502 0.1327 (c) Merged explicit, 50%; 0 .25 ×0.0291 0.0543 0.1487 (d) Merged explicit, 25%; 1 ×0.0294 0.0537 0.1481 (e) Merged explicit, 12.5%; 2 ×0.0290 0.0519 0.1462 Change, (d) vs. (b) +20 .0% +7.0% +11 .6% Table 4 |Downstream retrieval quality by Semantic-ID version at a matched model size, codebook budget, and train/held-out evaluation (a one-factor SID swap). Semantic-ID version Recall@20 Reward Recall@20 HR@20 MM-SID 0.0529 0.0398 0.1563 Qwen3-VL SID 0.0592 0.0439 0.1717 Change +11 .9% +10 .3% +9.9%
+
+intrinsic codebook statistics alone. Table 4 compares two tokenizers under a matched setup at a common codebook budget: the earlier MM-SID (a uniform, lower-resolution multimodal codebook) and the Qwen3-VL SID (a higher-resolution, non-uniform codebook). Swapping MM-SID for the Qwen3-VL SID improves recall@20 by 11.9%, reward-recall@20 by 10.3%, and HR@20 by 9.9%. Because the Qwen3-VL SID has a larger code-tuple space (an exact code-tuple match is a strictly harder target), these metrics are, if anything, biased against it and understate the gain in retrievable coverage. The mechanism is codebook quality: the natively video-aware embedding and the co-engagement contrastive objective spread items far more evenly across the codebook and roughly double item uniqueness over the prior tokenizer. 
+
+3.6.5 Freshness dominates out-of-window 
+
+The pre-trained model’s exact-item retrieval quality declines sharply within a few days of the training cutoff (Figure 3): the catalog turns over almost completely day-over-day, so the target set becomes overwhelmingly novel and fresh items fall out of vocabulary. Crucially, coarse -cluster recall stays essentially flat over the same window—the content a user wants is still predictable; only the exact fresh item is unreachable. We address this freshness limitation with continuous incremental retraining to incorporate newly available items. This limitation also explains why the post-training scope (Section 4) is confined to reshaping the in-window operating point: RL can redistribute generation probability among items the model can represent, but it cannot manufacture representations for post-cutoff items. 
+
+# 4 Post-training: Reward-Guided Alignment 
+
+Pre-training optimizes the decoder for next-code likelihood over ground-truth Semantic IDs, learning from logged user behavior without weighting outcomes by a specified reward. Different       
+
+> 13 GRP v0.1 Technical Report
+> 0123400.51Days past training cutoff Recall (rel. to in-window)
+> exact-item recall coarse-cluster recall
+> Figure 3 |Freshness decay of a frozen pre-trained model (recall normalized to its in-window value). Exact-item recall collapses within days as fresh items go out-of-vocabulary, while coarse-cluster recall is essentially flat, consistent with continued prediction of broad content preferences as exact-item coverage declines. We address catalog freshness through continuous incremental retraining; post-training adjusts candidate probabilities using the specified reward function.
+
+interaction types can receive different weights under that reward, which next-code likelihood alone does not express. We close this gap with an on-policy Group-Relative Policy Optimization (GRPO) (Shao et al., 2024) post-training stage that treats the pre-trained recommender as a policy and its own ranking module as the reward. We identified two failure modes: Sections 4.2 and 4.3 proceed from each problem to the intervention and the measured outcome. 
+
+4.1 GRPO against a frozen in-model reward 
+
+Frozen trunk. We freeze the encoder, the sparse and Semantic-ID embedding tables, the nor-malization statistics, and the entire MHP module, and train only the decoder (the decoder stack, its input LayerNorm, and the output projection). Freezing the trunk keeps the MHP reward a 
+
+stationary function of (prompt , sample ): the environment signal does not drift while the policy learns, which stabilizes the group-relative advantage and avoids the reward-hacking dynamics that a co-adapting reward model would introduce. Decoder dropout is disabled so that policy and reference log-probabilities are directly comparable. 
+
+Sampling and reward. For each prompt 𝑢 (an encoded user context), the current policy draws a group 𝒢( 𝑢 ) of 𝐺 candidate Semantic-ID sequences by temperature sampling (no beam search): the encoder output is expanded 𝐺 -fold and the decoder samples one code per hierarchy level, recording the per-token behavior log-probabilities. Each sampled sequence is scored by the frozen MHP reward model through the same serving-safe path used in pre-training, and a scalar reward is a fixed weighted mixture over heads, 
+
+𝑟 =
+
+Õ
+
+> ℎ
+
+𝑤 ℎ 𝜙 ℎ ( ˆ 𝑦 ℎ ), (5) where 𝜙 ℎ maps a head output to its served value (a sigmoid for classification heads, an exponential for the log-watch-time head) and the weights 𝑤 ℎ specify the contribution of each prediction head. Reward scoring runs without gradients: the MHP is a frozen environment signal. For the reported RL comparison in Section 6, the view-time prediction head is the sole reward. 
+
+> 14 GRP v0.1 Technical Report
+
+GRPO objective. Within each group the advantage is the standardized reward, and the policy loss is the PPO-clipped surrogate (Schulman et al., 2017) at the item level with an exact analytic per-token KL penalty to a frozen reference policy: 
+
+𝐴 𝑖 = 𝑟 𝑖 − 𝜇 𝒢 
+
+𝜎 𝒢 + 𝛿 , 𝜌 𝑖 (𝜃 ) = 𝑃 𝜃 ( ˆ 𝑦 𝑖 | 𝑢 )
+
+𝑃 𝜃 old ( ˆ 𝑦 𝑖 | 𝑢 ) , (6) 
+
+ℒGRPO (𝜃 ) = − 1
+
+𝐺 
+
+> 𝐺
+
+Õ
+
+> 𝑖 =1
+
+min  𝜌 𝑖 𝐴 𝑖 , clip (𝜌 𝑖 , 1−𝜖 , 1+𝜖 ) 𝐴 𝑖 
+
+ + 𝛽 𝐷 KL (𝜋 𝜃 ∥ 𝜋 ref ) , (7) where 𝑃 𝜃 ( ˆ 𝑦 | 𝑢 ) is the item probability (the product of teacher-forced code probabilities over the content positions), 𝜖 is the clip range, 𝛽 the KL coefficient, and 𝐷 KL the KL between the policy and reference next-code distributions over the full Semantic-ID vocabulary, averaged over valid token positions. The reference policy 𝜋 ref is a detached snapshot of the decoder weights, captured once at the start of post-training and evaluated with a functional forward; because the encoder, embeddings, and MHP are frozen and shared, only the decoder is duplicated rather than the full model. Post-training initializes from the pre-trained checkpoint, resets the learning-rate schedule, reduces the per-device batch size to absorb the 𝐺 -fold rollout, and reuses the same optimizers at reduced, batch-scaled learning rates. 
+
+4.2 Making the reward discriminate between candidates 
+
+Problem. Our first GRPO runs were noisy and learned little. Instrumenting the reward revealed why: rewards were nearly candidate-indifferent within a user. Across the candidates sampled for a single user request, the mixed reward varied by only 0 .005–0 .16% of its magnitude (individual heads by 0 .3–2 .3%), so the standardized advantages of Equation (6) looked healthy ( ±1) while carrying little ranking information per group. Tracing the candidate signal stage by stage through the module localized the loss to the cross-attention layer: its attention pattern had become effectively independent of the candidate query (the learned query bias dominated the query projection by three orders of magnitude), so the layer acted as a constant key-selector over the history and discarded essentially all of the candidate’s information in one step. The module had learned 
+
+𝑃 (engage | user ) rather than 𝑃 (engage | user , item )—a degenerate solution that pre-training never penalized, because the MHP only ever saw the logged target and could minimize its loss from the user context alone. 
+
+Intervention. We redesigned the MHP input path (Section 3.4) so that the candidate query is a 
+
+direct input to the cross network, i.e., candidates pass through the module along a residual path that no attention layer can zero out; adjusted the cross-network and prediction-head capacity; initialized each head from its base-rate prior; and clamped classification logits. 
+
+Result. On identical evaluation sets (Table 5), three of the four dense heads gained 0 .11–0 .13 AUROC and all three reported sparse heads gained 97–184% AUPRC; the skip head was the only regression ( −0.018 AUROC), which may be within noise. Recall@20 ( +0.0004) and reward-recall@20 (+0.0001) were unchanged, confirming that the MHP change did not leak into decoding—as the detached design intends. On the redesigned module the within-user reward spread rises from                                       
+
+> 15 GRP v0.1 Technical Report Table 5 |Ranking-module redesign, evaluated on identical held-out sets. Dense (frequent) heads are reported by AUROC and sparse (rare) heads by AUPRC. Watch ≥10s and Watch ≥p75 are watch-time thresholds (absolute, and relative to the item’s duration distribution). Head Metric Before After Change Watch ≥10 s AUROC 0.6628 0.7759 +17 .1% Skip AUROC 0.6281 0.6102 −2.8% Complete AUROC 0.6294 0.7609 +20 .9% Watch ≥p75 AUROC 0.7046 0.8296 +17 .7% Share AUPRC 0.0213 0.0457 +114 .6% Favorite AUPRC 0.0301 0.0592 +96 .7% Reply AUPRC 0.0123 0.0349 +183 .7%
+
+< 0.2% to a median of over 200% of the reward magnitude, which is what makes the group-relative advantage informative. 
+
+4.3 mGRPO: stopping reward optimization from collapsing recall 
+
+Problem. Even with a discriminative reward, vanilla GRPO frequently produced no gain or a net loss. The mechanism is a cascade: the pre-trained recommender’s recall of logged targets is modest to begin with, so most sampled groups contain no target and RL exploration is driven by reward alone; the policy drifts toward high-reward regions that the base model never validated against real behavior; and as it drifts, its recall of real targets erodes further, which removes the very signal that would anchor it. The KL penalty of Equation (7) slows this drift but does not target it, because KL is agnostic to which probability mass moves. In our experiments, the standard remedies—tuning the KL coefficient 𝛽 , or adding a supervised likelihood loss on the logged targets—produced either negative or only small improvements, which led us to the targeted alternative below. 
+
+Intervention. We add a one-sided, reference-anchored margin . For a user 𝑢 , let 𝒯 ( 𝑢 ) be the set of valid logged targets and 𝒢( 𝑢 ) the sampled candidates. Define a target’s competitive gap under a model 𝑥 as its log-probability advantage over the best sampled candidate, 
+
+𝑚 𝑥 (𝑦 ; 𝑢 ) = log 𝑃 𝑥 (𝑦 | 𝑢 ) − max 
+
+> ˆ𝑦 ∈𝒢( 𝑢 )
+
+log 𝑃 𝑥 ( ˆ 𝑦 | 𝑢 ), 𝑥 ∈ { 𝜃 , ref }, (8) and penalize the policy only when its gap on a logged target falls below the reference model’s gap: 
+
+ℒmargin (𝜃 ) = 1
+
+|𝒯 ( 𝑢 )| 
+
+Õ
+
+> 𝑦 ∈𝒯 ( 𝑢 )
+
+ 𝑚 ref (𝑦 ; 𝑢 ) − 𝑚 𝜃 (𝑦 ; 𝑢 )  
+
+> +
+
+, [𝑧 ]+ = max (𝑧, 0). (9) The final objective is 
+
+ℒmGRPO (𝜃 ) = ℒGRPO (𝜃 ) + 𝜆 ℒmargin (𝜃 ). (10) The margin is inactive wherever post-training has not eroded a logged target’s competitive position, so it never fights a reward improvement that leaves recall intact; it activates precisely when the policy begins to trade a real target away for a higher-reward sample. Because it is anchored to the reference model rather than to a fixed constant, it scales naturally with how confidently the base model already ranked each target. The encoder, embeddings, normalization state, and MHP remain 
+
+> 16
+
+GRP v0.1 Technical Report Table 6 | Post-training ablation and scaling (one-factor 2 × 2 on a common base checkpoint and evaluation set; changes relative to the base model). Vanilla GRPO performs worse than the base model on recall; mGRPO improves reward-recall while holding recall. Training objective Reward Recall@10 vs. base Recall@10 vs. base Readout GRPO only −0.1% −1.25% Policy moved without reward gain Margin only +0.5% +0.4% Recall preserved; limited reward movement GRPO + margin (mGRPO), 1 node +1.6% +0.3% Joint objective improves both GRPO + margin (mGRPO), 2 nodes +3.1% +0.9% Measured Pareto point 
+
+frozen throughout. 
+
+Result. Table 6 is a one-factor 2 × 2 on the same base checkpoint, data, steps, and evaluation set. Neither term alone moves reward-recall: GRPO without the margin is flat on reward-recall@10 (−0.1%) while recall@10 decreases ( −1.25%), indicating a loss in recall without an increase in reward-recall, and the margin alone preserves recall but produces only limited reward movement (+0.5%). Together they improve both: +1.6% reward-recall@10 with recall@10 at +0.3% on one node, and +3.1% / +0.9% on two nodes. The PPO term optimizes the reward objective, while the margin penalizes decreases in logged targets’ competitive position. The GRPO-only and margin-only variants are ablations of the joint objective, used to assess why both components are needed for reward-weighted recall improvement with recall preservation. The additional gain from training on more nodes comes from using more effective training data. 
+
+# 5 Deployment and Serving 
+
+5.1 Serving architecture 
+
+Packaging and inference service. An inference-only artifact—the dense weights plus the embed-ding tables, with optimizer and training-only state stripped—is packaged into a self-contained model archive for online inference. The served model runs only three components on the request path—the encoder over user context, the block-wise decoder that generates Semantic IDs, and the MHP module that scores them—so no dense item tower or maintained ANN index is needed online. Concurrent requests are dynamically batched, and requests sharing generation settings are grouped so each runs as one batched forward pass. 
+
+Per-request generation and scoring. A request carries only user-side features (no item features): the handler encodes the user context, runs block-wise beam search to generate the top-𝐾 Semantic-ID candidates (with optional diversity control across the coarse hierarchy level), and scores each candidate with the MHP module in the same forward pass. It returns the candidate Semantic IDs together with their per-head engagement scores—generation and ranking in a single service call. 
+
+Semantic-ID to item reverse mapping. A generated Semantic ID is not itself servable content; it must be mapped back to concrete items. This mapping is maintained asynchronously , off the request hot path: as new content is ingested it is tokenized and added to a catalog of SID →item assignments that is updated so that freshly generated SIDs resolve to current items (Section 3.6.5). A single Semantic ID fans out to multiple items, so the candidate pool for a request is the union of items over the generated SIDs, after quality and eligibility filtering. 
+
+17 GRP v0.1 Technical Report Table 7 | Relative changes from inference optimizations in the evaluated configuration. Component measurements and end-to-end latency use different measurement boundaries; their changes are not additive. Measurement Relative change Model-server latency (p50), cumulative optimizations −67 .7% Model-server throughput, cumulative optimizations +208% Generation-stage latency, KV cache and graph capture −84 .6% Input-conversion latency −96 .2% Model-server request latency (p95) ≈ − 50% Batched item-lookup latency (p95), before caching ≈ − 70% End-to-end retrieval-stage latency (p95) −69 .0% 
+
+Ranking-stage control. Because generation is conditioned on user context alone and directly emits scored candidates, a single service collapses the retrieval and early-ranking stages of a classic funnel. GRP is deployed behind a configurable funnel that can bypass those stages entirely or replace only a subset, injecting the generative candidates at a chosen point of the existing stack, and that can let a configurable portion of GRP candidates bypass the early-ranking stage. This is the control surface for Phases 2 and 3 of Section 2: it isolates the effect of generative retrieval from downstream ranking, and it lets a production ranker stay in the loop while the unified model matures. 
+
+5.2 Reducing end-to-end latency 
+
+A generative retriever is on the request’s critical path, so its latency determines whether it can hold a quota at all. Instrumenting the full path exposed bottlenecks on both sides of the service boundary. 
+
+Feed-orchestration side. (i) Event-sequence cap : the orchestrator forwarded a user’s entire event history although the model consumes only a fixed event budget; capping the payload at the model’s budget reduced p99 request-body size by approximately 67–75%. (ii) Event flattening : converting the typed event history into the model’s request format dominated orchestrator time because of an inefficient implementation; a rewrite reduced it by approximately 96%. (iii) Reverse lookup : the per-SID point reads that map generated Semantic IDs to items were replaced by a single batched read against the key-value store, cutting lookup p95 by approximately 70% before caching. Together these reduced the orchestrator-side p95 contribution by approximately 75% or more. 
+
+Model-server side. (i) Preprocessing : Python feature preprocessing dominated the model server; rewriting it in C++ reduced preprocessing by approximately 37%. (ii) KV cache and CUDA graphs :enabling a key–value cache during block-wise decoding removes repeated computation across decode steps, and capturing the decode graph once with CUDA graphs removes per-request graph construction; together they cut generation-stage latency by approximately 85%. (iii) Worker tuning :the model server’s RPC queue limited throughput; two workers with batch size 8 reduced RPC p95 by approximately 50%. 
+
+> 18 GRP v0.1 Technical Report
+
+# 6 Online A/B Test 
+
+The progressive path of Section 2 gives three axes along which the end-to-end model can take over the funnel: it can be a better retrieval source , its candidates can bypass the rankers on its own scores, and it can absorb the quota of sources it beats. The axes are independent knobs, so we explored them in parallel rather than in sequence, and each has its own success criterion. As a retrieval source, the model is evaluated on the reported surface metrics; the comparison tests how reward-guided post-training changes those outcomes. For the ranking bypass the goal is a larger share of served traffic for GRP at neutral topline metrics: the bypass removes a production ranker from part of the slate, so holding the topline is the bar. For bypass combined with source replacement the goal is both at once: a larger share and a topline gain. 
+
+6.1 Setup 
+
+All experiments run on the short-video surface and cover short-video content only. Every treatment adds GRP as an online retrieval source, served live through the stack of Section 5; the model variants are supervised pre-training (SFT), reward-guided post-training (RL) using the view-time prediction head in the reported comparison, and a larger per-request decoding budget. Results report relative changes in the metrics of Section 2.2: the views, view time, and shares on the surface, and GRP’s source-rate rank , its rank among the evaluated retrieval sources by share of served views. Significance is assessed at the 95% level and bold marks 𝑝 < 0.05 in the tables. Topline guardrails, such as DAUs and app-level engagement, remain neutral or positive in every configuration. 
+
+6.2 Axis 1: GRP as a retrieval source 
+
+Here GRP sits behind the unchanged rankers with a fixed quota, and the per-source protocol benchmarks it against the incumbent sources while we improve the model. The supervised model enters as the 14th-ranked source by served share with neutral surface-level metrics (Table 8): views 0.00%, view time +0.04%, shares +0.58%, none significant. This is the expected starting point for a new source behind an intact funnel, and it establishes the SFT model as the baseline against which model improvements are read. Reward-guided post-training is the first such improvement. Measured against the SFT model with the serving configuration held fixed, RL lifts GRP’s view-time contribution by +0.45%; view time is the sole reward used for post-training (Section 4). Adding a larger per-request decoding budget, made affordable by the serving work of Section 5, raises the source to 5th by served share and turns the surface-level results positive against production: +0.39% in view time ( 𝑝 = .031) and +0.31% in views ( 𝑝 = .091), with only the view-time gain significant. Raising the budget further to 20 × moves the source to 4th by served share and makes both view time ( +0.46%) and shares ( +0.77%) significant, with views at +0.22%, indicating that the retrieval-only configuration continues to benefit from a larger decoding budget. The per-source benchmark says where the model stands among the sources it competes with. Table 9 compares the post-trained model’s outcome profile with the all-source average in the same treatment (measured in the early-bypass configuration of Section 6.3, which is also the base for source replacement). GRP ranks 2nd on completion and on sends, improves average watch time and reduces skips relative to the average, and is above average on favorites; its watch-time and skip ranks leave room against the strongest individual sources. These comparisons identify the remaining differences between sources.                                         
+
+> 19 GRP v0.1 Technical Report Table 8 |Axis 1, GRP as a retrieval source behind the unchanged rankers. Relative changes on the short-video surface against the stated baseline; bold marks 𝑝 <0.05. The RL row is measured against the SFT model with the same serving configuration; its views and shares were not part of that read-out. Model Baseline Source-rate rank Views View time Shares SFT production 14th 0.00% +0.04% +0.58% SFT + RL SFT ——+0.45% —SFT + RL + 4 ×budget production 5th +0.31% +0.39 %+0.29% SFT + RL + 20 ×budget production 4th +0.22% +0.46 %+0.77 %Table 9 |Per-source engagement for SFT + RL with early-ranking bypass, the base configuration for source replacement, relative to the all-source average in the same treatment. Parentheses give ranks among sources with at least 1% of the benchmark’s attributed observations and a defined metric. The cutoff applies only to ranks. Completion is the mean watch-time-to-video-length ratio over valid observations; favorite and send rates measure the fraction of attributed observations with at least one such event. Lower skip rate is better. These estimates attribute engagement to served recommendations and can overcount viewed items. Metric Relative improvement (rank) Average watch time +4.9% (12th) Completion ratio +14 .6% (2nd) Skip rate (lower is better) −10 .1% (10th) Favorite rate +9.2% (9th) Send rate +34 .9% (2nd)
+
+6.3 Axis 2: bypassing early ranking 
+
+The bypass lets a configurable portion of GRP’s candidates skip the early-ranking stage and travel on the model’s own MHP scores (Section 5.1). Because a production ranker is removed from part of the slate, the goal is to raise GRP’s share of served traffic while holding the topline neutral ; a topline gain is desirable, although the acceptance criterion is neutrality. Table 10 reports the three configurations, each against production. With bypass, the supervised model moves from 14th to 8th by served-share rank, and with post-training and a larger decoding budget GRP reaches 4th. Whether the surface-level metrics stay neutral depends on the model. With the supervised model, shares rise +2.87% while view time falls −0.45%, both significant. These results show different effects on sharing and view time. The post-training comparison evaluates whether reward alignment changes that trade-off before the generative model is used for ranking. Post-training the same model with mGRPO against the frozen in-model reward closes the gap: view time is flat ( +0.04%) and shares stay positive ( +0.98%), which meets the neutrality bar at a higher share than SFT without bypass. The larger decoding budget then yields a served-share rank of 4th while the surface-level results remain neutral (view time 
+
+−0.24%, 𝑝 = .177; shares +2.30%). Together with Table 8, these results distinguish the deployment effects: bypass increases served share and sharing, with a view-time cost that post-training offsets, while a larger decode budget improves view time in the retrieval-only configuration. Extending the bypass toward the late-stage ranker requires the in-model ranking quality of Section 4.2 to be demonstrated online.                                        
+
+> 20 GRP v0.1 Technical Report Table 10 |Axis 2, early-ranking bypass, against production. Source-rate rank is GRP’s rank among the evaluated sources by share of served views (SFT without bypass ranks 14th); the remaining columns are relative changes on the short-video surface, bold marking 𝑝 <0.05. Configuration Source-rate rank Views View time Shares SFT + bypass 8th −0.16% −0.45 %+2.87 %SFT + RL + bypass 9th +0.22% +0.04% +0.98 %SFT + RL + bypass + larger budget 4th +0.24% −0.24% +2.30 %Table 11 |Axis 3, early-ranking bypass combined with retirement of low-performing sources, against production. The first row is the base configuration (Axis 2, Table 10); the second adds the source retirement. Source-rate rank is GRP’s rank among the evaluated sources by share of served views; the remaining columns are relative changes on the short-video surface, bold marking 𝑝 <0.05. Configuration Source-rate rank Views View time Shares SFT + RL + bypass 9th +0.22% +0.04% +0.98 %SFT + RL + bypass + source retirement 10th +0.47 %+0.82 %+2.56 %
+
+6.4 Axis 3: bypass with retirement of weaker sources 
+
+The third axis combines the early-ranking bypass with the retirement of a few low-performing incumbent sources, whose quota is reassigned to GRP. The goal is both a larger share of served traffic and a gain in the surface-level metrics. Applied to the post-trained early-bypass configuration, the treatment improves the surface-level metrics (Table 11): +0.47% views, +0.82% view time, and 
+
++2.56% shares against production, all significant, at neutral guardrails, where the base configuration alone was neutral on views and view time. GRP ranks 10th by served share in this experiment, so the measured gain came with the served share holding rather than growing; the served-share rank is measured within each experiment’s own arm and is not directly comparable across rows. The gain is accompanied by an expected shift in the content mix—the surface absorbs slots previously served from other content types—without adverse changes in the reported surface metrics, with neutral platform-level guardrails. 
+
+6.5 Where the path stands 
+
+The three axes evaluate complementary parts of the progressive deployment strategy. As a source, GRP is competitive on a few metrics (2nd on completion and sends), and post-training improves view time, the metric used as its reward. The early-ranking bypass raises its share of served traffic from 14th to 4th by rank, and post-training turns the bypass from a view-time loss into neutral surface-level results. Retiring weaker sources on top of the bypass converts the share into significant gains in views, view time, and shares at neutral guardrails. The remaining gaps are the ones the benchmark names: average watch time and skip rate still trail the strongest individual sources, and the late-stage ranker has not yet been bypassed. Further evaluation of quota changes and ranking-stage bypass should consider the reported outcome trade-offs together with the model’s ranking quality. 
+
+> 21 GRP v0.1 Technical Report
+
+# 7 Conclusion, Limitations, and Future Directions 
+
+This report presented GRP, a generative recommendation paradigm that unifies retrieval, ranking, and reward modeling in a single model, and the progressive path by which we are bringing it into production. Retrieval is generative decoding of Qwen3-VL Semantic IDs from a decoder-heavy encoder–decoder trunk with block-wise-independent target decoding and variable-length attention over event histories; ranking is a jointly-trained, detached MHP module that attaches calibrated engagement scores to candidates; and reward modeling reuses that same frozen module for mGRPO post-training. On the pre-training side we showed that item-level history fusion, decoder-heavy capacity, a merged stream of explicit actions with reserved budget, and a higher-resolution tokenizer each improve retrieval in one-factor comparisons. On the post-training side we diagnosed why a naively trained reward is candidate-indifferent, fixed it, and introduced a reference-anchored margin that lets reward optimization proceed without eroding recall. On the serving side we reduced end-to-end retrieval latency by 69%. Online, the post-trained early-bypass configuration delivers strong completion and sharing alongside above-average watch time, RL steers GRP toward the metric it is rewarded on, and replacing weaker sources with it yields significant surface-level gains at neutral guardrails. The distance from this system to a fully end-to-end recommender is also clear, and the progressive protocol measures it directly. 1. Not yet leading on every axis. Despite stronger watch time, completion, and skip performance than the all-source average, the post-trained early-bypass configuration remains below average on boost rate and trails the strongest individual sources on watch time and skip rate. Auxiliary sources remain necessary, and quota growth is bounded by these gaps rather than by infrastruc-ture. Next: multi-objective rewards that include these axes, so that RL optimizes engagement along multiple dimensions rather than view time alone. 2. Rankers are still in the loop, and the in-model ranker is not yet good enough to replace them. 
+
+Only a portion of GRP candidates bypasses the early-ranking stage and every candidate still passes the late-stage ranker; with the supervised model the bypass trades view time for sharing, and post-training only brings it back to neutral. The MHP module is the binding constraint: even after the redesign of Section 4.2 it trails the production ranker, and the gap is widest on the rare heads (favorite, share, reply), where AUPRC is low in absolute terms and the reward is therefore least informative about the actions that matter most. Next: close the MHP gap on the served distribution—more capacity and training data for the rare heads, and calibration monitoring against the production ranker. 3. The model is small. The deployed trunk is a relatively small dense model, and its size shows: histories beyond 𝐵 ref events are flat to negative, RL gains grow with batch scale, and the encoder–decoder rebalancing of Section 3.6.2 improved quality and throughput at the same time, which suggests the dense capacity is under-provisioned rather than misallocated. 
+
+Next: evaluate larger dense models, verify that the generative-recommendation loss follows a predictable scaling law as reported for other production systems, and re-run the history-length and post-training ladders at each size to confirm that capacity is what unlocks longer histories and larger RL gains. We believe the central lesson generalizes beyond our platform: end-to-end generative rec-ommendation becomes production-viable not by replacing the cascade with a bare generator, 
+
+> 22 GRP v0.1 Technical Report
+
+but by absorbing ranking and reward modeling into the generative model, by respecting the non-stationarity of the catalog with continuous retraining, and by migrating progressively, one measurable source and stage at a time. 
+
+# References 
+
+T. Dao, D. Y. Fu, S. Ermon, A. Rudra, and C. Ré. Flashattention: Fast and memory-efficient exact attention with io-awareness. In Advances in Neural Information Processing Systems (NeurIPS) , 2022. J. Deng, S. Wang, K. Cai, L. Ren, Q. Hu, W. Ding, Q. Luo, and G. Zhou. Onerec: Unifying retrieve and rank with generative recommender and iterative preference alignment. arXiv preprint arXiv:2502.18965 , 2025. R. He, L. Heldt, L. Hong, R. Keshavan, S. Mao, N. Mehta, Z. Su, A. Tsai, Y. Wang, S.-C. Wang, X. Yi, E. Chi, and C. Goodrow. Plum: Adapting pre-trained language models for industrial-scale generative recommendations. In Proceedings of the ACM Web Conference (WWW) , 2026. doi: 10.1145/3774904.3792802. K. Jordan, Y. Jin, V. Boza, J. You, F. Cesista, L. Newhouse, and J. Bernstein. Muon: An optimizer for the hidden layers of neural networks. Technical report , 2024. H. Li, Y.-P. Hsu, A. Mantha, P. Agarwal, L. Bhasin, J. Wang, H. Lin, B. Huang, Y. Li, X. Li, C. Wang, K. Rajesh, H. Shokri Razaghi, S. Li, Z. Qin, J. Yang, J. Li, D. D. Badani, J. Xu, and C. Rosenberg. Unipinrec: Unifying generative retrieval and ranking at pinterest scale. arXiv preprint arXiv:2606.00422 , 2026. OneRec Team, Kuaishou. Onerec-v2 technical report. arXiv preprint arXiv:2508.20900 , 2025. Qwen Team. Qwen3-vl: Technical report. arXiv preprint , 2025. C. Raffel, N. Shazeer, A. Roberts, K. Lee, S. Narang, M. Matena, Y. Zhou, W. Li, and P. J. Liu. Exploring the limits of transfer learning with a unified text-to-text transformer. Journal of Machine Learning Research , 21(140):1–67, 2020. S. Rajput, N. Mehta, A. Singh, R. H. Keshavan, T. Vu, L. Heldt, L. Hong, Y. Tay, V. Q. Tran, J. Samost, M. Kula, E. H. Chi, and M. Sathiamoorthy. Recommender systems with generative retrieval. In 
+
+Advances in Neural Information Processing Systems (NeurIPS) , 2023. J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347 , 2017. Z. Shao, P. Wang, Q. Zhu, R. Xu, J. Song, X. Bi, H. Zhang, M. Zhang, Y. K. Li, Y. Wu, and D. Guo. Deepseekmath: Pushing the limits of mathematical reasoning in open language models. arXiv preprint arXiv:2402.03300 , 2024. J. Su, Y. Lu, S. Pan, A. Murtadha, B. Wen, and Y. Liu. Roformer: Enhanced transformer with rotary position embedding. arXiv preprint arXiv:2104.09864 , 2021. D. Tikhonovich, O. Sorokin, V. Dodonov, M. Ulianova, and I. Murzin. Gryphon: A unified architecture for semantic-id generation and item-level scoring in industrial recommendations. 
+
+arXiv preprint arXiv:2606.08604 , 2026. 
+
+> 23 GRP v0.1 Technical Report
+
+R. Wang, R. Shivanna, D. Cheng, S. Jain, D. Lin, L. Hong, and E. Chi. Dcn v2: Improved deep & cross network and practical lessons for web-scale learning to rank systems. In Proceedings of the Web Conference (WWW) , 2021. Y. You, J. Li, S. Reddi, J. Hseu, S. Kumar, S. Bhojanapalli, X. Song, J. Demmel, K. Keutzer, and C.-J. Hsieh. Large batch optimization for deep learning: Training bert in 76 minutes. International Conference on Learning Representations (ICLR) , 2020. N. Zeghidour, A. Luebs, A. Omran, J. Skoglund, and M. Tagliasacchi. Soundstream: An end-to-end neural audio codec. In IEEE/ACM Transactions on Audio, Speech, and Language Processing , 2021. J. Zhai, L. Liao, X. Liu, Y. Wang, R. Li, X. Cao, L. Gao, Z. Gong, F. Gu, M. He, Y. Lu, and Y. Shi. Actions speak louder than words: Trillion-parameter sequential transducers for generative recommendations. In Proceedings of the 41st International Conference on Machine Learning (ICML) ,2024. J. Zhang, Y. Li, Y. Liu, C. Wang, Y. Wang, Y. Xiong, X. Liu, H. Wu, Q. Li, E. Zhang, et al. Gpr: Towards a generative pre-trained one-model paradigm for large-scale advertising recommendation. arXiv preprint arXiv:2511.10138 , 2025. G. Zhou, J. Deng, J. Zhang, K. Cai, L. Ren, Q. Luo, Q. Wang, Q. Hu, R. Huang, S. Wang, et al. Onerec technical report. arXiv preprint arXiv:2506.13695 , 2025. 
+
+> 24 GRP v0.1 Technical Report
+
+# Appendix A Contributions 
+
+Contributors 
+
+Wenfeng Zhuo Vincent Xue Charles Wei Cong Ni Ruiming Lu Jiwen Ren Mo Li Peng Yang Xufei Wang Dongheng Li Jiacong He Yi Song Yufei Fan Mikhail Obukhov Yiwen Chen Yvette Liu Yin Ye Chengjie Wu Mingtao Zhang Jinchao Ye Lili Zhang Chunhui Zhu 
+
+Use of AI tools. AI tools assisted with manuscript editing. All methodologies and supporting evidence were developed by humans and reviewed by the authors, who take responsibility for the content of this report. 
+
+# B Extended Related Work 
+
+Generative recommendation can be framed as a sequence-modeling problem: a user’s interaction history is consumed, and the model generates the identifier of the next item token-by-token rather than scoring items from a fixed corpus. Different systems realize this differently—encoder–decoder or decoder-only backbones, item-level or Semantic-ID targets, retrieval-only or retrieval-plus-ranking scope. We organize prior work into three strands and position GRP by how far it unifies all three. 
+
+Generative retrieval with Semantic IDs. TIGER (Rajput et al., 2023) introduced Semantic IDs —item identifiers obtained by residual-quantizing (RQ-VAE) a content embedding—and framed retrieval as sequence-to-sequence generation of these IDs, showing a single model can retrieve from a corpus without a maintained ANN index. PLUM (He et al., 2026) adapts pre-trained language models to the same generative-retrieval formulation at industrial scale via Semantic-ID tokenization and continued pre-training. This line establishes the tokenization and decoding machinery GRP builds on, but targets retrieval alone. 
+
+End-to-end generative recommendation. OneRec (Deng et al., 2025; Zhou et al., 2025) is the closest precedent: it unifies retrieval and ranking in one encoder–decoder generative recommender with iterative preference alignment , and OneRec-V2 (OneRec Team, Kuaishou, 2025) moves to a lazy decoder-only architecture and reinforcement learning against real online feedback. UniPinRec (Li et al., 2026) pushes toward a full-stack unification of retrieval and ranking at industrial scale within an existing serving stack, and GPR (Zhang et al., 2025) recasts large-scale advertising recommendation as a single generative “one-model” paradigm. These systems validate that a generative recommender can be aligned with preference signals; GRP differs in that the reward used for alignment is the model’s own jointly-trained ranking module , frozen and reused, rather than 
+
+> 25 GRP v0.1 Technical Report
+
+an externally or separately trained preference model, and in the explicitly progressive deployment path by which it displaces the incumbent cascade. 
+
+Generative modeling for ranking. HSTU (Zhai et al., 2024) recasts ranking and retrieval as a single generative transducer over a unified action sequence and demonstrates trillion-parameter scaling with hardware-efficient attention, but keeps retrieval and ranking as distinct downstream heads. Gryphon (Tikhonovich et al., 2026) is closest in spirit to GRP’s ranking design: it augments an encoder–decoder Semantic-ID generator with a jointly-trained item-level scoring head computed in a single forward pass. GRP extends this design by reusing that same jointly-trained head, frozen, as the reinforcement-learning reward that aligns the generator. 
+
+Policy optimization. mGRPO builds on GRPO (Shao et al., 2024), itself a critic-free variant of PPO (Schulman et al., 2017). Its margin term is related in spirit to preference-margin objectives, but is anchored to the reference model’s competitive gap on logged targets rather than to pairwise preferences over sampled candidates, which is what allows it to protect recall specifically. We also draw on standard components: DCNv2 (Wang et al., 2021) feature crossing, rotary position embeddings (Su et al., 2021), FlashAttention (Dao et al., 2022), the Muon (Jordan et al., 2024) and Lamb (You et al., 2020) optimizers, and Qwen3-VL (Qwen Team, 2025) embeddings for tokenization.

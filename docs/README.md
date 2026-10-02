@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-10-01</span>
+      <span class="dpr-home-dashboard-kicker">2026-10-02</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 3 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 12 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>9</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-10-01 23:00:09 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-10-02 23:12:48 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日速读3篇推荐系统论文，均分6.0，涵盖共享策展反馈、电商重排与用户侧LLM智能体。最值得看的是《AgentRecommender》提出的用户侧可定制推荐，以及《ZooWork-ShopRanker》的偏好对齐电商重排思路。普通读者可先关注LLM智能体如何让推荐由用户自己掌控这一方向。</p>
+<p>今天筛完12篇推荐系统论文，精读9篇、速读3篇，重点集中在生成式检索/推荐、CTR预测与训练效率。</p>
+<p>最值得看的是满分《Generative End-to-end Ad Retrieval at Douyin》和9分《FineSID》，分别指向生成式端到端广告检索与可扩展语义ID学习。</p>
+<p>普通读者建议先读这两篇精读，若关心落地效率，再补速读中的训练时间优化与CTR估计扩展。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">0 篇</strong>
+    <strong class="dpr-home-dashboard-count">9 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Generative End-to-end Ad Retrieval at Douyin">Generative End-to-end Ad Retrieval at Douyin</span></li><li><span class="dpr-home-dashboard-paper-title" title="FineSID: Scalable and Efficient Semantic Identifier Learning for Generative Recommendation">FineSID: Scalable and Efficient Semantic Identifier Learning for Generative Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="GRP v0.1 Technical Report">GRP v0.1 Technical Report</span></li></ul>
   </div>
-
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>9</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,7 +96,7 @@
     <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation">Nearest but Not Dearest: Shared Curator-Feedback Infrastructure for Content-Only Search and Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="ZooWork-ShopRanker: An Open, Preference-Aligned E-Commerce Reranker">ZooWork-ShopRanker: An Open, Preference-Aligned E-Commerce Reranker</span></li><li><span class="dpr-home-dashboard-paper-title" title="AgentRecommender: LLM Agents Enable Customizable Recommender Systems on the User Side">AgentRecommender: LLM Agents Enable Customizable Recommender Systems on the User Side</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Beyond Interaction Capacity: Estimator Scaling with Recursive Models for CTR Prediction">Beyond Interaction Capacity: Estimator Scaling with Recursive Models for CTR Prediction</span></li><li><span class="dpr-home-dashboard-paper-title" title="Optimizing Effective Training Time for Large-Scale Recommendation Systems">Optimizing Effective Training Time for Large-Scale Recommendation Systems</span></li><li><span class="dpr-home-dashboard-paper-title" title="AgentWebRec: Compact Evidence Fusion over the Agent Web for Personalized Recommendation">AgentWebRec: Compact Evidence Fusion over the Agent Web for Personalized Recommendation</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>

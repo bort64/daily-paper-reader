@@ -1,0 +1,424 @@
+Title: Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS)
+
+URL Source: https://arxiv.org/pdf/2610.01533v1
+
+Published Time: Fri, 02 Oct 2026 01:34:17 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS) 
+
+# Aleksei Medvedev ∗
+
+aleksei.medvedev@huawei.com Huawei Ireland Research Centre Dublin, Ireland 
+
+# Alejandro Ariza-Casabona ∗
+
+alejandro.ariza.casabona@h-partners.com Huawei Ireland Research Centre Dublin, Ireland 
+
+# Steven Derby 
+
+steven.derbi@huawei-partners.com Huawei Ireland Research Centre Dublin, Ireland 
+
+# Gonzalo Fiz Pontiveros 
+
+gonzalo.fiz.pontiveros@huawei.com Huawei Ireland Research Centre Dublin, Ireland 
+
+# Xinyang Shao 
+
+xinyang.shao@huawei-partners.com Huawei Ireland Research Centre Dublin, Ireland 
+
+# Florian Spiess 
+
+florian.spiess@h-partners.com Huawei Ireland Research Centre Dublin, Ireland 
+
+## Abstract 
+
+Existing work on Semantic IDs (SIDs) for generative recommenda-tion treats SID construction as a representation learning problem: encode items into a quantised latent space and read off codes. We argue this view is incidental. SID construction is, at heart, a re-cursive clustering problem, and once stated this way the natural object to cluster is a graph whose nodes carry semantic content and whose edges carry collaborative signal; SID assignment becomes a hierarchical graph partition. This reframing yields a unified frame-work, Graph-Informed Semantic IDs (GrIS), that subsumes prior approaches rather than displacing them. RQ-VAE and RQ-KMeans are recovered as the special case where the graph is empty, ex-posing content-only quantisation as one corner of a larger design space along two so-far-collapsed axes: graph construction and recur-sive partition algorithm. We explore two contrasting instantiations: RecDMoN, which performs hierarchical assignment via differen-tiable graph pooling, and RQ-GAE, which extends RQ-VAE with graph-aware item representations and a graph reconstruction ob-jective. On multiple real-world datasets, GrIS consistently improves over CF-aware SOTA, with gains of up to +52% Hit@10. Because graph construction and partition are explicit, separately config-urable components, improvements on either axis can be combined and evaluated systematically. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems ; Clustering and classification ; Collaborative search; 
+
+## Keywords 
+
+Generative Recommendation, Item Tokenisation, Graph Neural Networks 
+
+> ∗These authors contributed equally to this work.
+> This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3840883
+
+ACM Reference Format: 
+
+Aleksei Medvedev, Alejandro Ariza-Casabona, Steven Derby, Gonzalo Fiz Pontiveros, Xinyang Shao, and Florian Spiess. 2026. Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS). In Proceedings of the 35th ACM International Con-ference on Information and Knowledge Management (CIKM ’26), Novem-ber 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 11 pages. https: //doi.org/10.1145/3799682.3840883 
+
+## 1 Introduction 
+
+Recommender systems are increasingly shifting towards generative prediction, where a model directly produces the identifier of the next item rather than retrieving candidates by nearest-neighbour search over dense embeddings. Central to this approach are Seman-tic IDs (SIDs): short sequences of discrete codes assigned to each item and generated autoregressively by the recommender. Prior work has shown that SIDs can improve efficiency, generalisation, and retrieval quality [22], attracting significant research interest in how to construct better item tokenisations. Recent industrial studies further report online gains from SID-based retrieval at scale [2, 3, 5, 13, 29]. Most existing approaches formulate SID construction as a repre-sentation learning problem: encode each item into a dense latent vector, then quantise that vector into a sequence of codes. How-ever, this framing is incomplete. An SID is not merely a compact representation of an item; it should organise items hierarchically from coarse to fine granularity, collapsing similar items into shared codes while preserving distinctions that matter for recommenda-tion. These are properties of how the item space is structured and recursively partitioned for recommendation, and are not necessarily present in a good latent representation. The gap becomes critical once collaborative signal, which is key for recommendation, is taken into account. Supported by recent studies [25, 26], content similarity and behavioural similarity do not always coincide: semantically similar items can serve different audiences, while items frequently consumed together may share little surface content. As a result, naive quantisation based solely on content embeddings leads to semantically plausible yet misaligned SID codes with the downstream recommendation objective. Exist-ing approaches respond by incorporating user-item graphs [19], collaboratively trained embeddings [25], or contrastive alignment into the SID pipeline [8], proving that collaborative information arXiv:2610.01533v1 [cs.AI] 1 Oct 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Aleksei Medvedev et al. 
+
+matters for code assignment. Nonetheless, these additions are typi-cally introduced as modifications to representation learning, rather than as evidence that the primary objective of SID construction should itself be relational. We argue that SID construction is, at heart, a recursive clustering problem and that the natural object to cluster is not an isolated item embedding but an item graph whose nodes carry semantic content and whose edges carry collaborative signal, leading to a hierarchical graph partition problem. This perspective yields a unified frame-work, Graph-Informed Semantic IDs (GrIS) , that clarifies the structure of the design space and places several existing methods within it. In particular, powerful residual quantisation baselines such as RQ-VAE [18] and RQ-KMeans [21] are recovered as the special case in which the graph is empty, i.e. where partitioning is driven only by node content and no relational signal is present. The framework makes explicit two design choices that were previously treated as a single step: how to construct the graph and how to recursively partition it. This separation makes it possible to reason about SID quality beyond a single tokeniser architecture and it turns seemingly disparate methods into comparable instances of the same principle. Under GrIS, stronger semantic features can be combined with richer collaborative graphs and more effective hierarchical partitioners without reformulating the SID problem each time. To demonstrate this, we study two contrasting instantiations of GrIS. The first, RecDMoN , performs SID assignment through recur-sive differentiable graph pooling, directly optimising hierarchical partitions over the item-item graph. The second, RQ-GAE , extends residual quantisation with graph-aware item representations and a graph reconstruction objective, showing how graph information can be injected into a quantisation-based pipeline without abandon-ing its basic structure. Together, these instantiations illustrate that GrIS is not a single algorithm but a framework that spans multiple families of SID constructors. Our contributions are fourfold: 
+
+• We introduce GrIS, a new formulation of SID construction as hierarchical graph partition rather than stand-alone graph quantisation. 
+
+• We show that prior content-only SID methods arise as spe-cial cases of this formulation when collaborative edges are omitted. 
+
+• We explore two substantially different instantiations of our framework (RecDMoN and RQ-GAE), thereby exposing its own flexibility. 
+
+• Experimental results on multiple real-world datasets show that graph-informed SID construction yields consistent gains over strong collaborative and SID-based baselines, with im-provements of up to 52% Hit@10. The rest of the paper is organised as follows: Section 2 reviews content-based, behaviour-enhanced, and structure-aware Semantic IDs in recent literature. Section 3 introduces the problem formu-lation and important notation. Section 4 formalises GrIS, shows how existing methods fit into the framework, and instantiates RecD-MoN and RQ-GAE. Section 5 reports the experimental setup, results, and discuss implications, and limitations of each approach. Finally, Section 6 presents conclusions and directions for future work. 
+
+## 2 Related Work 
+
+Existing work on semantic identifiers for generative recommen-dation mainly differs in which signals are encoded into the to-kenisation space. We organise the literature into content-based, behaviour-enhanced, and structure-aware semantic IDs. We addi-tionally review two classes of graph-processing operations that are central to our framework: graph convolution and graph pooling. 
+
+## 2.1 Content-based Semantic IDs 
+
+Early semantic ID methods derive item tokens primarily from item content. TIGER [22] is the representative example: it encodes item text into dense embeddings and uses RQ-VAE to quantise them into hierarchical code sequences. This approach showed that seman-tically meaningful IDs generalise better than random hashing or atomic IDs, especially for cold-start and semantic sharing across similar items. More broadly, this family of methods treats item to-kenisation as semantic quantisation over content features. Related quantisation schemes such as hierarchical clustering, product quan-tisation variants, and residual clustering methods [4, 10, 20, 21] follow the same principle: build compact discrete codes from con-tent representations before training the generative recommender. Their common limitation is that the resulting IDs are governed by semantic similarity, which may not always align with user be-haviour. 
+
+## 2.2 Behaviour-enhanced Semantic IDs 
+
+A second line of work responds by injecting collaborative signals into semantic ID learning. LETTER [25] is a representative method in this direction. It keeps hierarchical semantic quantisation via RQ-VAE, but further aligns quantised representations with collabo-rative filtering embeddings, thus relying on a pretrained CF-based model, and adds diversity regularisation to reduce code assignment bias. PLUM [8] extends this idea in a large-scale Large Language Model (LLM) setting by combining multi-embedding content fu-sion with co-occurrence-based contrastive regularisation, so that user behaviour shapes the SID space during tokenisation rather than only during downstream training. Overall, these methods shift the goal from pure semantic compression to semantic-behaviour alignment. 
+
+## 2.3 Structure-aware Semantic IDs 
+
+A third line explicitly exploits structural information, such as co-occurrence graphs or interaction topology, during ID construction. In this setting, the structure itself helps define the semantic space instead of serving only as auxiliary supervision. MMGRec [19] is a representative graph-enhanced tokeniser: it uses Graph-aware RQ-VAE to fuse multimodal item features with collaborative signals from a user-item graph before quan-tisation, and further handles collisions with a popularity-based token. S2GR [6] also belongs to this line, as it improves the SID space with item co-occurrence structure, codebook balancing, and hierarchical reasoning over the resulting IDs. In addition, [11] is particularly relevant here because it explores several pure structure-based alternatives: identifiers such as CID or SID are derived from item co-appearance structure rather than content-based representa-tions. This makes it a useful reference point for the structure-aware Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS) CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+setting, especially when contrasting structure-first tokenisation against content-driven SID learning. GrIS unifies all three lines by formalising SID construction as hierarchical graph partition, with content-only methods arising as the degenerate case of an empty graph. 
+
+## 2.4 Graph Convolution and Graph Pooling 
+
+Graph neural networks (GNNs) commonly process graph-structured data through neighbourhood aggregation. In graph-convolutional architectures, each node updates its representation using its own features and information propagated from adjacent nodes. Stacking multiple such layers allows information to be integrated from multi-hop neighbourhoods. These architectures have been successfully applied to link prediction [32], node classification [7, 16], and graph classification [28]. Several structure-aware semantic ID methods discussed above use this mechanism to enrich content-based item representations with relational signals from the interaction graph. Graph pooling [30] progressively coarsens a graph by learning soft node-to-cluster assignments and aggregating the correspond-ing features and connectivity. Beyond producing graph-level repre-sentations, this formulation provides a differentiable approach to discovering coherent node clusters without ground-truth assign-ments. MinCutPool [1] and DMoN [24] learn such assignments jointly from graph topology and node attributes by optimising objectives based on normalised min-cut and modularity, respec-tively, together with regularisation terms that prevent degenerate partitions. Applying these operations recursively or across multi-ple stages yields hierarchies of graph-aware clusters, providing a natural basis for constructing multi-level semantic IDs. 
+
+## 3 Preliminaries 
+
+In this Section, we introduce the notation used throughout the paper and formalise the Semantic ID construction problem considered in generative recommendation. 
+
+Generative Recommendation Setup . Let U = 𝑢 1, ..., 𝑢 | U | be the set of users and I = 𝑖 1, ..., 𝑖 | I | the set of items. For each user 
+
+𝑢 ∈ U , we observe their interaction history 𝑥 𝑢 = (𝑖 𝑢, 1, ..., 𝑖 𝑢,𝑇 𝑢 ),where 𝑖 𝑢,𝑡 ∈ I denotes the item interacted with by the user at step 
+
+𝑡 . In sequential recommendation, the goal is to predict the next item 
+
+𝑖 𝑢,𝑇 𝑢 +1 given the prefix 𝑥 𝑢 .
+
+Item Semantic Representations . Each item 𝑖 ∈ I is associated with a set of semantic embeddings E𝑖 = {𝑒 1 
+
+> 𝑖
+
+, . . . , 𝑒 𝑀 𝑖  
+
+> 𝑖
+
+}, where each embedding is derived from content data associated with the item. While content data may span multiple modalities, in this work we use only text embeddings derived from item metadata, with the specific fields varying by dataset. 
+
+Collaborative Graph . User interaction sequences induce rela-tional structure over items that can be represented as a weighted graph 𝐺 = (𝑉 , 𝐸,𝑊 ) where I ⊆ 𝑉 , the edges 𝐸 ⊆ 𝑉 × 𝑉 connect behaviourally related nodes, and 𝑊 : 𝐸 → R>0 assigns weights that measure the strength of the relation. The specific construction rule that determines 𝐸 and 𝑊 from interaction data is a configurable component of the GrIS framework, discussed in Section 4. 
+
+Semantic IDs . A Semantic ID (SID) is a map SID : I → C 1 × · · · × C 𝐿 ,𝑖 ↦ → ( 𝑐 1 
+
+> 𝑖
+
+, . . . , 𝑐 𝐿 𝑖 ),
+
+where C1, . . . , C𝐿 denote 𝐿 codebooks, one per level. 1
+
+Problem Statement . Given a set of items I, their semantic em-beddings {E 𝑖 }𝑖 ∈ I , and user interaction sequences {𝑥 𝑢 }𝑢 ∈ U , the goal is to construct a SID map whose hierarchical structure im-proves retrieval quality when used by a generative recommender. We focus exclusively on SID construction and hold the downstream generative recommender fixed. 
+
+## 4 Graph Informed Semantic IDs (GrIS) 
+
+This Section introduces Graph Informed Semantic IDs (GrIS), a gen-eral framework for constructing hierarchical item identifiers from both semantic item features and collaborative item structure. Fig-ure 1 illustrates the main components and potential design choices of our framework. 
+
+## 4.1 Overview 
+
+GrIS formalises SID construction as hierarchical graph partition over an item graph whose nodes carry semantic content and whose edges carry collaborative signal. This formulation exposes two in-dependent design axes that were previously treated as a single step: 
+
+graph construction , which determines what relational structure is encoded, and hierarchical partition , which determines how that structure is recursively divided into codes. Each axis is an indepen-dently configurable component; Table 1 summarises how existing methods and our two instantiations occupy the resulting design space. 
+
+## 4.2 Item Graph Construction 
+
+The first step in GrIS is to construct an item graph 𝐺 from interac-tion data. For simplicity, we focus on item-item graph construction, though other entities such as users, or external entities (Knowl-edge Graphs) could be considered as well. Given user sequences 
+
+{𝑥 𝑢 }𝑢 ∈ U , we define an edge between items 𝑖 and 𝑗 whenever they are considered related under a chosen graph construction rule, such as windowed co-occurrence, immediate sequential transition, session-based co-appearance, or random walk proximity over an interaction graph. A weight 𝜔 𝑖 𝑗 = 𝑊 (𝑖, 𝑗 ) is assigned to each can-didate edge based on the strength of the co-occurrence signal, and edges below a minimum threshold 𝜆 may be discarded to control the graph’s density . This abstraction gives flexibility to the framework to adapt to different recommendation settings: sequential edges emphasise temporal transitions, session graphs emphasise local co-consumption, and random walk-based edges capture broader multi-hop affinity. 
+
+## 4.3 Hierarchical SID assignment 
+
+Given a graph 𝐺 and initial item representations 𝑋 , GrIS assigns each item a hierarchical SID.  
+
+> 1Recent work explores variable-length [15] and end-to-end [4] SID construction; we leave integration with GrIS to future work. CIKM ’26, November 07–11, 2026, Rome, Italy Aleksei Medvedev et al.
+
+Figure 1: Overview of the GrIS framework with two main axes: Graph Construction and Hierarchical SID Assignment. Graph Construction uses the user behaviour data to construct a weighted item graph based on predefined construction rules. This graph together with semantic item representations are fed to the second module to perform hierarchical partition. The output hierarchical SIDs are used to train a Generative Recommender model. In particular, we explore RQ-GAE and RecDMoN instantiations of the GrIS framework. Table 1: Instantiations of the GrIS framework. Content-only methods arise as special cases with an empty graph ( 𝐸 = ∅). Method Graph Construction Hierarchical Partition 
+
+TIGER [22] ∅ RQ-VAE LETTER [25] ∅ RQ-VAE + Contrastive CF + Diversity Loss MMGRec [19] Multimodal Bipartite U × I RQ-VAE + BPR loss S2GR [6] Windowed Co-occurrence I × I RQ-VAE + Load Balancing Loss RecDMoN (ours) Immediate Transition I × I Differentiable Graph Pooling (DMoN) RQ-GAE (ours) Immediate Transition I × I RQ-VAE + Graph Reconstruction Loss 
+
+4.3.1 Graph-Informed Representations. Once the graph 𝐺 is built, GrIS computes graph-informed item representations by propagat-ing information across neighbours: 
+
+𝐻 = 𝑓 𝐺𝑁 𝑁 (𝐺, 𝑋 )
+
+where 𝑋 is the matrix of initial item embeddings and ℎ𝑖 is the graph-informed representation of item 𝑖 . This encoder may be parametric, such as a graph convolutional or attention-based network, or non-parametric, such as normalised neighbourhood aggregation with fixed propagation weights. In both cases, the aim is to enrich each item representation with local collaborative context from nearby items in the graph. A generic K-layer propagation form can be written as 
+
+𝐻 𝑘 +1 = 𝜙 ( ˆ𝐴𝐻 𝑘 𝑊 𝑘 ), 𝐻 0 = 𝑋 
+
+for parametric encoders where 𝑊 𝑘 is learnable weight matrix, or as 
+
+𝐻 𝑘 +1 = 𝜙 ( ˆ𝐴𝐻 𝑘 )
+
+for non-parametric propagation, where ˆ 𝐴 is a normalised adjacency operator and 𝜙 (·) is a pointwise nonlinearity. 
+
+4.3.2 Residual Quantisation Instantiation. Starting from each graph-informed representation ℎ𝑖 , we map it into a latent vector 𝑧 𝑖 =
+
+𝑀𝐿𝑃 (ℎ𝑖 ) which is then discretised through residual quantisation across 𝐿 codebooks. Let the initial residual be 𝑟 1 
+
+> 𝑖
+
+= 𝑧 𝑖 . At level 𝑙 , the code assignment is 
+
+𝑐 𝑙 𝑖 = arg min  
+
+> 𝑘 ∈ C 𝑙
+
+𝑟 𝑙 𝑖 − 𝑏 𝑙 𝑘 
+
+> 22
+
+where 𝑏 𝑙 𝑘 is the 𝑘 -th code embedding in codebook 𝑙 . The residual is updated recursively as 
+
+𝑟 𝑙 +1 
+
+> 𝑖
+
+= 𝑟 𝑙 𝑖 − 𝑏 𝑙 𝑐 𝑙 𝑖 
+
+.
+
+Training Objective. The residual quantisation objective follows the standard RQ-VAE-based SID construction. We augment it with a graph reconstruction term that encourages the quantised latent space to preserve the item–item interaction graph. Rather than Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS) CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+reconstructing the full adjacency matrix, which is expensive for large item vocabularies, we optimise a subsampled neighbourhood softmax over mini-batches. Let 𝑞 𝑖 = Í𝐿 𝑙 =1 𝑏 𝑙 𝑐 𝑙 𝑖 
+
+denote the quantised latent representation of item 𝑖 . Given a mini-batch B, we treat items in B as sampled anchor and candidate nodes from the full item graph. Let 𝑤 𝑖 𝑗 denote the edge weight between items 𝑖 and 𝑗 in the induced batch subgraph. We define the subsampled neighbourhood distribution as 
+
+𝑝 𝜃 ( 𝑗 | 𝑖, B) = exp ( ¯𝑞 ⊤ 
+
+> 𝑖
+
+¯𝑞 𝑗 /𝜏 )
+
+Í𝑘 ∈ B , 𝑘 ≠𝑖 exp ( ¯𝑞 ⊤ 
+
+> 𝑖
+
+¯𝑞 𝑘 /𝜏 ) , ¯𝑞 𝑖 = 𝑞 𝑖 
+
+∥𝑞 𝑖 ∥2
+
+,
+
+where 𝜏 is a temperature parameter. The graph reconstruction loss is 
+
+Lgraph = − 1
+
+|B + |∑︁ 𝑖 ∈ B +∑︁ 𝑗 ∈ B 
+
+𝑤 𝑖 𝑗 log 𝑝 𝜃 ( 𝑗 | 𝑖, B) ,
+
+where 
+
+B+ =
+
+
+
+𝑖 ∈ B :∑︁  
+
+> 𝑗 ∈ B
+
+𝑤 𝑖 𝑗 > 0
+
+
+
+.
+
+Thus, for each sampled anchor item, the model assigns higher prob-ability to its observed graph neighbours within the batch. The remaining batch items form the normalising set of the subsam-pled softmax. This objective is related to weighted neighbourhood-likelihood objectives such as LINE [23], but we apply it directly to the quantised latent representations used for SID construction. The final objective is 
+
+L = LRQ + 𝛽 Lgraph ,
+
+where LRQ denotes the standard RQ-VAE reconstruction and quan-tisation objective, and 𝛽 controls the strength of graph-structural supervision. 
+
+4.3.3 Recursive DMoN Instantiation. This GrIS variant builds SIDs by recursively partitioning the item graph or the graph-informed latent space. Starting from the full item set, a clustering operator splits the current cluster into a small number of subclusters, and the branch selected for item 𝑖 at recursion depth 𝑙 becomes the 𝑙 -th SID code 𝑐 𝑙 𝑖 .When Recursive DMoN is used, the hierarchy is induced by re-peated graph clustering, so the SID no longer comes from codebook quantisation but from the path of the item in the partition tree. This approach is particularly interesting because it makes the graph structure explicit in the identifier itself. That is, two items share a prefix exactly when they remain in the same partition up to that recursion level. 
+
+Training Objective. Following DMoN [24], each recursive split is trained as a local differentiable graph clustering problem. Con-sider a parent cluster at recursion depth 𝑙 with induced weighted adjacency matrix 𝐴 ∈ R𝑛 ×𝑛 and node representations 𝑋 . A local assignment network produces soft assignments of the 𝑛 nodes to 𝐾 
+
+child clusters: 
+
+𝑆 = softmax (𝑔 𝜃 (𝑋, 𝐴 )) ∈ R𝑛 ×𝐾 ,
+
+where 𝐾 is the fixed branching factor shared across all recursion levels. Let 𝑑 = 𝐴 1 be the degree sequence, 𝑚 = 12 1⊤𝑑 the number 
+
+Table 2: Dataset statistics. 
+
+Dataset |U| |I| #Interactions Avg. 𝑇 𝑢 Sparsity Toys 19,412 11,924 167,597 8.63 99.928% Beauty 22,363 12,101 198,502 8.88 99.927% Sports 35,598 18,357 296,337 8.32 99.955% MIND 86,913 20,283 2,308,143 26.56 99.869% Yelp 213,170 94,304 3,277,932 15.38 99.984% Books 603,668 367,982 8,898,041 14.74 99.996% of edges, and set 
+
+𝐵 = 𝐴 − 𝑑𝑑 ⊤
+
+2𝑚 ,
+
+which is known as the local modularity matrix. For each parent cluster, the assignment network is optimised using the DMoN ob-jective: 
+
+L = − 12𝑚 Tr  𝑆 ⊤𝐵𝑆  +√𝐾 𝑛 
+
+> 𝑛
+
+∑︁ 
+
+> 𝑖 =1
+
+𝑆 𝑖 
+
+> 𝐹
+
+− 1.
+
+The first term maximises relaxed graph modularity, encouraging items with stronger-than-expected connectivity to remain in the same child partition. The second term is the DMoN collapse regular-isation term, which penalises highly imbalanced soft assignments across child clusters. After optimising the local split, each item is assigned to the child cluster with the largest assignment probability: 
+
+𝑐 𝑙 𝑖 = arg max   
+
+> 𝑘 ∈ { 1,...,𝐾 }
+
+𝑆 𝑖𝑘 .
+
+The procedure is then applied recursively to the resulting child clusters. The SID of item 𝑖 is given by the sequence of branch indices along its root-to-leaf path. 
+
+## 5 Experiments 5.1 Experimental Setup 
+
+Datasets. We evaluate the proposed framework on multiple rec-ommendation benchmarks spanning different domains: four subsets from the Amazon Reviews 2014 dataset [9] (Beauty, Toys, Sports, and Books), MIND-Small [27] (a public news recommendation dataset released by Microsoft), and Yelp 2018 2 (a user-business interaction dataset from the Yelp platform). These datasets provide a diverse test bed covering e-commerce, news, and local business scenarios, allowing us to assess the benefits and drawbacks of each instantiation of the framework across distinct item semantics, inter-action patterns, sparsity levels, and catalogue sizes. Table 2 shows the statistics of the selected datasets. 
+
+Baselines. We consider representative baselines from multiple methodological families: - CF-only atomic ID methods: SASRec [14], a self-attentive se-quential recommender over atomic item IDs, and HSTU [31], a strong and scalable sequential recommender with relative position and temporal attention biases over the original user-item ID space.  
+
+> 2https://www.yelp.com/dataset CIKM ’26, November 07–11, 2026, Rome, Italy Aleksei Medvedev et al.
+
+- Semantic-only SID generative method: TIGER [22], which represents items using semantic IDs obtained from residual quantisation and performs recommendation via generative decoding over semantic tokens rather than conventional item ranking. - CF-only SID method: Spectral clustering [11], which con-structs semantic-style item assignments purely from collab-orative filtering structure. - Graph-free SID assignment method: LETTER [25] learns hi-erarchical SIDs without an explicit item graph, injecting collaborative signals through a pretrained SASRec auxiliary model and regularisation losses. - Graph-aware GrIS methods: MMGRec [19], which integrates multimodal and graph signals within the GrIS framework, and S2GR [6], which enhances hierarchical semantic ID learning by explicitly modelling structural relations in the graph. 
+
+Implementation Details. Following prior work [10, 12, 25], we apply iterative 5-core filtering to all datasets and adopt a leave-one-out evaluation protocol, where each user’s last interaction is used for testing and the second-to-last interaction is used for validation. Furthermore, we fix the maximum sequence length to 20 following [25]. We report Hit Rate ( H) and normalised Discounted Cumulative Gain ( N) at cutoffs 5 and 10, with their scores expressed as percentages. Each experiment is repeated with three random seeds and average performance across seeds is reported. For all residual-quantisation-based SID mapping methods, in-cluding RQ-GAE, we use four codebooks with 256 entries each, following [25]. SID mapping models are trained for 20K epochs using AdamW with learning rate 10 −3, batch size 1024, and weight decay 10 −4; for the Books dataset, we increase the batch size to 8192 due to its larger scale. Downstream generative recommen-dation models are trained for 150 epochs with AdamW, learning rate 3 × 10 −4 and early stopping patience of 20 based on validation performance. For RQ-GAE, we use APPNP [17] as the graph propagation op-erator and construct the item graph using adjacent co-occurrence edges from training sequences. For S2GR, we omit the reasoning component and use the same downstream generative recommenda-tion backbone as the other SID methods, since our study focuses on isolating the effect of SID construction rather than comparing full recommendation frameworks. For MMGRec, we follow the public implementation and hyperparameter setting of [19]: the GCN com-ponent is first trained for 1000 epochs with BPR loss, after which the RQ-VAE stage is trained using the same residual-quantisation setup as the other SID baselines and RQ-GAE. Additional implementation details are provided in our source code at https://github.com/hirc-airecs/graph-informed-sids. 
+
+## 5.2 Experimental Results 
+
+Our experiments address the following questions: (a) Can GrIS instantiations improve over content-only and CF-aware SID base-lines? (b) How does graph construction affect downstream perfor-mance? (c) How do different hierarchical SID assignment techniques behave when combined with graph-informed representations? 
+
+5.2.1 Generative Recommendation Comparison. Table 3 compares RecDMoN and RQ-GAE against atomic-ID and semantic-ID base-lines. All methods use the same TIGER (T5-based) generative rec-ommendation backbone. On the three small Amazon benchmarks (Beauty, Sports, and Toys), RecDMoN achieves the best results among all evaluated methods. RQ-GAE ranks among the top two methods on Books, Beauty, Sports, and Yelp across all reported metrics. These results suggest that collaborative graph structure provides useful signal for SID construction. The signal is comple-mentary to purely semantic or CF-embedding-based identifiers. Since the generative recommender backbone is fixed, the observed gains are attributable to the SID construction strategy rather than to a stronger downstream recommender. On Books, RecDMoN could not be evaluated because the current DMoN implementation exceeded GPU memory limits. RQ-GAE scales to this setting and achieves the strongest result among the evaluated methods, reaching 4.60 H@10. Compared with S2GR and the CF-aware LETTER baseline, this corresponds to relative gains of +16 .5% and +34 .1%, respectively. 
+
+Discussion on Yelp and MIND. The Yelp and MIND results provide a useful view of how GrIS behaves beyond the Amazon benchmarks. On Yelp, RQ-GAE remains the second-best method across all re-ported metrics. On MIND, HSTU achieves the strongest overall performance, while RecDMoN remains competitive. This behaviour is plausible because MIND differs structurally from the Amazon datasets. It has substantially longer user histories on average and a relatively compact item set. This may favour strong sequential models over SID-based generative methods. Overall, results suggest that the effectiveness of graph-aware SID construction is clear but certain nuances can be observed depending on dataset structure, training stability, and scalability of the graph-clustering stage. 
+
+5.2.2 Impact of Graph Construction and Graph-Aware Design Choices. 
+
+We conduct the graph construction ablation on the Beauty dataset and test a windowed co-occurrence graph partition leaving other graph construction strategies such as random walk proximity or session-based co-occurrence as future work. Given each user’s time-ordered interaction sequence, we construct item–item graphs using forward windowed co-occurrence. The adjacent-pair graph is a special case of this construction with window size 𝑤 = 1, where each item is linked only to the next item in the sequence. We evaluate windowed graphs with 𝑤 ∈ { 2, 3, 5}, where each item is linked to the next 𝑤 items. For the 𝑤 = 5 setting, we additionally test inverse-distance weighting, where pairs at distance 𝑘 receive weight 1 /𝑘 . Edge weights are summed over all users and occur-rences, and graphs are symmetrised before being passed to the graph-aware SID module. Table 4 summarises the graph variants used in the ablation. The table reports the number of edges |𝐸 |, the average node de-gree computed on the unweighted graph, the average weighted degree after aggregating co-occurrence weights, and 𝜆 2, the second-smallest eigenvalue of the normalised graph Laplacian. This eigen-value is commonly used as a spectral proxy for graph connectiv-ity: larger values generally indicate stronger global connectivity. We report the ablation as heatmaps in Figure 2, where rows cor-respond to graph variants and columns correspond to method-specific hyperparameters. For RecDMoN, we vary the hierarchy Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS) CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Table 3: Results across datasets. Bold scores indicate leading results while underscore indicates second best results. † denotes significant improvement over the best baseline. Method H@5 H@10 N@5 N@10 H@5 H@10 N@5 N@10 Books Beauty RecDMoN – – – – 4.89 † 7.96 † 3.11 † 4.09 †
+
+ΔLETTER – – – – +21.7% +28.9% +14.6% +20.2% 
+
+RQ-GAE 3.31 † 4.60 † 2.39 † 2.81 † 4.43 † 6.87 † 2.96 † 3.74 †
+
+ΔLETTER +29.0% +34.1% +26.1% +29.0% +10.2% +11.2% +9.1% +9.9% Spectral – – – – 4.17 6.35 2.76 3.45 LETTER 2.56 3.43 1.90 2.18 4.02 6.18 2.71 3.41 TIGER 2.34 3.11 1.72 1.97 3.69 5.84 2.44 3.13 S2GR 2.91 3.95 2.11 2.45 3.68 5.74 2.41 3.07 MMGRec – – – – 3.17 5.08 2.06 2.67 HSTU 1.92 3.32 1.12 1.57 3.27 5.94 1.74 2.60 SASRec 1.03 1.71 0.64 0.86 1.68 2.96 1.03 1.44 
+
+MIND Sports RecDMoN 10.12 15.69 6.71 8.50 2.89 † 4.72 † 1.83 † 2.41 †
+
+ΔLETTER +21.3% +18.0% +21.5% +19.6% +36.3% +38.0% +32.4% +34.2% 
+
+RQ-GAE 8.33 13.49 5.55 7.21 2.28 † 3.75 † 1.45 1.92 †
+
+ΔLETTER -0.1% +1.5% +0.4% +1.3% +7.4% +9.6% +4.9% +6.8% Spectral 10.24 16.14 6.64 8.54 1.70 2.94 1.05 1.45 LETTER 8.34 13.29 5.53 7.11 2.12 3.42 1.38 1.80 TIGER 6.32 9.53 4.16 5.19 2.12 3.46 1.33 1.76 S2GR 4.31 6.90 2.90 3.73 2.02 3.24 1.28 1.68 MMGRec – – – – 1.62 2.73 1.02 1.38 HSTU 12.16 18.32 7.98 9.96 2.02 3.41 1.07 1.52 SASRec 8.07 12.96 5.30 6.87 1.21 2.00 0.79 1.04 
+
+Yelp Toys RecDMoN – – – – 4.81 8.16 † 2.94 † 4.02 †
+
+ΔLETTER – – – – +34.6% +52.0% +22.9% +35.3% 
+
+RQ-GAE 1.56 2.68 0.97 1.33 4.22 6.51 2.76 † 3.50 †
+
+ΔLETTER +73.3% +83.5% +63.7% +72.2% +18.1% +21.3% +15.4% +17.9% Spectral 2.62 4.30 1.69 2.23 3.50 5.33 2.28 2.87 LETTER 0.90 1.46 0.60 0.77 3.57 5.37 2.39 2.97 TIGER 1.31 2.14 0.84 1.11 3.26 5.24 2.04 2.68 S2GR 1.49 2.54 0.94 1.28 3.33 5.40 2.10 2.77 MMGRec – – – – 2.29 3.67 1.42 1.86 HSTU 1.28 2.38 0.77 1.12 4.35 7.03 2.28 3.15 SASRec 1.40 2.39 0.87 1.19 1.35 2.29 0.88 1.18 depth and recursive branching factor using 𝐿 4_ 𝑅𝐹 6, 𝐿 3_ 𝑅𝐹 10, and 
+
+𝐿 2_ 𝑅𝐹 16. For RQ-GAE, we vary the APPNP propagation coefficient 
+
+𝛼 ∈ { 0.1, 0.3, 0.5, 0.7, 0.9}, where larger 𝛼 preserves more of the ini-tial semantic representation and reduces the relative contribution of neighbourhood propagation. To keep the computational cost manageable, we reduce the number of RQ-GAE training iterations from 20k to 10k for this ablation. Each heatmap cell reports the mean over three random seeds. This setup allows us to study how graph construction interacts with the main graph-aware SID design choices. Figure 2(a) shows the results for RecDMoN. The strongest re-sults are obtained with the deeper 𝐿 4_ 𝑅𝐹 6 configuration, suggesting that a more gradual coarse-to-fine hierarchy is beneficial for down-stream generative recommendation. Compared with shallower al-ternatives, this setting performs recursive clustering through more levels with a smaller branching factor at each level, which may bet-ter align the graph hierarchy with the prefix structure of semantic IDs. Figure 2(b) shows the results for RQ-GAE. The performance is generally stronger for smaller APPNP coefficients, indicating that neighbourhood propagation is important for constructing effective graph-aware IDs. In contrast, very large 𝛼 values make the prop-agated representation closer to the original semantic embedding and lead to less stable downstream performance. This suggests that graph-aware SID quality depends on retaining semantic informa-tion while still allowing sufficient collaborative signal to enter the quantised representation. Overall, both heatmaps highlight the importance of method-specific graph-aware hyperparameters, especially hierarchy design for RecDMoN and propagation strength for RQ-GAE. However, we do not observe a simple monotonic relationship between the reported graph statistics and downstream recommendation quality. CIKM ’26, November 07–11, 2026, Rome, Italy Aleksei Medvedev et al. 
+
+Table 4: Graph statistics for the Beauty graph construction ablation. 
+
+Graph variant |𝐸 | Avg. deg. Avg. w-deg. 𝜆 2
+
+adjacent 111649 18.45 21.72 0.0467 w2 198768 32.85 39.74 0.0588 w3 265133 43.82 54.07 0.0514 w5 361874 59.81 75.88 0.0536 w5_invdecay 361874 59.81 40.46 0.0537 
+
+Table 5: RQ-GAE components ablation. Graph Input refers to a non-parametric graph-informed item representation (APPNP) and Graph Loss refers to the graph-contrastive loss at each codebook level. Bold scores indicate leading results while underscore indicates second best results.                                
+
+> Graph Input Graph Loss Beauty Sports Toys H@10 N@10 H@10 N@10 H@10 N@10
+> ✓✓6.87 3.74 1.92 3.75 3.50 6.51
+> ✓6.82 3.66 1.95 3.79 3.30 6.22
+> ✓5.66 3.10 1.49 2.95 2.78 5.38 5.84 3.13 1.76 3.46 2.68 5.24
+
+This indicates that the effect of graph construction is mediated by the SID generation method, and a more detailed analysis of graph connectivity and assignment quality remains an important direction for future work. 
+
+5.2.3 RQ-GAE Components Ablation. Table 5 reports the contri-butions of graph-informed item representations and graph recon-struction regularisation to the effectiveness of RQ-GAE across three datasets. Compared with the base TIGER model (bottom row), intro-ducing only the graph contrastive loss consistently improves per-formance across all three datasets, indicating that graph-structured supervision serves as a robust regulariser for semantic ID learn-ing. In contrast, using only graph-informed inputs yields mixed results: it brings modest gains on Toys but underperforms the base model on Beauty and Sports, suggesting that directly replacing the original item semantic embedding with a non-parametric graph representation may introduce noise or weaken sequentially rele-vant semantics. The full model, which combines both components, achieves the best overall performance, ranking first on Beauty and Toys and remaining competitive on Sports. This shows that the two components are complementary: graph-informed inputs inject structural relational information into the encoder, while graph con-trastive loss regularises the latent space to preserve graph proximity during quantisation. 
+
+5.2.4 Graph Clustering Analysis. Table 6 shows that the superi-ority of RecDMoN over spectral clustering is not limited to the raw number of clusters per level, but also extends to the balance of the induced hierarchy. While both methods produce similar numbers of top-level clusters, their cluster-size distributions differ substantially. Across Beauty, Sports, and Toys, RecDMoN exhibits dramatically lower Gini indices from 𝐿 1 to 𝐿 4, indicating that items 
+
+Table 6: Per-level number of clusters and Gini index for Spec-tral Clustering and RecDMoN semantic ID mappings.                                                                          
+
+> Dataset Method 𝐿 1𝐿 2𝐿 3𝐿 4𝐿 5Total Beauty Spectral 636 206 865 863 1976
+> Gini 0.736 0.815 0.845 0.811 0.774 RecDMoN 635 210 1245 33 1529
+> Gini 0.099 0.159 0.194 0.269 0.632 Sports Spectral 636 210 1087 661 2000
+> Gini 0.517 0.655 0.730 0.727 0.813 RecDMoN 636 216 1274 73 1605
+> Gini 0.177 0.198 0.225 0.271 0.753 Toys Spectral 636 206 1083 261 1592
+> Gini 0.508 0.651 0.695 0.685 0.781 RecDMoN 636 212 1220 48 1522
+> Gini 0.058 0.161 0.215 0.291 0.735
+
+are distributed much more evenly across clusters at the upper and intermediate levels. In contrast, spectral clustering yields consis-tently high Gini values throughout the hierarchy, suggesting that a small number of clusters dominate the partition while many oth-ers remain underutilised. This imbalance implies poorer usage of the semantic ID space and less informative hierarchical prefixes. RecDMoN also allocates more clusters to 𝐿 4 and far fewer to 𝐿 5
+
+(deduplication codebook), indicating that it resolves more structure before the terminal level. Although both methods show higher in-equality at 𝐿 5, this is expected at the finest granularity; importantly, RecDMoN maintains balanced partitions through the earlier levels where coarse-to-fine semantic organisation is most critical. These results suggest that RecDMoN constructs a more balanced and ef-fective hierarchical item vocabulary, which likely contributes to its stronger recommendation performance. 
+
+5.2.5 Sentence Embedding Ablation. Table 7 shows that replac-ing sentence-t5-base from the original TIGER model with Qwen3-Embedding-0.6B consistently improves recommendation perfor-mance for both RecDMoN and RQ-GAE across Beauty, Sports, and Toys domains. The gains are especially pronounced for RecDMoN, suggesting that methods relying more directly on the raw semantic text space are more sensitive to the quality of the sentence em-bedder. In contrast, RQ-GAE exhibits smaller but still consistent improvements, indicating that graph-aware representation learning and graph contrastive regularisation partially mitigate weaknesses in the underlying text embedding space. A plausible explanation is that Qwen produces higher-quality item representations due to its stronger model capacity, larger context window size, more retrieval-oriented embedding training, and potentially better util-isation of long and attribute-rich product text. These properties likely yield a better-structured continuous semantic space, which in turn facilitates more informative discretisation into semantic IDs. 
+
+5.2.6 Final Remarks on RecDMoN vs. RQ-GAE. The results reveal a clear performance split across dataset scales. RecDMoN outper-forms all baselines on smaller datasets, suggesting that differen-tiable graph pooling is a powerful hierarchical partition mechanism when the full graph can be materialised. However, in its current implementation RecDMoN requires storing the dense adjacency Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS) CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Figure 2: N@10 (%) on Beauty across graph construction strategies for (a) Recursive DMoN with different hierarchy configurations and (b) RQ-GAE with different APPNP propagation coefficients. Table 7: Results for RecDMoN and RQ-GAE with sentence-t5-base (T5) and Qwen3-Embedding-0.6B (Qwen) sentence em-bedders. Bold scores indicate leading results.                                      
+
+> Method Embedder Beauty Sports Toys
+> H@10 N@10 H@10 N@10 H@10 N@10 RecDMoN Qwen 7.96 4.09 4.72 2.41 8.16 4.02
+> RecDMoN T5 7.24 3.71 4.47 2.31 7.29 3.65 RQ-GAE Qwen 6.87 3.74 3.75 1.92 6.51 3.50
+> RQ-GAE T5 6.85 3.72 3.57 1.85 6.51 3.43
+
+matrix, making it impractical for larger item catalogues; on those datasets we report RQ-GAE results only. RQ-GAE proves competi-tive or dominant at scale, confirming that augmenting the RQ-VAE objective with a graph reconstruction term is an effective and scal-able way to inject collaborative signal into the partition axis. It is worth emphasising that RecDMoN and RQ-GAE are not merely two implementations of the same idea. They represent qual-itatively different families of hierarchical partitioning: RecDMoN performs a global, differentiable assignment over the graph via soft cluster memberships, whereas RQ-GAE inherits the greedy, quantisation-based commitment of the RQ family and augments it with a graph-aware reconstruction objective. 
+
+## 6 Conclusions 
+
+We introduce GrIS, a framework that formalises semantic ID con-struction as hierarchical graph partition over a collaborative item graph. By making explicit the two axes of graph construction and hierarchical partition, GrIS provides a principled design space for SID methods and a natural account of content-only approaches as empty-graph special cases. Two instantiations, RecDMoN and RQ-GAE, demonstrate that different partition mechanisms can be accommodated within the framework while both improving over strong collaborative-filtering-aware baselines. The framework opens concrete directions for future work on both axes. On graph construction, replacing the co-occurrence weighted graph with a knowledge graph would allow external entity relationships and item attributes to inform the partition directly, enriching the collaborative signal with structured world knowledge. Beyond the local co-occurrence structures evaluated here, future work could investigate longer-range item relationships captured through session-level co-appearance and random-walk proximity. On hierarchical partition, extending the partition target from individual items to item 𝑛 -grams would allow sequence length to be compressed during tokenisation: mapping 𝑛 -grams to 𝑘 codes increases sequence length by a factor of 𝑘 /𝑛 rather than 𝑘 , a direct lever on computational cost, given that transformer architectures scale as Ω(𝐿 2) in sequence length, making sequence compression a direct lever on computational cost. One inherent limitation of any method that incorporates collab-orative signal is temporal drift: as user behaviour evolves, the item graph changes, and previously derived partitions become stale. We leave a systematic study of incremental graph and partition updates to future work. Current implementation of RecDMoN limits its ap-plicability to large item catalogues. Developing sparse, sampled, or mini-batch variants is therefore an important direction. 
+
+## 7 GenAI Usage Disclosure 
+
+Generative AI tools, including ChatGPT, were used for non-substantive assistance with language polishing, grammar correction, and writ-ing suggestions, as well as for assistance with writing simple routine code. All AI-assisted text and code were reviewed, edited where necessary, and verified or tested by the authors. The research ideas, methodology, experimental design, analysis, and conclusions were developed by the authors, who take full responsibility for the work. 
+
+## References     
+
+> [1] Filippo Maria Bianchi, Daniele Grattarola, and Cesare Alippi. 2020. Spectral Clustering with Graph Neural Networks for Graph Pooling. In Proceedings of the 37th International Conference on Machine Learning , Vol. 119. PMLR, 874–883. [2] Edoardo D’Amico, Marco De Nadai, Praveen Chandar, Divita Vohra, Shawn Lin, Max Lefarov, Paul Gigioli, Gustavo Penha, Ilya Kopysitsky, Ivo Joel Senese, Darren Mei, Francesco Fabbri, Oguz Semerci, Yu Zhao, Vincent Tang, Brian St. Thomas, Alexandra Ranieri, Matthew N.K. Smith, Aaron Bernkopf, Bryan Leung, Ghazal Fazelnia, Mark VanMiddlesworth, Timothy Christopher Heath, Petter Pehrson Skiden, Alice Y. Wang, Douglas J. Cole, Andreas Damianou, Maya Hristakeva, Reid Wilbur, Tarun Chillara, Vladan Radosavljevic, Pooja Chitkara, Sainath Adapa, Juan Elenter, Bernd Huber, Jacqueline Wood, Saaketh Vedantam, Jan Stypka, Sandeep Ghael, Martin D. Gould, David Murgatroyd, Yves Raimond, Mounia Lalmas, and Paul N. Bennett. 2026. From Habits to Discovery: Deploying LLMs for Personalized Generative Recommendations at Spotify. In Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2
+> (Republic of Korea) (KDD ’26) . Association for Computing Machinery, New York, NY, USA, 7141–7150. doi:10.1145/3770855.3818419
+
+CIKM ’26, November 07–11, 2026, Rome, Italy Aleksei Medvedev et al. 
+
+[3] Jiaxin Deng, Shiyao Wang, Kuo Cai, Lejian Ren, Qigen Hu, Weifeng Ding, Qiang Luo, and Guorui Zhou. 2025. OneRec: Unifying Retrieve and Rank with Generative Recommender and Iterative Preference Alignment. arXiv:2502.18965 [cs.IR] https://arxiv.org/abs/2502.18965 [4] Junchen Fu, Xuri Ge, Alexandros Karatzoglou, Ioannis Arapakis, Suzan Ver-berne, Joemon M. Jose, and Zhaochun Ren. 2026. Differentiable Semantic ID for Generative Recommendation. In Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR ’26) . Association for Computing Machinery, New York, NY, USA, 369–379. doi:10.1145/3805712.3809641 [5] Kairui Fu, Tao Zhang, Shuwen Xiao, Ziyang Wang, Xinming Zhang, Chenchi Zhang, Yuliang Yan, Junjun Zheng, Xiangheng Kong, Shengyu Zhang, Kun Kuang, and Yuning Jiang. 2026. FORGE: Forming Semantic Identifiers for Generative Retrieval in Industrial Datasets. In Proceedings of the 32nd ACM SIGKDD Con-ference on Knowledge Discovery and Data Mining V.2 (Republic of Korea) (KDD ’26) . Association for Computing Machinery, New York, NY, USA, 8858–8869. doi:10.1145/3770855.3817477 [6] Zihao Guo, Jian Wang, Ruxin Zhou, Youhua Liu, Jiawei Guo, Jun Zhao, Xiaoxiao Xu, Yongqi Liu, and Kaiqiao Zhan. 2026. S2GR: Stepwise Semantic-Guided Reasoning in Latent Space for Generative Recommendation. In Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2 
+
+(Republic of Korea) (KDD ’26) . Association for Computing Machinery, New York, NY, USA, 1498–1507. doi:10.1145/3770855.3817720 [7] Will Hamilton, Zhitao Ying, and Jure Leskovec. 2017. Inductive Representation Learning on Large Graphs. In Advances in Neural Information Processing Systems ,I. Guyon, U. Von Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett (Eds.), Vol. 30. Curran Associates, Inc. https://proceedings.neurips.cc/ paper_files/paper/2017/file/5dd9db5e033da9c6fb5ba83c7a7ebea9-Paper.pdf [8] Ruining He, Lukasz Heldt, Lichan Hong, Raghunandan H. Keshavan, Shifan Mao, Nikhil Mehta, Zhengyang Su, Alicia Tsai, Yueqi Wang, Shao-Chuan Wang, Xinyang Yi, Lexi Baugher, Baykal Cakici, Ed H. Chi, Cristos Goodrow, Ningren Han, He Ma, Rómer Rosales, Abby Van Soest, Devansh Tandon, Su-Lin Wu, Weilong Yang, and Yilin Zheng. 2026. PLUM: Adapting Pre-trained Language Models for Industrial-scale Generative Recommendations. In Proceedings of the ACM Web Conference 2026, WWW 2026, Dubai, United Arab Emirates, originally scheduled for April 13-17, 2026, rescheduled for June 29 - July 3, 2026 . ACM, 8093– 8104. doi:10.1145/3774904.3792802 [9] Ruining He and Julian J. McAuley. 2016. Ups and Downs: Modeling the Visual Evolution of Fashion Trends with One-Class Collaborative Filtering. In Proceed-ings of the 25th International Conference on World Wide Web, WWW 2016, Montreal, Canada, April 11 - 15, 2016 . ACM, 507–517. doi:10.1145/2872427.2883037 [10] Yupeng Hou, Jiacheng Li, Ashley Shin, Jinsung Jeon, Abhishek Santhanam, Wei Shao, Kaveh Hassani, Ning Yao, and Julian McAuley. 2025. Generating Long Semantic IDs in Parallel for Recommendation. In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2 . ACM, Toronto ON Canada, 956–966. doi:10.1145/3711896.3736979 [11] Wenyue Hua, Shuyuan Xu, Yingqiang Ge, and Yongfeng Zhang. 2023. How to Index Item IDs for Recommendation Foundation Models. In Proceedings of the Annual International ACM SIGIR Conference on Research and Development in Information Retrieval in the Asia Pacific Region . ACM, Beijing China, 195–204. doi:10.1145/3624918.3625339 [12] Clark Mingxuan Ju, Liam Collins, Leonardo Neves, Bhuvesh Kumar, Louis Yufeng Wang, Tong Zhao, and Neil Shah. 2025. Generative Recommendation with Seman-tic IDs: A Practitioner’s Handbook. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management, CIKM 2025, Seoul, Republic of Korea, November 10-14, 2025 . ACM, 6420–6425. doi:10.1145/3746252.3761612 [13] Clark Mingxuan Ju, Tong Zhao, Leonardo Neves, Liam Collins, Bhuvesh Kumar, Jiwen Ren, Lili Zhang, Wenfeng Zhuo, Wen Zhang, Xiao Bai, Jinchao Li, Karthik Iyer, Zihao Fan, Yilun Xu, Yiwen Chen, Peicheng Yu, Manish Malik, and Neil Shah. 2026. Semantic IDs for Recommender Systems at Snapchat: Use Cases, Technical Challenges, and Design Choices. In Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval 
+
+(Australia) (SIGIR ’26) . Association for Computing Machinery, New York, NY, USA, 4694–4699. doi:10.1145/3805712.3808405 [14] Wang-Cheng Kang and Julian J. McAuley. 2018. Self-Attentive Sequential Rec-ommendation. In IEEE International Conference on Data Mining, ICDM 2018, Singapore, November 17-20, 2018 . IEEE Computer Society, 197–206. doi:10.1109/ ICDM.2018.00035 [15] Kirill Khrylchenko. 2026. Variable-Length Semantic IDs for Recommender Sys-tems. doi:10.48550/ARXIV.2602.16375 [16] Thomas N. Kipf and Max Welling. 2017. Semi-Supervised Classification with Graph Convolutional Networks. In International Conference on Learning Repre-sentations (ICLR) .[17] Johannes Klicpera, Aleksandar Bojchevski, and Stephan Günnemann. 2019. Pre-dict then Propagate: Graph Neural Networks meet Personalized PageRank. In 7th International Conference on Learning Representations, ICLR 2019, New Orleans, LA, USA, May 6-9, 2019 . OpenReview.net. https://openreview.net/forum?id=H1gL-2A9Ym [18] Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho, and Wook-Shin Han. 2022. Autoregressive Image Generation Using Residual Quantization. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) .IEEE, 11523–11532. [19] Han Liu, Yinwei Wei, Xuemeng Song, Weili Guan, Yuan-Fang Li, and Liqiang Nie. 2026. MMGRec: Multimodal Generative Recommendation with Transformer Model. ACM Trans. Multimedia Comput. Commun. Appl. (Aug. 2026). doi:10.1145/ 3838594 Just Accepted. [20] Zihan Liu, Yupeng Hou, and Julian J. McAuley. 2024. Multi-Behavior Generative Recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management, CIKM 2024, Boise, ID, USA, October 21-25, 2024 . ACM, 1575–1585. doi:10.1145/3627673.3679730 [21] Xinchen Luo, Jiangxia Cao, Tianyu Sun, Jinkai Yu, Rui Huang, Wei Yuan, Hezheng Lin, Yichen Zheng, Shiyao Wang, Qigen Hu, Changqing Qiu, Jiaqi Zhang, Xu Zhang, Zhiheng Yan, Jingming Zhang, Simin Zhang, Mingxing Wen, Zhaojie Liu, and Guorui Zhou. 2025. QARM: Quantitative Alignment Multi-Modal Recom-mendation at Kuaishou. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management . ACM, Seoul Republic of Korea, 5915– 5922. doi:10.1145/3746252.3761502 [22] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, Maciej Kula, Ed Chi, and Maheswaran Sathiamoorthy. 2023. Recommender Systems with Generative Retrieval. In Advances in Neural Information Processing Systems ,Vol. 36. Curran Associates, Inc., 10299–10315. [23] Jian Tang, Meng Qu, Mingzhe Wang, Ming Zhang, Jun Yan, and Qiaozhu Mei. 2015. Line: Large-scale information network embedding. In Proceedings of the 24th international conference on world wide web . 1067–1077. [24] Anton Tsitsulin, John Palowitch, Bryan Perozzi, and Emmanuel Müller. 2023. Graph Clustering with Graph Neural Networks. Journal of Machine Learning Research 24, 127 (2023), 1–21. [25] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable Item Tokenization for Generative Recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management . ACM, Boise ID USA, 2400–2409. doi:10. 1145/3627673.3679569 [26] Ye Wang, Jiahao Xun, Minjie Hong, Jieming Zhu, Tao Jin, Wang Lin, Haoyuan Li, Linjun Li, Yan Xia, Zhou Zhao, and Zhenhua Dong. 2024. EAGER: Two-Stream Generative Recommender with Behavior-Semantic Collaboration. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining 
+
+(Barcelona, Spain) (KDD ’24) . Association for Computing Machinery, New York, NY, USA, 3245–3254. doi:10.1145/3637528.3671775 [27] Fangzhao Wu, Ying Qiao, Jiun-Hung Chen, Chuhan Wu, Tao Qi, Jianxun Lian, Danyang Liu, Xing Xie, Jianfeng Gao, Winnie Wu, and Ming Zhou. 2020. MIND: A Large-scale Dataset for News Recommendation. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, ACL 2020, Online, July 5-10, 2020 . Association for Computational Linguistics, 3597–3606. doi:10. 18653/V1/2020.ACL-MAIN.331 [28] Keyulu Xu, Weihua Hu, Jure Leskovec, and Stefanie Jegelka. 2019. How Powerful are Graph Neural Networks?. In International Conference on Learning Representa-tions . https://openreview.net/forum?id=ryGs6iA5Km [29] Junwei Yin, Senjie Kou, Changhao Li, Shuli Wang, Yinqiu Huang, Xue Wei, Yinhua Zhu, Haitao Wang, and Xingxing Wang. 2026. DOS: Dual-Flow Orthogonal Semantic IDs for Recommendation in Meituan. In Proceedings of the ACM Web Conference 2026 (United Arab Emirates) (WWW ’26) . Association for Computing Machinery, New York, NY, USA, 8305–8308. doi:10.1145/3774904.3792845 [30] Zhitao Ying, Jiaxuan You, Christopher Morris, Xiang Ren, Will Hamilton, and Jure Leskovec. 2018. Hierarchical Graph Representation Learning with Differen-tiable Pooling. In Advances in Neural Information Processing Systems , S. Bengio, H. Wallach, H. Larochelle, K. Grauman, N. Cesa-Bianchi, and R. Garnett (Eds.), Vol. 31. Curran Associates, Inc. https://proceedings.neurips.cc/paper_files/paper/ 2018/file/e77dbaf6759253c7c6d0efc5690369c7-Paper.pdf [31] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhaojie Gong, Fangda Gu, Jiayuan He, Yinghai Lu, and Yu Shi. 2024. Actions Speak Louder than Words: Trillion-Parameter Sequential Transducers for Generative Recommendations. In Forty-first International Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024 (Proceedings of Machine Learning Research) . PMLR / OpenReview.net, 58484–58509. https://proceedings.mlr.press/ v235/zhai24a.html [32] Muhan Zhang and Yixin Chen. 2018. Link Prediction Based on Graph Neu-ral Networks. In Advances in Neural Information Processing Systems , S. Bengio, H. Wallach, H. Larochelle, K. Grauman, N. Cesa-Bianchi, and R. Garnett (Eds.), Vol. 31. Curran Associates, Inc. https://proceedings.neurips.cc/paper_files/paper/ 2018/file/53f0d7c537d99b3824f0f99d62ea2428-Paper.pdf Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS) CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+Table 8: SID-space diagnostics and per-level codebook cardinalities on all six datasets. 𝐿 denotes the number of codebooks, while 𝛿 CF and 𝛿 Sem denote prefix-level cosine-similarity gaps computed using SASRec and Qwen3-Embedding-0.6B embeddings, respectively. 
+
+Model L Collision Rate |C 𝑙 | Gini Utilisation Ratio 𝛿 𝑆𝑒𝑚 𝛿 𝐶𝐹 
+
+𝑙 = 0 𝑙 = 1 𝑙 = 2 𝑙 = 0 𝑙 = 1 𝑙 = 2 𝑙 = 0 𝑙 = 1 𝑙 = 2 𝑙 < 1 𝑙 < 2 𝑙 < 3 𝑙 < 1 𝑙 < 2 𝑙 < 3Beauty RecDMoN 5 0 7 36 211 0.224 0.179 0.194 - - - 0.074 0.122 0.177 -0.002 -0.006 0.005 RQ-GAE 4 0 256 256 256 0.147 0.222 0.156 1 1 1 0.088 0.184 0.322 -0.010 0.001 -0.022 LETTER 4 0 44 256 256 0.504 0.178 0.192 0.172 1 1 0.050 0.118 0.220 -0.005 0.012 0.018 MMGRec 5 0 256 78 136 0.224 0.918 0.860 1 0.305 0.531 0.074 0.085 0.100 0.010 -0.002 0.001 S2GR 4 0.001 44 250 244 0.297 0.197 0.187 0.172 0.977 0.953 0.163 0.333 0.481 0 -0.007 -0.001 Spectral 5 0 7 37 207 0.770 0.816 0.844 - - - 0.007 0.018 0.020 -0.006 0.017 0.010 TIGER 4 0.002 46 256 256 0.294 0.179 0.165 0.180 1 1 0.170 0.353 0.513 -0.014 -0.006 0Sports RecDMoN 5 0 7 37 217 0.290 0.214 0.225 - - - 0.081 0.118 0.178 0.091 0.177 0.228 RQ-GAE 4 0 256 256 256 0.157 0.231 0.146 1 1 1 0.088 0.127 0.299 0.273 0.410 0.487 LETTER 4 0.003 68 256 256 0.434 0.172 0.193 0.266 1 1 0.072 0.094 0.290 0.281 0.562 0.505 MMGRec 5 0 256 93 93 0.180 0.917 0.865 1 0.363 0.363 0.071 0.092 0.097 0.210 0.235 0.259 S2GR 4 0.001 27 256 256 0.311 0.188 0.160 0.105 1 1 0.148 0.321 0.490 0.145 0.213 0.272 Spectral 5 0 7 37 211 0.581 0.659 0.729 - - - 0.040 0.055 0.065 0.070 0.143 0.192 TIGER 4 0.005 256 256 256 0.417 0.181 0.179 1 1 1 0.224 0.445 0.547 0.184 0.244 0.299 Toys RecDMoN 5 0 7 37 213 0.188 0.179 0.214 - - - 0.051 0.126 0.188 0.059 0.122 0.210 RQ-GAE 4 0 256 256 256 0.144 0.178 0.137 1 1 1 0.096 0.232 0.363 0.304 0.549 0.686 LETTER 4 0.002 48 256 256 0.495 0.241 0.243 0.188 1 1 0.052 0.106 0.054 0.235 0.573 0.847 MMGRec 5 0 256 84 129 0.183 0.931 0.867 1 0.328 0.504 0.078 0.090 0.097 0.228 0.234 0.249 S2GR 4 0 35 249 233 0.255 0.191 0.202 0.137 0.973 0.910 0.137 0.341 0.493 0.112 0.255 0.382 Spectral 5 0 7 37 207 0.572 0.655 0.694 - - - 0.014 0.021 0.030 0.039 0.093 0.141 TIGER 4 0.001 255 256 256 0.439 0.185 0.189 0.996 1 1 0.226 0.458 0.555 0.169 0.330 0.393 Books  RQ-GAE 4 0.002 256 256 256 0.288 0.337 0.281 1 1 1 0.116 0.212 0.301 0.130 0.152 0.167 LETTER 4 0.079 256 256 256 0.409 0.387 0.376 1 1 1 0.208 0.430 0.510 0.044 0.061 0.061 S2GR 4 0.023 88 256 256 0.275 0.154 0.154 0.344 1 1 0.246 0.481 0.591 0.025 0.068 0.088 TIGER 4 0.079 92 256 256 0.296 0.149 0.162 0.359 1 1 0.273 0.499 0.599 0.017 0.070 0.078 MIND RecDMoN 5 0 7 37 217 0.180 0.083 0.094 - - - 0.084 0.127 0.164 0.053 0.105 0.174 RQ-GAE 4 0 256 255 255 0.291 0.599 0.429 1 0.996 0.996 0.022 0.055 0.077 0.371 0.378 0.416 LETTER 4 0.005 167 256 256 0.225 0.215 0.222 0.652 1 1 0.022 0.078 0.452 0.241 0.475 0.376 S2GR 4 0 37 256 256 0.217 0.153 0.125 0.145 1 1 0.170 0.303 0.448 0.103 0.171 0.206 Spectral 5 0 7 37 217 0.191 0.143 0.253 - - - 0.006 0.001 0.013 0.158 0.377 0.424 TIGER 4 0.006 207 256 256 0.379 0.160 0.141 0.809 1 1 0.223 0.387 0.521 0.138 0.195 0.219 Yelp  RQ-GAE 4 0.001 256 256 256 0.284 0.368 0.291 1 1 1 0.133 0.166 0.182 0.098 0.131 0.140 LETTER 4 0.002 256 256 256 0.131 0.089 0.093 1 1 1 0.017 0.069 0.191 0.017 0.023 0.044 S2GR 4 0.001 256 256 256 0.473 0.255 0.204 1 1 1 0.174 0.267 0.337 0.085 0.097 0.105 Spectral 5 0 7 37 217 0.605 0.620 0.646 - - - 0.065 0.115 0.122 -0.014 0.070 0.090 TIGER 4 0.002 256 256 256 0.528 0.230 0.263 1 1 1 0.182 0.268 0.345 0.080 0.097 0.104 
+
+## A SID Quality Metrics 
+
+Beyond downstream accuracy, Table 8 evaluates SID structure across all six datasets. For the first three codebook levels, we report cardinality, utilisation, and usage Gini, where higher utilisation and lower Gini indicate better coverage and balance. We also report the collision rate of complete SIDs, where lower is better. Hierarchical coherence is measured by treating SID prefixes as clusters and computing 𝛿 = 𝜇 intra − 𝜇 inter , where each mean cosine similarity is estimated from 1,000 sampled item pairs. 𝛿 CF uses the SASRec embeddings employed in LETTER training, whereas 
+
+𝛿 Sem uses Qwen3-Embedding-0.6B embeddings. A larger positive 𝛿 
+
+indicates that items sharing a prefix are more similar than items assigned to different prefixes. Together, these metrics characterise the uniqueness, coverage, balance, and hierarchical organisation of the generated SIDs beyond their downstream recommendation accuracy. CF-aware methods generally improve 𝛿 CF over TIGER at the cost of 𝛿 Sem . Graph-aware methods preserve more semantic coherence, with RQ-GAE providing the strongest overall balance between CF and semantic structure while maintaining balanced codeword usage, which could explain its good overall downstream performance. RecDMoN and spectral clustering use fewer than 10 first-level codewords, making their 𝛿 values less comparable with those of finer-grained methods. Between them, RecDMoN achieves higher 
+
+𝛿 Sem and 𝛿 CF , consistent with its trainable graph-pooling architec-ture, which combines semantic node representations with collabo-rative graph structure and optimises modularity.

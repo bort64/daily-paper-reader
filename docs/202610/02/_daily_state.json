@@ -1,0 +1,201 @@
+{
+  "date": "20261002",
+  "date_label": "",
+  "generated_at": "2026-10-02 23:12:48 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.39327v1",
+      "route": "202610/02/2609.39327v1-generative-end-to-end-ad-retrieval-at-douyin",
+      "title": "Generative End-to-end Ad Retrieval at Douyin",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 10.0,
+      "evidence": "生成式端到端广告检索，联合优化分词器、生成器与重排器",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.36670v1",
+      "route": "202610/02/2609.36670v1-finesid-scalable-and-efficient-semantic-identifier-learning-for-generative-recommendation",
+      "title": "FineSID: Scalable and Efficient Semantic Identifier Learning for Generative Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向生成式推荐的可扩展语义标识符学习",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.36688v1",
+      "route": "202610/02/2609.36688v1-grp-v01-technical-report",
+      "title": "GRP v0.1 Technical Report",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "融合检索、排序与奖励建模的生成式推荐",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.37183v2",
+      "route": "202610/02/2609.37183v2-helix-purified-and-unified---rethinking-feature-interaction-and-sequence-modeling-for-large-scale-recommendation",
+      "title": "HELIX: Purified and Unified - Rethinking Feature Interaction and Sequence Modeling for Large-Scale Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "联合扩展特征交互与序列建模并分析缩放律",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.38646v2",
+      "route": "202610/02/2609.38646v2-exploring-forum-post-retrieval-with-generative-modeling",
+      "title": "Exploring Forum Post Retrieval with Generative Modeling",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "用大模型直接生成语义ID的生成式推荐",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.39312v1",
+      "route": "202610/02/2609.39312v1-learning-multiresolution-relevance-for-hierarchical-generative-retrieval",
+      "title": "Learning Multiresolution Relevance for Hierarchical Generative Retrieval",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "语义ID层次化生成式检索",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.39319v1",
+      "route": "202610/02/2609.39319v1-residual-trajectory-distillation-for-generative-retrieval",
+      "title": "Residual Trajectory Distillation for Generative Retrieval",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向语义ID生成式检索的残差轨迹蒸馏",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.39828v1",
+      "route": "202610/02/2609.39828v1-kuaishou-explorer-llm-rec-challenge-2026-reasoning-generative-recommendation",
+      "title": "KUAISHOU Explorer LLM-Rec Challenge 2026: Reasoning Generative Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "基于语义ID的OneRec自回归下一物品预测推荐",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2610.01533v1",
+      "route": "202610/02/2610.01533v1-neither-black-nor-white-balancing-semantic-and-collaborative-signals-with-graph-informed-semantic-ids-gris",
+      "title": "Neither Black nor White: Balancing Semantic and Collaborative Signals with Graph-Informed Semantic IDs (GrIS)",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "用于生成式推荐的图信息语义ID，平衡语义与协同信号",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2609.37905v1",
+      "route": "202610/02/2609.37905v1-beyond-interaction-capacity-estimator-scaling-with-recursive-models-for-ctr-prediction",
+      "title": "Beyond Interaction Capacity: Estimator Scaling with Recursive Models for CTR Prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "以估计器扩展突破CTR预测的交互容量瓶颈",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2610.02057v1",
+      "route": "202610/02/2610.02057v1-optimizing-effective-training-time-for-large-scale-recommendation-systems",
+      "title": "Optimizing Effective Training Time for Large-Scale Recommendation Systems",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "大规模推荐系统训练生命周期开销的集群级研究",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    },
+    {
+      "paper_id": "2610.01705v1",
+      "route": "202610/02/2610.01705v1-agentwebrec-compact-evidence-fusion-over-the-agent-web-for-personalized-recommendation",
+      "title": "AgentWebRec: Compact Evidence Fusion over the Agent Web for Personalized Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "LLM智能体网络用于个性化推荐",
+      "first_seen_at": "2026-10-02 23:12:48 UTC",
+      "updated_at": "2026-10-02 23:12:48 UTC"
+    }
+  ]
+}

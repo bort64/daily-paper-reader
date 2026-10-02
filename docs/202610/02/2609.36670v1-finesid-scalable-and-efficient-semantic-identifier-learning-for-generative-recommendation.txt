@@ -1,0 +1,733 @@
+Title: FineSID: Scalable and Efficient Semantic Identifier Learning for Generative Recommendation
+
+URL Source: https://arxiv.org/pdf/2609.36670v1
+
+Published Time: Wed, 30 Sep 2026 00:53:33 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# FineSID: Scalable and Efficient Semantic Identifier Learning for Generative Recommendation 
+
+## Song-Li Wu 1∗, Weinan Gan 2∗, Zhaocheng Du †2, Xianquan Wang 3, Jingyi Wang 1
+
+> 1
+
+Tsinghua University, 2Huawei Noah’s Ark Lab, 3University of Science and Technology of China 
+
+Abstract 
+
+A critical prerequisite of generative recommendation is de-signing semantic identifiers (SIDs) that are both scalable to large item sets and efficiently learnable. Existing SID learning methods fundamentally rely on Top-1 hard assignment dur-ing vector quantization. While heuristic strategies—such as clustering-based initialization or forced post-hoc collision res-olution—can artificially inflate codebook coverage, they often disrupt end-to-end semantic alignment and fail to address the underlying optimization bottleneck: sparse gradient propaga-tion. In standard Top-1 assignment, gradients concentrate on a narrow subset of frequently selected codewords, leaving the majority inherently under-trained and causing severe SID col-lisions. To overcome this limitation natively without relying on complex initialization priors, we propose FineSID, a uni-fied quantization framework that moves beyond Top-1 assign-ment by enabling fine-grained gradient propagation across the entire codebook. Instead of updating only a single selected codeword, FineSID distributes learning signals to all code-words in a soft, differentiable manner. This design promotes globally balanced codebook optimization while strictly pre-serving semantic consistency, effectively alleviating SID colli-sions and stabilizing training in large, high-dimensional code-books. Extensive experiments on multiple public benchmarks demonstrate that FineSID is robust to initialization configura-tions and consistently improves both codebook utilization and recommendation accuracy. Our work provides a principled, initialization-agnostic solution for semantic identifier learn-ing, advancing the practicality of generative recommendation. Codes are available. 
+
+## Introduction 
+
+Framing recommendation as an autoregressive sequence generation problem has emerged as a promising paradigm for recommendation, enabling unified modeling of users, items, and their interactions (Rajput et al. 2023). Central to this paradigm is the Semantic Identifier (SID), which bridges con-tinuous item representations and discrete token generation by learning a quantization codebook, typically instantiated via vector-quantized autoencoders such as RQ-VAE (Wang 
+
+> ∗
+
+These authors contributed equally. 
+
+> †
+
+Corresponding author. Copyright © 2027, Association for the Advancement of Artificial Intelligence (www.aaai.org). All rights reserved. 
+
+et al. 2024). By transforming recommendation into a token generation process, SIDs provide a scalable foundation for expressive generative recommendation models. However, existing SID learning methods predominantly rely on Top-1 hard assignment during discretization, which induces a fundamental optimization bottleneck: gradient up-dates concentrate on a narrow subset of frequently selected codewords, leaving the majority under-trained (Rajput et al. 2023; Wang et al. 2024). While in practice one might em-ploy heuristic strategies to mitigate these symptoms—such as utilizing K-means clustering for robust codebook initializa-tion or resolving residual collisions by artificially assigning items to the next closest available code—these workarounds fail to address the root optimization bottleneck. Specifically, static initialization strategies provide a favorable starting point but cannot prevent codebook collapse during dynamic, end-to-end training, as Top-1 assignment continually starves low-frequency codes of gradient flow. Furthermore, arbi-trarily reassigning items to sub-optimal, semantically dis-tant codes merely to avoid collisions fundamentally disrupts the semantic fidelity of the identifiers, forcing the genera-tive model to learn distorted item representations. Conse-quently, the reliance on Top-1 assignment inevitably leads to a trade-off between severe SID collisions and semantic drift, ultimately degrading both item reconstruction fidelity and downstream recommendation performance—even when the codebook size is substantially increased (Guo et al. 2026). To alleviate SID collisions, prior work has explored two primary directions. One line of research introduces auxiliary regularization objectives to encourage more balanced code-book utilization (Wang et al. 2024; Yao et al. 2025). An-other line enhances representational expressiveness by aug-menting SIDs with additional tokens, thereby expanding the identifier space (Rajput et al. 2023; Wang et al. 2025). How-ever, an effective Semantic Identifier (SID) for generative recommendation must simultaneously satisfy two essential properties: scalability and efficiency (Kong et al. 2025; Liu et al. 2025). Scalability requires the SID space to accom-modate large item catalogs with low collision rates, while efficiency demands computationally lightweight autoregres-sive SID generation to ensure low inference overhead. From this perspective, existing solutions exhibit fundamental lim-itations. Regularization-based methods promote more uni-form code usage but often suppress intrinsic semantic dif-arXiv:2609.36670v1 [cs.AI] 29 Sep 2026 ferentiation among codewords, effectively shrinking the us-able representational capacity of the codebook—particularly for long-tailed or rare items—thereby limiting scalability to large item sets (Li et al. 2025a). In contrast, auxiliary-token approaches alleviate collisions by lengthening SID se-quences, which directly increases autoregressive decoding cost and undermines inference efficiency (Wang et al. 2025). These limitations jointly motivate a principled SID learning paradigm that performs global optimization over the code space, preserving semantic structure while simultaneously achieving both scalability and efficiency. To resolve these challenges, we propose FineSID, a unified quantization framework for principled semantic identifier op-timization. FineSID introduces a full-codebook optimization mechanism that overcomes the Top-1 hard assignment bottle-neck, enabling learning signals to propagate across all code-words while strictly preserving discrete identifiers for autore-gressive generation. FineSID consists of two tightly coupled components: Global–Local Quantization (GLQ) and a Se-mantic Consistency Module. GLQ maintains a soft SID for global optimization alongside a hard SID for discrete gener-ation, thereby balancing expressive codebook capacity with high-fidelity autoregressive decoding. The Semantic Con-sistency Module enforces alignment between discrete SIDs and continuous item representations, preventing semantic drift—particularly for low-frequency codewords. Together, these designs enable FineSID to distribute semantic learning signals across both frequent and long-tailed items, ensuring stable optimization and efficient inference even with large, high-dimensional codebooks. As a result, FineSID simulta-neously achieves scalability to large item sets and efficiency in autoregressive SID generation. We summarize our contributions as follows: 
+
+• We identify Top-1 hard assignment as a fundamental opti-mization bottleneck in SID learning, revealing that while heuristic initializations and greedy re-assignments can mask symptoms, they inherently trade codebook collapse for semantic distortion, limiting true scalability in gener-ative recommendation. 
+
+• We propose FineSID , a unified quantization framework that enables global, fine-grained gradient propagation 
+
+across the entire codebook while strictly preserving dis-crete compatibility for autoregressive generation, thereby jointly addressing scalability and efficiency. 
+
+• We design two tightly coupled components— Global– Local Quantization (GLQ) and a Semantic Consistency Module —that support stable optimization and semantic alignment, particularly for long-tailed items. 
+
+• Extensive experiments on multiple public benchmarks demonstrate that FineSID consistently outperforms exist-ing SID-based methods in both codebook utilization and recommendation accuracy, with particularly pronounced gains under long-tailed item distributions. 
+
+## Related Work 
+
+Generative Recommendation Systems 
+
+Generative Recommendation (GR) formulates recommen-dation as an autoregressive sequence generation problem by representing items with discrete Semantic IDs (SIDs) (Ra-jput et al. 2023; Li et al. 2025b; Sun et al. 2023). A typical GR pipeline involves embedding extraction, SID quantiza-tion, and generative model training (Petrov, Macdonald, and Tonellotto 2025; Lin et al. 2025). Among these, SID quanti-zation is the critical bridge mapping continuous representa-tions to discrete generation tokens, directly determining SID uniqueness, semantic fidelity, and overall recommendation performance (Deldjoo et al. 2024; Li et al. 2024). 
+
+SID Collision in Generative Recommendation 
+
+SID collision occurs when distinct items map to identical SID sequences, causing ambiguous item grounding. Prior work mitigates this via two main strategies: (1) training-time reg-ularization to encourage balanced codeword utilization (e.g., entropy-regularized assignment (Yao et al. 2025) or con-strained codebooks (Wang et al. 2024)), and (2) augmenting SIDs with auxiliary tokens to expand the representational space (Rajput et al. 2023; Wang et al. 2025; Chen et al. 2025). Additionally, while soft quantization methods (e.g., Straight-Through Estimator or Gumbel-Softmax) ( ?? ) enable global gradient flow, they inherently smooth discrete repre-sentations and weaken strict item boundaries. This makes them unsuitable for SIDs, which must function as discrete, atomic symbols for autoregressive generation. Ultimately, GR imposes dual constraints on SID learning: SIDs must be strictly discrete and uniquely identifiable for autoregressive decoding, while being globally optimizable and robust to long-tailed items. Existing methods typically satisfy only a subset of these requirements—often trading semantic fidelity for balanced usage, or inference efficiency for uniqueness. Consequently, SID collision remains a persistent challenge, motivating the need for more principled, globally optimized SID quantization frameworks. 
+
+## Methodology 
+
+To address SID collision in generative recommendation, we propose FineSID, a unified quantization framework that performs principled optimization over the semantic space. FineSID consists of two complementary modules: Global– Local Quantization (GLQ) and the Quantization Semantic Consistency Module (QSCM). Specifically, GLQ stabilizes and balances SID usage at the structural level . It achieves this by combining local, dense gradient updates with global code-book usage tracking to prevent codebook collapse. Mean-while, QSCM acts at the representation level to preserve semantic fidelity, ensuring that the continuous embeddings remain tightly aligned with their discrete SIDs even as the codebook updates. Together, these modules ensure scalable, efficient, and semantically faithful SID learning for autore-gressive recommendation. 
+
+Problem Formulation and Background 
+
+Let I denote the universal item set. The interaction history is represented as a sequence S = [ x1, x 2, . . . , x t] with xt ∈ I .The objective is to predict the next item xt+1 , which we formulate as a token-based sequence generation task. Items 
+
+�
+
+1. Item Encoding  
+
+> Semantic
+> Embedding
+> Embedding
+> s
+> Continuous
+> Latent Rep
+
+z 
+
+> Continuous
+> Latent Rep
+
+z    
+
+> QSCM
+> (Semantic Consistency)
+> £qscm
+> Local Refinement Quantization (LRQ)
+> [Soft Path]
+
+I n d      
+
+> (Soft Assignments)
+> Global Gradient Flow Discrete SID
+> Next Item Prediction
+> History SID
+> Sequence
+> S
+> Pre-trained LLM (e.g., LLaMA)
+
+2.Fine SID Quantization Core （GLQ + QSCM ）              
+
+> STE (Forward: Hard, Backward: Soft)
+> Decoder
+> Autoregressive Decoder
+> Prediction Head
+> Solid Blue Arrow:
+> Dashed Red Arrow:
+> Data Flow (Forv/ard)
+> Gradient Flov/ (Backward)
+> Dashed Grey Arrow: Loss/Conslraint Circular Arrow: EMA Update
+> LRQ
+> jjjj
+
+Figure 1: Overview of FineSID. 
+
+Item Tokenization. Instead of representing items with opaque ID embeddings, we tokenize each item into a se-quence of Semantic Identifiers (SIDs). This design provides two key benefits: it enables generalization to unseen items and ensures compatibility with autoregressive generative models. For each item xj , we first extract a dense seman-tic embedding sj ∈ Rd from its content features (e.g., title or description) using a pre-trained language model such as LLaMA-7B (Touvron et al. 2023). This embedding is then encoded into a latent representation zj = Encoder( sj).To discretize zj, we employ a Residual Quantized VAE (RQ-VAE) tokenizer (Lee et al. 2022) spanning L quanti-zation levels. We perform residual quantization iteratively. Starting from the initial residual r(0)  
+
+> j
+
+= zj, each level l se-lects the nearest SID from the codebook El = [ e(l)1 , . . . , e(l) 
+
+> K
+
+]:
+
+cjl = arg min  
+
+> i∈{ 1,...,K }
+
+∥r(l−1)  
+
+> j
+
+− e(l) 
+
+> i
+
+∥2, r(l) 
+
+> j
+
+= r(l−1)  
+
+> j
+
+− e(l)
+
+> cjl
+
+.
+
+(1) The item is thus tokenized into an SID sequence: 
+
+[cj
+
+> 1
+
+, c j
+
+> 2
+
+, . . . , c jL]. The quantized embedding ˆzj = PLl=1 e(l)
+
+> cjl
+
+is then decoded to reconstruct the semantic embedding ˆsj. A reconstruction loss ensures semantic faithfulness: 
+
+LSem =∥sj − ˆsj∥2 +
+
+> L
+
+X
+
+> l=1
+
+
+
+∥sg[ r(l−1)  
+
+> j
+
+] − e(l)
+
+> cjl
+
+∥2
+
++ ∥r(l−1)  
+
+> j
+
+− sg[ e(l)
+
+> cjl
+
+]∥2
+
+, (2) where sg[ ·] is the stop-gradient operator. The full user in-teraction history S thus becomes a flattened token sequence 
+
+[c11, . . . , c 1
+
+> L
+
+, . . . , c t
+
+> 1
+
+, . . . , c tL].
+
+Autoregressive Generation. The model predicts the next-item token sequence Y = [ ct+1 1 , . . . , c t+1  
+
+> L
+
+] autoregressively. To strengthen ranking performance, we use a temperature-scaled softmax cross-entropy loss (Wang et al. 2024): 
+
+Lrank = − 1
+
+|Y |
+
+> L
+
+X
+
+> l=1
+
+log Pθ (ct+1  
+
+> l
+
+| ct+1  
+
+> <l
+
+, X ), (3) 
+
+Pθ (ct+1  
+
+> l
+
+| ct+1  
+
+> <l
+
+, X ) = exp( p(ct+1  
+
+> l
+
+)) 
+
+P 
+
+> v∈V
+
+exp( p(v)) , (4) where V is the complete token vocabulary. 
+
+Global-Local Quantization (GLQ) 
+
+Traditional Top-1 hard assignment restricts gradient updates to a single winning codeword per item. This bottleneck re-sults in sparse gradients, causing many SIDs to become in-active early in training (codebook collapse). To address this, we introduce Global–Local Quantization (GLQ), consisting of two complementary mechanisms: LRQ for dense gradient flow and GAQ for global frequency balancing. 
+
+Local Refinement Quantization (LRQ) The role of LRQ is to provide dense, token-level gradient propaga-tion. By distributing learning signals across the entire code-book—including rarely used tokens—LRQ effectively cir-cumvents the gradient sparsity problem. Specifically, LRQ computes a soft assignment probability distribution between the input residuals and all SIDs: Ind (l)LRQ( t) = softmax (logits (l)(t)), (5) where logits (l)(t) ∈ RK represents the similarities (e.g., neg-ative scaled distance) between the item’s residual and all codewords in El at training step t, and Ind (l)LRQ( t) is the re-sulting soft assignment vector. Using the straight-through estimator (STE), LRQ main-tains differentiable quantization during training while strictly outputting discrete hard assignments for inference: Ind (l)(t) = Ind (l) 
+
+> GAQ (t)
+
+− sg[ Ind (l)LRQ( t)] + Ind (l)LRQ( t). (6) Here, Ind (l) 
+
+> GAQ (t)
+
+denotes the one-hot encoded vector of the actual Top-1 hard assignment. This formulation allows the forward pass to utilize the hard index (from GAQ), while the backward pass routes gradients through the soft probabilities (from LRQ), preventing "dead" tokens. 
+
+Global Anchor Quantization (GAQ) While LRQ ensures all codes receive gradients, low-frequency SIDs may still be overwhelmed by gradients from high-frequency ones. GAQ acts as a global regulator, dynamically adjusting codeword update rates based on their historical utilization to ensure long-term balance. It utilizes an exponential moving average (EMA) of usage frequencies: 
+
+N (l) 
+
+> k(t)
+
+= γN (l) 
+
+> k(t−1)
+
++ (1 − γ) n(l)
+
+> k(t)
+
+B , (7) 
+
+e(l) 
+
+> k(t)
+
+= (1 − α(l)
+
+> k(t)
+
+)e(l) 
+
+> k(t−1)
+
++ α(l)
+
+> k(t)
+
+ˆz(l)
+
+> k(t)
+
+. (8) In these equations, N (l) 
+
+> k(t)
+
+represents the smoothed usage fre-quency of the k-th codeword at level l and step t, γ ∈ (0 , 1) is the EMA decay factor, and n(l) 
+
+> k(t)
+
+is the actual number of times the k-th codeword was selected in the current batch of size B.For the codeword update, e(l) 
+
+> k(t)
+
+is the k-th codeword embed-ding, α(l) 
+
+> k(t)
+
+acts as an adaptive update rate (inversely scaled by the usage frequency N (l)
+
+> k(t)
+
+), and ˆz(l) 
+
+> k(t)
+
+is the aggregated mean of the latent residuals assigned to the k-th codeword in the current batch. This mechanism continuously steers underutilized codes toward high-density semantic regions. 
+
+Quantization Semantic Consistency Module (QSCM) 
+
+Because GLQ distributes updates across the codebook, there is a risk that codes may drift from their original semantic meanings. The role of QSCM is to enforce bidirectional alignment between the continuous embeddings and their discrete semantic anchors, ensuring semantic faithfulness throughout training. QSCM bridges this gap by imposing a quantization se-mantic consistency loss :
+
+ˆzj(t) =
+
+> L
+
+X
+
+> l=1
+
+Ind (l)
+
+> GAQ (t)
+
+El, (9) 
+
+LQSCM = ∥ˆzj(t) − sg[ zj ]∥2 + ∥sg[ˆ zj(t)] − zj ∥2. (10) Here, ˆzj(t) denotes the fully quantized latent representation reconstructed using the one-hot hard assignments Ind (l)
+
+> GAQ (t)
+
+.The first term of the loss pulls the quantized semantic anchors toward the original continuous embedding, refining the code-book to capture input semantics accurately. The second term anchors the continuous embedding to its quantized coun-terpart, preventing semantic drift during gradient updates. By explicitly regularizing this pathway, QSCM provides the representational stability needed to support GLQ’s structural balancing. 
+
+Optimization Objectives 
+
+In summary, FineSID integrates the structural-level stability of GLQ with the semantic-level alignment of QSCM. GLQ dynamically balances SID utilization to prevent representa-tion collapse, while QSCM enforces semantic faithfulness. The overall framework is trained by jointly optimizing three complementary objectives: 
+
+LFineSID = Lrank + LGLQ + LQSCM . (11) The autoregressive ranking loss Lrank aligns SIDs with se-quential user–item interaction patterns, the item representa-tion reconstruction loss LGLQ ensures that SIDs retain the original item content, and LQSCM enhances discriminability by strictly aligning the continuous and quantized spaces. 
+
+## Experiment 
+
+Experiment Setup 
+
+Dataset. To evaluate our method, we experiment on three datasets (Hou et al. 2024), including “Musical Instruments,” “Video Games,” and “Industrial Scientific.” These datasets cover user reviews from May 1996 through September 2023. In line with previous studies (Zheng et al. 2024; Zhou et al. 2020), we filter out users and items with fewer than five inter-actions using the 5-core criterion. User behavior sequences are then ordered chronologically, and the maximum sequence length for items is capped at 50. Table 1 provides the statistics of the processed datasets. Table 1: Statistics of the Datasets. Dataset #Users #Items #Interactions Sparsity Instrument 57,439 24,587 511,836 99.964% Scientific 50,985 25,848 412,947 99.969% Game 94,762 25,612 814,586 99.966% 
+
+Baseline Models. We consider a broad set of representative baselines, including classical recommendation models (Tang and Wang 2018; Ma, Kang, and Liu 2019; Hidasi et al. 2015; Sun et al. 2019; Kang and McAuley 2018; Zhou et al. 2022; Zhang et al. 2019; Zhou et al. 2020). Generative recommen-dation methods are generally decomposed into two compo-nents: an item tokenizer and an autoregressive generative backbone. For the item tokenizer, we evaluate two repre-sentative design paradigms: (i) tokenizers optimized with auxiliary training objectives (Wang et al. 2024; Yao et al. 2025), and (ii) tokenizers that expand the item vocabulary via the introduction of additional tokens (Rajput et al. 2023; Wang et al. 2025; Chen et al. 2025). Table 2: The overall performance comparisons between the baselines and FineSID. The best and second-best results are highlighted in bold and underlined font, respectively. The improvement is statistically significant with p < 10 −2 (⋆: p < 10 −2,
+
+⋆⋆ : p < 10 −4). Method Instrument Scientific Game Recall@5 Recall@10 NDCG@5 NDCG@10 Recall@5 Recall@10 NDCG@5 NDCG@10 Recall@5 Recall@10 NDCG@5 NDCG@10 Caser 0.0242 0.0392 0.0154 0.0202 0.0172 0.0281 0.0107 0.0142 0.0346 0.0567 0.0221 0.0291 GRU4Rec 0.0345 0.0537 0.0220 0.0281 0.0221 0.0353 0.0144 0.0186 0.0522 0.0831 0.0337 0.0436 HGN 0.0319 0.0515 0.0202 0.0265 0.0220 0.0356 0.0138 0.0182 0.0423 0.0694 0.0266 0.0353 SASRec 0.0341 0.0530 0.0217 0.0277 0.0256 0.0406 0.0147 0.0195 0.0517 0.0821 0.0329 0.0426 BERT4Rec 0.0305 0.0483 0.0196 0.0253 0.0180 0.0300 0.0113 0.0151 0.0453 0.0716 0.0294 0.0378 FMLP-Rec 0.0328 0.0529 0.0206 0.0271 0.0248 0.0388 0.0158 0.0203 0.0535 0.0860 0.0331 0.0435 FDSA 0.0364 0.0557 0.0233 0.0295 0.0261 0.0391 0.0174 0.0216 0.0548 0.0857 0.0353 0.0453 S3-Rec 0.0340 0.0538 0.0218 0.0282 0.0253 0.0410 0.0172 0.0218 0.0533 0.0823 0.0351 0.0444 TIGER 0.0352 0.0507 0.0234 0.0285 0.0192 0.0300 0.0123 0.0158 0.0497 0.0748 0.0343 0.0424 LETTER 0.0372 0.0581 0.0243 0.0310 0.0276 0.0433 0.0179 0.0230 0.0576 0.0901 0.0373 0.0475 SaviorRec 0.0368 0.0574 0.0242 0.0308 0.0275 0.0431 0.0181 0.0231 0.0570 0.0895 0.0370 0.0471 OneSearch 0.0375 0.0576 0.0242 0.0306 0.0272 0.0435 0.0174 0.0227 0.0561 0.0891 0.0363 0.0469 CAR 0.0402 0.0624 0.0260 0.0331 0.0294 0.0455 0.0190 0.0241 0.0616 0.0947 0.0400 0.0507 FineSID 0.0489 ⋆⋆ 0.0703 ⋆⋆ 0.0326 ⋆⋆ 0.0388 ⋆⋆ 0.0352 ⋆⋆ 0.0514 ⋆⋆ 0.0261 ⋆⋆ 0.0294 ⋆⋆ 0.0664 ⋆⋆ 0.1031 ⋆⋆ 0.0482 ⋆⋆ 0.0594 ⋆⋆ 
+
+Evaluation Settings. To assess the effectiveness of differ-ent sequential recommendation approaches, we adopt two commonly used evaluation metrics: top-K Recall and top-K
+
+Normalized Discounted Cumulative Gain (NDCG), with K
+
+set to 5 and 10. Consistent with previous work (Rajput et al. 2023; Zhou et al. 2020), we apply the leave-one-out protocol to partition the dataset into training, validation, and test sets. Concretely, for each user, the most recent interaction is re-served for testing, the second most recent for validation, and all remaining interactions are used for model training. We perform full-ranking evaluations across the entire item set to eliminate potential bias from sampling. For generative rec-ommendation models, the beam search size is consistently set to 20. 
+
+Implementation Details. For all generative recommenda-tion models, following prior work (Rajput et al. 2023; Wang et al. 2024), we adopt T5 as the autoregressive backbone. The model consists of 6 encoder layers and 6 decoder layers, with a hidden size of 128 and a feed-forward dimension of 512. Each layer employs 4 self-attention heads, each with a head dimension of 64. The item tokenizer is initialized us-ing an RQ-VAE, where both the encoder and decoder are implemented as 3-layer MLPs. We set the number of code-books to K = 3 , each containing 256 code embeddings with dimensionality 128. The entire framework is optimized us-ing AdamW (Rajput et al. 2023) with a weight decay of 0.05. Traditional baselines are implemented using the open-source RecBole framework (Zhao et al. 2022, 2021). The remain-ing baselines are implemented based on their original papers or publicly available codebases (Wang et al. 2024, 2025), while TIGER strictly follows the original experimental set-tings (Rajput et al. 2023). Unless otherwise specified, all models use an embedding dimension of 128. 
+
+Overall Performance 
+
+We evaluate FineSID on three public recommendation benchmarks, with results summarized in Table 2. Several key observations can be made. Among traditional sequen-tial recommendation models, FDSA achieves the strongest performance, which can be attributed to its incorporation of additional textual embeddings that enrich item representa-tions. For generative recommendation models, we observe a clear performance difference between methods that rely on extra training objectives (e.g., SaviorRec and LETTER) and those that introduce additional identifier tokens (e.g., One-Search and CAR). The latter generally performs better, as auxiliary training objectives tend to distort semantic infor-mation, leading to suboptimal tokenizer learning and ulti-mately degrading recommendation performance. Although introducing extra IDs improves accuracy, it inevitably in-creases the size of the identifier space, resulting in higher computational overhead and reduced efficiency. In contrast, our proposed FineSID achieves the best performance across all three benchmarks and all evaluation metrics, with statis-tically significant improvements. Notably, FineSID consis-tently outperforms all baselines by a clear margin, highlight-ing the advantage of learning fine-grained semantic iden-tifiers for generative recommendation. We attribute these gains to FineSID’s global optimization of the identifier space, which avoids the limitations of Top-1 local assignment and leads to a more balanced and semantically coherent tok-enizer. This design enables more effective utilization of the codebook and, consequently, stronger and more efficient gen-erative recommendation performance. 
+
+Ablation Study 
+
+Table 3 presents the ablation results for the key components. The full model consistently outperforms all variants, val-idating the effectiveness of the overall design. Among all modules, GLQ has the most significant impact: removing it leads to the largest performance drop, highlighting its role as a global optimization mechanism for SID learning. By globally optimizing the identifier space rather than relying on local Top-1 assignments, GLQ enables more effective ag-gregation of collaborative signals. The remaining modules provide complementary gains: QSCM maintains semantic consistency, LRQ captures fine-grained semantic distinc-tions, and GAQ ensures the semantic validity of each SID. Together, these components yield consistent improvements across datasets, confirming the robustness and generalizabil-Table 3: Ablation study of FineSID. Method Instrument Scientific Game Recall@5 Recall@10 NDCG@5 NDCG@10 Recall@5 Recall@10 NDCG@5 NDCG@10 Recall@5 Recall@10 NDCG@5 NDCG@10 w/o GAQ 0.0431 0.0658 0.0292 0.0351 0.0312 0.0484 0.0228 0.0254 0.0629 0.0966 0.0421 0.0528 w/o LRQ 0.0429 0.0657 0.0288 0.0346 0.0307 0.0482 0.0224 0.0251 0.0627 0.0963 0.0418 0.0526 w/o QSCM 0.0425 0.0654 0.0284 0.0337 0.0304 0.0478 0.0222 0.0246 0.0622 0.0958 0.0416 0.0522 w/o GLQ 0.0419 0.0649 0.0279 0.0334 0.0297 0.0473 0.0219 0.0241 0.0618 0.0955 0.0413 0.0518 FineSID(Full) 0.0489 0.0703 0.0326 0.0388 0.0352 0.0514 0.0261 0.0294 0.0664 0.1031 0.0482 0.0594 (c) FineSID              
+
+> 40 20 10 80 50 30 60 80 120 160 040 200 240 70
+> (b) CAR
+> 200 100 50 400 250 150 350 80 120 160 040 200 240
+> (a) SaviorRec
+> 90 60 30 160 120 80 120 160 040 200 240 140
+> Balance Rate: 1.19 Utilization Rate: 82.42% Balance Rate: 1.55 Utilization Rate: 48.43% Balance Rate: 0.4812 Utilization Rate: 100%
+
+Figure 2: Codebook Utilization Rates and Balance Rates of SID in Different GR Paradigms. ity of the proposed design. 
+
+Further Analysis 
+
+Codebook Analysis Figure 2 analyzes FineSID’s Seman-tic IDs (SIDs) in terms of codebook utilization and balance rate, which measures the uniformity of SID activation via nor-malized entropy (Jin, Zhou, and Mobasher 2005). FineSID exhibits a continuous, non-zero activation distribution, indi-cating effective utilization of the entire codebook. The extra-training-objective-based baseline(SaviorRec) achieve higher balance than extra-ID-based method(CAR) by explicitly reg-ularizing SID usage, albeit at the cost of semantic distortion. In contrast, FineSID achieves a balance rate of 0.4812 with-out auxiliary objectives or additional IDs, demonstrating that balanced codebook utilization can emerge from global opti-mization. This property reduces redundancy while enabling SIDs to capture richer semantic variations, improving both efficiency and expressiveness. 
+
+Impact of Initialization on Semantic ID Generation Ta-ble 4 reports the impact of different initialization strategies on Semantic ID generation. In our default setting, we adopt random initialization. To systematically analyze its effect, we vary two factors: (i) the embedding backbone, comparing SASRec with BERT (Devlin et al. 2019) and large language model encoders, and (ii) the initialization strategy, includ-ing clustering-based initialization as well as non-clustering approaches such as random initialization and collaborative embeddings extracted from a pretrained SASRec (Kang and McAuley 2018). Three observations emerge. First, random initialization performs competitively and often outperforms more structured initialization schemes, suggesting that nei-ther semantic- nor clustering-based priors are necessary for effective codebook learning. Second, among non-random strategies, collaborative initialization consistently outper-forms semantic initialization, indicating that collaborative Table 4: Ablation study of different codebook initialization strategies. NC denotes non-clustering initialization. Method Instrument Scientific Game Recall@10 NDCG@10 Recall@10 NDCG@10 Recall@10 NDCG@10 FineSID(NC) 0.0621 0.0332 0.0458 0.0247 0.0923 0.0510 FineSID(BERT) 0.0640 0.0345 0.0472 0.0255 0.0941 0.0521 FineSID(LLM) 0.0642 0.0348 0.0473 0.0258 0.0949 0.0525 FineSID(SASRec) 0.0655 0.0352 0.0486 0.0260 0.0958 0.0528 FineSID(Random) 0.0703 0.0388 0.0514 0.0294 0.1031 0.0594 
+
+signals are more aligned with the recommendation objective than purely semantic features. Third, despite these differ-ences, FineSID demonstrates strong robustness to initializa-tion: even with weak or random starting points, it progres-sively refines the codebook through global optimization. 
+
+Efficiency Evaluation We evaluate the training efficiency of FineSID against representative baselines. Table 5 presents the training time required for convergence and the inference time on three widely used benchmark datasets. FineSID con-sistently achieves significantly faster convergence, reducing overall training time by more than 50% compared to the strongest baseline, CAR, across all datasets. To ensure a fair comparison, all methods are trained under identical con-ditions, including the same optimizer, learning rate sched-ule, and early stopping criteria. Notably, FineSID’s ability to propagate gradients across the full codebook allows it to utilize the representation space more effectively, avoiding wasted updates and redundant training stages. This global optimization paradigm not only accelerates representation learning but also maintains or improves recommendation performance. Collectively, these results highlight FineSID’s potential for efficient, scalable deployment in large-scale gen-erative recommendation systems, particularly in scenarios with massive item catalogs where training efficiency is crit-ical. Table 5: Training time (TT, hours) and inference speed (IS, seconds per sample) across benchmark datasets. Dataset LETTER SaviorRec CAR FineSID 
+
+TT IS TT IS TT IS TT IS Game 52.9 0.0539 37.5 0.0680 24.5 0.0729 9.3 0.0571 Instrument 28.2 0.0762 21.3 0.1397 13.3 0.1588 4.8 0.0865 Scientific 25.7 0.1039 27.8 0.1743 11.9 0.1953 3.7 0.1246 
+
+Scalability under High-Dimensional Settings We eval-uate the codebook scalability of FineSID against state-of-the-art baselines by examining codebook utilization , a key indicator of resilience to codebook collapse. As illustrated 256512 1024 2048 4096       
+
+> Codebook Size
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> Utilization Rate
+> 10 20 40 80 160
+> Training Epochs
+> FineSID LETTER SaviorRec CAR
+
+Figure 3: Codebook utilization rate under different codebook sizes and training epochs. in Figure 3, FineSID (red line) consistently sustains opti-mal utilization across varying codebook sizes, demonstrat-ing its robustness under high-dimensional settings. In con-trast, all competing methods suffer significant degradation as the codebook expands: CAR, in particular, exhibits se-vere under-utilization, with many SIDs remaining inactive, reflecting inherent collapse tendencies. It is also notewor-thy that LETTER, by explicitly encouraging SID dispersion, achieves higher utilization than TIGER. However, without tackling sparse gradient propagation, baseline improvements remain limited compared to FineSID’s holistic stability, af-firming it as a principled solution for scaling generative rec-ommendation in high-dimensional codebooks. 
+
+Generalizability Evaluation. To evaluate the generaliz-ability of FineSID, we assess its recommendation perfor-mance on users unseen during training. Specifically, we con-struct a training set by excluding the interactions of a subset of users and form a corresponding test set containing both seen and unseen users. For the Instrument and Scientific datasets, we designate the 5% of users with the least interaction history as unseen. Recommendation performance is then measured separately for seen and unseen users. As shown in Figure 4, FineSID consistently outperforms LETTER, SaviorRec and CAR across both user groups, demonstrating its robust capa-bility to capture user preferences through the effective align-ment between semantic and collaborative representations. Seen Unseen 0.06 0.08 Recall@10 Instrument Seen Unseen 0.03 0.04 0.05 Scientific    
+
+> LETTER SaviorRec CAR FineSID
+
+Figure 4: Comparison between Seen and Unseen Users. 
+
+Optimization Trajectory Analysis. To further illustrate the optimization dynamics in generative recommendation, 5.0 2.5 0.0 2.5 5.0     
+
+> x2
+> 4
+> 2
+> 0246
+> x1
+> Trajectories of Points
+> 5.0 2.5 0.0 2.5 5.0
+> x2
+> Trajectories of Points
+> q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 z
+
+Figure 5: (left) The optimization trajectory of existing Top-1 optimization GR. Only a small fraction of points are updated while others remain inactive. (right) The optimization trajec-tory of FineSID. All the points are updated towards targets 
+
+z.we conduct a two-dimensional toy experiment and visualize the trajectories in Figure 5. The comparison highlights a key distinction: conventional Top-1-optimization-based GR ex-hibits sparse and localized updates, where only a limited sub-set of identifiers receives meaningful gradients, leaving many SID effectively excluded from collaborative refinement. This behavior mirrors the practical limitation in recommenda-tion, where popular items dominate the learning process while long-tail items remain under-optimized. In contrast, FineSID achieves coordinated and comprehensive updates across the entire codebook. By jointly leveraging GLQ and QSCM, FineSID ensures that all identifiers—representing both head and tail items—actively participate in the opti-mization process and evolve toward task-aligned item rep-resentations z. This trajectory-level evidence substantiates our claim that FineSID not only mitigates the inefficiency of isolated updates but also enhances codebook utilization, thereby improving diversity, robustness, and accuracy in rec-ommendation. 
+
+## Conclusions 
+
+In this work, we identify the Top-1 hard assignment as a fun-damental bottleneck in Semantic ID (SID) learning for gen-erative recommendation, which heuristic workarounds fail to resolve without inducing semantic distortion. To overcome this, we propose FineSID, a unified quantization framework that enables global gradient propagation across the codebook while preserving strict discreteness for autoregressive gen-eration. By integrating Global–Local Quantization (GLQ) and a Quantization Semantic Consistency Module (QSCM), FineSID achieves balanced code usage and high semantic fidelity without artificial reassignments. Extensive experi-ments demonstrate that FineSID consistently outperforms existing methods, particularly in long-tailed and large-scale scenarios. Future directions include extending FineSID to cross-domain settings and integrating natural language in-structions for more controllable recommendation. References 
+
+Chen, B.; Guo, X.; Wang, S.; Liang, Z.; Lv, Y.; Ma, Y.; Xiao, X.; Xue, B.; Zhang, X.; Yang, Y.; et al. 2025. One-search: A preliminary exploration of the unified end-to-end generative framework for e-commerce search. arXiv preprint arXiv:2509.03236 .Deldjoo, Y.; Mcauley, J.; Sanner, S.; Castells, P.; Zhang, S.; and Palumbo, E. 2024. The 1st International Workshop on Risks, Opportunities, and Evaluation of Generative Models in Recommendation (ROEGEN). In Proceedings of the 18th ACM Conference on Recommender Systems , 1250–1252. Devlin, J.; Chang, M.-W.; Lee, K.; and Toutanova, K. 2019. Bert: Pre-training of deep bidirectional transformers for lan-guage understanding. In Proceedings of the 2019 conference of the North American chapter of the association for compu-tational linguistics: human language technologies, volume 1 (long and short papers) , 4171–4186. Guo, C.; Cai, K.; Zhou, Y.; Luo, Q.; Tang, R.; Li, H.; Gai, K.; and Zhou, G. 2026. PROMISE: Process Reward Models Unlock Test-Time Scaling Laws in Generative Recommen-dations. arXiv preprint arXiv:2601.04674 .Hidasi, B.; Karatzoglou, A.; Baltrunas, L.; and Tikk, D. 2015. Session-based recommendations with recurrent neural net-works. arXiv preprint arXiv:1511.06939 .Hou, Y.; Li, J.; He, Z.; Yan, A.; Chen, X.; and McAuley, J. 2024. Bridging language and items for retrieval and recom-mendation. arXiv preprint arXiv:2403.03952 .Jin, X.; Zhou, Y.; and Mobasher, B. 2005. A maximum en-tropy web recommendation system: combining collaborative and content features. In Proceedings of the eleventh ACM SIGKDD international conference on Knowledge discovery in data mining , 612–617. Kang, W.-C.; and McAuley, J. 2018. Self-attentive sequential recommendation. In 2018 IEEE international conference on data mining (ICDM) , 197–206. IEEE. Kong, X.; Sheng, L.; Tan, J.; Chen, Y.; Wu, J.; Zhang, A.; Wang, X.; and He, X. 2025. MiniOneRec: An Open-Source Framework for Scaling Generative Recommendation. arXiv preprint arXiv:2510.24431 .Kurita, H.; Kobayashi, G.; Yokoi, S.; and Inui, K. 2023. Con-trastive learning-based sentence encoders implicitly weight informative words. arXiv preprint arXiv:2310.15921 .Lee, D.; Kim, C.; Kim, S.; Cho, M.; and Han, W.-S. 2022. Autoregressive image generation using residual quantization. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , 11523–11532. Li, M.; Wang, H.; Chen, Z.; Nie, G.; Qiu, Y.; Tang, G.; Liu, L.; and Zhuo, J. 2024. Generative retrieval with pref-erence optimization for e-commerce search. arXiv preprint arXiv:2407.19829 .Li, X.; Chen, B.; She, J.; Cao, S.; Wang, Y.; Jia, Q.; He, H.; Zhou, Z.; Liu, Z.; Liu, J.; Zhang, Z.; Zhou, Y.; Tang, G.; Yang, Y.; Guo, C.; Dong, S.; Cai, K.; Jia, P.; Wang, M.; Wang, W.; Wang, S.; Luo, X.; Hu, Q.; Luo, Q.; Lv, X.; Ma, C.; Tang, R.; Gai, K.; Zhou, G.; and Zhao, X. 2025a. A Sur-vey of Generative Recommendation from a Tri-Decoupled Perspective: Tokenization, Architecture, and Optimization. 
+
+Preprints , 2025120203. Li, X.; Jin, J.; Zhou, Y.; Zhang, Y.; Zhang, P.; Zhu, Y.; and Dou, Z. 2025b. From matching to generation: A survey on generative information retrieval. ACM Transactions on Information Systems , 43(3): 1–62. Lin, G.; Hua, Z.; Feng, T.; Yang, S.; Long, B.; and You, J. 2025. Unified semantic and ID representation learning for deep recommenders. arXiv preprint arXiv:2502.16474 .Liu, J.; Collins, L.; Tang, J.; Zhao, T.; Shah, N.; and Ju, C. M. 2025. Understanding Generative Recommendation with Se-mantic IDs from a Model-scaling View. arXiv preprint arXiv:2509.25522 .Ma, C.; Kang, P.; and Liu, X. 2019. Hierarchical gating net-works for sequential recommendation. In Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining , 825–833. Oyama, M.; Yokoi, S.; and Shimodaira, H. 2022. Norm of word embedding encodes information gain. arXiv preprint arXiv:2212.09663 .Petrov, A. V.; Macdonald, C.; and Tonellotto, N. 2025. Effi-cient Recommendation with Millions of Items by Dynamic Pruning of Sub-Item Embeddings. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval , 2102–2111. Rajput, S.; Mehta, N.; Singh, A.; Hulikal Keshavan, R.; Vu, T.; Heldt, L.; Hong, L.; Tay, Y.; Tran, V.; Samost, J.; et al. 2023. Recommender systems with generative retrieval. 
+
+Advances in Neural Information Processing Systems , 36: 10299–10315. Sun, F.; Liu, J.; Wu, J.; Pei, C.; Lin, X.; Ou, W.; and Jiang, P. 2019. BERT4Rec: Sequential recommendation with bidi-rectional encoder representations from transformer. In Pro-ceedings of the 28th ACM international conference on infor-mation and knowledge management , 1441–1450. Sun, W.; Yan, L.; Chen, Z.; Wang, S.; Zhu, H.; Ren, P.; Chen, Z.; Yin, D.; Rijke, M.; and Ren, Z. 2023. Learning to tokenize for generative retrieval. Advances in Neural Information Processing Systems , 36: 46345–46361. Tang, J.; and Wang, K. 2018. Personalized top-n sequential recommendation via convolutional sequence embedding. In 
+
+Proceedings of the eleventh ACM international conference on web search and data mining , 565–573. Team, Q. 2024. Qwen2 technical report. arXiv preprint arXiv:2407.10671 .Touvron, H.; Lavril, T.; Izacard, G.; Martinet, X.; Lachaux, M.-A.; Lacroix, T.; Rozière, B.; Goyal, N.; Hambro, E.; Azhar, F.; et al. 2023. Llama: Open and efficient founda-tion language models. arXiv preprint arXiv:2302.13971 .Wang, W.; Bao, H.; Lin, X.; Zhang, J.; Li, Y.; Feng, F.; Ng, S.-K.; and Chua, T.-S. 2024. Learnable item tokenization for generative recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowl-edge Management , 2400–2409. Wang, Y.; Gan, W.; Xiao, L.; Zhu, J.; Chang, H.; Wang, H.; Zhang, R.; Dong, Z.; Tang, R.; and Li, R. 2025. Act-With-Think: Chunk Auto-Regressive Modeling for Genera-tive Recommendation. arXiv preprint arXiv:2506.23643 .Wu, D.; Shang, M.; Luo, X.; and Wang, Z. 2021. An L 1-and-L 2-norm-oriented latent factor model for recommender systems. IEEE Transactions on Neural Networks and Learn-ing Systems , 33(10): 5775–5788. Yao, Y.; Li, Z.; Xiao, S.; Du, B.; Zhu, J.; Zheng, J.; Kong, X.; and Jiang, Y. 2025. Saviorrec: Semantic-behavior alignment for cold-start recommendation. arXiv preprint arXiv:2508.01375 .Zhang, T.; Zhao, P.; Liu, Y.; Sheng, V. S.; Xu, J.; Wang, D.; Liu, G.; Zhou, X.; et al. 2019. Feature-level deeper self-attention network for sequential recommendation. In IJCAI ,4320–4326. Zhao, W. X.; Hou, Y.; Pan, X.; Yang, C.; Zhang, Z.; Lin, Z.; Zhang, J.; Bian, S.; Tang, J.; Sun, W.; et al. 2022. Recbole 2.0: Towards a more up-to-date recommendation library. In 
+
+Proceedings of the 31st ACM international conference on information & knowledge management , 4722–4726. Zhao, W. X.; Mu, S.; Hou, Y.; Lin, Z.; Chen, Y.; Pan, X.; Li, K.; Lu, Y.; Wang, H.; Tian, C.; et al. 2021. Recbole: Towards a unified, comprehensive and efficient framework for recommendation algorithms. In proceedings of the 30th acm international conference on information & knowledge management , 4653–4664. Zheng, B.; Hou, Y.; Lu, H.; Chen, Y.; Zhao, W. X.; Chen, M.; and Wen, J.-R. 2024. Adapting large language models by integrating collaborative semantics for recommendation. In 2024 IEEE 40th International Conference on Data Engi-neering (ICDE) , 1435–1448. IEEE. Zhou, K.; Wang, H.; Zhao, W. X.; Zhu, Y.; Wang, S.; Zhang, F.; Wang, Z.; and Wen, J.-R. 2020. S3-rec: Self-supervised learning for sequential recommendation with mutual infor-mation maximization. In Proceedings of the 29th ACM in-ternational conference on information & knowledge manage-ment , 1893–1902. Zhou, K.; Yu, H.; Zhao, W. X.; and Wen, J.-R. 2022. Filter-enhanced MLP is all you need for sequential recommen-dation. In Proceedings of the ACM web conference 2022 ,2388–2399. 
+
+## More Experiments 
+
+All experiments were conducted on A100 GPUs and repeated five times with different random seeds. 
+
+Generalization 
+
+To assess our method’s generalization on decoder-only LLMs, we instantiate our model and all baselines on the Qwen family (Qwen-1.5B–Qwen-7B) (Team 2024); the scale study is summarized in Table 7. Detailed results for Qwen-1.5B on the Toys and Beauty datasets are presented in Table 6. (a) Two-Stage GR Norm Index 1 2 3(b) End-to-End GR Norm Index 1 2 3(c) EAGLE Norm Index 1 2 3
+
+Figure 6: Average Norm Analysis of SID. The y-axis is plot-ted on a logarithmic scale (ranging from 10 −3 to 10 2). 
+
+Popularity Bias 
+
+To assess FineSID’s effectiveness in alleviating popularity bias, we partition the test set into Head and Tail subsets. As reported in Table 8, FineSID consistently outperforms all baselines on both subsets. Notably, the improvement is more pronounced on the Tail items, suggesting that FineSID is particularly effective at mitigating popularity bias compared to existing neural models. 
+
+Average Norm Analysis of SID To characterize the distri-bution of code embeddings, we employ the embedding norm as a proxy for information capacity, following prior stud-ies (Oyama, Yokoi, and Shimodaira 2022; Kurita et al. 2023) which have established that larger norms correspond to richer semantic representations. We first compute the average norm across the hierarchical codebooks of the RQ-VAE (Figure 6). Specifically, for each item we derive a semantic ID sequence of length L = 3 and the corresponding code embedding elcl
+
+is retrieved from the l-th codebook, and its L2 norm (Wu et al. 2021) || elcl || is then calculated. Aggregating across all items, we group by index position and report the average norm at each level. As shown in Figure 6, the results exhibit a clear hierarchical decay pattern: prefix tokens (earlier in-dices) attain larger average norms, indicating that semantic information is more densely concentrated in the initial posi-tions. Moreover, we observe that existing methods diminishes semantic expressiveness across all three levels, whereas our proposed FineSID framework consistently enhances multi-level semantic representations compared to the conventional two-stage generative recommendation paradigm. 
+
+Hyperparameters 
+
+The hyperparameter γ is selected from {0.4, 0.5, 0.6, 0.7},with γ = 0.6 yielding the best performance. The hyperparameters τ and ϵ are chosen from 
+
+{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9} and {1 × 10 −9, 1 ×
+
+10 −8, 1 × 10 −7, 1 × 10 −6}, respectively, with τ = 0 .2 and 
+
+ϵ = 1 × 10 −7 achieving the best results. 
+
+## Discussion and Analysis 
+
+Theoretical Analysis 
+
+To address the theoretical foundations of FineSID, we pro-vide rigorous analysis of the representation capacity, collapse prevention guarantees, and semantic preservation properties of our proposed GLQ and QSCM modules. Table 6: Overall performance of Qwen-1.5B on the Toys and Beauty datasets. The best results are highlighted in bold and the second-best are underlined. Inf. Time denotes the total inference time across all test users on a single NVIDIA RTX A5000 GPU. Dataset Method All Warm Cold Inf. Time(s) All Users R@5 R@10 N@5 N@10 R@5 R@10 N@5 N@10 R@5 R@10 N@5 N@10 Toys DreamRec 0.0006 0.0013 0.0005 0.0008 0.0008 0.0019 0.0007 0.0012 0.0076 0.0137 0.0052 0.0074 1,093 E4SRec 0.0065 0.0108 0.0056 0.0072 0.0089 0.0144 0.0075 0.0096 0.0084 0.0235 0.0055 0.0111 905 BIGRec 0.0009 0.0016 0.0009 0.0012 0.0011 0.0013 0.0010 0.0011 0.0194 0.0311 0.0147 0.0191 43,304 IDGenRec 0.0030 0.0053 0.0022 0.0031 0.0043 0.0086 0.0032 0.0048 0.0189 0.0364 0.0161 0.0224 30,720 CID 0.0027 0.0047 0.0025 0.0033 0.0055 0.0084 0.0044 0.0056 0.0055 0.0156 0.0044 0.0081 27,248 SemID 0.0024 0.0042 0.0018 0.0024 0.0034 0.0055 0.0026 0.0034 0.0140 0.0275 0.0095 0.0143 32,288 TIGER 0.0068 0.0117 0.0054 0.0072 0.0094 0.0159 0.0070 0.0095 0.0384 0.0715 0.0291 0.0408 13,800 LETTER 0.0057 0.0093 0.0050 0.0064 0.0080 0.0126 0.0066 0.0085 0.0217 0.0416 0.0170 0.0239 13,800 SETRec 0.0116 0.0188 0.0095 0.0120 0.0144 0.0236 0.0118 0.0151 0.0531 0.0883 0.0382 0.0507 926 ETEGRec 0.0117 0.0191 0.0097 0.0125 0.0145 0.0239 0.0120 0.0153 0.0534 0.0884 0.0383 0.0509 1428 EAGLE 0.0153* 0.0251* 0.0129* 0.0167* 0.0189* 0.0264* 0.0141* 0.0185* 0.0594* 0.0954* 0.0438* 0.0551* 979 Beauty DreamRec 0.0007 0.0009 0.0005 0.0005 0.0010 0.0011 0.0007 0.0007 0.0090 0.0167 0.0075 0.0103 1,326 E4SRec 0.0067 0.0109 0.0056 0.0072 0.0088 0.0146 0.0072 0.0094 0.0017 0.0071 0.0010 0.0029 910 BIGRec 0.0006 0.0010 0.0006 0.0007 0.0010 0.0010 0.0008 0.0008 0.0141 0.0246 0.0094 0.0135 29,500 IDGenRec 0.0042 0.007 0.0030 0.0043 0.0045 0.0104 0.0033 0.0054 0.0254 0.0471 0.0207 0.0292 35,040 CID 0.0046 0.0077 0.0040 0.0052 0.0059 0.0107 0.0051 0.0068 0.0075 0.0155 0.0071 0.0096 27,792 SemID 0.0030 0.0045 0.0027 0.0033 0.0050 0.0076 0.0042 0.0052 0.0159 0.0227 0.0116 0.0159 45,160 TIGER 0.0041 0.0065 0.0032 0.0041 0.0054 0.0085 0.0042 0.0054 0.0083 0.0167 0.0064 0.0091 12,600 LETTER 0.0040 0.0069 0.0031 0.0042 0.0051 0.0088 0.0039 0.0054 0.0043 0.0129 0.0043 0.0071 12,600 SETRec 0.0104 0.0167 0.0085 0.0108 0.0140 0.0221 0.0109 0.0141 0.0477 0.0748 0.0370 0.0464 1,050 ETEGRec 0.0109 0.0171 0.0088 0.0111 0.0142 0.0226 0.0112 0.0144 0.0483 0.0749 0.0374 0.0465 1,398 EAGLE 0.0128* 0.0193* 0.0119* 0.0142* 0.0167* 0.0252* 0.0182* 0.0174* 0.0504* 0.0772* 0.0391* 0.0488* 1,196 Table 7: Performance comparison between FineSID and competitive baselines with different LLM sizes on Qwen. All Warm Cold                                                                                                  
+
+> LLM Size Model R@10 N@10 R@10 N@10 R@10 N@10 1.5B LETTER 0.0093 0.0064 0.0126 0.0085 0.0416 0.0239 E4SRec 0.0108 0.0072 0.0144 0.0096 0.0235 0.0111 SETRec 0.0188 0.0120 0.0236 0.0151 0.0883 0.0507 ETEGRec 0.0191 0.0125 0.0239 0.0153 0.0884 0.0509 FineSID 0.0251 0.0167 0.0264 0.0185 0.0954 0.0551
+> 3B LETTER 0.0109 0.0072 0.0151 0.0097 0.0471 0.0236 E4SRec 0.0096 0.0061 0.0129 0.0081 0.0218 0.0103 SETRec 0.0195 0.0123 0.0258 0.0159 0.0964 0.0571 ETEGRec 0.0198 0.0125 0.0263 0.0164 0.0969 0.0572 FineSID 0.0125 0.0148 0.0292 0.0193 0.0986 0.0594
+> 7B LETTER 0.0099 0.0061 0.0137 0.0081 0.0406 0.0216 E4SRec 0.0088 0.0057 0.0114 0.0072 0.0133 0.0065 SETRec 0.0194 0.0115 0.0239 0.0140 0.1016 0.0613 ETEGRec 0.0195 0.0118 0.0242 0.0143 0.1017 0.0616 FineSID 0.0223 0.0142 0.0251 0.0173 0.1031 0.0639
+
+Representation Capacity Analysis We first establish the theoretical limits of SID in generative recommendation. 
+
+Theorem 0.1 (Codebook Capacity Bound) . For a hierarchi-cal codebook E = {E 1, . . . , EL} with each level containing 
+
+K SIDs of dimension d, the expressive capacity of FineSID’s SID satisfies: 
+
+I(X; ˆZ) ≤ min 
+
+
+
+H(X), L log K, d
+
+2 log 
+
+
+
+1 + E[∥z∥2]
+
+σ2
+
+> q
+
+ 
+
+,
+
+(12) 
+
+where σ2 
+
+> q
+
+is the quantization error variance, H(X) is the item entropy, and I(X; ˆZ) denotes mutual information. Proof. The bound derives from three aspects: (1) Data pro-cessing inequality gives I(X; ˆZ) ≤ H(X); (2) The finite cardinality KL of hierarchical codes bounds I(X; ˆZ) ≤
+
+L log K; (3) Treating quantization as a communication chan-nel with noise variance σ2 
+
+> q
+
+, the Gaussian channel capacity Table 8: Tail and Head performance comparison on ML-1M and Beauty. Each metric is NDCG@5. Dataset ML-1M Beauty Model All Tail Head All Tail Head SASRec 0.1197 0.0648 0.1567 0.0319 0.0167 0.0508 TIGER 0.1274 0.0752 0.1629 0.0345 0.0172 0.0532 LETTER 0.1226 0.0713 0.1552 0.0316 0.0238 0.0511 CAR 0.1296 0.0791 0.1584 0.0470 0.0271 0.0684 SaviorRec 0.0930 0.0537 0.1385 0.0257 0.0108 0.0435 FineSID 0.1387 0.0854 0.1674 0.0547 0.0325 0.0841 
+
+formula provides the third term. The hierarchical structure in RQ-VAE achieves better rate-distortion tradeoff than flat quantization. 
+
+Collapse Prevention Guarantees The GLQ mechanism provides formal guarantees against representation collapse. 
+
+Theorem 0.2 (GLQ Embedding Collapse Prevention) . Un-der GAQ with EMA frequency tracking, the minimum SID utilization probability pmin satisfies: 
+
+pmin ≥ 1 − γK exp 
+
+
+
+− DKL (Pdata ∥U )
+
+ϵ
+
+
+
+, (13) 
+
+where U is the uniform distribution, γ is the EMA decay factor, and ϵ controls the softmax temperature in LRQ. Proof. The EMA update in GAQ ensures that for any SID 
+
+ek, its usage frequency Nk follows: 
+
+N (t) 
+
+> k
+
+≥ (1 − γ) nk
+
+B + γN (t−1)  
+
+> k
+
+. (14) For persistently underutilized SIDs, the soft assignment in LRQ guarantees nonzero gradient flow: 
+
+∂L
+
+∂ek
+
+=
+
+> B
+
+X
+
+> j=1
+
+∂L
+
+∂ˆzj
+
+· exp( −∥ rj − ek∥2/τ )
+
+P 
+
+> i
+
+exp( −∥ rj − ei∥2/τ ) . (15) Even when ∥rj − ek∥ is large, the gradient remains nonzero, preventing dead SIDs. 
+
+Corollary 0.3 (Token Collapse Immunity) . For temperature 
+
+τ = Θ(1 / log K), GLQ achieves near-perfect codebook uti-lization: 
+
+E
+
+ #active SIDs 
+
+K
+
+
+
+≥ 1 − O 
+
+ 1
+
+K
+
+
+
+. (16) 
+
+Quantization Error Analysis We derive explicit bounds on the quantization error introduced by our hierarchical dis-cretization. 
+
+Theorem 0.4 (Quantization Error Bound) . The reconstruc-tion error of FineSID’s hierarchical quantization satisfies: 
+
+E[∥z − ˆz∥2] ≤
+
+> L
+
+X
+
+> l=1
+
+ϵl + O
+
+ log Kd
+
+
+
+, (17) 
+
+where ϵl is the quantization error at level l, bounded by the covering radius of codebook El.Proof. Using the residual quantization structure, the total error decomposes as: 
+
+∥z − ˆz∥2 =
+
+> L
+
+X
+
+> l=1
+
+(r(l−1) − ecl )
+
+> 2
+
+≤ L
+
+> L
+
+X
+
+> l=1
+
+∥r(l−1) − ecl ∥2.
+
+(18) Each term ∥r(l−1) − ecl ∥2 is bounded by the covering prop-erties of the codebook. The GLQ mechanism ensures each 
+
+El forms an ϵ-net with covering radius O(plog K/d ).
+
+Semantic Preservation Theory The QSCM module pro-vides formal guarantees for semantic consistency. 
+
+Theorem 0.5 (QSCM Semantic Preservation) . The double quantization alignment loss in QSCM ensures the quantiza-tion process is Lipschitz continuous: 
+
+|∥ zi − zj ∥ − ∥ ˆzi − ˆzj ∥| ≤ ϵ ∀i, j, (19) 
+
+where ϵ = O
+
+q L log Kd
+
+
+
+.Proof. The QSCM loss LDQA = ∥ˆz − sg [z]∥2 + ∥sg [ˆ z] − z∥2
+
+enforces bidirectional consistency. By the triangle inequality: 
+
+|∥ zi − zj ∥ − ∥ ˆzi − ˆzj ∥| ≤ ∥ zi − ˆzi∥ + ∥zj − ˆzj ∥ (20) 
+
+≤ 2pLDQA = O
+
+r L log Kd
+
+!
+
+.
+
+(21) The final bound comes from substituting the quantization error bound. 
+
+Corollary 0.6 (Collaborative Similarity Preservation) . For any item pair (i, j ), their cosine similarity in embedding and SID satisfies: 
+
+|sim (zi, zj ) − sim (ˆ zi, ˆzj )| ≤ δ, (22) 
+
+where δ = O
+
+q L log Kd
+
+
+
+.
+
+Optimization Convergence Analysis We analyze the con-vergence properties of the joint training objective. 
+
+Theorem 0.7 (FineSID Convergence Rate) . The unified FineSID objective L = Lrank + λ1LSem + λ2LDQA converges exponentially fast: 
+
+E[L(t) − L ∗] ≤ C · ρt, (23) 
+
+where ρ < 1 depends on the condition number κ of the loss landscape, and C depends on initialization. Proof. The GLQ mechanism ensures well-behaved gradients by maintaining codebook diversity, bounding the condition number κ(∇2L). The QSCM module provides strong con-vexity in the semantic alignment term. Applying Nesterov acceleration to this well-conditioned problem yields the ex-ponential convergence rate, with ρ = 1 − O (1 /√κ).
+
+Generalization Bounds Finally, we establish generaliza-tion guarantees for the recommendation task. 
+
+Theorem 0.8 (Generalization Error Bound) . With probabil-ity at least 1−δ, the generalization error of FineSID satisfies: 
+
+Lgen ≤ ˆLemp + O
+
+r L log K + log(1 /δ )
+
+N
+
+!
+
+, (24) 
+
+where N is the number of training sequences, and ˆLemp is the empirical loss. Proof. The proof uses Rademacher complexity analysis. The SID with L log K effective bits reduces the hypothesis space complexity compared to continuous embeddings, while the hierarchical structure captures essential semantic patterns without overfitting. 
+
+Corollary 0.9 (Long-tail Performance Guarantee) . For items with frequency f ≤ 1/K , FineSID maintains non-trivial recall: Recall @Ktail ≥ Ω
+
+ 1
+
+√L log K
+
+
+
+. (25)

@@ -1,0 +1,235 @@
+Title: Exploring Forum Post Retrieval with Generative Modeling
+
+URL Source: https://arxiv.org/pdf/2609.38646v2
+
+Published Time: Fri, 02 Oct 2026 00:45:34 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Exploring Forum Post Retrieval with Generative Modeling 
+
+Yang Li 1,∗,†, Yaguang Liu 2,†, Heng Liu 2,†, Samson Komo 2,†, Jane Kou 2, Yulian Zhou 2, Gang Yang 2,
+
+Shubhojeet Sarkar 2, Gaurav Chakravorty 2,†, Yujie Liu 2, Haipeng Chen 1, Yonghuan Yang 2, Deepti Chheda 2,
+
+Yamin Wang 2, Mike Plumpe 2, Rish Tandon 2, Shengbo Guo 2,†
+
+> 1
+
+William & Mary, 2Meta 
+
+> ∗
+
+Work done during internship at Meta , †Equal contribution. 
+
+Generative recommendation (GR) has emerged as an alternative to embedding-based retrieval, building on the success of generative models in language and vision. We are exploring GR on Facebook Forum, a standalone application for medium-to-heavy users of Facebook Groups. Because Forum is a new surface, its own interaction data are too sparse to train a GR model from scratch. We address this with transfer along two axes: we train on a broader corpus of Facebook Groups engagements rather than Forum sessions alone, and we reuse hierarchical, prefix-based semantic IDs (SIDs) learned from cross-platform Facebook Feed data instead of fitting a Forum-specific tokenizer. A 3B-parameter instruction-tuned language model is then supervised-fine-tuned to generate SIDs directly from user context. We systematically ablate the design choices that matter most in practice, including SID construction, the composition and length of user history, and the inclusion of user-profile features. Our results show that cross-platform SIDs transfer to a new recommendation surface, and offer practical guidance for teams deploying GR on real-world social platforms.  
+
+> Date:
+
+October 2, 2026  
+
+> Correspondence:
+
+Yang Li yli102@wm.edu 
+
+# 1 Introduction 
+
+Facebook is one of the largest social platforms in the world, serving billions of people across an extremely wide range of interests. Facebook Groups is among the largest contributors to that daily activity: rather than a single global feed, Groups organizes content around communities of shared interest, so the recommendation problem is inherently one of matching a user to content within and across the specific communities they care about. 
+
+Forum is a new standalone companion application built for people who are heavily invested in Groups. It offers direct access to group discussions along with tools intended to deepen community engagement, and it is deliberately narrower than the main Facebook application: its users arrive with community-oriented intent rather than to browse a general feed. This makes Forum an attractive setting for recommendation research, but also a difficult one. As a newly launched surface, Forum has accumulated comparatively little of its own interaction data, so a model trained on Forum sessions alone would be badly under-served — precisely the cold-start regime in which transferring representations and behavioral signal from a larger related surface is most valuable. With the success of generative models in natural language processing, computer vision, and time-series modeling, the recommender-systems community has begun to explore generative recommendation (GR) as an alternative to embedding-based retrieval. Rather than embedding a query and performing approximate nearest-neighbor search over an item index, a GR model generates an identifier for the next item directly. Work in this direction spans diffusion-based approaches to sequential recommendation [12, 29, 32] and autoregressive approaches that represent items as discrete token sequences and predict the next item with a transformer [7, 20, 35]. The autoregressive formulation is a natural fit for our setting: it lets us reuse a pretrained language model, and — because items are identified by semantic ID (SID) rather than by an opaque index — the same model can consume natural-language context about a user alongside their interaction 1arXiv:2609.38646v2 [cs.IR] 1 Oct 2026 history. This paper reports our experience applying autoregressive GR to Groups content, as a step toward serving Forum. Our broader effort aims to enhance the conventional retrieve stack with a new foundation model that generates candidate group posts; here we focus on the generative retrieval half, and on the data and training foundations that any such system requires. Concretely, we build the post-to-SID mapping for Groups posts, construct the alignment corpus that teaches a pretrained model a new SID vocabulary, assemble user-level engagement sequences in SID form, and train and evaluate models end-to-end on production Groups data. Two forms of transfer make this feasible despite Forum’s limited data. First, rather than training on Forum sessions alone, we train on the substantially larger corpus of Facebook Groups engagements. Second, rather than fitting a Forum-specific tokenizer, we reuse hierarchical, prefix-based SIDs learned by an RQ-VAE trained on cross-platform Facebook Feed content, which lets a new surface inherit an item vocabulary it could not have learned on its own. Our contributions are as follows: • We describe an end-to-end GR system for a real social platform, built on a 3B-parameter instruction-tuned language model that generates cross-platform SIDs from user engagement history (Section 3.2). • We systematically evaluate the design choices that most affect quality in practice — SID depth, how engagement history is verbalized in the prompt, history length and whether it must be fixed, and the choice of base model — finding that SID depth dominates all other factors and that the smallest base model we tried is also the most cost-efficient (Section 4). 
+
+# 2 Related Work 
+
+Large Language Models for Recommendation. The integration of Large Language Models (LLMs) into recommendation systems has fundamentally shifted the paradigm from traditional embedding-based retrieval to generative recommendation [16, 28, 31]. Early efforts treated recommendation as a language processing task, mapping user histories and item metadata into natural language prompts [7, 11]. Subsequent work has explored instruction tuning to better align pre-trained language models with recommendation objectives [3, 14, 33], while others have investigated LLMs as interactive and explainable agents [6, 17]. Unlike approaches that rely purely on lengthy textual descriptions of items, our work leverages an instruction-tuned LLM to generate compact, discrete semantic identifiers, bridging the gap between natural language reasoning and strict item retrieval. 
+
+Semantic IDs and Generative Retrieval. To sidestep the inefficiencies of generating full text for items, recent systems employ generative retrieval, where models predict discrete item identifiers directly [24, 30]. Semantic IDs (SIDs), typically derived from hierarchical clustering or quantization of item embeddings, preserve semantic proximity: items with similar content share prefix tokens [9, 20, 35]. While early generative recommendation approaches used standard VQ-VAEs [8, 26], we adopt Residual-Quantized VAEs (RQ-VAE) [10] to achieve a compact, hierarchical codebook. This strict prefix structure is crucial for transferring item representations across domains, allowing our model to leverage cross-platform Facebook Feed data for the cold-start Forum surface [5, 27]. 
+
+Reinforcement Learning for Alignment. Aligning language models with human preferences via Reinforcement Learning from Human Feedback (RLHF) [2, 18] has become standard practice for general-purpose LLMs. Early foundations demonstrated that fine-tuning on human preferences could drastically improve text quality and helpfulness [23, 36]. In recommendation, policy optimization techniques like Proximal Policy Optimization (PPO) [21] have historically been adapted to optimize ranking metrics directly [34]. More recently, methods like Generative Reward Policy Optimization (GRPO) [22] and Direct Preference Optimization (DPO) [19] have shown promise by eliminating the need for separate value models. However, as we demonstrate in our post-training experiments, applying these RL alignment techniques to short-sequence generative recommendation introduces severe reward sparsity, highlighting a critical gap between text-based reasoning alignment and item-based ranking alignment. 23 System Design 
+
+In this section we describe the core components of our implementation. As in autoregressive generative models for images [10, 26], recommendation generation proceeds in two stages: (1) encoding a candidate post into a sequence of discrete semantic tokens, and (2) learning a probabilistic model over these token sequences. 
+
+3.1 Semantic IDs via RQ-VAE 
+
+The choice of encoding is one of the central design challenges in a real-world deployment, since it determines both what the generative model can express and how long its output sequences are. Continuous embeddings are the natural latent representation for diffusion-based models, whereas codebook-based encodings such as the Vector-Quantized Variational Autoencoder (VQ-VAE) [26] yield the discrete vocabulary that autoregressive transformers require. The GR community has more recently adopted Residual-Quantized VAE (RQ-VAE) [10, 20], which reaches comparable reconstruction quality with a codebook that is orders of magnitude smaller: rather than assigning one code per item from a single large codebook, RQ-VAE represents an item as a short sequence of codes that successively refine one another. This coarse-to-fine structure also gives the resulting semantic IDs (SIDs) a prefix property that we exploit through experiment. We adopt an internal RQ-VAE trained on Facebook Feed data, using post embeddings produced by an internal content-understanding model. The model exposes two configurations: a 3-layer and a 4-layer codebook, each layer holding K = 2048 codes. We summarize the procedure below. Let Cl = {clk}Kk=1 denote the codebook at layer l ∈ [1 , L ], with |Cl| = K. The encoder quantizes an item embedding e into a sequence of L codes, and the decoder reconstructs e from that sequence. Quantization is applied recursively to the residual: setting r0 = e,
+
+kl = arg min 
+
+> k∈[1 ,K ]
+
+rl−1 − clk
+
+> 22
+
+, rl = rl−1 − clkl , (1) so that the semantic ID of the item is the tuple RQ (e) = ( k1, . . . , k L) and the reconstruction is ˆe = PLl=1 clkl .Because each layer quantizes what the previous layers left unexplained, the codes are ordered coarse-to-fine, and items sharing a prefix are semantically related. The codebooks, encoder, and decoder are trained jointly, minimizing a reconstruction term together with the quantization error accumulated across layers: 
+
+Ltotal = ∥e − ˆe∥22
+
+| {z }
+
+> Lrecon
+
++β
+
+> L
+
+X
+
+> l=1
+
+sg[ rl−1] − clkl 
+
+> 22
+
++ rl−1 − sg[ clkl ] 22
+
+| {z }
+
+> Lresidual
+
+, (2) where sg[ ·] denotes the stop-gradient operator, which allows gradients to pass through the non-differentiable 
+
+arg min via the straight-through estimator. 
+
+3.2 Generative Recommendation with a Small Language Model 
+
+Following established practice in generative retrieval [20, 24, 30, 35], we train a small language model (SLM) to generate SIDs directly. Adapting a pretrained SLM to this task requires two stages: (1) grounding the newly introduced SID tokens in the model’s existing textual knowledge, and (2) learning to generate the SID of a user’s next engagement from their interaction history.  
+
+> 3.2.1 Align SIDs in Textual Context
+
+The SLM arrives with strong instruction-following ability in the textual domain, but the SID tokens are entirely new to it: an identifier such as <a_1029> is an uninitialized embedding carrying no semantics. Our first stage bridges this gap, letting the model reuse what it already knows about language to form useful representations of each SID. 3Finer-grained alignment supervision generally yields better representations, but collecting it through human annotation does not scale. We instead exploit a pairing that arises for free in a production setting: every post already has both a text body and an SID assigned by the RQ-VAE of Section 3.1. We use this pairing in both directions, requiring no annotation:  
+
+> Text
+
+→ SID teaches the model to map a textual description onto the identifier of the post it describes, aligning language directly with the SID vocabulary.  
+
+> Input:
+> The content can be described as follows: “Happy Mother’s Day, Mom! I love you so much!” What is its semantic ID?
+> Response:
+> <a_1029><b_1520><c_350>
+> SID
+
+→ Text teaches the inverse mapping, forcing each SID embedding to become predictive of its post’s content.  
+
+> Input:
+> Describe the content associated with semantic ID <a_1029><b_1952><c_861> .
+> Response:
+> Happy Father’s Day, Dad! I love you so much!
+
+Note that these two posts share the first-layer code <a_1029> while diverging at the second: the coarse-to-fine structure of Section 3.1 places semantically related content under a common prefix, and this stage exposes the SLM to exactly that structure. Because the goal here is representation learning rather than conditional generation, we compute the language-modeling loss over all tokens in the sequence rather than masking the prompt as is standard for instruction tuning. Gradients therefore reach the SID embeddings whether an SID appears as input or as target.  
+
+> 3.2.2 Learning to Generate Recommendations
+
+The second stage builds the recommendation capability itself. Given an instruction and a fixed-length history of the user’s recent engagements, each rendered as an SID, the model is trained to generate the SID of the next post the user engages with positively. The main difficulty is the composition of that history. We distinguish strong positive signals (like, share, comment, save) from weak ones (dwell time above a threshold τ , group visit, profile visit). Strong signals are the prediction target, but they are also sparse: a history assembled from strong signals alone spans a long and uneven time window, so consecutive items in the sequence may be days apart and carry little sequential relationship. We therefore populate the history with both weak and strong signals, preserving chronological order, while supervising only on strong-signal targets. We explore two types of history composition: (1) pure SID history and (2) SID history with action names (i.e., liked <a_1><b_1><c_1> ). An example of SID with action names is shown below:     
+
+> Input:
+> You are a helpful post recommendation specialist. Given a user’s engagement history (e.g., reacted to, commented on, shared) along with each post’s semantic ID (e.g., <a_1><b_1><c_1> ), you will predict the semantic ID of the next post the user will positively engage with (i.e., like, share, comment, save, etc.). The user has engagement history: viewed a photo <a_1><b_1><c_1> , viewed a video <a_2><b_2><c_2> ,reacted to a photo <a_3><b_3><c_3> , . . . in chronological order. Based on this history, predict the next post the user will positively engage with (i.e., like, share, comment, save, etc.).
+> Next item:
+> <a_4><b_4><c_4>
+
+In contrast to the grounding stage, this stage follows the standard instruction-tuning recipe: the loss is masked over the prompt so that gradients are computed only on the response tokens and the history serves purely as 4Table 1 SID depth and history rendering, HR@10 at 200k SFT steps, history length 10. Verbs prefixes each history item with its action (“liked <a_10><b_20><c_30> ”); raw SID lists bare identifiers. Depth Rendering HR@10 3-layer Verbs (With Prompt Template) 0.0667       
+
+> 3-layer Raw SID (With Prompt Template) 0.0654 4-layer Verbs (With Prompt Template) 0.0303 4-layer Raw SID (With Prompt Template) 0.0296
+
+conditioning context. Concretely, with the prompt tokens masked out, the loss is 
+
+L = −
+
+> L
+
+X
+
+> l=1
+
+log pθ (kl | k<l , prompt) (3) i.e. standard next-token prediction over the target SID alone. 
+
+# 4 Experiments 
+
+We study four questions that a practitioner must answer before deploying GR, and one that determines its cost: (1) how deep should the SID hierarchy be? (2) how should the engagement history be rendered into the prompt, and does an explicit alignment stage help? (3) how long a history should the model condition on, and must that length be fixed? and (4) does the choice of base model change any of these answers? 
+
+4.1 Setup  
+
+> Data and metrics.
+
+Training sequences are drawn from Facebook Groups engagements using the weak/strong signal taxonomy of Section 3.2. We report HR@ k for k ∈ { 3, 5, 10 } and NDCG@10 over a held-out set of 86,648 users. A hit requires the generated SID to match the ground-truth item exactly in all L layers.  
+
+> Matched-budget protocol.
+
+All arms are trained to a fixed SFT step budget, and all comparisons are drawn at the 200k-step checkpoint. Several arms were trained further, but we restrict analysis to 200k so that every number in this section reflects the same budget.  
+
+> Reference configuration.
+
+Unless stated otherwise, results use Llama-3.2-3B-Instruct with 3-layer SIDs, a fixed history of 10 items, verbalized history, and CPT initialization. This configuration scores HR@10 = 0 .0667 at 200k steps. Two conditions restrict the eligible user population and are evaluated on smaller sets — a 50-item history can only be assembled for users with at least 50 engagements — and we note the count wherever it limits a comparison. 
+
+4.2 SID Construction 
+
+SID depth is the single most consequential design choice we studied. At matched budget the 3-layer configuration reaches HR@10 of 0.0667 against 0.0303 for the 4-layer configuration — a 2.2× difference, an order of magnitude larger than any other effect we measured. We attribute this to task difficulty rather than to representation quality. Because a hit requires every layer to be correct, a fourth layer imposes an additional 2048-way decision on every prediction: with K = 2048 , the nominal output space grows from 2048 3 ≈ 8.6 × 10 9 to 2048 4 ≈ 1.8 × 10 13 . The deeper SID is a strictly more precise target, and the model pays for that precision in accuracy. This makes the comparison a trade-off rather than a verdict. Coarser SIDs collide more: more distinct posts map to the same code tuple, so a 3-layer hit identifies a semantic neighborhood rather than a unique post, and HR@10 is correspondingly easier to satisfy. The two configurations are therefore not scored against equally hard targets, and the 2.2× gap overstates the practical advantage by an amount related to the collision rate. Which depth to prefer thus depends on what sits downstream. If generation feeds a ranking stage that can 5Table 2 Prompt rendering × continued pre-training, 200k SFT steps, 3-layer SIDs, history length 10, all arms on the same 86,648-user evaluation set. CPT initializes from the text ↔SID aligned checkpoint; stock initializes from Llama-3.2-3B-Instruct directly. Init Rendering HR@3 HR@5 HR@10 NDCG@10 CPT Model Verbs (With Prompt Template) 0.0399 0.0509 0.0667 0.0420                                   
+
+> Stock Model Verbs (With Prompt Template) 0.0391 0.0492 0.0640 0.0406 CPT Model Raw SID (No Prompt Template) 0.0383 0.0484 0.0633 0.0399 Stock Model Raw SID (No Prompt Template) 0.0379 0.0479 0.0621 0.0393
+> Table 3 History length at 200k SFT steps, 3-layer SIDs, verbalized history, CPT init. The variable arm samples lengths in [5 ,25] . Evaluation-set sizes differ because longer histories restrict the eligible user population. History HR@3 HR@5 HR@10 NDCG@10 Fixed 10 0.0399 0.0509 0.0667 0.0420
+> Fixed 50 0.0322 0.0413 0.0544 0.0336 Variable 5–25 0.0279 0.0362 0.0492 0.0296
+
+disambiguate within a colliding tuple, the coarser SID is the better retrieval target; if the generated SID must identify a single post, the 4-layer cost may be unavoidable. 
+
+4.3 Prompt Construction and Continued Pre-Training 
+
+Two components of our design aim at the same goal: letting the model bring its pretrained language understanding to bear on a vocabulary it has never seen. The alignment stage of Section 3.2.1 does so before SFT, by aligning SID tokens with post text. Prompt verbalization does so during SFT, by annotating each history item with the action that produced it. We disentangle the two in a 2 × 2 design. Both interventions help, and they reinforce one another. Verbalizing the history improves HR@10 slightly by 2.0% relative when the model has been grounded (0.0667 vs. 0.0654) for 3-layer SID and by 2.4% relative for 4-layer SID. Symmetrically, continued pre-training improves HR@10 by 4.2% with a verbalized prompt (0.0667 vs. 0.0640) and by 1.9% with raw SIDs (0.0633 vs. 0.0621). The two are complementary rather than redundant: each is worth roughly twice as much in the presence of the other. That interaction is the clearest evidence we have for the mechanism we intended. Grounding teaches the model to relate SID tokens to language; verbalization gives it language in the prompt to relate them to. Neither alone realizes the full benefit, and a model that had reduced the task to transition statistics over the code vocabulary would show no interaction at all — it would be indifferent to natural-language annotations interleaved between SIDs regardless of initialization. The practical ordering is nonetheless worth stating plainly: the verbalized prompt without continued pre-training (0.0640) outperforms raw SIDs with it (0.0633). A change to the prompt template — a few tokens per history item, no additional training — buys more than a full continued-pre-training stage over a bidirectional alignment corpus. A team with a fixed budget should verbalize before it aligns, then align if budget remains. 
+
+4.4 History Length 
+
+More history is not better under a fixed training budget. At 200k steps, fixed-10 leads fixed-50 by 22.6% relative HR@10 (0.0667 vs. 0.0544) and leads the variable-length arm by 35.6% (0.0492). The ordering is consistent across all four metrics.  
+
+> Why longer histories cost accuracy.
+
+Two mechanisms plausibly contribute. A 50-item history is roughly five times as many tokens per example, so a fixed step budget buys proportionally fewer gradient updates per unit of sequence content. And the prediction target sits further from the most recent — and most predictive — engagements in the attention window. 6Table 4 Base model comparison at 200k SFT steps, 3-layer SIDs, history length 10, verbalized history. Model HR@3 HR@5 HR@10 NDCG@10 Llama-3.2-3B 0.0399 0.0509 0.0667 0.0420                                 
+
+> Gemma-4-12B 0.0400 0.0507 0.0661 0.0418 Qwen3-4B 0.0372 0.0470 0.0610 0.0387
+> Table 5 GRPO post-training against the SFT checkpoint it initializes from, 3-layer SIDs, history length 10, 1000 GRPO steps. Reward HR@3 HR@5 HR@10 NDCG@5 NDCG@10 SFT Baseline 0.0399 0.0509 0.0667 0.0366 0.0420
+> Accuracy 0.0397 0.0502 0.0651 0.0365 0.0413 Accuracy +ranking (beam) 0.0395 0.0503 0.0651 0.0365 0.0413
+> Comparability caveat.
+
+The fixed-50 arm can only be trained and evaluated on users with at least 50 recorded engagements, a heavier-usage population, and its evaluation set is correspondingly smaller. Heavier users are not obviously easier or harder to predict — they supply more signal but also engage more diffusely — so we cannot isolate this confound, and the fixed-50 result should be read as indicative rather than as a controlled comparison. Adding profile features to the fixed-50 arm does not recover the deficit.  
+
+> Variable-length histories.
+
+Training a single generalist across history lengths is harder still: at 200k steps the variable arm trails fixed-10 by 35.6% relative HR@10. The effect is therefore not specific to length variability 
+
+— both lengthening histories and making them heterogeneous cost accuracy at fixed compute.  
+
+> Implications.
+
+The practical reading is not that short histories carry more signal, but that the specialist is cheaper to train to a given quality — and, for a deployment, fixed-length prompts also give predictable serving latency and KV-cache behavior that a variable-length model does not. The countervailing argument is that one variable-length model can be prompted at several history lengths to produce different slates for the same user, offering diversity a specialist cannot without training multiple models. 
+
+4.5 Base Model: Does Capacity Change the Answers? 
+
+Base-model capacity buys strikingly little. At matched 200k steps, Gemma-4-Unified-12B [25] and Llama-3.2-3B [4] are indistinguishable — 0.0661 against 0.0667 HR@10, a 0.9% difference in Llama’s favor — despite a fourfold difference in parameter count. Qwen3-4B-Instruct-2507[1], though also larger than Llama, trails it by 9.3% HR@10 and 8.5% NDCG@10. The ordering does not track parameter count at all. Two conclusions follow. First, all three model families reach the same qualitative answers on SID depth, prompt rendering, and history length, so the design guidance in this section is not an artifact of one base model. Second, a 4× increase in parameters returns no measurable accuracy gain, which makes the 3B model the clear operating point once serving cost enters the comparison. We conjecture that the bottleneck is learning a newly initialized 3 × 2048 = 6 ,144 -token vocabulary and its sequential structure — a task to which pretrained language ability transfers only weakly — so that available training steps, not parameters, is the binding constraint. 
+
+4.6 Reinforcement Learning Post-Training 
+
+Hit rate and NDCG are ranking objectives that the token-level cross-entropy of SFT optimizes only indirectly, so post-training the generator against a ranking reward is a natural next step. We ran 1000 GRPO [22] steps from our best SFT checkpoint under two reward designs. The first is standard GRPO with an accuracy 
+
+reward: each sampled completion is scored by whether it matches the ground-truth SID exactly. The second follows MiniOneRec [13] in rolling out with beam search and combining accuracy with a ranking reward, so that a correct item is credited more when it appears higher in the generated beam — aligning the training signal more closely with the NDCG we report. 7Neither reward improved on SFT (Table 5); both were marginally worse, by 2.4% relative HR@10 and 1.7% NDCG@10. The more informative observation is that the two arms are indistinguishable from one another — identical to four decimal places on HR@10, NDCG@5, and NDCG@10 — even though the ranking reward was designed specifically to shape the ordering within the beam and the accuracy reward is indifferent to it. A reward that targets the metric we care about produced the same model as one that does not, which suggests the limitation lies upstream of reward design. We see two reasons, and report them because we believe the failure mode is intrinsic to generative recommen-dation in this regime rather than specific to our implementation.  
+
+> The action sequence is too short to benefit from policy optimization.
+
+RL post-training has been most effective on tasks where the model emits long reasoning traces [15, 18], and where a reward on the final answer can be redistributed across many intermediate token choices that the policy is free to reorganize. Our completions are L = 3 code tokens, conditioned on a prompt roughly eighty times longer. There is no intermediate structure to reorganize: the policy makes three categorical decisions, each already directly supervised by SFT’s cross-entropy against the ground-truth code at that position. Sequence-level credit assignment — the mechanism through which RL adds value over next-token supervision — has almost nothing to assign. The prompt-to-completion ratio also makes rollouts expensive relative to the signal they carry, since each sample requires a forward pass over a ∼250-token context to produce three tokens of decision.  
+
+> The reward is too sparse to estimate an advantage.
+
+Because our absolute hit rates are low — an HR@10 near 0.067 means the correct item appears in a slate of ten roughly one time in fifteen — a group of sampled rollouts usually contains no hit at all. Every completion in the group then receives the same reward, the within-group advantage that GRPO computes is identically zero, and the group contributes no gradient. Across both runs we observed this in roughly 95% of rollout groups: about one group in twenty carried any learning signal, while all of them incurred full rollout cost. This also explains why the ranking reward bought nothing. A ranking term can only discriminate among rollouts that contain a hit to rank, and in the overwhelming majority of groups there was none, so the richer reward collapsed to the same constant-zero advantage as the binary one. Consistent with this, mean reward is flat from the first hundred training steps to the last, and the final KL divergence from initialization is under 6 × 10 −3 — the policy barely moved, because there was almost no gradient to move it.  
+
+> Implications for future work.
+
+We do not recommend RL post-training for generative recommendation in this regime, but we also do not read our result as evidence that the direction is unpromising — rather, that the reward must be densified before policy optimization has anything to work with. Shaping the reward to give graded semantic credit looks most promising to us: the coarse-to-fine prefix structure of Section 3.1 means a generated SID sharing a two-layer prefix with the target is a near miss rather than a miss, and scoring it accordingly would convert a binary signal into an ordinal one that varies within almost every group. Alternatives include biasing rollout sampling toward users whose targets the model can occasionally reach, or enlarging the group size, so that groups contain reward variance by construction rather than by luck. Each attacks the same bottleneck: the fraction of rollout groups with non-zero advantage. We suggest reporting that fraction as a first-class diagnostic in any such attempt, since in our runs it was already at its final value from the first training step — long before the downstream metrics revealed anything. 
+
+# 5 Conclusion 
+
+We described an end-to-end generative recommendation system for Facebook Groups content, built toward serving Forum, a new standalone application for people heavily invested in Groups. Because Forum has little interaction data of its own, our design rests on two forms of transfer: training on the larger corpus of Groups engagements, and reusing hierarchical, prefix-based semantic IDs learned by an RQ-VAE on cross-platform Facebook Feed content. A 3B-parameter instruction-tuned language model, first grounded in the new SID vocabulary through bidirectional text ↔SID alignment, learns to generate the SID of a user’s next positive interaction directly.Our evaluation isolates four design choices, and the cheap ones matter most. SID depth dominates: the 3-layer configuration outperforms the 4-layer one by 2.2 × HR@10 at matched budget, traded off against a higher collision rate. Verbalizing the engagement history with action verbs gains 2.0% HR@10 at negligible token cost — more than a full continued-pre-training stage buys, and at a fraction of the cost. 8Longer and variable-length histories hurt under fixed compute. And base-model capacity buys little: our 3B model and a 12B model are practically indistinguishable (with the 3B model leading by 0.9% HR@10) despite a fourfold difference in parameters, while a 4B model trails both outright, suggesting the binding constraint is learning a newly initialized 6,144-token vocabulary rather than any deficit in pretrained language ability.Finally, GRPO post-training against an accuracy and ranking based reward did not improve on SFT: with only three or four action tokens per rollout and a hit rate near 0.067, over 95% of rollout groups contained no reward variance and therefore produced no gradient. 9References 
+
+[1] Jinze Bai, Shuai Bai, Yunfan Chu, Zeyu Cui, Kai Dang, Xiaodong Deng, Yang Fan, Wenbin Ge, Yu Han, et al. Qwen technical report. arXiv preprint arXiv:2309.16609 , 2023. [2] Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell, Jackson Kernion, Andy Jones, Anna Chen, Anna Goldie, Azalia Mirhoseini, et al. Training a helpful and harmless assistant with reinforcement learning from human feedback. arXiv preprint arXiv:2204.05862 , 2022. [3] Keqin Bao, Jieming Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan He. Tallrec: An effective and efficient tuning framework to align large language model with recommendation. In Proceedings of the 17th ACM Conference on Recommender Systems , pages 1007–1014, 2023. [4] Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten, Amy Yang, et al. The llama 3 herd of models. arXiv preprint arXiv:2407.21783 , 2024. [5] Wenqi Fan, Zihuai Zhao, Jiatong Li, Dan Liu, Xiaowei Mei, Hao Wang, Jiliang Tang, and Qing Li. Recommender systems in the era of large language models (llms). arXiv preprint arXiv:2307.02046 , 2023. [6] Yunfan Gao, Tai Sheng, Youlin Xiang, Yuxiang Xiong, Haoda Wang, and Jiawei Zhang. Chat-rec: Towards interactive and explainable llms-augmented recommender system. arXiv preprint arXiv:2303.14524 , 2023. [7] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. Recommendation as language processing (rlp): A unified pretrain, personalized prompt & predict paradigm (p5). In Proceedings of the 16th ACM Conference on Recommender Systems , 2022. arXiv:2203.13366. [8] Yupeng Hou, Wayne Xin Zhao, Yingqian Xia, Ji-Rong Ding, et al. Learning vector-quantized item representation for transferable sequential recommenders. In Proceedings of the ACM Web Conference 2023 , pages 1162–1171, 2023. [9] Wenyue Hua, Shuyuan Zheng, Yingqiang Ge, Jianchao Zuo, and Yongfeng Zhang. How to index item ids for recommendation foundation models. arXiv preprint arXiv:2305.06569 , 2023. [10] Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho, and Wook-Shin Han. Autoregressive image generation using residual quantization. In IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2022. arXiv:2203.01941. [11] Yupeng Li, Yupeng Hou, Ji-Rong Ding, and Wayne Xin Zhao. Text is all you need: Learning language representations for sequential recommendation. in Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining , 2023. [12] Zihao Li, Aixin Sun, and Chenliang Li. Diffurec: A diffusion model for sequential recommendation. ACM Transactions on Information Systems , 42(3), 2024. doi: 10.1145/3631116. arXiv:2304.00686. [13] Jiayi Liao, Sihang Li, Zhengyi Yang, Jiancan Wu, Yancheng Yuan, Xiang Wang, and Xiangnan He. Onerec: Unifying retrieve and rank with generative recommender and iterative preference alignment. arXiv preprint arXiv:2502.18965 , 2025. [14] Jiaying Liao, Yuxin Chen, et al. Llara: Large language and recommendation assistant. arXiv preprint arXiv:2312.02445 , 2023. [15] Hunter Lightman, Vineet Kosaraju, Yura Burda, Harri Edwards, Bowen Baker, Teddy Lee, Jan Leike, John Schulman, Ilya Sutskever, and Karl Cobbe. Let’s verify step by step. arXiv preprint arXiv:2305.20050 , 2023. [16] Jianghao Lin, Xinyi Dai, Yunjia Xi, Weiwen Liu, Bo Chen, Xiangyu Li, Chenxu Zhu, Huifeng Guo, Yong Ru, Ruiming Tang, et al. A survey on large language models for recommendation. arXiv preprint arXiv:2305.19860 ,2023. [17] Junling Liu, Chao Liu, Peilin Ren, Wenqiang Peng, and Jiancan Wu. Is chatgpt a good recommender? apreliminary study. arXiv preprint arXiv:2304.10149 , 2023. [18] Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, et al. Training language models to follow instructions with human feedback. In Advances in Neural Information Processing Systems (NeurIPS) , 2022. arXiv:2203.02155. 
+
+10 [19] Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher D Manning, and Chelsea Finn. Direct preference optimization: Your language model is secretly a reward model. Advances in Neural Information Processing Systems , 36, 2024. [20] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan H. Keshavan, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Q. Tran, Jonah Samost, Maciej Kula, Ed H. Chi, and Maheswaran Sathiamoorthy. Recommender systems with generative retrieval. In Advances in Neural Information Processing Systems (NeurIPS) , 2023. arXiv:2305.05065. [21] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347 , 2017. [22] Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, Y. K. Li, Y. Wu, and Daya Guo. Deepseekmath: Pushing the limits of mathematical reasoning in open language models. arXiv preprint arXiv:2402.03300 , 2024. [23] Nisan Stiennon, Long Ouyang, Jeffrey Wu, Daniel Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, and Paul F Christiano. Learning to summarize from human feedback. In Advances in Neural Information Processing Systems , pages 3008–3021, 2020. [24] Yi Tay, Vinh Q. Tran, Mostafa Dehghani, Jianmo Ni, Dara Bahri, Harsh Mehta, Zhen Qin, Kai Hui, Zhe Zhao, Jai Gupta, Tal Schuster, William W. Cohen, and Donald Metzler. Transformer memory as a differentiable search index. In Advances in Neural Information Processing Systems (NeurIPS) , 2022. arXiv:2202.06991. [25] Gemma Team. Gemma: Open models based on gemini research and technology. arXiv preprint arXiv:2403.08295 ,2024. [26] Aaron van den Oord, Oriol Vinyals, and Koray Kavukcuoglu. Neural discrete representation learning. In Advances in Neural Information Processing Systems (NeurIPS) , 2017. arXiv:1711.00937. [27] Lei Wang, Ee-Peng Lim, et al. Zero-shot next-item recommendation using large pretrained language models. 
+
+arXiv preprint arXiv:2304.03153 , 2023. [28] Wenjie Wang, Xinyu Lin, Fuli Feng, and Xiangnan He. Generative recommendation: Towards next-generation recommender paradigm. arXiv preprint arXiv:2304.03516 , 2023. [29] Wenjie Wang, Yiyan Xu, Fuli Feng, Xinyu Lin, Xiangnan He, and Tat-Seng Chua. Diffusion recommender model. In Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval , 2023. [30] Yujing Wang, Yingyan Hou, Haonan Wang, Ziming Miao, Shibin Wu, Hao Sun, Qi Chen, Yuqing Xia, Chengmin Chi, Guoshuai Zhao, Zheng Liu, Xing Xie, Hao Allen Sun, Weiwei Deng, Qi Zhang, and Mao Yang. A neural corpus indexer for document retrieval. In Advances in Neural Information Processing Systems (NeurIPS) , 2022. arXiv:2206.02743. [31] Likang Wu, Zhi Zheng, Zhaopeng Qiu, Hao Wang, Hongchao Gu, Tingjia Shen, Chuan Qin, Chen Zhu, Hengshu Zhu, Chao Qi, et al. How can recommender systems benefit from large language models: A survey. arXiv preprint arXiv:2306.05817 , 2023. [32] Zhengyi Yang, Jiancan Wu, Zhicai Wang, Xiang Wang, Yancheng Yuan, and Xiangnan He. Generate what you prefer: Reshaping sequential recommendation via guided diffusion. In Advances in Neural Information Processing Systems (NeurIPS) , 2023. arXiv:2310.20453. [33] Junjie Zhang, Ruobing Ru, Yajie Wang, Zheng Li, et al. Recommendation as instruction following: A large language model empowered recommendation approach. arXiv preprint arXiv:2305.07001 , 2023. [34] Xiangyu Zhao, Longxia Zhang, Zhuoye Ding, Liang Xia, Jiliang Tang, and Dawei Yin. Deep reinforcement learning for page-wise recommendations. In Proceedings of the 12th ACM Conference on Recommender Systems , pages 95–103, 2018. [35] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. Adapting large language models by integrating collaborative semantics for recommendation. In IEEE 40th International Conference on Data Engineering (ICDE) , pages 1435–1448, 2024. arXiv:2311.09049. [36] Daniel M Ziegler, Nisan Stiennon, Jeffrey Wu, Tom B Brown, Alec Radford, Dario Amodei, Paul Christiano, and Geoffrey Irving. Fine-tuning language models from human preferences. arXiv preprint arXiv:1909.08593 , 2019. 
+
+11
