@@ -1,0 +1,146 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-10-03T22:22:05.133743+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.34552v1",
+      "source": "arxiv",
+      "title": "EvoSkillRec: Skill-Genome Evolution for Recommender Architecture Discovery",
+      "abstract": "Modern recommender systems advance not only by scaling data and parameters, but also by encoding task-specific inductive biases through architecture, including sparse feature interactions for click-through rate (CTR) prediction, temporal attention for sequential recommendation, and expert routing for multi-task learning. However, these biases are typically human expert designed or searched within predefined operator spaces. Although Recent LLM-driven code evolution expands this space, unconstrained edits often produce invalid or ineffective architectures, underuse established architecture design knowledge, and fail to preserve successful innovations for reuse. We introduce EvoSkillRec, a promotion-and-reuse framework for cumulative recommender architecture evolution. It first decomposes recommenders into atomic executable skills and represents architectures as typed skill genomes, with each skill equipped with input--output types, semantic annotations, and implementation code. We then evolve models with different tasks through two coupled spaces: a constrained skill--space that mutates, recombines, specializes, and reuses validated skills, and an open-ended code--space in which LLM planners and synthesizers invent new skill modules using prior evolution traces and accumulated experience. An autoresearch controller evaluates candidates, diagnoses failures, retrieves relevant skills, promotes validated innovations into the skill library, and adaptively allocates the proposal budget between the two spaces. Extensive experiments on CTR prediction, multi-task learning, and multi-domain learning, including resource-constrained co-optimization of predictive quality and model FLOPs utilization in generative ranking models, consistently demonstrate the effectiveness of our proposed EvoSkillRec.",
+      "authors": [
+        "Xiaopeng Li",
+        "Kuo Cai",
+        "Bo Chen",
+        "Wenlin Zhang",
+        "Mengyang Ma",
+        "Yingyi Zhang",
+        "Zichuan Fu",
+        "Yu Yang",
+        "Qidong Liu",
+        "Yiyu Wang",
+        "Ruiming Tang",
+        "Wenwu Ou",
+        "Jiang Wu",
+        "Zhanbo Xu",
+        "Xiangyu Zhao"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-28T08:12:08+00:00",
+      "link": "https://arxiv.org/pdf/2609.34552v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "evolving recommender architectures while scaling data and parameters",
+      "llm_evidence_cn": "在扩展数据与参数的同时演化推荐架构",
+      "llm_evidence": "在扩展数据与参数的同时演化推荐架构",
+      "canonical_evidence": "在扩展数据与参数的同时演化推荐架构",
+      "llm_tldr_en": "Recommender architecture biases are usually hand-designed or searched in fixed operator spaces; EvoSkillRec evolves and reuses recommender architectures via a cumulative skill-genome promotion framework, yielding more valid and reusable designs.",
+      "llm_tldr_cn": "针对推荐系统架构偏置依赖人工设计、LLM驱动代码演化易产生无效架构且难以复用经验的问题，本文提出EvoSkillRec晋升与复用框架，以技能基因组方式累积地演化推荐架构。方法在保留成功设计的同时约束无效编辑，实验表明其能更有效地发现并复用高性能推荐架构，为推荐架构的自动化演化提供了可累积的新思路。",
+      "llm_tldr": "针对推荐系统架构偏置依赖人工设计、LLM驱动代码演化易产生无效架构且难以复用经验的问题，本文提出EvoSkillRec晋升与复用框架，以技能基因组方式累积地演化推荐架构。方法在保留成功设计的同时约束无效编辑，实验表明其能更有效地发现并复用高性能推荐架构，为推荐架构的自动化演化提供了可累积的新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "techniques for scaling up deep learning based recommendation and ranking models on large user item graphs",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.38999v1",
+      "source": "arxiv",
+      "title": "When LLM-Inferred User Context Adds Value in Production Streaming Recommendation",
+      "abstract": "Contextual information in recommender systems is shifting from static, predefined variables toward latent representations inferred from behavior. Large language models support this shift by rendering an unstructured interaction history as a natural-language summary, which yields a thematic user context that can be encoded and used in place of an aggregate profile. The conditions under which such generated profiles outperform aggregate embeddings have received limited characterization mainly at the domain level. We evaluate semantic user-profiling strategies on a production streaming platform, ranking against the full catalog. The evaluation covers a 2*2 design space crossing representation type (aggregate or LLM-generated) with contextual scope (holistic history or attention-fused short-term and long-term contexts). The relative ordering of the two representation types is conditional on the user's consumption regime. Aggregate profiles are consistently stronger under habitual consumption, which characterizes approximately four-fifths of the population, while LLM-generated profiles are stronger for exploratory users whose subsequent interactions diverge semantically from their history. We also observe a popularity-attractor effect in LLM-generated profiles, which modestly raises within-list diversity while substantially lowering catalog coverage and reducing novelty. These results indicate that a context-aware system can select a profiling strategy from the inferred consumption regime rather than applying one representation to all users.",
+      "authors": [
+        "Milad Sabouri",
+        "Neeraj Sharma",
+        "Sardar Hamidian",
+        "Shaghayegh Agah"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-30T05:12:57+00:00",
+      "link": "https://arxiv.org/pdf/2609.38999v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-inferred user context for production recommendation ranking",
+      "llm_evidence_cn": "LLM推断用户上下文用于生产推荐排序",
+      "llm_evidence": "LLM推断用户上下文用于生产推荐排序",
+      "canonical_evidence": "LLM推断用户上下文用于生产推荐排序",
+      "llm_tldr_en": "Evaluates when LLM-inferred natural-language user context outperforms aggregate profile embeddings in production streaming recommendation ranking.",
+      "llm_tldr_cn": "推荐中的上下文正从静态变量转向由行为推断的潜表示，大语言模型可将非结构化交互历史总结为语义用户画像，但其相对聚合画像的增益条件尚不明确。作者在生产流式平台上以全目录排序评估聚合与LLM生成表示的不同组合。结果显示LLM生成上下文在特定条件下提升排序效果，为生产推荐中用户画像表示的选择提供了实证指导。",
+      "llm_tldr": "推荐中的上下文正从静态变量转向由行为推断的潜表示，大语言模型可将非结构化交互历史总结为语义用户画像，但其相对聚合画像的增益条件尚不明确。作者在生产流式平台上以全目录排序评估聚合与LLM生成表示的不同组合。结果显示LLM生成上下文在特定条件下提升排序效果，为生产推荐中用户画像表示的选择提供了实证指导。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2610.00964v1",
+      "source": "arxiv",
+      "title": "RPTune: Learned Context Curation for LLM Catalog Search",
+      "abstract": "For small merchant businesses (SMBs) whose catalogs fit within a long-context LLM, full-catalog prompting offers a compelling alternative to multi-stage retrieval designed primarily for large marketplaces with millions of items. However, fitting the full catalog into the context window does not ensure that the model can use it effectively, since LLMs do not exploit long contexts uniformly. We therefore study in-context catalog search through two complementary questions: (1) how to curate and present catalogs to the LLM, and (2) how to adapt the LLM for product selection on curated contexts.   We propose RPTune, an end-to-end framework that couples learned catalog curation with LLM post-training using automatically generated, catalog-grounded supervision. An encoder-reorganizer curator orders and prunes products guided by downstream LLM feedback, while the resulting curated catalogs in turn improve the effectiveness of LLM post-training with a context-relative reward. We evaluate RPTune on 7 real merchants spanning distinct retail verticals, using 100 complex conversational queries per merchant. RPTune consistently improves search accuracy across both proprietary and open-weight LLMs, with context curation yielding gains of up to 31.4 percentage points and post-training adding a further 10.3 points on average.",
+      "authors": [
+        "Chuxuan Hu",
+        "Hejie Cui",
+        "Norman Huang",
+        "Shubham Kumar Bharti",
+        "Wang-Chiew Tan",
+        "Sercan Ö. Arık"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.CL",
+        "cs.LG"
+      ],
+      "published": "2026-10-01T02:52:24+00:00",
+      "link": "https://arxiv.org/pdf/2610.00964v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM catalog search via learned context curation and post-training",
+      "llm_evidence_cn": "基于LLM的目录搜索与学习式上下文整理",
+      "llm_evidence": "基于LLM的目录搜索与学习式上下文整理",
+      "canonical_evidence": "基于LLM的目录搜索与学习式上下文整理",
+      "llm_tldr_en": "For small merchant catalogs fitting a long-context LLM, full-catalog prompting can replace multi-stage retrieval, but LLMs underuse long contexts. The paper proposes RPTune, coupling learned catalog curation with LLM post-training via catalog-grounded supervision.",
+      "llm_tldr_cn": "面向商品目录可放入长上下文的小商户，全目录提示可替代面向百万级商品的多阶段检索，但模型并不能均匀利用长上下文。本文研究上下文内目录搜索，提出RPTune框架，将学习式目录整理与基于目录自动监督的LLM后训练结合。该端到端方法提升了模型在整理后上下文中的商品选择能力，为小规模目录的生成式检索提供了高效方案。",
+      "llm_tldr": "面向商品目录可放入长上下文的小商户，全目录提示可替代面向百万级商品的多阶段检索，但模型并不能均匀利用长上下文。本文研究上下文内目录搜索，提出RPTune框架，将学习式目录整理与基于目录自动监督的LLM后训练结合。该端到端方法提升了模型在整理后上下文中的商品选择能力，为小规模目录的生成式检索提供了高效方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

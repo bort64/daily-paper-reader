@@ -1,0 +1,57 @@
+{
+  "date": "20261003",
+  "date_label": "",
+  "generated_at": "2026-10-03 22:23:27 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.34552v1",
+      "route": "202610/03/2609.34552v1-evoskillrec-skill-genome-evolution-for-recommender-architecture-discovery",
+      "title": "EvoSkillRec: Skill-Genome Evolution for Recommender Architecture Discovery",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "在扩展数据与参数的同时演化推荐架构",
+      "first_seen_at": "2026-10-03 22:23:27 UTC",
+      "updated_at": "2026-10-03 22:23:27 UTC"
+    },
+    {
+      "paper_id": "2609.38999v1",
+      "route": "202610/03/2609.38999v1-when-llm-inferred-user-context-adds-value-in-production-streaming-recommendation",
+      "title": "When LLM-Inferred User Context Adds Value in Production Streaming Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "LLM推断用户上下文用于生产推荐排序",
+      "first_seen_at": "2026-10-03 22:23:27 UTC",
+      "updated_at": "2026-10-03 22:23:27 UTC"
+    },
+    {
+      "paper_id": "2610.00964v1",
+      "route": "202610/03/2610.00964v1-rptune-learned-context-curation-for-llm-catalog-search",
+      "title": "RPTune: Learned Context Curation for LLM Catalog Search",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "基于LLM的目录搜索与学习式上下文整理",
+      "first_seen_at": "2026-10-03 22:23:27 UTC",
+      "updated_at": "2026-10-03 22:23:27 UTC"
+    }
+  ]
+}

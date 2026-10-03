@@ -1,0 +1,1381 @@
+Title: EvoSkillRec: Skill-Genome Evolution for Recommender Architecture Discovery
+
+URL Source: https://arxiv.org/pdf/2609.34552v1
+
+Published Time: Tue, 29 Sep 2026 03:50:52 GMT
+
+Number of Pages: 43
+
+Markdown Content:
+# EvoSkillRec: Skill-Genome Evolution for Recommender Architecture Discovery 
+
+Xiaopeng Li 1,†, Kuo Cai 2, Bo Chen 2, Wenlin Zhang 1, Mengyang Ma 1, Yingyi Zhang 1, Zichuan Fu 1,
+
+Yu Yang 1, Qidong Liu 3, Yiyu Wang 2, Ruiming Tang 2, Wenwu Ou 2, Jiang Wu 3, Zhanbo Xu 3,
+
+Xiangyu Zhao 1,∗
+
+> 1
+
+City University of Hong Kong, 2Kuaishou Technology, 3Xi’an Jiaotong University 
+
+> †
+
+Work done during an internship at Kuaishou , ∗Corresponding author 
+
+Modern recommender systems advance not only by scaling data and parameters, but also by encoding task-specific inductive biases through architecture, including sparse feature interactions for click-through rate (CTR) prediction, temporal attention for sequential recommendation, and expert routing for multi-task learning. However, these biases are typically human expert designed or searched within predefined operator spaces. Although Recent LLM-driven code evolution expands this space, unconstrained edits often produce invalid or ineffective architectures, underuse established architecture design knowledge, and fail to preserve successful innovations for reuse. We introduce EvoSkillRec, a promotion-and-reuse framework for cumulative recommender architecture evolution. It first decomposes recommenders into atomic executable skills and represents architectures as typed skill genomes, with each skill equipped with input–output types, semantic annotations, and implementation code. We then evolve models with different tasks through two coupled spaces: a constrained skill–space that mutates, recombines, specializes, and reuses validated skills, and an open-ended code–space in which LLM planners and synthesizers invent new skill modules using prior evolution traces and accumulated experience. An autoresearch controller evaluates candidates, diagnoses failures, retrieves relevant skills, promotes validated innovations into the skill library, and adaptively allocates the proposal budget between the two spaces. Extensive experiments on CTR prediction, multi-task learning, and multi-domain learning, including resource-constrained co-optimization of predictive quality and model FLOPs utilization in generative ranking models, consistently demonstrate the effectiveness of our proposed EvoSkillRec. 
+
+Code : https://github.com/Xiaopengli1/EvoSkill-Rec 
+
+Contact : xiaopli2-c@my.cityu.edu.hk 
+
+# 1 Introduction 
+
+Recommender systems are large-scale prediction engines that estimate user preferences from historical interactions and side information. Their backbones have changed substantially alongside the platforms they serve, moving from content-based filtering to deep ranking models and, more recently, to generative ranking models. Across every stage, however, many of the most consequential advances have stemmed from a narrower and more identifiable source: architectural inductive bias . In click-through-rate (CTR) prediction, the field converged on the view that sparse categorical fields should interact in structured, often high-order ways, motivating explicit factorization and feature-crossing modules such as DeepFM (Guo et al., 2017) and DCN (Wang et al., 2017). In target-aware ranking, a consensus emerged that different candidate items should activate different parts of a user’s history, first realized through attention-based interest extraction in DIN (Zhou et al., 2018) and later extended by DIEN (Zhou et al., 2019). In multi-task recommendation, the shared insight is that tasks should share representations without collapsing task-specific signal, as instantiated in MMoE (Ma et al., 2018a) and PLE (Tang et al., 2020). These examples support a unifying view: a recommender is not merely a stack of neural layers, but a composition of reusable inductive-bias units. This view exposes a bottleneck. The first generation of strong recommender architectures, such as Wide & Deep 1arXiv:2609.34552v1 [cs.IR] 28 Sep 2026 (Cheng et al., 2016), DeepFM (Guo et al., 2017), DCN (Wang et al., 2017), SASRec (Kang and McAuley, 2018), etc., demonstrates the value of expert-designed inductive bias, but the design cycle behind each system is slow and largely manual. Moving to a new task, feature distribution, or business scenario typically requires many rounds of human trial and error, and the knowledge embedded in one model family is rarely expressed in a form another task can reuse directly. Recommender AutoML and neural architecture search (NAS) automate part of this burden by searching over operators, connectivity patterns, or loss functions rather than hand-designing them. Automated neural interaction search discovers feature-interaction architectures for CTR prediction (Song et al., 2020); NASRec trains weight-sharing supernets over recommender architectures (Zhang et al., 2022); AutoLossGen searches loss-function programs for recommendation objectives (Li et al., 2022b); and recent surveys call for broader automated model design across the recommendation pipeline (Zhang et al., 2024a). These approaches are valuable but inherit a structural limitation: the search space itself is still specified by humans. A NAS system can efficiently select among candidate operators, but it rarely invents a new module, objective, or routing mechanism that lies outside the grammar it was given. LLM-driven program evolution offers a possible escape from this fixed-space restriction. Program-search systems such as FunSearch (Romera-Paredes et al., 2024) and AlphaEvolve (Novikov et al., 2025) use language models to propose code within a broad, largely unconstrained program space, relying on evaluators to select useful variants. Concurrent work has begun to apply this idea to recommender systems: Self-EvolveRec uses LLM-based directional feedback to iteratively edit recommender code (Kim et al., 2026), and a related system for large-scale video recommendation coordinates offline and online LLM agents for autonomous optimization (Wang et al., 2026b). These works support an important finding: model design can become an iterative, evaluator-driven research process, with LLMs acting as the source of proposals. Direct LLM code evolution, however, is not yet sufficient for recommender architecture discovery, for two reasons. First, open-ended code edits, unconstrained by structural priors, tend to produce a large proportion of invalid or low-value modifications when the accumulated inductive-bias knowledge of the field is ignored during search. Second, even when an edit succeeds, its useful idea remains trapped inside a one-off code diff: the next generation starts again from a codebase and a feedback transcript rather than from accumulated, validated recommender knowledge. A self-evolving recommender should not merely mutate; it should remember. We propose EvoSkillRec , a framework for skill-genome evolution in recommender architecture design and discovery. First, we introduce the idea of treating recommender modules as skills : EvoSkillRec decomposes existing recommender models into atomic, executable modular skills, annotates each with semantic and inductive-bias knowledge, validates its functional correctness and reusability, and stores it in a library together with its provenance, empirical performance history, and implementation. Second, we design a dual-space evolution process that jointly supports knowledge reuse and open-ended discovery for architecture search. In the skill space, EvoSkillRec performs reliable genetic operations over known skills — add, replace, hybridize, and specialize — that make full use of accumulated architectural knowledge. In the code space, EvoSkillRec permits open-ended LLM invention when the existing skill library is hard to use to address a diagnosed failure, producing a new module, fusion design, auxiliary objective, or routing mechanism grounded in the evolutionary trace. Successful inventions are not discarded after a single run: they are compiled back into skill cards and become part of the evolving genome, available for reuse in subsequent generations. Our contributions are as follows. • We formulate recommender self-evolution as skill-genome accumulation : a model-to-skill compiler decomposes recommender code into validated, reusable architectural units, curated into a growing library rather than discarded after use. • We design a dual-space evolution algorithm that couples type-checked mutation over the skill library with open-ended code-space invention, closed by an AutoResearch loop that distills successful inventions back into the library. • We show that EvoSkillRec outperforms strong hand-designed and automated-design baselines across recommen-dation benchmarks, and that skill-space and code-space evolution contribute complementary, task-dependent gains. 22 Related Work 
+
+AutoML and NAS for recommendation. Automated recommender design searches over architectures, feature interactions, embeddings, or objectives, inheriting techniques from general Neural architecture search (NAS) (Zoph and Le, 2017; Real et al., 2019). Automated neural interaction discovery explores CTR interaction operators (Song et al., 2020); NASRec amortizes recommender architecture search with weight sharing (Zhang et al., 2022); AutoLossGen generates loss functions (Li et al., 2022b); and broader automated model-design work considers co-design across architecture and system constraints (Zhang et al., 2024a). EvoSkillRec differs in the object being evolved . Rather than searching only within a predeclared operator set, it maintains a growing library of validated skills and invents new ones when the library proves insufficient—so the search space is an output of the procedure, not an input to it. 
+
+LLM-driven program evolution. LLM program search has shown that code can be evolved under external evaluators. Evolution through large models established LLMs as mutation operators over programs (Lehman et al., 2023); FunSearch evolves programs for mathematical discovery (Romera-Paredes et al., 2024); and AlphaEvolve extends the idea into a general coding agent for algorithmic and systems discovery (Novikov et al., 2025). Recommender self-evolution is a parallel emerging direction: Self-EvolveRec introduces directional feedback for LLM-based recommender evolution (Kim et al., 2026), and Wang et al. (2026b) describe an offline/online agent system for autonomous model optimization in large-scale video recommendation. These systems treat each run as self-contained: the population and the transcript carry state, but nothing durable is extracted. EvoSkillRec is complementary and targets exactly that gap—how an evolving system stores, validates, and reuses the architectural knowledge such loops produce. 
+
+# 3 Problem Setting 
+
+Let a recommender training instance be (D, T , C), where D is the dataset, T specifies the task and its metrics (e.g., CTR prediction, multi-task ranking, multi-domain ranking, or FLOPs-constrained generative ranking), and C encodes deployment or research constraints such as latency, parameter budget, or permitted feature types. A model M
+
+comprises code, parameters, data-processing assumptions, and training logic. Conventional AutoML and NAS solve 
+
+M⋆ = arg max 
+
+> M∈ Ω
+
+E(M; D, T , C), (1) where human designers fix the search space Ω in advance. EvoSkillRec instead maintains an evolving skill library Lt
+
+at generation t and searches jointly over compositions of existing skills and newly synthesized code: 
+
+Mt+1 ∈ Compose( Lt) ∪ Invent( Lt, r t), (2) where rt diagnoses the current failure mode (Section 4.3). Whenever an LLM-coded candidate passes validation and improves E, its reusable components are written back into Lt+1 . Unlike Eq. 1, the objective of EvoSkillRec is thus twofold: find a strong M⋆ for the current task, and improve the search distribution for future tasks by accumulating validated architectural knowledge. Writing Ωt for the space reachable at generation t, conventional search holds 
+
+Ωt = Ω for all t, whereas here Ωt ⊆ Ωt+1 , with strict inclusion exactly when a code-space invention is promoted. We call this monotone growth of the search space skill-genome accumulation, a property that a single run of program search lacks. Note that E need not be a single metric: Section 5.5 instantiates it as a compound objective over predictive quality and hardware efficiency, deeming a candidate eligible only if its training MFU stays at least 95% of the seed backbone’s and its validation AUC stays within 10 −3 of the incumbent, with eligibility enforced at selection time rather than folded into a scalarized reward. 
+
+# 4 EvoSkillRec: Skill-Genome Evolution 
+
+We now describe EvoSkillRec in detail, and Figure 1 gives the overall picture. Section 4.1 introduces the skill card abstraction together with the model-to-skill compiler and two-tier library that populate and grow the skill genome. Section 4.2 presents the dual-space evolution process that couples constrained skill-space recombination with open-ended code-space invention, and the adaptive budget that arbitrates between them. Section 4.3 closes the loop with the AutoResearch controller that diagnoses failures, drives both spaces, and consolidates validated discoveries into evolutionary memory. 3EvoSkillRec 
+
+1 Observe Task & Diagnosis Read task and data to understand 
+
+2 Parse Model into Skills Decompose existing models into atomic skills Dual Space Candidate Generation Generate candidates in skill-space and code-space with dynamic budget 
+
+3 Train / Validate / Evaluate Train proposed models, validate and test model performance 
+
+4 Select Survivors &Accumulate Skills Select the best-performing models as survivors and retain their skills in the skill library. 
+
+5 Auto-Researc h Loop Advance to next round with survivors and accumulated knowledge 
+
+6
+
+Skill - Genome Evolution for Recommender Architecture Discovery 
+
+2. Dual-space Model Evolution 1. Recommender Modules as Skills   
+
+> Field Embedding FM Interaction Mlp Tower Sigmoid Prediction
+
+DeepFM (CTR)    
+
+> Field Embedding Flatten Embeddings MMoE Gate Task Tower
+
+MMoE (Multi-Task) 
+
+1. mmoe_gate.skill.yaml  
+
+> name: mmoe_g ate
+> category : mu ltitask
+> description : Mix sha red expe rt MLP outputs
+> inputs :
+> …outputs :…
+> good_for:
+> - related multitas krecommendati on
+> bad_for:
+> - unrelate d tasks with no shared signal
+> use_when:
+> - Multiple t asks sha re input , but require diff erent Ex pert wei ghts - MMoE needs to be u sed befo re the task tower
+> avoid_when:
+> - The task i s comple tely unr elated
+> Domain indicator adapter Field Embedding Flatten Embeddings Star Domain FCN
+
+STAR (Multi-Scenario) 
+
+Model Parsing 
+
+Semantic Annotation Executable Extraction 
+
+Skill Verification 
+
+Skill Cards 
+
+2. mmoe_gate.py 
+
+> @register_sk ill("mmo e_ga te") class MMOEGateSkil l(BaseSk ill): skill_sp ec = SkillSpec( name=“mm oe_gate” ,category =“multit ask”, hyperparamet ers={“…" },) def __in it__(…) …def forw ard(self ,…) -> SkillCont ext :…return ctx.put(..)
+
+Implementation 
+
+Two-Tier Skill Library Tier-1: Curated Skills 
+
+(Human-curated Skills) 
+
+Tier-2: Evolved Skills 
+
+(Automatically Discovered) 
+
+ü Atomic, Stable, Low-risk ü Validated, Reusable, Discovered     
+
+> Embedding Interaction Sequence Routing Fusion Head
+> Adaptive Expert Routing
+> Specialize d Predictor Contex t-aware Fusion
+> …
+
+Decompose existing models into atomic skills Agent-created skills that generated the best model 
+
+> Dynamic Budget Allocation
+
+Path A: Skill-space Evolution 
+
+Add Replace Hybridize Specialize 
+
+> Previous-Round Best Model New Model Generation New Model Generation
+
+Validation Pipeline 
+
+Architecture Planner (LLM) 
+
+Error Memory 
+
+Skills Updating 
+
+Path B: Code-space Evolution 
+
+> Previous-Round Best Model
+
+Parent Population (Root) Round 1 Round 2 
+
+Skill-space Evolution 
+
+（Path A 
+
+）
+
+Code-space Evolution (Path B)  
+
+> Skill Retrieval & Mutation
+> Skill_1 Skill_2 Skill_3
+> Agent Evaluation & Macro level Skill Generation Evaluate Evaluate Selected Survivor (best) Skill Retrieval & Mutation
+> Skill_1 Skill_2 Skill_3
+> Agent Evaluation & Macro level Skill Generation Evaluate Evaluate
+> Selected Survivor (best)
+
+Promoted to Tier-2 Skill Library 
+
+> Skill Retrieval & Mutation
+> Skill_1 Skill_2 Skill_3
+> Agent Evaluation & Macro level Skill Generation
+
+…… Round N 
+
+…………
+
+AutoResearch Loop for Multi-round Evolution 
+
+> best model
+> Skill_1 Skill_2 Skill_1 Skill_2 Skill_1 Skill_2
+
+Code Synthesizer (LLM) 
+
+Reuse Generated Skills Figure 1 Overview of EvoSkillRec. (Left) A model-to-skill compiler decomposes established recommender architectures into atomic, executable skills, each documented by a skill card with code and admitted to the curated Tier-1 library only after passing validation. (Right) A model is represented as a typed skill genome. Under an adaptive budget, dual-space evolution proposes candidate models via type-checked recombination of library skills (skill space) or LLM-based planning and synthesis of new modules (code space). The AutoResearch loop evaluates and diagnoses candidates, selects survivors, and promotes validated inventions into the Tier-2 library, making them available to skill-space search in later generations. 
+
+4.1 Recommender Modules as Skills 
+
+Recent agent skills frameworks package an LLM agent’s capabilities as well-specified, directly invocable units that can be retrieved and composed on demand, rather than re-derived from scratch in every episode. EvoSkillRec brings the same principle to recommender architecture design: it re-represents each established architecture as a set of atomic, executable skills , turning the inductive-bias knowledge otherwise buried in a monolithic, task-specific implementation into explicit, validated, reusable building blocks that an evolutionary search can retrieve, recombine, and extend. 
+
+4.1.1 The Skill Card Abstraction 
+
+The atomic unit of EvoSkillRec is a skill : an executable module paired with structured metadata, 
+
+S = ( c, I, O, b, a, f, v, m ), (3) where c is the implementation code, a PyTorch module that reads from and writes to a shared tensor context X ,a blackboard-style key–value store of named tensors (e.g., field_embeddings , fm_output ); I and O are the input and output keys c requires and produces, so two skills are composable whenever a producer’s output keys satisfy a consumer’s required keys, regardless of where either sits in the architecture; b is an inductive-bias description; a
+
+specifies applicable task types and usage conditions; f lists failure signatures the skill addresses or may trigger; v
+
+is a validation suite; and m is accumulated empirical memory (historical performance, mutation lineage, and reuse statistics). A skill is not a natural-language prompt: it must be directly executable and testable, so its behavior is verified before it enters any candidate architecture. Each skill is externally described by a skill card , a structured record that operationalizes Eq. 3 for retrieval and validation: I and O become typed tensor specifications; b and a become inductive-bias tags, task types, and good_-for /bad_for usage notes; f becomes machine-checkable failure signatures (e.g., an unexpected input rank); v becomes a suite of shape, unit, and reconstruction tests; and m becomes composition statistics over compatible upstream and 4downstream skills, together with a natural-language retrieval block used for relevance scoring (Section 4.2.1). The abbreviated example below shows the schema for fm_interaction , a second-order factorization-machine branch extracted from DeepFM (Guo et al., 2017):               
+
+> name : fm_interaction category : interaction
+> inputs : field_embeddings ∈RB×F×Doutputs : fm_output ∈RB×1
+> inductive_bias : second-order feature interactions failure_signatures : input rank ̸= 3
+> good_for : low-cost pairwise categorical interactions bad_for : high-order interactions without an additional tower
+> compatible_with : upstream ={field_embedding}, downstream ={concat_fusion, binary_ctr_head}
+> retrieval.use_when : “unflattened field embeddings are available and pairwise interaction signal is needed without enumerating all field pairs.”
+
+Every card is paired with a code implementation that specifies, at the implementation level, exactly how the skill turns its declared inputs into its declared outputs. This is not a bare excerpt of the original open-source code: it inherits from 
+
+BaseSkill , carries all the information declared in its card, and is thereby guaranteed to be reusable and to compose into a genome without special-casing. The snippet below is the implementation backing the fm_interaction card above, where the shape assertion enforces exactly the input contract the card declares:  
+
+> class FMInteractionSkill(BaseSkill): def __init__(self): ... def forward(self, ctx: SkillContext) -> SkillContext: x = ctx.get_required("field_embeddings") assert x.dim() == 3 # shape contract from the skill card return ctx.put("fm_output", self.fm(x))
+
+The full schema and worked examples across the interaction, sequence, and fusion categories are given in Appendix A. 
+
+4.1.2 Model-to-Skill Compiler 
+
+To bootstrap the library, EvoSkillRec compiles a set of established open-source recommender architectures, including DeepFM (Guo et al., 2017), Wide & Deep (Cheng et al., 2016), DCN (Wang et al., 2017), DIN (Zhou et al., 2018), DIEN (Zhou et al., 2019), SASRec (Kang and McAuley, 2018), MMoE (Ma et al., 2018a), and PLE (Tang et al., 2020), among other, into reusable skills through four stages. 
+
+Parsing. The compiler extracts candidate modules from open-source model code 1—embedding tables, field encoders, feature-crossing blocks, sequence encoders, attention aggregators, fusion layers, towers, gates, experts, losses, and samplers—combining static code analysis with LLM-assisted semantic grouping. A module is accepted as a candidate only if its inputs, outputs, parameters, and call sites can be cleanly isolated from the rest of the model. 
+
+Semantic annotation. An LLM writes the skill card for each candidate: function, inductive bias, applicable tasks, failure modes, assumptions, and nearest known model family. 
+
+Executable extraction. The candidate’s code is rewritten into a concrete, executable Python file structured as a typed BaseSkill module, exposing exactly the inputs, outputs, and core execution logic identified during parsing. This rewriting is what makes the result a minimal, independent execution unit and can instead be executed, tested, and reused on its own. 
+
+Validation. Every skill must pass validation before it is finally produced. General tests cover importability, determin-istic construction, shape preservation, differentiability, and serialization, ensuring practical usability. The strongest test is reconstruction: EvoSkillRec rebuilds each seed model from its extracted skills and verifies that end-to-end behavior matches the original implementation. When exact equivalence cannot be established, the skill construction is flagged and the extraction process is re-evaluated. 
+
+4.1.3 Two-Tier Skill Library 
+
+Skill extraction (Section 4.1.2) only deposits knowledge that human designers have already discovered and fixed into a published architecture—a static distillation of prior inductive bias. Evolution itself, however, is an ongoing source of knowledge: as EvoSkillRec runs, LLM-driven synthesis in the code space (Section 4.2.2) can turn up modules no 
+
+> 1We use the open-source implementations from Torch-RecHub (Datawhale, 2022) and UniRank (Li et al., 2026).
+
+5seed architecture contained, and this dynamically discovered knowledge likewise needs to be deposited and made reusable, or it is lost the moment the run ends. The library L is accordingly organized into two tiers, one for each kind of knowledge. Tier-1 holds the curated skills produced by the compiler of Section 4.1.2; it is static within a run and serves as a reliable, well-understood foundation. Tier-2 holds skills that originate from code-space invention (Section 4.2.2) during evolution itself. A code-space proposal is promoted into Tier-2 only if it satisfies the same extraction and validation pipeline as any Tier-1 skill and demonstrably improves E when substituted into a genome: validated invention becomes evolutionary memory, and unvalidated invention is discarded. This promotion criterion is what converts a one-off code diff into durable, reusable architectural knowledge, addressing the trapped-edit failure mode of unconstrained code evolution. 
+
+4.2 Dual-Space Evolution 
+
+Given the library of Section 4.1, EvoSkillRec generates candidate genomes through two coupled search spaces—a 
+
+skill space that performs constrained, safety-checked recombination of validated skills, and a code space in which an LLM invents new modules when the library cannot address a diagnosed failure—with a per-generation budget arbitrating how many candidates are drawn from each. The split exists because the two spaces trade off exploitation against exploration: skill space reuses accumulated inductive bias reliably but cannot reach a mechanism with no precedent in L, whereas code space can reach anywhere but at the cost of the invalid, low-value edits that plague unconstrained code evolution; the adaptive budget is what lets EvoSkillRec shift toward whichever space the current generation needs. 
+
+4.2.1 Skill-Space Evolution 
+
+Skill-space evolution treats the genome much like a genetic algorithm treats a chromosome: at each generation, EvoSkillRec retrieves the skills in L most likely to benefit the current model given its task, scenario, and diagnosed failure, and composes them into the genome through a fixed set of genetic operators—adding, replacing, hybridizing, or specializing a branch. What makes this composition powerful is that the retrieved skills need not all be human-designed: they may come from Tier-1, encoding an expert’s inductive bias, or from Tier-2, encoding a solution the system itself discovered and validated earlier. Skill space is therefore not just a mutation mechanism but the channel through which both kinds of accumulated knowledge—human-designed and self-discovered— compound into continual improvement. Concretely, EvoSkillRec represents a candidate model as a genome graph G = ( V, E ): each node v ∈ V is a skill instance, and each edge e ∈ E is a tensor-context connection that wires one skill’s output into another’s input, so 
+
+G is exactly the composition of skills that defines the model. Skill-space evolution operationalizes mutation as four operator categories, each a DAG-level transformation of this graph: • Add : insert a new skill node into the DAG, extending the pipeline with an additional skill that can make the model more effective, without modifying any existing skill. • Replace : substitute a skill node with an interface-compatible skill, preserving its output key so downstream wiring is untouched. • Hybridize : combine branches drawn from different architecture families within one candidate, e.g., pairing a DeepFM-style interaction branch with a DIN-style interest branch. • Specialize : adapt an existing path to the target task, scenario, or capacity budget—narrowing or widening a branch, or adjusting its hyperparameters— without changing its skill_id or wiring. Both add and replace may draw their source skill from either tier (Section 4.1.3), through a retrieval process that selects, from all of L, the skills most likely to help the current genome. 2 Retrieval proceeds in two stages. A hard filter first discards any skill that is incompatible with the current task, whose required inputs the parent genome cannot supply, that has no loadable implementation, that belongs to a category excluded from direct search (e.g., losses, objectives, terminal heads), or that would duplicate a skill already present in the genome. 
+
+> 2This retrieval is rule-based rather than embedding-based: there is no vector index (e.g., FAISS, Annoy, Milvus) over skill representations, only scoring over skill-card metadata, string matching against the diagnosis, and tensor-key compatibility.
+
+6The skills that pass this filter are then ranked by a multi-faceted scoring function. For skill Si, parent genome G with available tensor keys XG, and diagnosis rt, the score is 
+
+score( Si | G, r t) = w1ϕtask (Si, T ) + w2ϕio (Si, XG) + w3ϕret (Si, r t) + w4ϕbias (Si, r t) + w5 ¯m(Si), (4) where ϕtask checks task-type compatibility, ϕio checks whether Si’s required input keys are present in XG or producible by a one-hop upstream skill, ϕret measures textual similarity between Si’s retrieval description and the diagnosis, 
+
+ϕbias rewards skills whose inductive bias is known to counter the failure signature in rt, and ¯m(Si) is Si’s historical average validated improvement. The top-n scoring skills are retrieved as the pool from which the genome is evolved, subject to a per-category cap that keeps the pool from collapsing onto a single skill category. 
+
+4.2.2 Code-Space Evolution 
+
+Skill space can only exploit: it recombines skills already in L, so its reach is bounded by what the library contains. Escaping that bound requires searching an open space, in which a module is written rather than selected. Such a search is expensive—every proposal costs an LLM call and a full training run—so what it discovers should be kept rather than discarded once the run ends. Code space therefore comprises a disciplined invention pipeline and a sedimentation mechanism that deposits validated inventions as reusable evolutionary memory, the Tier-2 skills of Section 4.1.3. 
+
+Invention pipeline. Code space runs in every generation rather than only when skill-space retrieval comes up empty: it always holds a share of the candidate budget, set adaptively (Section 4.2.3) and smallest in early generations, where recombining library skills still yields most of the available gain. What the LLM receives is not the training data but a structured design brief 
+
+Bt =  Gt, r t, Mt−∆: t, XGt , C, (5) combining the parent genome Gt with its nodes, edges, and per-node interfaces; the diagnosis rt, which names the observed failure modes and the node they are attributed to; the most recent ∆ entries of evolutionary memory 
+
+M; the tensor keys XGt the genome currently exposes; and the constraints C. Memory is read in both directions: recently promoted skills show which structural directions are working, while proposals that failed validation or trained poorly are supplied as negative examples, so the same dead end is not explored twice. The constraints are also concrete: a proposal must be a macro-level change, wired in one of four ways (replacing a node, inserting between two nodes, branching into the fusion layer, or replacing that layer), and may read only keys already present in XGt , so a synthesized module consumes intermediate tensors produced upstream in the genome rather than raw features. Generation then proceeds in two stages: 1. Architecture planner : one LLM call turns Bt into a set of architectural sketches, which describe structure rather than code. A sketch states the mechanism the model is missing, the innovation lane it belongs to (interaction, routing, fusion, embedding, or sequence), the failure mode it targets, the nodes it touches, the input and output keys it needs, its wiring, and its parameter budget. 2. Code synthesizer : a second LLM call turns each selected sketch into a proposal carrying an executable nn.Module ,its skill identifier, and its declared input and output. Both steps are preceded by screening, so that neither the synthesis call nor the training run is spent on a proposal that cannot work. A sketch is discarded if Gt cannot supply its inputs, if its wiring is not one of the permitted macro-level transformations, or if its structure duplicates one already tried. Synthesized code is checked next: static analysis rejects non-importable code and any file, network, subprocess, or dynamic-evaluation capability; the declared skill-card contract must match the realized interface and tensor shapes; the code must realize the macro-level change its sketch declared; and the module must complete forward and backward passes with valid gradients on synthetic inputs. These checks establish that a candidate is safe, executable, and structurally compatible, not that it will improve E, which only training can decide. A final portability test, whether the module stays executable as the number and type of input fields change. Candidates clearing these checks are wired into the genome, compiled, trained, and evaluated. 
+
+Sedimentation into Tier-2. Section 4.1.3 introduced Tier-2 as the half of L that accumulates knowledge acquired during evolution; we now describe how a skill reaches it. Clearing the checks above establishes that a proposal runs, not that it helps, so the validated skill is trained and evaluated inside its host genome alongside the generation’s other candidates, and promotion is decided by how that genome performs. A candidate enters the survivor set Σt if it stays within a tolerance δ of the generation mean on the primary metric and ranks in the top-K after sorting, and only 7generated skills carried by a survivor are promoted. What is sedimented is therefore what measurably helped the strongest models of its generation, under the task, data, and training budget at hand. A promoted skill card records not only the skill itself but the evidence that earned it a place in L: the candidate metrics and status that triggered promotion, the architecture details, and the originating proposal and parent node, among others. Promotion also registers the skill in the index the genome compiler reads, so from the next generation onward a Tier-2 skill is retrieved by skill-space search exactly like a Tier-1 skill, under the same scoring and filters as in Section 4.2.1, and no longer consumes code-space budget. 
+
+4.2.3 Adaptive Budget Allocation 
+
+Skill-space recombination is cheap and reliable but bounded by the library’s coverage; code-space invention escapes that bound but is more expensive and less reliable per proposal. We therefore balance exploitation against exploration through dynamic budget allocation. EvoSkillRec allocates a fixed per-generation budget of N candidates, 8 by default, between the two spaces as (nskill , n code ), by default (6 , 2) , an explore–exploit split biased toward exploiting accumulated knowledge. The split adapts: early generations keep nskill high, exploiting the existing library as far as it goes; if the best validated score has not improved by more than ϵ over the last k generations—a performance plateau, indicating that the current library cannot express a better genome—the budget shifts toward code space, raising ncode 
+
+so the planner can attribute the plateau’s likely cause via failure diagnosis over recent bad cases and propose new seed skills. Once a new skill is validated and promoted, the allocation relaxes back toward the default, since the enlarged library can now be exploited through the cheaper skill-space operators. 
+
+4.3 AutoResearch Loop 
+
+The AutoResearch loop turns the evolution process into one iterative procedure over executable genomes: diagnose the current models, propose candidates in both spaces, validate and train them, keep the survivors, and record what happened. EvoSkillRec first trains and evaluates the seed genome under fixed data splits. Each later generation conditions both spaces on the diagnosis of its parents and on the evolutionary memory M, which they read so that a structure already tried is not proposed again. Candidates are screened by the checks of Sections 4.2.1 and 4.2.2 and de-duplicated by architecture details, so the training budget is spent only on architectures that are executable and new; those that remain are trained under one protocol per generation, the same splits, optimizer, and stopping rule, which makes their scores comparable. Survivors are selected by E, instantiated as validation AUC in our CTR experiments, and become the next generation’s parents; the generated skills they carry sediment into L, and their metrics, lineage, diagnoses, and failure records are appended to M. When the best validated score stops improving, the allocation shifts toward code space (Section 4.2.3). Algorithm 1 states the procedure in full. 
+
+# 5 Experiments 
+
+We evaluate EvoSkillRec through five research questions. RQ1 (Effectiveness) tests whether skill-genome evolution consistently outperforms hand-crafted architectures and automated-design baselines across diverse recommendation tasks. RQ2 (Evolution dynamics) traces how architectures improve over evolution and which mechanisms drive the gains at each stage. RQ3 (Mechanism ablation) compares single-space variants with the full model and analyzes how candidates from the two spaces perform within full runs. RQ4 (Multi-objective evolution) examines whether EvoSkillRec jointly optimizes objectives beyond predictive accuracy, particularly model FLOPs utilization (MFU), increasingly important for efficient generative ranking models. RQ5 (LLM backbone) compares state-of-the-art LLMs as the invention engine driving evolution. 
+
+5.1 Experimental Settings 
+
+Tasks and datasets. We evaluate EvoSkillRec on three supervised recommendation tasks: click-through rate (CTR) prediction on MovieLens, Amazon Beauty, and Amazon Books; multi-task learning (MTL) on Census-Income; and multi-domain learning (MDL) on Amazon and MovieLens. For multi-objective evolution , where AUC is co-optimized with MFU, we use the industrial-scale QK-Video corpus. 
+
+Baselines. We compare against three families of methods: (i) manually designed models , comprising 7 CTR, 5 MTL, and 11 MDL architectures; (ii) automated architecture search , represented by NASRec, a weight-sharing search 8Algorithm 1 AutoResearch loop. O = {add , replace , hybridize , specialize } is the skill-space operator set (Sec-tion 4.2.1), Pt the skills synthesized in code space, GS the candidate genome hosting skill S, and Top K the K
+
+highest-scoring elements of a set; ℓ(G) and o(G) record a candidate’s lineage and validation outcome. 
+
+Require: seed genome G0; initial skill library L0; instance (D, T , C); generations T ; budget N ; survivor size K and tolerance δ; plateau window k and threshold ϵ
+
+Ensure: best genome G⋆; grown library LT ; memory MT 
+
+> 1:
+
+s(G0) ← E (G0; D, T , C); Σ0 ← { G0}; M0 ← { (G0, s (G0)) }; G⋆ ← G0 
+
+> 2:
+
+for t = 1 to T do  
+
+> 3:
+
+rt ← Diagnose (Σ t−1, Mt−1) ▷ failure modes attributed to genome nodes  
+
+> 4:
+
+(nskill , n code ) ← Allocate (N, Mt−1, ϵ, k ) ▷ shift toward code space on a plateau  
+
+> 5:
+
+St ← Retrieve (Lt−1, Σt−1, r t) ▷ top-n skills under Eq. 4  
+
+> 6:
+
+Qskill  
+
+> t
+
+←  op( G, S) : G ∈ Σt−1, S ∈ S t, op ∈ O , |Q skill  
+
+> t
+
+| = nskill 
+
+> 7:
+
+ Pt, Qcode 
+
+> t
+
+ ← Synthesize  Plan (Bt), |Q code  
+
+> t
+
+| = ncode ▷ Bt from Eq. 5  
+
+> 8:
+
+Qt ← Validate  Qskill  
+
+> t
+
+∪ Q code 
+
+> t
+
+ ▷ validation and fingerprint de-duplication  
+
+> 9:
+
+s(G) ← E (G; D, T , C) for every G ∈ Q t ▷ one training protocol per generation  
+
+> 10:
+
+¯st ← mean G∈Q t s(G); Σt ← Top K
+
+ G ∈ Q t : s(G) ≥ ¯st − δ ▷ survivor selection  
+
+> 11:
+
+Lt ← L t−1 ∪  S ∈ P t : GS ∈ Σt ▷ sedimentation into Tier-2  
+
+> 12:
+
+Mt ← M t−1 ∪    G, s (G), r t, ℓ (G), o (G) : G ∈ Q skill  
+
+> t
+
+∪ Q code  
+
+> t
+> 13:
+
+G⋆ ← arg max G∈{ G⋆}∪ Σt s(G) 
+
+> 14:
+
+end for  
+
+> 15:
+
+return G⋆, LT , MT
+
+method (Zhang et al., 2022); and (iii) LLM-driven code evolution , represented by OpenEvolve, an open-source framework inspired by AlphaEvolve (Novikov et al., 2025) 3. Appendix D.5 provides implementation details, including data and training protocols, search spaces, validation-based selection, and candidate budgets. 
+
+Metrics and protocol. We report test AUC for CTR, mean test AUC over the two tasks for MTL, and overall test AUC across domains for MDL. Candidate and checkpoint selection uses the corresponding validation metric; held-out test metrics are used for reporting, not selection. For multi-objective evolution, selection uses validation AUC and training MFU jointly, and both validation and test AUC are reported alongside MFU. Further details are provided in Appendix D. 
+
+Implementation. Unless stated otherwise, all EvoSkillRec code-space proposals in RQ1–RQ4 are generated by GPT-5.5 through the Codex CLI; RQ5 replaces this backbone with other LLMs. Training configurations, search budgets, and LLM settings are given in Appendix D. 
+
+5.2 RQ1: Effectiveness Across Recommendation Tasks 
+
+Table 1 compares EvoSkillRec with the best manual design, the NASRec search baseline, and the OpenEvolve code-evolution baseline across all three task families. Under the reported settings, the NASRec baseline scores below the strongest manual model on all six benchmarks. The OpenEvolve baseline exceeds the best manual result on all three CTR benchmarks but scores below it on MTL and MDL; the largest shortfall is 0.0194 AUC on MDL-MovieLens. EvoSkillRec has the highest reported test AUC in each column, with gains of 0.0001 –0.0085 over the strongest alternative in that column. These results compare the evaluated implementations under the protocols in Appendix D.5. The methods use different search spaces and proposal mechanisms, so the aggregate comparison alone does not identify which design choice accounts for the differences. 
+
+5.3 RQ2: How Do Architectures Evolve? 
+
+To examine how improvements accumulate during evolution, Figure 2 plots the best-so-far validation AUC against evolution round for each benchmark. Each annotation marks an improvement with the corresponding operator and 
+
+> 3https://github.com/algorithmicsuperintelligence/openevolve
+
+9Table 1 Test AUC across CTR, MTL, and MDL benchmarks. Best Manual is the strongest manually designed model on each dataset. ∆ is the gain of EvoSkillRec over the strongest non-EvoSkillRec baseline in that column. Baseline implementations and search budgets are specified in Appendix D.5. 
+
+CTR MTL MDL Method MovieLens Amazon Books Amazon Beauty Census Amazon MovieLens 
+
+Best Manual 0.7487 a 0.6587 b 0.6666 c 0.9726 d 0.7012 e 0.7924 e
+
+NASRec 0.7361 0.6487 0.6632 0.9711 0.6870 0.7619 OpenEvolve 0.7521 0.6654 0.6760 0.9722 0.6903 0.7730 
+
+EvoSkillRec 0.7522 0.6708 0.6845 0.9748 0.7033 0.7932 
+
+∆ vs. best baseline ↑0.0001 (+0.01%) ↑0.0054 (+0.81%) ↑0.0085 (+1.26%) ↑0.0022 (+0.23%) ↑0.0021 (+0.30%) ↑0.0008 (+0.10%) 
+
+Best manual models: aWide & Deep, bWide & Deep, cAutoInt, dAITM, eSAR-Net. 0 5 10 15 20 25 
+
+Evolution Round 
+
+0.7565 0.7569 0.7573 0.7577 0.7581 
+
+> Best-so-far Validation AUC
+> Baseline (0.75658)
+
+(a) CTR - MovieLens 
+
+Baseline Skill-space operator Code-space operator 
+
+> R4 R5
+> R0: SENet-FM Δ=+0.00043 R6: AutoInt Δ=+0.00032 R10: Field-Relation Δ=+0.00025 R22: Neural-BDD (final global best)
+
+0 5 10 15 20 25 
+
+Evolution Round 
+
+0.675 0.685 0.695 0.705 0.715 
+
+> Best-so-far Validation AUC
+
+Baseline (0.6778) 
+
+(b) CTR - Amazon Beauty 
+
+Baseline Skill-space operator Code-space operator       
+
+> R1 R2
+> R0: Relation Capsule Router Δ=+0.0166 R3: Low-Rank Cross-Attention Tower Δ=+0.0049 R9: Contextual Field Reparameterizer Δ=+0.0067 R24: Adaptive CrossNet Expert (final global best)
+> 10.0 12.5 15.0 17.5 20.0 22.5 25.0 0.7080 0.7085 0.7090 R9 R10 R14 R15 R18 R24
+
+0 5 10 15 20 25 
+
+Evolution Round 
+
+0.680 0.685 0.690 0.695 0.700 
+
+> Best-so-far Validation AUC
+
+Baseline (0.67894) 
+
+(c) CTR - Amazon Books 
+
+Baseline Skill-space operator Code-space operator   
+
+> R3 R6 R10 R12
+> R0: Mixture Fusion Δ=+0.00598 R1: CrossNet+AFM Hybrid Δ=+0.00168 R4: Contrastive Branch Fusion Δ=+0.00676 R14: Kernel-Memory Branch (final global best)
+
+0 5 10 15 20 25 
+
+Evolution Round 
+
+0.9716 0.9720 0.9724 0.9728 
+
+> Best-so-far Mean Validation AUC
+> Baseline (0.97175)
+
+(d) MTL - Census-Income 
+
+Baseline Skill-space operator Code-space operator 
+
+> R2 R7
+> R0: Field Covariance Shrinkage Δ=+0.00066 R8: Block Krylov Resolvent Δ=+0.00008 R17: Field Covariance Shrinkage (final global best)
+
+0 5 10 15 20 25 
+
+Evolution Round 
+
+0.67 0.68 0.69 0.70 
+
+> Best-so-far Validation AUC
+
+Baseline (0.6704) 
+
+(e) MDL - Amazon 
+
+Baseline Skill-space operator Code-space operator 
+
+R1 R3 R5 R7 R11        
+
+> R0: Domain-Aware Field Norm Δ=+0.0082 R4: Affine Norm Δ=+0.0036 R9: Swap M3oE Δ=+0.0033 R12: Swap SARNet Δ=+0.0094
+> 12 14 16 18 20 22 0.7020 0.7025 0.7030 0.7035 R12 R13 R14 R16 R17 R21: Shared-Private Splitter (final global best)
+
+0 5 10 15 20 25 
+
+Evolution Round 
+
+0.7940 0.7944 0.7948 0.7952 0.7956 
+
+> Best-so-far Validation AUC
+> Baseline (0.79412)
+
+(f) MDL - MovieLens 
+
+Baseline Skill-space operator Code-space operator 
+
+> R0: Feature Gate Δ=+0.00055 R8: Cross-Basis Δ=+0.00042 R11: Cross-Token Δ=+0.00010 R23: Swap MMoE (final global best)
+
+Figure 2 Best-so-far validation AUC over evolution rounds. Each annotated improvement reports its operator and AUC gain, with color indicating its origin in skill space or code space. 
+
+its origin in skill space or code space. The trajectories show that skill-space reuse and code-space synthesis play complementary roles, with contributions varying across datasets and evolution stages. On CTR, CTR-MovieLens benefits from both spaces: skill-space operators contribute at several rounds, while code-space edits also improve the trajectory, including in later stages. CTR-Books similarly combines both mechanisms. Code-space operators such as Mixture Fusion and Contrastive Branch Fusion produce substantial improvements, while multiple skill-space transitions also advance the best-so-far performance, 10 Table 2 Ablation of the two search spaces and generated-skill reuse. All values are test AUC; MTL reports the mean over tasks and MDL the overall AUC across domains.                                
+
+> Method Search space CTR MTL MDL
+> Skill Code Reuse MovieLens Books Beauty Census Amazon MovieLens Skill-space only ✓✗✗0.7512 0.6647 0.6639 0.9737 0.7019 0.7924 Code-space only ✗✓✗0.7520 0.6689 0.6840 0.9730 0.6807 0.7926 Full model ( EvoSkillRec )✓✓✓0.7522 0.6708 0.6845 0.9748 0.7033 0.7932
+
+including the final best-so-far model. Thus, the effectiveness of the two search spaces can vary considerably even within the same task family. On MDL-Amazon, code-space proposals introduce domain-specific structures such as Domain-Aware Field Norm and Shared-Private Splitter, whereas skill-space replace steps that insert the M3oE or SAR-Net module in place of an existing module also improve the trajectory. MDL-MovieLens likewise contains improvements from both mechanisms. Overall, Figure 2 should be read as illustrating how skill reuse and code synthesis interact over individual evolution trajectories, rather than as evidence that either space universally dominates. We quantify their aggregate contributions separately in RQ3. 
+
+5.4 RQ3: What Does Each Mechanism Contribute? 
+
+We conduct two complementary analyses. The first compares EvoSkillRec with single-space variants (Table 2): Skill-space only recombines existing library skills, Code-space only invents at the code level without consolidating results back into the library, and the full model couples both with generated-skill reuse. We do not run a variant that combines the two spaces without reuse, so this comparison does not isolate the contribution of reuse from that of combining the spaces. The second keeps the full model intact and groups the candidates of each run by the space that proposed them (Table 3). There, the positive-gain rate is the fraction of evaluated candidates whose validation AUC exceeds that of their parent, ∆max is the largest such gain, and the survivor yield is the fraction of proposed candidates that are selected as survivors, with duplicates and failed candidates counted as non-survivors. Table 2 shows that the full model attains the highest test AUC on all six benchmarks, although several margins over the stronger single-space variant are small (e.g., +0 .0002 on CTR-MovieLens and +0 .0005 on CTR-Beauty) and, like all results here, come from single runs (Section 6). Neither single-space variant dominates: Code-space only is the stronger ablation on the three CTR benchmarks, Skill-space only on MTL-Census and MDL-Amazon, and the two are nearly tied on MDL-MovieLens (0.7924 vs. 0.7926). This is consistent with the intended division of labor, in which skill space exploits primitives already in the library and code space explores beyond them, so that combining the two does not require choosing a space in advance. Within the full model (Table 3), the positive-gain rates of the two spaces are similar on CTR-Beauty and CTR-Books, higher for code space on CTR-MovieLens (25.7% vs. 17.7%) and MTL-Census (35.1% vs. 29.0%), and higher for skill space on both multi-domain benchmarks (56.2% vs. 45.8% and 31.6% vs. 28.6%). Skill-space candidates reach the larger ∆max 
+
+on five of six benchmarks, CTR-Books being the exception. This comparison attributes each gain to the space that proposed the candidate; because skill-space operators can also insert Tier-2 skills that were originally generated in code space, it does not show that recombining human-designed modules alone yields the largest improvements. Survivor yield differs more sharply between the spaces. Skill space has the higher yield on all CTR and MTL benchmarks but only 3.1% and 6.2% on the two multi-domain benchmarks, against 62.5% and 50.6% for code space; we attribute this mainly to domain-conditioned compatibility constraints, under which many skill-space recombinations reduce to previously evaluated architectures and are removed as duplicates before training. Finally, the number of promoted code skills ranges from 16 (CTR-Beauty) to 45 (both multi-domain benchmarks). Promoted skills become available to skill-space search in later generations; on CTR-MovieLens, for example, the module invented in round 3 ( autoint_senet_ bridge_branch_r3 ) is reused in round 6 and improves the best-so-far validation AUC (Figure 2 and Appendix E.2). 
+
+5.5 RQ4: Multi-Objective Evolution 
+
+Industrial recommenders are shifting towards generative ranking models (Zhou et al., 2025; Zhu et al., 2025), with parameter counts growing from tens of millions to billions. At this scale, hardware efficiency becomes a design 11 Table 3 Skill space vs. code space within the full model’s runs, grouped by the space that proposed each candidate. ∆ is the validation AUC gain of a candidate over its parent. The positive-gain rate is the fraction of evaluated candidates with ∆ > 0,                                                             
+
+> ∆max is the largest ∆, and survivor yield is the fraction of proposed candidates that are selected as survivors.
+> Benchmark Positive-gain rate P(∆ >0) (%) Max. validation gain ∆max Survivor yield (%) Code skills
+> Skill Code Skill Code Skill Code promoted (#) CTR-MovieLens 17.7 25.7 +0.001470 +0.001171 40.9 38.1 43 CTR-Beauty 19.0 18.9 +0.016589 +0.006988 45.2 21.6 16 CTR-Books 17.3 18.1 +0.005369 +0.008282 44.1 26.0 19 MTL-Census 29.0 35.1 +0.000655 +0.000229 44.3 35.1 18 MDL-Amazon 56.2 45.8 +0.011990 +0.009539 3.1 62.5 45 MDL-MovieLens 31.6 28.6 +0.004594 +0.001665 6.2 50.6 45
+
+constraint, and model FLOPs utilization (MFU), the ratio of achieved training FLOP/s to the GPU’s theoretical peak FLOP/s, is now reported alongside accuracy (Chowdhery et al., 2023; Zhou et al., 2025; Zhang et al., 2026b). We therefore test whether EvoSkillRec can optimize a compound objective. On QK-Video, we seed evolution from a RankMixer backbone (Zhu et al., 2025) and run 30 rounds 4 with an objective jointly rewarding AUC and MFU, subject to the eligibility criterion of Section 3. Figure 3 shows the resulting accuracy–efficiency trade-off and the Pareto front with its five candidates P1–P5, whose validation AUC, test AUC, and training MFU appear in Table 4; Figure 4 shows how the evolved architectures differ from the backbone. In Figure 3, a large fraction of evolved candidates lie in the upper-right region and dominate the RankMixer seed on both axes, so the two objectives improve together rather than trade off. Five candidates, P1–P5, lie on the Pareto front, but only P1 (round 19) retains both improvements on the test set. Headroom on either objective alone is also substantial, with the best validation AUC reaching 0.9301 and the best MFU 1.605%, so evolution remains effective for compound objectives, not only for single metrics. As Figure 4 shows, although produced in different rounds (r1, r3, r5, r18, r19), all five share two modifications to the seed backbone: scaling RankMixer from L=3 , E =2 to L=4 , E =3 ,and inserting a Hadamard cross mixer directly after DIN attention. Beyond this shared core, their differences follow the front’s geometry. Higher-MFU candidates stack compute-dense operators: P3 and P5 add an FFN+GELU block, P4 a second channel-group cross mixer, and P5 bidirectional token context. P1, at the accuracy-preserving end, instead adds a low-rank task router at the tower interface and has the lowest MFU of the five ( 1.477% ). Dense operators thus raise utilization, while low-rank routing preserves accuracy. 
+
+5.6 RQ5: Effect of the LLM Backbone 
+
+Because an LLM drives evolution in EvoSkillRec, the backbone choice is a design variable, and models that perform comparably on public benchmarks need not behave alike here. We compare four models, Claude Opus 4.8, GPT-5.6 (SOL), DeepSeek-V4-Pro and GLM-5.2, each at its highest reasoning setting and run with identical initial architectures, environment configurations and round budgets; the main experiments (RQ1–RQ4) instead use GPT-5.5. Figure 5 reports test AUC on CTR (Amazon-Books), MTL (Census-Income) and MDL (MovieLens). No single backbone leads on all three tasks. Claude Opus 4.8 is strongest on CTR by a clear margin (0.6738 test AUC), whereas GLM-5.2 leads on MTL (0.9739 mean test AUC) and MDL (0.7935), though its 0.0001 advantage over Claude Opus 4.8 on MDL should be read as a tie. On MDL, GLM-5.2 is also on par with, and slightly above, the GPT-5.5 run reported in Table 1 (0.7932), indicating that comparable MDL results can be obtained with an open-weight backbone. Given list token prices, GLM-5.2 reaches this performance at lower cost than Claude Opus 4.8, making it the most economical backbone across this task suite. The gap between open- and closed-weight backbones is model-specific rather than categorical: GLM-5.2 is competitive with both closed-weight models and ahead of them on two tasks, whereas DeepSeek-V4-Pro is among the weaker backbones on all three tasks (lowest on MDL, tied for lowest on MTL, and second lowest on CTR). DeepSeek’s proposals also succeed at a consistently lower rate during evolution, so its deficit lies in how reliably it produces valid candidates, not only in their quality. The preferred backbone therefore depends on the task family. One plausible explanation is uneven pretraining coverage: CTR architectures are far more widely documented than multi-task and multi-domain ones, and the two closed-weight models lead precisely on CTR 
+
+> 4Our pipeline builds on the public UniRank codebase: https://github.com/salmon1802/UniRank.
+
+12 1.25 1.30 1.35 1.40 1.45 1.50 1.55 1.60 
+
+Train MFU (%)  
+
+> 0.9288 0.9290 0.9292 0.9294 0.9296 0.9298 0.9300 0.9302
+> Validation AUC
+> raw validation max Val 0.930143 raw MFU max MFU 1.605%
+> Evolution candidates Retained / best-validation candidates Eligible Pareto front Baseline raw validation max raw MFU max
+> P1 r19 P2 r1 P3 r3 P4 r18
+> P5 r5
+> Baseline Val AUC 0.929477 | MFU 1.433%
+
+Figure 3 Accuracy–MFU trade-off on QK-Video. Grey points are all evolution candidates, blue points retained candidates, and the black curve the eligible Pareto front. Diamonds mark the raw validation-AUC and MFU maxima. 
+
+Model Val. AUC Test Training MFU 
+
+AUC ∆AUC ( ×10 −4) MFU (%) ∆MFU (pp) Baseline 0.929 48 0.935 80 0.0 1.433 0.000 
+
+P1 (r19) 0.929 99 0.935 98 1.7 1.477 0.044 
+
+P2 (r1) 0.929 96 0.935 73 −0.7 1.513 0.080 
+
+P3 (r3) 0.929 63 0.935 70 −1.0 1.565 0.132 
+
+P4 (r18) 0.929 46 0.935 40 −4.0 1.567 0.134 
+
+P5 (r5) 0.929 27 0.935 61 −1.9 1.574 0.141 
+
+Table 4 Performance and training efficiency of the baseline (RankMixer) and eligible Pareto-front candidates. All ∆ values are relative to the baseline; MFU deltas are in percentage points (pp). Architectural details for P1–P5 are shown in Figure 4; r N denotes the round that produced each candidate. Baseline 
+
+> Feature Embedding Embedding -> Tokens Target-Aware Attention RankMixer L=3, E=2 4-task MLP towers
+
+P1 r19 
+
+> Feature Embedding Embedding -> Tokens Target-Aware Attention RankMixer L=4, E=3 4-task MLP towers
+> Hadamard cross mixer Low-rank task router
+
+P2 r1 
+
+> Feature Embedding Embedding -> Tokens Target-Aware Attention RankMixer L=4, E=3 4-task MLP towers
+> Hadamard cross mixer
+
+P3 r3 
+
+> Feature Embedding Embedding -> Tokens Target-Aware Attention RankMixer L=4, E=3 4-task MLP towers
+> Hadamard cross mixer FFN + GELU stack (E=2, 3)
+
+P4 r18 
+
+> Feature Embedding Embedding -> Tokens Target-Aware Attention RankMixer L=4, E=3 4-task MLP towers
+> Signed-transition smoother Hadamard cross mixer Channel-group cross mixer FFN + GELU stack (E=3)
+
+P5 r5    
+
+> Feature Embedding Embedding -> Tokens Target-Aware Attention RankMixer L=4, E=3 4-task MLP towers
+> Bidirectional token context Hadamard cross mixer FFN + GELU stack (E=2, 3)
+> Original backbone RankMixer Evolution insert Task towers
+
+Figure 4 Architectural differences between the baseline (RankMixer) and the Pareto-optimal models on QK-Video. 
+
+while ceding the two less common families to GLM-5.2. We cannot verify this externally, but the practical implication is stable across our runs: GLM-5.2 is the reasonable default for MTL and MDL evolution. 
+
+# 6 Discussion and Limitations 
+
+The experiments above support our central claim, that evolution should accumulate reusable architectural knowledge rather than rediscover it each run. Several questions remain open. 
+
+Statistical resolution. Some of the margins we report are on the order of 10 −4 AUC, which a single evolution run cannot reliably separate from run-to-run variation. Where we draw conclusions we rely on the larger effects, such as the ablation reversals in Section 5.4; the smaller orderings should be read as observations from one run rather than as established results. Repeating each run under several seeds would settle this, but every cell in Table 1 is a full evolution run rather than a single model fit, and the compute this would require was beyond what we could afford here. 
+
+Cost and dependence on the LLM. Code-space invention is the expensive branch. Each proposal consumes two LLM calls followed by a full training and validation cycle, and a large share of proposals are rejected before training begins. The adaptive budget of Section 4.2.3 contains this cost without removing it. The API bill is not trivial either: across all backbones and tasks, the experiments reported here cost roughly $7,000. This limits how much of the design space an academic group can explore, and it pushes such work toward cheaper backbones, even though Section 5.6 shows that the choice of backbone affects which architectures a run discovers. Wider academic access programs from model providers would make this line of work easier to pursue outside industry. Until then, our numbers should be read as characterizing EvoSkillRec together with the model driving it, rather than the framework in isolation. 13 0.664 0.668 0.672 0.676  
+
+> 0.6738 0.6722 0.6684 0.6686
+> (a) CTR
+> Test AUC 0.9725 0.9730 0.9735 0.9740 0.9745
+> 0.9734 0.9736 0.9739 0.9734
+> (b) MTL
+> Test mean AUC 0.791 0.792 0.793 0.794
+> 0.7934 0.7931 0.7935 0.7924
+> (c) MDL
+> Test overall AUC
+
+Figure 5 Effect of the LLM backbone. AUC of Claude Opus 4.8, GPT-5.6 (SOL), DeepSeek-V4-Pro and GLM-5.2 on CTR (Amazon-Books), multi-task learning (MTL, Census-Income) and multi-domain learning (MDL, MovieLens). 
+
+Scope of transfer. Two questions remain untested. The first is cross-task transfer: every library in our experiments is grown and used within a single task family, so we do not know whether skills discovered on one task would benefit evolution on other tasks. This is the stronger version of our claim, and answering it would require a different experimental design from the one used here. The second is industrial validation. The library is seeded from published academic architectures and evaluated mostly on public benchmarks, and QK-Video is our only contact with an industrial-scale setting. That result is encouraging, since evolution there improved on a strong production backbone under a compound objective, but whether the same decomposition into reusable skills holds for proprietary backbones and industrial oneline production traffic remains to be seen. We see this as the direction with the most practical value. 
+
+Outlook. The longer-term motivation for this line of work is to let an agent carry out architecture design that currently requires an experienced engineer, and to leave the resulting design decisions inspectable rather than buried in a search trajectory. Our results indicate that this is not yet within reach: backbones differ substantially in how reliably they propose viable architectures, and the surrounding loop, from budget allocation to promotion criteria and evaluation, still needs careful design. We expect the balance to shift as models improve at long-horizon, tool-using work, and we regard the skill library as the component most likely to carry over, since it stores what a run has learned in a form that neither the model nor the next task has to reconstruct. 
+
+# 7 Conclusion 
+
+We presented EvoSkillRec, a skill-genome framework for recommender architecture discovery. It breaks established recommenders down into executable skills, evolves them through coupled skill-space recombination and code-space invention, and promotes validated discoveries back into a growing library. EvoSkillRec is the only method we compare that improves on the strongest hand-designed baseline on all six benchmarks, and it extends to accuracy–efficiency co-optimization in generative ranking models. The two search spaces are complementary, and future work will study cross-task skill transfer and industrial deployment. 
+
+# References 
+
+Rich Caruana. Multitask learning. Machine Learning , 28(1):41–75, 1997. Zheng Chai, Huizhi Yang, Di Chen, Lele Yu, Xiang Sun, Qin Ren, Bo Han, Hui Lu, Xionghang Xie, Yaocheng Tan, Xijun Xiao, Sijun Zhang, Wenlin Zhao, Shiru Ren, Peng Xu, Yuchao Zheng, and Di Wu. Longer: Scaling up long sequence modeling in industrial recommenders. arXiv preprint arXiv:2505.04421 , 2025. Jianxin Chang, Chenbin Zhang, Yiqun Hui, Dewei Leng, Yanan Niu, Yang Song, and Kun Gai. PEPNet: Parameter and embedding personalized network for infusing with personalized prior information. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD) , 2023. Bo Chen, Yichao Wang, Zhirong Liu, Ruiming Tang, Wei Guo, Hongkun Zheng, Weiwei Yao, Muyu Zhang, and Xiuqiang He. Enhancing explicit and implicit feature interactions via information sharing for parallel deep CTR models. In Proceedings of the 30th ACM International Conference on Information & Knowledge Management (CIKM) , 2021. 
+
+14 Heng-Tze Cheng, Levent Koc, Jeremiah Harmsen, Tal Shaked, Tushar Chandra, Hrishi Aradhye, Glen Anderson, Greg Corrado, Wei Chai, Mustafa Ispir, Rohan Anil, Zakaria Haque, Lichan Hong, Vihan Jain, Xiaobing Liu, and Hemal Shah. Wide & deep learning for recommender systems. In Proceedings of the 1st Workshop on Deep Learning for Recommender Systems , pages 7–10, 2016. Aakanksha Chowdhery, Sharan Narang, Jacob Devlin, et al. Palm: Scaling language modeling with pathways. Journal of Machine Learning Research , 24(240):1–113, 2023. Datawhale. Torch-rechub. https://github.com/datawhalechina/torch-rechub, 2022. A PyTorch-based recommender system framework providing easy-to-use and extensible solutions. Qin Ding, Kevin Course, Linjian Ma, Jianhui Sun, Rouchen Liu, Zhao Zhu, Chunxing Yin, Wei Li, Dai Li, Yu Shi, Xuan Cao, Ze Yang, Han Li, Xing Liu, Bi Xue, Hongwei Li, Rui Jian, Daisy Shi He, Jing Qian, Matt Ma, Qunshu Zhang, and Rui Li. Bending the scaling law curve in large-scale recommendation systems. arXiv preprint arXiv:2602.16986 , 2026. Huan Gui, Ruoxi Wang, Ke Yin, Long Jin, Maciej Kula, Taibai Xu, Lichan Hong, and Ed H Chi. Hiformer: Heterogeneous feature interactions learning with transformers for recommender systems. arXiv preprint arXiv:2311.05884 , 2023. Huifeng Guo, Ruiming Tang, Yunming Ye, Zhenguo Li, and Xiuqiang He. Deepfm: A factorization-machine based neural network for ctr prediction. In Proceedings of the 26th International Joint Conference on Artificial Intelligence , pages 1725–1731, 2017. Mingming Ha, Guanchen Wang, Linxun Chen, Xuan Rao, Yuexin Shi, Tianbao Ma, Zhaojie Liu, Yunqian Fan, Zilong Lu, Yanan Niu, Han Li, and Kun Gai. Unimixer: A unified architecture for scaling laws in recommendation systems. arXiv preprint arXiv:2604.00590 , 2026. F. Maxwell Harper and Joseph A. Konstan. The MovieLens datasets: History and context. ACM Transactions on Interactive Intelligent Systems , 5(4):1–19, 2015. Ruining He and Julian McAuley. Ups and downs: Modeling the visual evolution of fashion trends with one-class collaborative filtering. In Proceedings of the 25th International Conference on World Wide Web (WWW) , 2016. Xu Huang, Hao Zhang, Zhifang Fan, Yunwen Huang, Zhuoxing Wei, Zheng Chai, Jinan Ni, Yuchao Zheng, and Qiwei Chen. Mixformer: Co-scaling up dense and sequence in industrial recommenders. arXiv preprint arXiv:2602.14110 , 2026a. Yunwen Huang, Shiyong Hong, Xijun Xiao, Jinqiu Jin, Xuanyuan Luo, Zhe Wang, Zheng Chai, Shikang Wu, Yuchao Zheng, and Jingjian Lin. Hyformer: Revisiting the roles of sequence modeling and feature interaction in ctr prediction. arXiv preprint arXiv:2601.12681 , 2026b. Yuchen Jiang, Jie Zhu, Xintian Han, Hui Lu, Kunmin Bai, Mingyu Yang, Shikang Wu, Ruihao Zhang, Wenlin Zhao, Shipeng Bai, Sijin Zhou, Huizhi Yang, Tianyi Liu, Wenda Liu, Ziyan Gong, Haoran Ding, Zheng Chai, Deping Xie, Zhe Chen, Yuchao Zheng, and Peng Xu. Tokenmixer-large: Scaling up large ranking models in industrial recommenders. arXiv preprint arXiv:2602.06563 ,2026. Wang-Cheng Kang and Julian McAuley. Self-attentive sequential recommendation. In 2018 IEEE International Conference on Data Mining , pages 197–206. IEEE, 2018. Sein Kim, Sangwu Park, Hongseok Kang, Wonjoong Kim, Jimin Seo, Yeonjun In, Kanghoon Yoon, and Chanyoung Park. Self-evolverec: Self-evolving recommender systems with llm-based directional feedback. arXiv preprint arXiv:2602.12612 , 2026. Terran Lane and Ronny Kohavi. Census-income (KDD). UCI Machine Learning Repository, 2000. Joel Lehman, Jonathan Gordon, Shawn Jain, Kamal Ndousse, Cathy Yeh, and Kenneth O. Stanley. Evolution through large models. In Handbook of Evolutionary Machine Learning , pages 331–366. Springer, 2023. Honghao Li, Xianquan Wang, Zibin Zhang, Yi Zhang, Kangyi Lin, and Yiwen Zhang. UniRank: Benchmarking Ranking Models for Unified Sequential Modeling and Feature Interaction. arXiv preprint arXiv:2607.19987 , 2026. Jinyun Li, Huiwen Zheng, Yuanlin Liu, Minfang Lu, Lixia Wu, and Haoyuan Hu. AdaptDHM: Adaptive distribution hierarchical model for multi-domain CTR prediction. arXiv preprint arXiv:2211.12105 , 2022a. Kaiyuan Li, Yanhua Cheng, Dongdong Mao, Yanxiang Zeng, Yongxiang Tang, Chao Wang, Xialong Liu, and Peng Jiang. Infnet: A task-aware information flow network for large-scale recommendation systems. arXiv preprint arXiv:2508.11565 , 2025a. Xiaopeng Li, Fan Yan, Xiangyu Zhao, Yichao Wang, Bo Chen, Huifeng Guo, and Ruiming Tang. HAMUR: Hyper adapter for multi-domain recommendation. In Proceedings of the 32nd ACM International Conference on Information and Knowledge Management (CIKM) , 2023. Xiaopeng Li, Jingtong Gao, Pengyue Jia, Yichao Wang, Wanyu Wang, Yejing Wang, Yuhao Wang, Huifeng Guo, and Ruiming Tang. Scenario-wise rec: A multi-scenario recommendation benchmark. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management (CIKM) , 2025b. doi: 10.1145/3746252.3761137. 
+
+15 Zelong Li, Jianchao Ji, Yingqiang Ge, and Yongfeng Zhang. Autolossgen: Automatic loss function generation for recommender systems. arXiv preprint arXiv:2204.13160 , 2022b. Mingyang Liu, Yong Bai, Zhangming Chan, Sishuo Chen, Xiang-Rong Sheng, Han Zhu, Jian Xu, and Xinyang Chen. Est: Towards efficient scaling laws in click-through rate prediction via unified modeling. arXiv preprint arXiv:2602.10811 , 2026. Jiaqi Ma, Zhe Zhao, Xinyang Yi, Jilin Chen, Lichan Hong, and Ed H. Chi. Modeling task relationships in multi-task learning with multi-gate mixture-of-experts. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining , pages 1930–1939, 2018a. Xiao Ma, Liqin Zhao, Guan Huang, Zhi Wang, Zelin Hu, Xiaoqiang Zhu, and Kun Gai. Entire space multi-task model: An effective approach for estimating post-click conversion rate. In Proceedings of the 41st International ACM SIGIR Conference on Research & Development in Information Retrieval (SIGIR) , 2018b. Julian McAuley, Christopher Targett, Qinfeng Shi, and Anton van den Hengel. Image-based recommendations on styles and substitutes. In Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR) , 2015. Jianmo Ni, Jiacheng Li, and Julian McAuley. Justifying recommendations using distantly-labeled reviews and fine-grained aspects. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing (EMNLP-IJCNLP) , 2019. Alexander Novikov, Ngan Vu, Marvin Eisenberger, Emilien Dupont, Po-Sen Huang, Adam Zsolt Wagner, Sergey Shirobokov, Borislav Kozlovskii, Francisco J. R. Ruiz, Abbas Mehrabian, M. Pawan Kumar, Abigail See, Swarat Chaudhuri, George Holland, Alex Davies, Sebastian Nowozin, Pushmeet Kohli, and Matej Balog. Alphaevolve: A coding agent for scientific and algorithmic discovery. arXiv preprint arXiv:2506.13131 , 2025. Esteban Real, Alok Aggarwal, Yanping Huang, and Quoc V. Le. Regularized evolution for image classifier architecture search. In 
+
+Proceedings of the 33rd AAAI Conference on Artificial Intelligence , pages 4780–4789, 2019. Bernardino Romera-Paredes, Mohammadamin Barekatain, Alexander Novikov, Matej Balog, M. Pawan Kumar, Emilien Dupont, Francisco J. R. Ruiz, Jordan S. Ellenberg, Pengming Wang, Omar Fawzi, Pushmeet Kohli, and Alhussein Fawzi. Mathematical discoveries from program search with large language models. Nature , 625:468–475, 2024. Qijie Shen, Wanjie Tao, Jing Zhang, Hong Wen, Zulong Chen, and Quan Lu. SAR-Net: A scenario-aware ranking network for personalized fair recommendation in hundreds of travel scenarios. In Proceedings of the 30th ACM International Conference on Information & Knowledge Management (CIKM) , 2021. Xiang-Rong Sheng, Liqin Zhao, Guorui Zhou, Xinyao Ding, Binding Dai, Qiang Luo, Siran Yang, Jingshan Lv, Chi Zhang, Hongbo Deng, and Xiaoqiang Zhu. One model to serve all: Star topology adaptive recommender for multi-domain CTR prediction. In 
+
+Proceedings of the 30th ACM International Conference on Information & Knowledge Management (CIKM) , 2021. Qingquan Song, Dehua Cheng, Hanning Zhou, Jiyan Yang, Yuandong Tian, and Xia Hu. Towards automated neural interaction discovery for click-through rate prediction. arXiv preprint arXiv:2007.06434 , 2020. Weiping Song, Chence Shi, Zhiping Xiao, Zhijian Duan, Yewen Xu, Ming Zhang, and Jian Tang. Autoint: Automatic feature interaction learning via self-attentive neural networks. In Proceedings of the 28th ACM International Conference on Information and Knowledge Management , pages 1161–1170, 2019. Hongyan Tang, Junning Liu, Ming Zhao, and Xudong Gong. Progressive layered extraction (ple): A novel multi-task learning (mtl) model for personalized recommendations. In Proceedings of the 14th ACM Conference on Recommender Systems , pages 269–278, 2020. Fangye Wang, Guowei Yang, Xiaojiang Zhou, Song Yang, and Pengjie Wang. Query-mixed interest extraction and heterogeneous interaction: A scalable ctr model for industrial recommender systems. arXiv preprint arXiv:2602.09387 , 2026a. Haochen Wang, Yi Wu, Daryl Chang, Li Wei, and Lukasz Heldt. Self-evolving recommendation system: End-to-end autonomous model optimization with llm agents. arXiv preprint arXiv:2602.10226 , 2026b. Ruoxi Wang, Bin Fu, Gang Fu, and Mingliang Wang. Deep & cross network for ad click predictions. In Proceedings of the ADKDD’17 ,pages 1–7, 2017. Ruoxi Wang, Rakesh Shivanna, Derek Cheng, Sagar Jain, Dong Lin, Lichan Hong, and Ed Chi. DCN V2: Improved deep & cross network and practical lessons for web-scale learning to rank systems. In Proceedings of the Web Conference (WWW) , 2021. Dongbo Xi, Zhen Chen, Peng Yan, Yinger Zhang, Yongchun Zhu, Fuzhen Zhuang, and Yu Chen. Modeling the sequential dependence among audience multi-step conversions with multi-task learning in targeted display advertising. In Proceedings of the 27th ACM SIGKDD Conference on Knowledge Discovery & Data Mining (KDD) , 2021. 
+
+16 Jun Xiao, Hao Ye, Xiangnan He, Hanwang Zhang, Fei Wu, and Tat-Seng Chua. Attentional factorization machines: Learning the weight of feature interactions via attention networks. arXiv preprint arXiv:1708.04617 , 2017. Xuanhua Yang, Xiaoyu Peng, Penghui Wei, Shaoguo Liu, Liang Wang, and Bo Zheng. AdaSparse: Learning adaptively sparse structures for multi-domain click-through rate prediction. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management (CIKM) , 2022. Yantao Yu, Sen Qiao, Lei Shen, Bing Wang, and Xiaoyi Zeng. Beyond dense connectivity: Explicit sparsity for scalable recommen-dation. arXiv preprint arXiv:2604.08011 , 2026. Guanghu Yuan, Fajie Yuan, Yudong Li, Beibei Kong, Shujie Li, Lei Chen, Min Yang, Chenyun Yu, Bo Hu, Zang Li, Yu Xu, and Xiaohu Qie. Tenrec: A large-scale multipurpose benchmark dataset for recommender systems. In Advances in Neural Information Processing Systems (NeurIPS), Datasets and Benchmarks Track , volume 35, 2022. Ruifeng Zhang, Zexi Huang, Zikai Wang, Ke Sun, Bohang Zheng, Zhen Ouyang, Huimin Xie, Phil Shen, Junlin Zhang, Wentao Guo, and Qinglei Wang. Zenith: Scaling up ranking models for billion-scale livestreaming recommendation. arXiv preprint arXiv:2601.21285 , 2026a. Tunhou Zhang, Dehua Cheng, Yuchen He, Zhengxing Chen, Xiaoliang Dai, Liang Xiong, Feng Yan, Hai Li, Yiran Chen, and Wei Wen. Nasrec: Weight sharing neural architecture search for recommender systems. arXiv preprint arXiv:2207.07187 , 2022. Tunhou Zhang, Dehua Cheng, Yuchen He, Zhengxing Chen, Xiaoliang Dai, Liang Xiong, Yudong Liu, Feng Cheng, Yufan Cao, Feng Yan, Hai Li, Yiran Chen, and Wei Wen. Towards automated model design on recommender systems. arXiv preprint arXiv:2411.07569 , 2024a. Zhaoqi Zhang, Haolei Pei, Jun Guo, Tianyu Wang, Yufei Feng, Hui Sun, Shaowei Liu, and Aixin Sun. Onetrans: Unified feature interaction and sequence modeling with one transformer in industrial recommender. In Proceedings of the ACM Web Conference 2026 , pages 8162–8170, 2026b. Zijian Zhang, Shuchang Liu, Jiaao Yu, Qingpeng Cai, Xiangyu Zhao, Chunxu Zhang, Ziru Liu, Qidong Liu, Hongwei Zhao, Lantao Hu, Peng Jiang, and Kun Gai. M3oE: Multi-domain multi-task mixture-of-experts recommendation framework. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR) , 2024b. Guorui Zhou, Xiaoqiang Zhu, Chenru Song, Ying Fan, Han Zhu, Xiao Ma, Yanghui Yan, Junqi Jin, Han Li, and Kun Gai. Deep interest network for click-through rate prediction. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining , pages 1059–1068, 2018. Guorui Zhou, Na Mou, Ying Fan, Qi Pi, Weijie Bian, Chang Zhou, Xiaoqiang Zhu, and Kun Gai. Deep interest evolution network for click-through rate prediction. In Proceedings of the 33rd AAAI Conference on Artificial Intelligence , pages 5941–5948, 2019. Guorui Zhou, Jiaxin Deng, Jinghao Zhang, Kuo Cai, Lejian Ren, Qiang Luo, Qianqian Wang, Qigen Hu, Rui Huang, Shiyao Wang, et al. Onerec technical report. arXiv preprint arXiv:2506.13695 , 2025. Yifeng Zhou, Yuehong Hu, Zhixiang Feng, Junwei Pan, Kaihui Wu, Hanyong Li, Shangyu Zhang, Shudong Huang, Zhangbin Zhu, Chengguo Yin, Haijie Gu, and Jie Jiang. Tokenformer: Unify the multi-field and sequential recommendation worlds. arXiv preprint arXiv:2604.13737 , 2026. Jie Zhu, Zhifang Fan, Xiaoxie Zhu, Yuchen Jiang, Hangyu Wang, Xintian Han, Haoran Ding, Xinmin Wang, Wenlin Zhao, Zhen Gong, Huizhi Yang, Zheng Chai, Zhe Chen, Yuchao Zheng, Qiwei Chen, Feng Zhang, Xun Zhou, Peng Xu, Xiao Yang, Di Wu, and Zuotao Liu. Rankmixer: Scaling up ranking models in industrial recommenders. arXiv preprint arXiv:2507.15551 , 2025. Jieming Zhu, Jinyang Liu, Shuai Yang, Qi Zhang, and Xiuqiang He. Open benchmarking for click-through rate prediction. In 
+
+Proceedings of the 30th ACM International Conference on Information & Knowledge Management (CIKM) , 2021. Barret Zoph and Quoc V. Le. Neural architecture search with reinforcement learning. In International Conference on Learning Representations , 2017. 
+
+17 Contents of the Appendix 
+
+A Skill Library and Skill Cards 18 
+
+A.1 Skill Card Fields and Tensor Interfaces . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18 A.2 Curated Skills by Category . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19 A.3 Examples of Curated and Generated Skill Cards . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21 
+
+B Skill-Space Operators and Compatibility Checks 22 C Evaluation Tasks, Datasets, and Models 23 
+
+C.1 Tasks and Evaluation Objectives . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23 C.2 Datasets and Data Splits . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23 C.3 Baseline and Seed Models . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24 
+
+D Training, Search, and Hardware Settings 26 
+
+D.1 Model Training and Initial Architectures . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26 D.2 Search Budgets and Survivor Selection . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27 D.3 Hardware Setup and MFU Measurement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28 D.4 LLM Settings for Planning and Code Generation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28 D.5 Implementation of the Automated Search Baselines . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29 
+
+E Detailed Experimental Results 31 
+
+E.1 Baseline Comparisons on the Six Accuracy Benchmarks . . . . . . . . . . . . . . . . . . . . . . . . . . 31 E.2 Architecture Changes and Scores by Generation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31 E.3 Generative Ranking on QK-Video . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37 
+
+F Results with Different LLM Backbones 42 
+
+# A Skill Library and Skill Cards 
+
+Every reusable module in the skill library comes with a skill card: a machine-readable YAML manifest that records what the module computes, which named tensors it consumes and produces, and how it can be retrieved and composed with other skills. The library has two tiers. Tier-1 consists of curated components obtained by decomposing existing recommendation models, together with supporting adapters and training objectives. Tier-2 consists of modules synthesized by the LLM during Code Space exploration and retained for later reuse. Both tiers use the same named-tensor interface, so the planner can treat them uniformly; Tier-2 cards additionally store the validation and promotion evidence collected when the module was admitted. Below, we first specify the card schema (§A.1), then list the Tier-1 library by category (§A.2), and finally show one card from each tier (§A.3). 
+
+A.1 Skill Card Fields and Tensor Interfaces 
+
+Table 5 groups the fields of a skill card by function. Two serialization conventions coexist in the implementation. Curated cards usually identify a skill by name and declare its interface with inputs and outputs . Generated cards also carry a skill_id and declare the interface with input_signature and output_signature . The two conventions 18 encode the same identity and interface information. Not every field is mandatory: the table lists the field groups that the library supports, and a compact curated card may leave its full tensor contract to the SkillSpec registered in Python. 
+
+Table 5 Fields of a skill card, grouped by function. The Validation and Promotion groups appear only in Tier-2 (generated) cards. 
+
+Field group Serialized fields Content and purpose 
+
+Identity and role name , skill_id , skill_name , category ,
+
+description / function_description 
+
+Stable identifier, functional category, and a natural-language description of the module. Tensor interface inputs , outputs ; or input_signature ,
+
+output_signature 
+
+Name, shape, and dtype of each input and output tensor; generated signatures may add a semantic annotation. Modeling context task_types / applicable_tasks ,
+
+inductive_bias , failure_signatures ,
+
+failure_modes_addressed 
+
+Applicable tasks, modeling assumptions, known interface failures, and the modeling weaknesses the skill is meant to address. Retrieval retrieval : summary , use_when , avoid_when ,
+
+task_types , architecture_roles ,
+
+input_modalities , output_semantics ,
+
+objectives , model_families , aliases ,
+
+query_examples 
+
+Descriptions and search terms used to match a modeling need to a reusable component. Composition composition : requires , produces ,
+
+common_upstream , common_downstream ,
+
+example_genome_fragment 
+
+Context keys read and written, typical neighboring skills, and an example invocation with constructor parameters. Usage and cost constraints , cost , good_for , bad_for ,
+
+compatible_with , mutation_roles 
+
+Optional restrictions, computational cost, compatibility hints, and suggested mutation roles. Implementation and provenance 
+
+source ; or implementation_path , class_name ,
+
+source_proposal_id , parent_skills ,
+
+mutation_lineage 
+
+Tier-1: original implementation and extraction type. Tier-2: location of the generated code and its proposal lineage. Validation (Tier-2) validation_status , validation_results ,
+
+portability 
+
+Results of static, forward/backward, and shape checks; where available, tests under other feature schemas and the resulting reuse scope. Promotion (Tier-2) promotion_status , promoted_at ,
+
+candidate_id , candidate_status ,
+
+candidate_metrics ,
+
+architecture_fingerprint , code_hash 
+
+Evidence from the candidate genome that contained the skill, plus identifiers that trace the retained architecture and code. 
+
+Tensor shapes and compatibility requirements. A tensor contract binds a name to a shape and a dtype. For example, field_embeddings has shape [B, F, D ], where B is the batch size, F the number of feature fields, and D the embedding dimension. Constructor arguments are supplied by the genome node that invokes the skill; the example invocation in a card may use placeholders such as ${embedding_dim} . Because dimensions are symbolic, a skill can be re-instantiated under a different feature schema, provided its declared constraints hold. This concerns the module definition only: trained weights are not assumed to transfer, and compatibility is checked for each concrete schema rather than guaranteed for all of them. Similarly, the upstream and downstream neighbors listed in a card serve only as retrieval hints. A connection in an actual genome is valid only when the instantiated tensor shapes and context keys match. 
+
+A.2 Curated Skills by Category 
+
+The curated library contains 94 skills in 11 categories . Table 6 reports the full size of each category and shows up to four skill identifiers per category; ellipses indicate omitted entries. Skills are grouped by the category field of their cards, and each skill is counted once even if it serves several tasks or model families. Categories are defined by functional role, and two of them need a brief note. scenario collects multi-domain components, and generative 
+
+collects semantic-ID and generative ranking components. The name generative refers to the modeling paradigm, not to how a skill was obtained: every skill in this table is a curated Tier-1 skill. Fusion adapters are listed under utility .19 Table 6 Curated Tier-1 skills by category. The Size column gives the full number of skills in each category. Up to four identifiers are shown per category; . . . denotes omitted entries. Identifiers and category assignments follow the stored skill manifests. 
+
+Category Size Role Example skill identifiers 
+
+embedding 4 Categorical and sequential feature embeddings. 
+
+field_aware_embedding_adapter , field_embedding ,
+
+sequence_field_embedding , shared_sequence_embedding interaction 11 Explicit feature interactions, attention, and gating. 
+
+afm_attention_pooling , autoint_attention , bilinear_interaction ,
+
+cen_feature_gate , . . . 
+
+tower 2 Dense representation transformations. 
+
+mlp_tower , shared_mlp_tower sequence 19 Sequence encoding, interest modeling, and temporal features. 
+
+dien_interest_evolution , din_target_attention ,
+
+exact_leakyrelu_transformer_encoder , full_augru_evolution , . . . 
+
+matching 7 Candidate scoring, retrieval, and negative sampling. 
+
+all_item_scoring_adapter , candidate_dot_logits , dot_product_logits ,
+
+in_batch_negative_head , . . . 
+
+multitask 10 Shared experts, task routing, and task-specific prediction. 
+
+aitm_transfer , esmm_chain_head , exact_attention_transfer ,
+
+mmoe_gate , . . . 
+
+scenario 11 Domain conditioning, adaptation, and prediction. 
+
+adaptdhm_cluster_tower , adasparse_pruned_tower ,
+
+domain_indicator_adapter , domain_select , . . . 
+
+generative 8 Quantization, semantic IDs, and generative recommendation. 
+
+exact_residual_quantizer_stack , exact_t5_encoder_decoder ,
+
+kmeans_sinkhorn_initialization , normalized_item_dot_head , . . . 
+
+head 6 Prediction logits, probabilities, and language-model outputs. 
+
+binary_ctr_head , linear_logit , sasrec_pairwise_logits ,
+
+sequence_lm_head , . . . 
+
+loss 9 Training objectives and regularization. 
+
+bce_loss , covariance_regularizer , dien_auxiliary_interest_loss ,
+
+hinge_loss , . . . 
+
+utility 7 Tensor adaptation, normalization, and fusion. 
+
+additive_fusion , concat_fusion , dense_feature_path , field_sum , . . . 
+
+Total 94 11 categories; 42 identifiers shown 
+
+20 A.3 Examples of Curated and Generated Skill Cards 
+
+We show one card from each tier: a component decomposed from an existing model (Tier-1) and a module generated by the Code Space LLM pipeline (Tier-2). Both listings are excerpts of stored manifests. Some fields are omitted for space; the retained fields keep their original values and nesting. 
+
+Curated skill example: factorization-machine interaction. The fm_interaction skill isolates the second-order interaction branch of DeepFM by wrapping the existing FM layer. The card (Listing 1) records the source location and extraction type, the second-order inductive bias, the tensor interface, and a minimal invocation. 
+
+> name: fm_interaction category: interaction description: Compute second-order factorization-machine interactions over field embeddings. inputs: - name: field_embeddings shape: "[batch_size, num_fields, embedding_dim]" dtype: float32 outputs: - name: fm_output shape: "[batch_size, 1]" dtype: float32 task_types: [ctr, ranking] inductive_bias: [second_order_feature_interactions] failure_signatures: [rank_not_3] constraints: input_rank: 3 cost: parameters: 0 compute: "O(batch_size * num_fields * embedding_dim)" source: file: torch_rechub/basic/layers.py class_or_function: FM extraction_type: wrapped retrieval: summary: "Use this for low-cost second-order feature interactions over field embeddings in CTR/ranking models." task_types: [ctr, ranking] architecture_roles: [interaction, second_order, factorization_machine] input_modalities: [field_embeddings] output_semantics: [interaction_logit, fm_output] composition: requires: [field_embeddings] produces: [fm_output] common_upstream: [field_embedding] common_downstream: [concat_fusion, binary_ctr_head] example_genome_fragment: skill: fm_interaction params: input_key: field_embeddings output_key: fm_output
+
+Listing 1 Tier-1 card example: FM interaction extracted from an existing implementation. 
+
+Generated skill example: covariance-based field mixing. The generated skill macro_field_covariance_-shrinkage_v1 was proposed while exploring a PLE-based multi-task genome. The design hypothesis was that suppressing field correlations that conflict across tasks, before the representation is shared, would reduce negative transfer. The module first normalizes the field embeddings and estimates cross-field correlations from the current batch. Two small networks map these statistics to the factors of a field-routing matrix, and a learned gate interpolates between this matrix and the identity. Channel projections and a residual connection complete the update. Both the input and the output are field_embeddings with shape [B, F, D ], so the module can be inserted between the feature path and the flattening step without changing any downstream interface. The card (Listing 2) is shown as follows: 
+
+> skill_id: macro_field_covariance_shrinkage_v1 name: macro_field_covariance_shrinkage_v1 category: routing task_types: [multitask]
+
+21 failure_modes_addressed: [negative_transfer_between_tasks] input_signature: - name: field_embeddings shape: [batch_size, num_fields, embedding_dim] dtype: float32 output_signature: - name: field_embeddings shape: [batch_size, num_fields, embedding_dim] dtype: float32 implementation_path: recskill/generated_skills/macro_field_covariance_shrinkage_v1.py class_name: FieldCovarianceShrinkage source_proposal_id: proposal_field_covariance_shrinkage_v1 validation_status: passed validation_results: static_check: {passed: true, issues: []} unit_tests: passed: true checks: {import: true, instantiate: true, forward: true, backward: true} issues: [] shape_tests: passed: true output_shapes: {field_embeddings: [2, 3, 16]} issues: [] portability_tests: passed: true portability: scope: schema_agnostic reuse_enabled: true constraints: {min_num_fields: 1} composition: requires: [field_embeddings] produces: [field_embeddings] example_genome_fragment: skill: macro_field_covariance_shrinkage_v1 params: covariance_rank: 8 embedding_dim: ${embedding_dim} num_fields: ${num_fields} shrinkage_hidden_dim: 16 promotion_status: promoted promoted_at: ’2026-08-04T17:21:03+00:00’ candidate_id: round1_code_macro_field_covariance_shrinkage_v1_p0 candidate_status: survivor candidate_metrics: validation_mean_auc: 0.9720098642670008 architecture_fingerprint: 1835d961a9028a03a224 
+
+Listing 2 Tier-2 card example: a generated and promoted field-mixing module. 
+
+Because the two cards follow the same tensor contract, the planner can wire either skill to any compatible neighbor. The tiers differ in provenance and in the evidence attached to it. A Tier-1 card records the source component and how it was extracted; a Tier-2 card additionally records the generated implementation, its verification results, and the candidate through which it entered the library. 
+
+# B Skill-Space Operators and Compatibility Checks 
+
+Table 7 specifies the four skill-space operator categories of Section 4.2.1 with their preconditions. Every precondition is checked statically against the genome DAG and the skill cards’ typed interfaces before a candidate is constructed, so a proposal that violates one is rejected without consuming any training budget. 22 Table 7 Typed mutation operators used by skill-space evolution.          
+
+> Operator Preconditions Example
+> Add The new skill’s required input keys are present in XG
+> or producible by one upstream hop, and its output key is accepted by the fusion layer. Insert a target-aware attention branch before the tower. Replace Input and output signatures are compatible, and the output key is preserved so downstream wiring is untouched. Replace mean pooling with target-aware atten-tion; replace the FM branch with identity (re-moval). Hybridize Two branches expose compatible fusion points and the merged graph remains acyclic and typed. Combine a DeepFM interaction branch with a DIN interest branch. Specialize Scenario or task metadata is available, and the change alters only hyperparameters, not skill_id
+> or wiring. Attach a domain-specific adapter; widen a branch under a larger capacity budget.
+
+# C Evaluation Tasks, Datasets, and Models 
+
+C.1 Tasks and Evaluation Objectives 
+
+We evaluate our framework on four representative recommendation tasks, covering single-objective prediction, multi-task learning, multi-domain learning, and joint quality–efficiency optimization. • Click-Through Rate (CTR) Prediction. Given a user–item pair with its contextual features, CTR prediction estimates the probability that the user interacts with (e.g., clicks) the item, which is formulated as binary classification. The model is trained with binary cross-entropy (BCE) loss and evaluated by AUC and LogLoss, following common CTR benchmarks (Zhu et al., 2021). • Multi-Task Learning (MTL). MTL jointly optimizes several related prediction objectives with a single model, where the tasks share part of the model’s parameters so that knowledge transfers between them (Caruana, 1997; Ma et al., 2018a). The key challenge is to balance useful sharing against negative transfer between tasks. The overall loss is the (weighted) sum of per-task BCE losses, and we report the AUC of each task. • Multi-Domain Learning (MDL). Also known as multi-scenario recommendation, MDL serves samples from several domains (scenarios) with one unified model. The domains share the same feature space and label, but their data distributions differ (Sheng et al., 2021). The model must capture both what the domains share and what is specific to each domain. Following Li et al. (2025b), we report AUC for each domain and overall. • Multi-Objective Optimization: AUC Co-optimized with MFU. Beyond predictive quality, industrial recommenders must also use hardware efficiently. In this task, a searched architecture is judged jointly by (i) its predictive quality (AUC) and (ii) its Model FLOPs Utilization (MFU) (Chowdhery et al., 2023). MFU is the ratio of achieved training FLOP/s to the hardware’s theoretical peak FLOP/s. The goal is to find architectures that improve AUC without lowering MFU (or that reach a better AUC–MFU Pareto front). 
+
+C.2 Datasets and Data Splits 
+
+Table 8 summarizes the statistics of all datasets used in the four tasks. The details are as follows. • CTR task. 
+
+– MovieLens (Harper and Konstan, 2015): a movie-rating dataset collected by GroupLens, containing user demographic features and movie attributes. We use the MovieLens-1M version. 
+
+– Amazon Beauty and Amazon Books (McAuley et al., 2015; He and McAuley, 2016): two category subsets of the Amazon product review corpus, containing user ratings together with item metadata. Books is the largest CTR dataset in our study (over 19M interactions), so it tests whether searched architectures scale to large data. All three datasets are split into training, validation, and test sets with a ratio of 7:1:2. • MTL task. 
+
+23 Table 8 Dataset statistics. For the six accuracy benchmarks, # models is the number of manually designed architectures in the comparison set. For QK-Video, it is the number of UniRank seed models used to compile the generative ranking skill library. Split sizes are numbers of interactions.                                  
+
+> Task # Models or seeds Dataset # Interactions Train Val Test
+> CTR 7MovieLens 700.15K 100.02K 200.04K Beauty 1.20M 171.26K 342.51K Books 13.76M 1.97M 3.93M MTL 5Census 199.52K 49.88K 49.88K MDL 11 Amazon 658.83K 82.35K 82.35K MovieLens 800.17K 100.02K 100.02K Multi-objective 15 QK-Video 394.65M 50.08M 48.58M
+
+– Census-Income (KDD) (Lane and Kohavi, 2000): a UCI benchmark extracted from the 1994–1995 U.S. Current Population Surveys, with about 300K records and 40 demographic and employment attributes. It is widely used to evaluate multi-task recommenders (Ma et al., 2018a; Tang et al., 2020). • MDL task. Both datasets follow the preprocessing protocol of the Scenario-Wise Rec benchmark (Li et al., 2025b), with an 8:1:1 split. 
+
+– Amazon (Ni et al., 2019): three product categories ( Clothing , Beauty , and Health ) are treated as three domains. 
+
+– MovieLens (Harper and Konstan, 2015): interactions are divided into three domains by user age group (1–24 , 25–34 , and 35+ ). • Multi-objective task. 
+
+– QK-Video (Yuan et al., 2022): the largest sub-dataset of the Tenrec benchmark, collected from Tencent’s QQ Kandian video-recommendation platform. It contains about 493M user–video interactions. Its industrial scale makes it well suited to measuring training efficiency (MFU) together with predictive quality. 
+
+C.3 Baseline and Seed Models 
+
+For each task, the manually designed architectures listed below serve as manual baselines (Table 8). 
+
+CTR baselines (7 models). 
+
+• Wide&Deep (Cheng et al., 2016): jointly trains a wide linear model (for memorization) and a deep MLP (for generalization). • DeepFM (Guo et al., 2017): replaces the wide part of Wide&Deep with a factorization machine (FM). The FM and the deep network share one embedding layer, so no manual feature engineering is needed. • DCN (Wang et al., 2017): adds a cross network that explicitly models bounded-degree feature interactions, in parallel with a deep network. • DCN-V2 (Wang et al., 2021): improves DCN with a more expressive cross layer, and supports both stacked and parallel structures. • EDCN (Chen et al., 2021): strengthens parallel CTR models by sharing information between the explicit and implicit interaction branches through bridge and regulation modules. • AFM (Xiao et al., 2017): extends FM with an attention network that learns a separate importance weight for each second-order feature interaction. 24 • AutoInt (Song et al., 2019): learns high-order feature interactions automatically with stacked multi-head self-attention layers. 
+
+MTL baselines (5 models). 
+
+• Shared-Bottom (Caruana, 1997): all tasks share the bottom layers, and each task has its own tower on top. • MMoE (Ma et al., 2018a): replaces the shared bottom with a set of shared experts, combined by task-specific gating networks. • PLE (Tang et al., 2020): separates task-specific experts from shared experts and extracts representations progressively across levels, which reduces negative transfer and the seesaw phenomenon. • ESMM (Ma et al., 2018b): models post-view CTR and CTCVR over the entire sample space, which addresses sample selection bias and data sparsity in conversion-rate estimation. • AITM (Xi et al., 2021): models the sequential dependence among multi-step conversions with an adaptive information-transfer module based on attention. 
+
+MDL baselines (11 models). 
+
+• Shared-Bottom (Caruana, 1997), MMoE (Ma et al., 2018a), and PLE (Tang et al., 2020): multi-task architectures adapted to MDL by treating each domain as a task. • STAR (Sheng et al., 2021): a star-topology network whose shared centered parameters are combined element-wise with domain-specific parameters. It also uses partitioned normalization and an auxiliary network. • SAR-Net (Shen et al., 2021): a scenario-aware ranking network that transfers users’ cross-scenario interests through scenario-specific attention and mixes scenario-specific and shared experts. • AdaSparse (Yang et al., 2022): learns adaptively sparse network structures for each domain with lightweight domain-aware neuron-level weighting factors. • AdaptDHM (Li et al., 2022a): an adaptive distribution hierarchical model that clusters samples into distributions dynamically and routes each sample to the matching expert, without relying on predefined domain labels. • EPNet and PPNet (Chang et al., 2023): the two components of PEPNet. EPNet personalizes embeddings with domain-side prior information, and PPNet personalizes the DNN parameters of each layer with user/item-side prior information via gate networks. • HAMUR (Li et al., 2023): a hyper adapter framework. A shared hyper-network dynamically generates the parameters of domain-specific adapters that plug into backbone models. We include a large and a small variant, which differ in model capacity. • M3oE (Zhang et al., 2024b): a multi-domain, multi-task mixture-of-experts framework with shared, domain-specific, and task-specific experts, fused through a two-level structure whose fusion weights are found by AutoML. 
+
+UniRank seed models for generative ranking (15 models). For this setting, the seed-model set comprises the 15 generative ranking architectures listed by the UniRank benchmark (Li et al., 2026) 5: OneTrans, RankMixer, Zenith, HyFormer, MixFormer, TokenMixer, HiFormer, INFNet, EST, LONGER, HeMix, UniMixer, TokenFormer, UltraHSTU, and SSR. These architectures are the source models from which the generative ranking skill library is compiled, and each is described in Appendix E.3. RankMixer (Zhu et al., 2025) is the seed backbone used to initialize the reported co-evolution run; the other 14 seed models are source architectures rather than separately evaluated baselines in the AUC–MFU table. 
+
+> 5https://github.com/salmon1802/UniRank
+
+25 D Training, Search, and Hardware Settings 
+
+The EvoSkillRec experiments fall into two groups. The first group runs accuracy-oriented architecture search on the CTR, multi-task (MTL), and multi-domain (MDL) benchmarks, where every candidate is trained on a single GPU 
+
+and selected by validation AUC. The second group runs AUC–MFU co-evolution on the industrial-scale QK-Video corpus, where every candidate is trained with multi-GPU data parallelism and selected jointly on validation AUC and measured hardware efficiency. The two groups share the search procedure and the LLM pipeline, but differ in data scale, training recipe, and selection rule. All settings are fixed within a search run and are identical for every candidate in that run. The two automated baselines are described separately in Section D.5. 
+
+D.1 Model Training and Initial Architectures 
+
+Shared recipe The EvoSkillRec candidate models are implemented in PyTorch and trained from scratch with Adam at a learning rate of 10 −3, without learning-rate schedules or warmup. Each prediction target is trained with binary cross-entropy; for multi-task datasets the losses of all tasks are summed with equal weights. Table 9 compares the remaining settings of the two experiment groups.                          
+
+> Table 9 Training settings shared by EvoSkillRec candidates in each experiment group. MDL: multi-domain learning. Setting CTR / MTL / MDL benchmarks AUC–MFU co-evolution Optimizer Adam, lr 10 −3Adam, lr 10 −3
+> Weight decay dataset-specific (Table 10) 0Batch size dataset-specific (Table 10) 8,192 per GPU Epochs dataset-specific, with early stopping 1Gradient clipping -global norm 10 Precision FP32 BF16 autocast Embedding dimension 16 (CTR, MDL); 8 (MTL) 16 Model selection best validation AUC validation mean AUC over tasks Reported metrics AUC, logloss AUC, gAUC, logloss Random seed 2022 2026
+
+CTR, MTL, and MDL benchmarks. Table 10 lists the dataset-specific settings. Training stops when the selection metric does not improve for the given number of epochs, and the best checkpoint is restored before test evaluation. The selection metric is validation AUC for CTR, the mean validation AUC of the income and marital-status tasks for Census-Income, and the global validation AUC over all domains for MDL (per-domain AUC is reported separately). CTR datasets are split chronologically into 70%/10%/20% for training, validation, and test. Census-Income uses the standard prepared splits with 32 categorical and 7 continuous features. The MDL datasets use a random 80%/10%/10% split with three domains.                                           
+
+> Table 10 Dataset-specific training settings on the CTR, MTL, and MDL benchmarks. Epochs is the maximum number of epochs; patience is the early-stopping patience in epochs. Task Dataset Batch size Epochs Weight decay Patience CTR MovieLens-1M 1,024 53×10 −43CTR Amazon-Beauty 8,192 23×10 −42CTR Amazon-Books 8,192 23×10 −42MTL Census-Income 2,048 510 −43MDL MovieLens 4,096 110 −53MDL Amazon 4,096 110 −53
+
+The EvoSkillRec search starts from a standard model for each task (Table 23): DeepFM for CTR, Shared-Bottom for MTL, and SAR-Net for MDL on both MovieLens and Amazon. The CTR seed uses hidden widths (256 , 128 , 64) , ReLU, and dropout 0.2. The MTL seed uses a shared backbone of (128 , 64) , task heads with one hidden layer of width 32, ReLU, and dropout 0.1. On both MDL datasets, the SAR-Net seed uses eight shared experts and two domain-specific experts of dimension 16, with no dropout. These values define only the starting point; evolution is free to change the structure and the architecture-specific parameters. 26 AUC–MFU co-evolution. Table 11 summarizes the industrial-scale dataset used here. The user ID is the grouping key for gAUC. Every candidate is trained for one epoch and evaluated once at the end of the epoch. The search starts from RankMixer, which on QK-Video uses three RankMixer blocks with expansion ratio 2, four non-sequential tokens of dimension 128, and task towers of widths (128 , 64) . User behavior sequences are truncated or padded to length 100 and processed by target attention with hidden widths (256 , 128) , Dice activation, and no dropout or batch normalization. The resulting model has 141.7M parameters, of which 140.0M are embeddings and 1.66M are dense.         
+
+> Table 11 The industrial-scale dataset used for AUC–MFU co-evolution, together with the RankMixer token dimension used on it. Sample counts are taken from the parquet metadata. Dataset QK-Video Train 394,647,318 Validation 50,079,027 Test 48,579,958 Tasks 4Feature fields 10 Token dim 128
+
+D.2 Search Budgets and Survivor Selection 
+
+Each EvoSkillRec generation evaluates a fixed budget of N candidates, split between skill-space and code-space proposals. Skill-space proposals apply one of four operators (add, replace, hybridize, specialize) to retrieved skill cards. Code-space proposals are macro-level modules produced by the LLM and wired into the parent genome either between two existing nodes or in place of one node, with input and output shapes preserved. Before training, each generated module is checked for syntax, importability, tensor-shape compatibility, and genome validity. Candidates whose architecture fingerprint matches a previously evaluated architecture, including those stored in the evolution memory, are skipped. A code-space module becomes a reusable skill only after its candidate survives selection and passes the portability check. 
+
+Budget controller. The split of N between the two spaces is adjusted online. If the best validation score has not improved by at least 10 −3 for two consecutive generations, the controller moves budget from skill space to code space, up to the maximum code quota; any qualifying improvement resets it to the initial split. N itself never changes. When the LLM returns fewer valid proposals than its quota, skill-space candidates fill the remaining slots. Table 12 lists the per-run values.                                                             
+
+> Table 12 Evolution settings for each EvoSkillRec search run. B/B denotes Amazon-Beauty and Amazon-Books, which share one configuration. Quotas are given as numbers of candidates per generation. CTR MTL MDL Co-evo. Setting ML-1M B/B Census ML Amazon QK-Video Generations 25 25 25 25 25 30 Candidate budget N888886Survivors kept K434442Initial skill / code quota 6/2 6/2 6/2 6/2 6/2 4/2 Code quota increment 212112Maximum code quota 666664Minimum skill quota 222222Stagnation patience 222222
+
+Survivor selection. On the CTR, MTL, and MDL benchmarks, survivor selection follows Algorithm 1. Let s(G)
+
+denote the task’s validation AUC metric and ¯st = mean G∈Q t s(G) the generation mean. The survivor set Σt consists of the top-K candidates by s(G) among those satisfying s(G) ≥ ¯st − δ, where δ is the tolerance in Algorithm 1. These survivors become the next generation’s parents, and only generated skills carried by a survivor are promoted to Tier-2. If no candidate survives, the current parents are kept. In co-evolution, selection is made on a constrained Pareto front of validation mean AUC and end-to-end training MFU. A candidate is eligible only if its validation AUC is within 27 0.001 of the incumbent best and its training MFU is at least 95% of the baseline’s, with a stable MFU measurement (see Section D.3). Candidates without a valid hardware measurement are discarded. Test metrics are never used for selection in either setting. 
+
+D.3 Hardware Setup and MFU Measurement 
+
+All experiments run on a single node with eight NVIDIA A800-SXM4 GPUs (80 GB each) and two Intel Xeon Platinum 8358 CPUs. On the CTR, MTL, and MDL benchmarks, each candidate is trained on one GPU, and up to eight candidates are evaluated in parallel. In co-evolution, each candidate is trained with distributed data parallelism on six GPUs. 
+
+Measuring model FLOPs utilization. MFU is the ratio between achieved training FLOP/s and the BF16 dense peak of the A800 (312 TFLOP/s per GPU). FLOPs per sample are counted on a single profiled training step after 30 warm-up steps. Step time is then measured over 150 steps split into three windows, and in each window the slowest rank determines the step time. The measurement is end-to-end: it includes data loading and all training-loop overhead. We accept a measurement only if the coefficient of variation of MFU across windows is at most 0.05. Table 13 reports the resulting values for the RankMixer baseline on QK-Video.       
+
+> Table 13 Hardware measurements of the RankMixer baseline on QK-Video (6 GPUs, BF16, batch size 8,192 per GPU). Quantity Value FLOPs per sample 58.67 M Training MFU 1.43% Step time 107.5 ms Peak memory per GPU 8.12 GB
+
+The baseline MFU is low, which is common for embedding-heavy ranking models whose dense part is small. This is the main reason we optimize MFU rather than FLOPs alone. 
+
+D.4 LLM Settings for Planning and Code Generation 
+
+Code-space proposals are generated in two stages. A planner receives the parent genome, task and tensor dimensions, recent validation and hardware metrics, records of failed candidates, the current budget state, and the evolution history, and returns a set of architecture sketches. A synthesizer turns selected sketches into JSON proposals, each containing a PyTorch module, its tensor signature, the wiring location in the genome, and skill metadata. The LLM is called separately for each parent that receives code-space budget, so the total number of calls per generation depends on the controller state. Generated modules may not read or write files, spawn processes, or access the network. If the LLM fails to return a valid proposal after the allowed attempts, no template-based fallback is used and the slot is filled from skill space. See Table 14 for our settings.                         
+
+> Table 14 LLM settings. Sketches and proposals are requested per parent that receives code-space budget. Decoding parameters not set by our wrapper follow the provider defaults. Setting CTR / MTL / MDL Co-evolution Backend / model Codex CLI, GPT-5.5 Codex CLI, GPT-5.5 Stages planner →synthesizer planner →synthesizer Sketches requested 8 (ML-1M CTR), 12 (others) 8Proposals requested 3 (B/B CTR), 2 (others) 2Attempts per stage 1 (CTR), 2 (MTL, MDL) 2Timeout per call 300 s 900 s Output format one JSON object per call one JSON object per call Temperature / top-p/ max tokens provider default provider default
+
+28 D.5 Implementation of the Automated Search Baselines 
+
+This section describes the NASRec weight-sharing search baseline and the OpenEvolve code-evolution baseline evaluated on the six CTR, MTL, and MDL benchmarks in Table 1. Our implementations adapt these methods to the recommendation tasks considered here. The task-specific data processing, model interfaces, search settings, and evaluation protocols used in these experiments are detailed below. Both use standalone PyTorch models and a shared candidate trainer, with the same preprocessing, data splits, random seed, optimizer, and early-stopping settings. Their dataset-specific training schedules match those in Table 10; method-specific search procedures and budgets are detailed below. These settings apply to the six accuracy benchmarks, separately from the QK-Video co-evolution experiment. Each baseline candidate uses one GPU and random seed 2022; independent workers can run across the eight-GPU node described in Section D.3. 
+
+Datasets, labels, and input features. Table 15 records the baseline input and label configurations. Both baselines use temporal 70%/10%/20% splits for CTR, the prepared Census-Income train/validation/test files, and seeded random 80%/10%/10% splits for MDL, following the dataset protocols in Section D.1. Amazon CTR uses the provided binary 
+
+label column. For Amazon MDL, Beauty, Clothing, and Health form three domains, and ratings greater than 3 are positive. MovieLens CTR uses ratings of at least 4 as positives; MovieLens MDL uses ratings of at least 3. The latter groups age codes into {1, 18 }, {25 }, and {35 , 45 , 50 , 56 }, corresponding to the age groups in Section C.2. Categorical features are label-encoded with zero reserved for missing or padding entries. Continuous features use a separate dense-feature path; MovieLens MDL normalizes the age feature. Embedding dimensions are 16 for CTR and MDL and 8 for MTL.                             
+
+> Table 15 Input configurations of the two automated baselines. CTR splits are temporal, Census-Income uses prepared files, and MDL splits are seeded random splits. Sparse and dense refer to categorical and continuous input features, respectively. Dataset / task Samples Target Input features MovieLens / CTR 1,000,209 rating ≥47 sparse Books / CTR 19,651,355 provided binary label 2 sparse Beauty / CTR 1,712,558 provided binary label 2 sparse Census / MTL 299,285 income and marital status 32 sparse + 7 dense Amazon / MDL 823,534 rating >32 sparse; 3 domains MovieLens / MDL 1,000,209 rating ≥36 sparse + 1 dense; 3 domains
+
+Candidate training and validation-based selection. Each candidate implements a PyTorch nn.Module and is trained with Adam and binary cross-entropy with logits. Table 16 lists the shared baseline hyperparameters. The selection metric is validation AUC for CTR, the arithmetic mean of the two validation AUCs for Census-Income, and global validation AUC across domains for MDL. The corresponding test metrics are evaluated after candidate selection and do not guide search. For Census-Income, both baseline trainers average the two task losses with equal weights; the EvoSkillRec training description in Section D.1 uses their sum. Thus, the matching schedules do not imply identical loss normalization. For MDL, global and per-domain AUC are reported separately.                                           
+
+> Table 16 Candidate-training settings shared by the NASRec and OpenEvolve baselines. Epochs is the maximum number of epochs, and patience is measured in epochs. These hyperparameters match Table 10; the Census loss reduction is described in the text. Dataset / task Epochs Batch Learning rate Weight decay Patience MovieLens / CTR 51,024 10 −33×10 −43Books / CTR 28,192 10 −33×10 −42Beauty / CTR 28,192 10 −33×10 −42Census / MTL 52,048 10 −310 −43Amazon / MDL 14,096 10 −310 −53MovieLens / MDL 14,096 10 −310 −53
+
+Configured candidate budgets. Table 17 gives the configured budgets. Each baseline requests B = 250 standalone candidate-training slots on MovieLens CTR and MovieLens MDL, and B = 200 on the other four benchmarks. For 29 OpenEvolve search, these correspond to 25 rounds with at most nb = 10 or 8 proposals per round, respectively. EvoSkillRec uses 25 rounds with eight candidate slots per round on all six benchmarks (Table 12). These are configured budgets, not counts of successfully trained models; invalid or failed proposals are not reported as successful evaluations. NASRec search additionally trains a weight-sharing supernet before standalone candidate training. Accordingly, candidate budgets do not measure total search computation.                                   
+
+> Table 17 Configured candidate budgets on the six accuracy benchmarks. Bis the standalone training budget for each automated baseline. nb=B/ 25 is the OpenEvolve per-round proposal limit. EvoSkillRec uses 25 ×8 = 200 candidate slots on each benchmark. Supernet training is additional to the NASRec budget B.Dataset / task nbEach baseline: BEvoSkillRec: slots MovieLens / CTR 10 250 200 Books / CTR 8200 200 Beauty / CTR 8200 200 Census / MTL 8200 200 Amazon / MDL 8200 200 MovieLens / MDL 10 250 200
+
+NASRec architecture search. The baseline samples a pool of 2B architectures from a fixed, task-specific search space and trains a weight-sharing supernet for three epochs. Architectures are sampled in a balanced manner during supernet training and ranked by inherited validation AUC. The highest-ranked distinct architectures are then instantiated as standalone models and trained independently under Table 16, up to budget B. This separates inherited-weight screening from the standalone evaluation used to select the reported model. The search spaces are: • CTR: linear, FM, deep MLP, cross-network, AutoInt, and SENET-deep branches, with sum, gated, or concatenation-MLP fusion. The default configuration has embedding dimension 16, hidden widths (256 , 128 , 64) , dropout 0.2, three cross layers, and two attention heads. • MTL: Shared-Bottom, MMoE, PLE, and task-specific towers, with variants using 4–8 experts and representation widths of 32–128. • MDL: Shared-Bottom, STAR, MMoE, PLE, SAR-Net, and domain-specific towers, including 4–8-expert and wider STAR variants. 
+
+OpenEvolve code evolution. The proposal provider receives the current population, archive, recent failures, and island-specific parents, and generates ordinary PyTorch model modules. The entry point is tools/ordinary_mod el_llm_provider.py . Each proposal must define build_model(context) , use the feature dimensions provided by 
+
+context , and return logits with the required task-specific shape. Candidate code cannot import EvoSkillRec genome classes or access the filesystem or network. Before training, proposals undergo static safety, import/instantiation, forward-shape, and output-contract checks. Valid proposals use the same standalone trainer as the NASRec baseline. The search maintains a population of 32, an archive of 64, four islands, and two parents per proposal. One provider call per round returns at most nb proposals. Invalid proposals and training failures are recorded; they are not assigned test results.                  
+
+> Table 18 Method-specific search settings. Band nbare defined in Table 17; they do not denote completed evaluation counts. Method Search and training budget Search state NASRec 3 supernet epochs; 2Bscreened architectures; Bstandalone training slots Balanced sampling and inherited-AUC ranking OpenEvolve 25 provider calls; at most nbproposals per round; Bconfigured training slots Population 32; archive 64; 4 islands; 2 parents per proposal
+
+Shared settings and differences between methods. The two baselines share their data and candidate-training implementation, and the optimizer settings, epoch limits, batch sizes, and validation selection metrics align with those reported for EvoSkillRec. The Census loss reduction differs as specified above. Search spaces, candidate 30 representations, and proposal procedures remain method-specific; the comparison therefore evaluates the configured search systems under the reported protocols. Candidate records retain architecture and metric information, elapsed time, and the failure stage where applicable, to support inspection of individual evaluations. 
+
+# E Detailed Experimental Results 
+
+E.1 Baseline Comparisons on the Six Accuracy Benchmarks 
+
+This appendix gives the full results behind Table 1 on all six datasets. Table 19 covers CTR prediction, Table 20 covers MTL on Census, and Tables 21 and 22 cover MDL on Amazon and MovieLens. Each table lists all manual models together with EvoSkillRec. EvoSkillRec achieves the best performance on all six datasets, outperforming every manually designed model and every automated baseline. Relative to the strongest manual model, it improves AUC by 0.0035, 0.0121, and 0.0179 on the three CTR datasets, by 0.0022 in mean AUC on Census, and by 0.0021 and 0.0008 on the two MDL datasets. These consistent gains across all datasets show that the proposed framework can discover models that outperform expert-designed architectures. 
+
+Table 19 CTR prediction results on three datasets. AUC is higher-better ( ↑) and Logloss is lower-better ( ↓). The best manual-model result in each column is in bold and the second best is underlined. 
+
+MovieLens Amazon Books Amazon Beauty Model AUC ↑ Logloss ↓ AUC ↑ Logloss ↓ AUC ↑ Logloss ↓
+
+Manual models 
+
+Wide & Deep 0.7487 0.5921 0.6587 0.5073 0.6565 0.5052 DeepFM 0.7482 0.5921 0.6575 0.5024 0.6566 0.5107 DCN 0.7484 0.5895 0.6573 0.5048 0.6570 0.4839 DCN-V2 0.7479 0.5904 0.6571 0.4953 0.6612 0.5404 EDCN 0.7487 0.5880 0.6567 0.4960 0.6639 0.4585 
+
+AFM 0.7474 0.5869 0.6562 0.4958 0.6254 0.4714 AutoInt 0.7455 0.5932 0.6579 0.5029 0.6666 0.5629 
+
+EvoSkillRec 0.7522 0.5857 0.6708 0.4952 0.6845 0.4441 
+
+Table 20 Multi-task results on Census, reported as test AUC ( ↑). Income and Marital prediction are regarded as two tasks; Mean AUC is averaged over the two shared tasks. The best manual-model result in each column is in bold and the second best is underlined; tied entries are marked together. 
+
+Model Income (CVR) Marital (CTR) Mean AUC 
+
+Manual models 
+
+AITM 0.9507 0.9944 0.9726 PLE 0.9502 0.9946 0.9724 Shared-Bottom 0.9492 0.9946 0.9719 MMoE 0.9485 0.9945 0.9715 ESMM 0.8463 0.9912 0.9188 
+
+EvoSkillRec 0.9550 0.9946 0.9748 
+
+E.2 Architecture Changes and Scores by Generation 
+
+This appendix shows how EvoSkillRec evolves the genome, generation by generation, on all six datasets. Table 23 lists the seed model of each run. Tables 24–26 cover CTR prediction on MovieLens, Amazon-Beauty, and Amazon-Books, Table 27 covers MTL on Census, and Tables 28 and 29 cover MDL on Amazon and MovieLens-1M. Each table lists the best surviving candidate of every generation, the space it comes from, the mutation applied, and its validation and test scores. A generation is omitted from a table when none of its mutations produced a valid candidate, so the generation indices in these tables are not always consecutive. 31 Table 21 Multi-domain results on Amazon. We report overall test AUC and Logloss (LL), as well as per-domain test AUC. Manual models are sorted by validation AUC, which is used for model selection. Among the manual models, the best result in each column is in bold and the second best is underlined. 
+
+Overall Per-domain AUC ↑
+
+Model AUC ↑ LL ↓ D0 D1 D2
+
+Manual models 
+
+SAR-Net 0.7012 0.4632 0.6970 0.6768 0.7204 
+
+M3oE 0.6905 0.4678 0.6859 0.6752 0.7026 AdaSparse 0.6876 0.4681 0.6800 0.6636 0.7080 MMoE 0.6756 0.4765 0.6669 0.6520 0.6973 PPNet 0.6771 0.4720 0.6765 0.6458 0.6991 HAMUR 0.6748 0.4778 0.6718 0.6484 0.6971 Shared-Bottom 0.6748 0.4732 0.6626 0.6498 0.6986 EPNet 0.6751 0.4772 0.6690 0.6559 0.6919 PLE 0.6719 0.4749 0.6647 0.6502 0.6969 STAR 0.6690 0.4749 0.6680 0.6397 0.6883 AdaptDHM 0.6305 0.5052 0.6331 0.6079 0.6504 
+
+EvoSkillRec 0.7033 0.4624 0.6963 0.6780 0.7240 
+
+Table 22 Multi-domain results on MovieLens. We report overall test AUC and Logloss (LL), as well as per-domain test AUC. Manual models are sorted by validation AUC, which is used for model selection. Among the manual models, the best result in each column is in bold and the second best is underlined. 
+
+Overall Per-domain AUC ↑
+
+Model AUC ↑ LL ↓ D0 D1 D2
+
+Manual models 
+
+AdaSparse 0.7920 0.5393 0.7974 0.7961 0.7856 SAR-Net 0.7924 0.5384 0.7970 0.7953 0.7869 
+
+EPNet 0.7917 0.5390 0.7972 0.7960 0.7866 M3oE 0.7912 0.5419 0.7945 0.7950 0.7852 Shared-Bottom 0.7918 0.5399 0.7964 0.7952 0.7841 MMoE 0.7905 0.5432 0.7975 0.7948 0.7835 HAMUR 0.7900 0.5423 0.7965 0.7953 0.7849 PLE 0.7890 0.5420 0.7961 0.7949 0.7851 PPNet 0.7889 0.5422 0.7967 0.7955 0.7791 STAR 0.7846 0.5470 0.7866 0.7891 0.7784 AdaptDHM 0.7805 0.5553 0.7802 0.7851 0.7744 
+
+EvoSkillRec 0.7932 0.5371 0.7971 0.7970 0.7871 
+
+32 The mutation operators are as follows. In the skill space, specialize adapts an existing Tier-1 path, add inserts a library skill as a new node, replace substitutes one module of the genome with an interface-compatible Tier-1 module while leaving the rest of the genome unchanged (its argument names the architecture the module comes from; e.g., sarnet 
+
+denotes SAR-Net’s expert-mixer module, sarnet_expert_mixer ), hybridize recombines two Tier-1 branches, and 
+
+reuse draws a promoted Tier-2 skill. In the code space, invent writes a new module from scratch. Selection uses validation AUC only; test scores are reported but never used in the search. A ✓ marks a generation whose validation AUC beats the best so far, seed included. Three patterns hold across the runs. First, both spaces produce large jumps in validation AUC. Code-space inventions account for several of them (e.g., generations 3 and 9 on Amazon-Beauty and generations 0 and 4 on Amazon-Books), and skill-space steps account for others (e.g., the module-level replace sarnet at generation 12 on Amazon MDL). Second, skills used early in a run often appear again in later generations. On MovieLens, autoint_senet_bridge_ branch_r3 is invented at generation 3 and gives the best test AUC and logloss when reused at generation 6. On Census, macro_field_covariance_shrinkage_v1 , used in the skill-space candidate at generation 0, appears in most later skill-space rows. Third, because selection uses validation data only, a higher validation score does not always carry over to test. 
+
+Table 23 Seed architecture for each task and dataset. Every run initializes the genome with an established architecture and evolves from there. 
+
+Task Dataset Seed architecture 
+
+CTR prediction MovieLens DeepFM Amazon-Beauty DeepFM Amazon-Books DeepFM Multi-task learning Census Shared-Bottom Multi-domain learning Amazon (5-core) SAR-Net MovieLens-1M SAR-Net 
+
+Table 24 Evolution trace for CTR prediction on MovieLens, seeded with DeepFM. Each row is the best surviving candidate of one generation. Operators and markers are defined in Appendix E.2.                                                                                                                                                              
+
+> Val Test Gen. Space Mutation AUC AUC LL Imp.
+> 0Skill specialize senet_fm 0.7570 0.7513 0.5843 ✓
+> 1Skill specialize senet_fm 0.7570 0.7515 0.5845 2Skill add crossnet_v2 0.7568 0.7519 0.5838 3Code invent autoint_senet_bridge_branch_r3 0.7566 0.7518 0.5836 4Code invent contextual_subspace_moe_branch_r4 0.7570 0.7520 0.5825 ✓
+> 5Code invent bilinear_spline_interaction_branch_r5 0.7571 0.7519 0.5828 ✓
+> 6Skill reuse autoint_senet_bridge_branch_r3 0.7574 0.7529 0.5817 ✓
+> 7Skill reuse autoint_senet_bridge_branch_r3 0.7566 0.7520 0.5831 8Code invent cin_cross_tower_replace_r9 0.7574 0.7515 0.5862 9Code invent field_cumulant_moment_branch_r10 0.7568 0.7516 0.5849 10 Skill reuse field_relation_capsule_branch_r3 0.7577 0.7512 0.5863 ✓
+> 11 Skill reuse autoint_senet_bridge_branch_r3 0.7572 0.7513 0.5864 12 Skill reuse field_relation_capsule_branch_r3 0.7574 0.7523 0.5853 13 Skill reuse oblivious_cross_tree_branch_r6 0.7570 0.7514 0.5855 14 Skill reuse autoint_senet_bridge_branch_r3 0.7571 0.7515 0.5849 15 Skill reuse autoint_senet_bridge_branch_r3 0.7572 0.7515 0.5850 16 Skill reuse oblivious_cross_tree_branch_r6 0.7572 0.7519 0.5858 17 Skill reuse oblivious_cross_tree_branch_r6 0.7576 0.7517 0.5859 18 Code invent contrastive_hyperedge_bank_replace_r20 0.7576 0.7517 0.5859 19 Skill reuse oblivious_cross_tree_branch_r6 0.7569 0.7516 0.5856 20 Skill reuse oblivious_cross_tree_branch_r6 0.7575 0.7519 0.5857 21 Code invent field_tuple_contrastive_memory_branch_r22 0.7576 0.7517 0.5859 22 Code invent neural_bdd_clause_lattice_replace_r23 0.7579 0.7522 0.5857 ✓
+> 23 Skill reuse field_product_kernel_branch_r11 0.7572 0.7511 0.5855
+
+33 Table 25 Evolution trace for CTR prediction on Amazon-Beauty, seeded with DeepFM. Operators and markers are defined in Appendix E.2. 
+
+Val Test Gen. Space Mutation AUC AUC LL Imp. 
+
+0 Skill relation_capsule_router_branch 0.6943 0.6755 0.3893 ✓
+
+1 Skill reuse fourier_pair_kernel_branch 0.6945 0.6747 0.3869 ✓
+
+2 Code invent tensor_train_field_interaction 0.6966 0.6761 0.3915 ✓
+
+3 Code invent lowrank_cross_attention_tower 0.7015 0.6809 0.4256 ✓
+
+4 Code invent fourier_volterra_kernel_branch 0.7012 0.6807 0.4264 5 Code invent contextual_branch_token_transformer_fusion 0.7013 0.6803 0.4255 6 Skill reuse contextual_branch_token_transformer_fusion 0.7014 0.6806 0.4260 7 Skill hybridize crossnet_afm 0.7014 0.6806 0.4260 9 Code invent contextual_field_reparameterizer 0.7082 0.6843 0.4451 ✓
+
+10 Skill reuse contextual_branch_token_transformer_fusion 0.7084 0.6847 0.4465 ✓
+
+11 Skill hybridize crossnet_afm 0.7082 0.6843 0.4451 14 Code invent sobol_tensor_mixture_cross_branch 0.7087 0.6844 0.4423 ✓
+
+15 Skill reuse symmetric_bilinear_crossnet_branch 0.7088 0.6842 0.4420 ✓
+
+16 Skill hybridize crossnet_afm 0.7088 0.6842 0.4420 18 Skill reuse adaptive_crossnet_expert_branch_1 0.7090 0.6844 0.4463 ✓
+
+19 Skill hybridize crossnet_afm 0.7090 0.6844 0.4463 24 Skill reuse adaptive_crossnet_expert_branch_1 0.7092 0.6845 0.4442 ✓
+
+Table 26 Evolution trace for CTR prediction on Amazon-Books, seeded with DeepFM. Operators and markers are defined in Appendix E.2. 
+
+Val Test Gen. Space Mutation AUC AUC LL Imp. 
+
+0 Code invent contextual_mixture_fusion 0.6849 0.6634 0.5088 ✓
+
+1 Skill hybridize crossnet_afm 0.6866 0.6579 0.5777 ✓
+
+2 Skill hybridize crossnet_afm 0.6862 0.6578 0.5756 3 Skill hybridize crossnet_afm 0.6873 0.6593 0.5849 ✓
+
+4 Code invent contrastive_branch_consensus_fusion 0.6940 0.6682 0.5599 ✓
+
+5 Skill reuse field_wise_monomial_lattice_branch 0.6939 0.6663 0.5601 6 Code invent branch_field_coattention_fusion 0.6946 0.6699 0.5482 ✓
+
+7 Skill hybridize crossnet_afm 0.6946 0.6699 0.5482 10 Skill reuse complex_phase_correlation_branch 0.6947 0.6696 0.5488 ✓
+
+11 Skill hybridize crossnet_afm 0.6947 0.6696 0.5488 12 Skill reuse hyperbolic_user_item_metric_branch 0.6950 0.6693 0.5490 ✓
+
+13 Skill reuse hyperbolic_user_item_metric_branch 0.6950 0.6693 0.5490 14 Skill reuse kernel_memory_pair_compatibility_branch 0.6958 0.6708 0.4952 ✓
+
+15 Skill hybridize crossnet_afm 0.6958 0.6705 0.4955 16 Skill hybridize crossnet_afm 0.6955 0.6702 0.5428 19 Skill reuse neural_outer_product_sketch_branch 0.6958 0.6701 0.4967 20 Skill reuse relation_capsule_router_branch 0.6958 0.6698 0.5009 21 Skill hybridize crossnet_afm 0.6958 0.6700 0.5003 
+
+34 Table 27 Evolution trace for multi-task learning on Census, seeded with Shared-Bottom. Selection uses validation mean AUC over the two tasks; test scores are reported only. Per-task validation scores are omitted for space, and values are given to five decimals because differences are small. Operators and markers are defined in Appendix E.2. 
+
+Val Test Gen. Space Mutation Mean AUC Mean AUC Income AUC Marital AUC Imp. 
+
+0 Skill macro_field_covariance_shrinkage_v1 0.97240 0.97473 0.95460 0.99486 ✓
+
+1 Skill specialize wider_shared_bottom 0.97228 0.97425 0.95367 0.99483 2 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97243 0.97477 0.95473 0.99482 ✓
+
+3 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97224 0.97455 0.95427 0.99483 4 Code invent macro_flat_subspace_expert_ router_v1 
+
+0.97223 0.97438 0.95392 0.99485 5 Code invent macro_flat_cross_stage_ lattice_v1 
+
+0.97231 0.97416 0.95357 0.99475 6 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97225 0.97449 0.95410 0.99489 7 Code invent macro_flat_multiscale_ dilated_mixer_v1 
+
+0.97244 0.97427 0.95366 0.99488 ✓
+
+8 Code invent macro_flat_block_krylov_ resolvent_v1 
+
+0.97252 0.97463 0.95437 0.99489 ✓
+
+9 Code invent macro_flat_virtual_task_view_ fusion_v1 
+
+0.97230 0.97452 0.95418 0.99486 10 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97237 0.97446 0.95408 0.99485 11 Code invent macro_flat_butterfly_expert_ lattice_v1 
+
+0.97237 0.97442 0.95402 0.99482 12 Code invent macro_flat_hypercomplex_ factor_mixer_v1 
+
+0.97238 0.97439 0.95389 0.99488 13 Code invent macro_flat_sparse_coordinate_ graph_v1 
+
+0.97231 0.97460 0.95433 0.99486 14 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97244 0.97464 0.95441 0.99488 15 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97239 0.97449 0.95412 0.99486 16 Code invent macro_flat_wavelet_packet_ cross_router_v1 
+
+0.97241 0.97454 0.95422 0.99487 17 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97265 0.97482 0.95500 0.99464 ✓
+
+18 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97252 0.97465 0.95448 0.99481 19 Code invent macro_field_cumulant_ conditioned_channel_mixer_v1 
+
+0.97236 0.97398 0.95333 0.99463 20 Code invent macro_flat_semiseparable_ scan_bank_v1 
+
+0.97250 0.97453 0.95415 0.99490 21 Code invent macro_flat_oblique_forest_ recomposer_v1 
+
+0.97246 0.97447 0.95410 0.99484 22 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97243 0.97464 0.95446 0.99482 23 Skill reuse macro_field_covariance_ shrinkage_v1 
+
+0.97250 0.97418 0.95351 0.99486 24 Code invent macro_flat_butterfly_ permutation_fabric_v1 
+
+0.97263 0.97448 0.95413 0.99483 
+
+35 Table 28 Evolution trace for multi-domain learning on Amazon (5-core), seeded with SAR-Net. D0–D2 denote test AUC on each domain; per-domain validation scores are omitted for space. Scores are displayed to four decimals, and ✓ denotes an update of the best-so-far validation candidate. The round-12 operation replaces the current expert mixer with the SAR-Net expert-mixer component, preserving the rest of the evolved genome. Operators and markers are defined in Appendix E.2. 
+
+Val Test Test AUC by domain Gen. Space Mutation AUC AUC LL D0 D1 D2 Imp. 
+
+0 Code invent domain_aware_field_norm 0.6786 0.6796 0.4713 0.6740 0.6528 0.7002 ✓
+
+1 Skill specialize ple_more_experts 0.6794 0.6801 0.4718 0.6779 0.6464 0.7029 ✓
+
+2 Code invent domain_modulated_lowrank_ field_rotation 
+
+0.6794 0.6801 0.4718 0.6779 0.6464 0.7029 3 Code invent domain_contrastive_field_ residual 
+
+0.6817 0.6823 0.4706 0.6825 0.6477 0.7043 ✓
+
+4 Code invent flat_domain_affine_norm 0.6853 0.6846 0.4695 0.6820 0.6515 0.7074 ✓
+
+5 Code invent field_token_self_attention_ adapter 
+
+0.6856 0.6848 0.4692 0.6823 0.6520 0.7075 ✓
+
+6 Code invent flat_domain_prototype_ residual 
+
+0.6846 0.6839 0.4697 0.6812 0.6508 0.7068 7 Code invent flat_sparse_mixture_adapter 0.6869 0.6872 0.4680 0.6840 0.6545 0.7102 ✓
+
+8 Code invent rep_cross_domain_contrastive_ residual 
+
+0.6866 0.6881 0.4676 0.6859 0.6552 0.7106 9 Skill replace m3oe 0.6902 0.6894 0.4685 0.6874 0.6701 0.7041 ✓
+
+10 Code invent field_domain_token_affine_ residual 
+
+0.6901 0.6890 0.4687 0.6873 0.6693 0.7038 11 Code invent flat_domain_moment_normalizer 0.6927 0.6926 0.4672 0.6867 0.6749 0.7085 ✓
+
+12 Skill replace sarnet_expert_mixer 0.7021 0.7012 0.4636 0.6946 0.6777 0.7233 ✓
+
+13 Code invent field_domain_channel_ competition 
+
+0.7022 0.7013 0.4635 0.6949 0.6773 0.7233 ✓
+
+14 Code invent flat_domain_hyper_adapter 0.7026 0.7013 0.4630 0.6947 0.6775 0.7230 ✓
+
+15 Code invent field_domain_cross_stitch_ channel_mixer 
+
+0.7024 0.7020 0.4631 0.6945 0.6774 0.7237 16 Code invent flat_domain_residual_mixture_ calibrator 
+
+0.7031 0.7018 0.4627 0.6945 0.6778 0.7231 ✓
+
+17 Code invent flat_domain_squeeze_ excitation 
+
+0.7033 0.7019 0.4627 0.6947 0.6779 0.7232 ✓
+
+18 Code invent flat_domain_sparse_delta_ router 
+
+0.7032 0.7027 0.4629 0.6956 0.6782 0.7240 19 Code invent field_domain_cross_stitch_ residual 
+
+0.7032 0.7034 0.4619 0.6961 0.6783 0.7239 20 Code invent field_domain_lowrank_hyper_ token_adapter 
+
+0.7031 0.7028 0.4624 0.6959 0.6780 0.7229 21 Code invent field_domain_shared_private_ splitter 
+
+0.7034 0.7033 0.4624 0.6963 0.6780 0.7240 ✓
+
+36 Table 29 Evolution trace for multi-domain learning on MovieLens-1M, seeded with SAR-Net. D0–D2 denote test AUC on each domain; per-domain logloss is omitted for space. Operators and markers are defined in Appendix E.2.                                                                                                                                                                        
+
+> Val Test Test AUC by domain Gen. Space Mutation AUC AUC LL D0D1D2Imp.
+> 0Code invent flat_domain_feature_gate 0.7947 0.7928 0.5379 0.7976 0.7953 0.7869 ✓
+> 1Skill replace m3oe 0.7930 0.7912 0.5419 0.7945 0.7950 0.7852 2Skill specialize ple_more_experts 0.7941 0.7923 0.5384 0.7970 0.7957 0.7864 3Code invent domain_representation_slot_ norm
+> 0.7939 0.7923 0.5387 0.7962 0.7958 0.7849 4Code invent domain_slot_contextual_ lowrank_adapter
+> 0.7938 0.7919 0.5385 0.7961 0.7954 0.7860 5Code invent domain_representation_active_ slot_cross_attention
+> 0.7942 0.7923 0.5395 0.7966 0.7957 0.7852 7Code invent flat_domain_basis_residual 0.7942 0.7930 0.5384 0.7976 0.7961 0.7863 8Code invent flat_domain_cross_basis_ adapter
+> 0.7951 0.7932 0.5375 0.7970 0.7953 0.7878 ✓
+> 9Code invent flat_domain_blockwise_ calibrator
+> 0.7949 0.7932 0.5378 0.7978 0.7959 0.7873 10 Code invent field_domain_token_fourier_ bias
+> 0.7946 0.7929 0.5374 0.7968 0.7958 0.7872 11 Code invent field_domain_cross_token_ squeeze
+> 0.7952 0.7927 0.5379 0.7969 0.7953 0.7870 ✓
+> 12 Code invent flat_domain_hadamard_expert_ residual
+> 0.7950 0.7931 0.5374 0.7977 0.7959 0.7869 14 Code invent flat_domain_residual_ temperature_gate
+> 0.7950 0.7933 0.5372 0.7975 0.7961 0.7867 15 Code invent flat_domain_covariance_ residual_smoother
+> 0.7942 0.7922 0.5391 0.7981 0.7951 0.7857 19 Skill replace adasparse 0.7926 0.7910 0.5395 0.7972 0.7972 0.7853 22 Skill specialize deeper_domain_tower 0.7879 0.7881 0.5529 0.7956 0.7931 0.7810 23 Skill replace mmoe 0.7953 0.7932 0.5371 0.7971 0.7970 0.7871 ✓
+> 24 Skill replace shared_bottom 0.7927 0.7917 0.5395 0.7971 0.7952 0.7840
+
+E.3 Generative Ranking on QK-Video 
+
+We evolve the RankMixer backbone to improve predictive quality (AUC) and hardware efficiency (model FLOPs utilisation, MFU) at the same time. The skill library is compiled (Section 4.1.2) from 15 generative ranking architectures: • OneTrans (Zhang et al., 2026b): a single causal Transformer over one token stream of sequential and non-sequential features. Sequential tokens share parameters, non-sequential tokens have their own, and the KV cache is reused across requests. • RankMixer (Zhu et al., 2025): a hardware-aware design that replaces self-attention with parameter-free multi-head token mixing and per-token FFNs. A Sparse-MoE variant scales it to 1B parameters. • Zenith (Zhang et al., 2026a): scales a small set of high-dimensional Prime Tokens with Token Fusion and Token Boost, at little extra inference latency. • HyFormer (Huang et al., 2026b): alternates Query Decoding, where global tokens decode long behaviour sequences, and Query Boosting, which mixes tokens across features. • MixFormer (Huang et al., 2026a): scales dense interaction and sequence modelling together in one shared-parameter block with a query mixer, cross-attention and output fusion. • TokenMixer (Jiang et al., 2026): scales token mixing to 15B parameters with mixing-and-reverting, inter-layer residuals, auxiliary losses and a sparse per-token MoE. • HiFormer (Gui et al., 2023): heterogeneous self-attention with feature-specific projections, made servable by low-rank approximation and pruning. • INFNet (Li et al., 2025a): per-group hub tokens gather context by cross-attention and broadcast it back to feature tokens, giving task-aware interaction at linear cost. • EST (Liu et al., 2026): treats all raw inputs as one sequence, with lightweight cross-attention for heterogeneous features and content-sparse attention for behaviours. • LONGER (Chai et al., 2025): models ultra-long user sequences with global tokens, token merging through inner 37 Transformers, and hybrid attention. • HeMix (Wang et al., 2026a): extracts user interests with dynamic and fixed queries, and replaces self-attention with a HeteroMixer block for multi-granularity feature interaction. • UniMixer (Ha et al., 2026): makes rule-based token mixing a learnable operator that covers attention-, TokenMixer- and FM-style interaction. • TokenFormer (Zhou et al., 2026): unifies multi-field and sequential tokens with bottom-full/top-sliding attention and multiplicative gating, which prevents representation collapse. • UltraHSTU (Ding et al., 2026): co-designs the input sequence, sparse attention and topology of HSTU for better training and inference scaling. • SSR (Yu et al., 2026): replaces dense connectivity with filter-then-fuse blocks, which apply sparse dimension-level filtering over parallel views and then fuse densely within each subspace. Table 30 lists the base skills obtained by decomposing these architectures. The compiler breaks each model into reusable components and keeps the generic modules they depend on, giving 92 skills in 10 categories . This library is separate from the one used in the CTR, MTL and MDL experiments and shares no skills with it. We build it specifically for generative ranking models . These models work on unified token sequences and rely on token mixing, attention and model-specific backbone blocks, so they need different operators from classical feature-interaction models. Interaction (25), embedding (17) and attention (16) make up 63% of the library. 54 skills are model-specific and carry their source model’s prefix. The other 38 are shared building blocks , such as cross networks, pooling, activations and PyTorch primitives. 
+
+AUC–MFU score for comparison after search. To summarise the trade-off between ranking quality and hardware utilisation, we give each evaluated architecture c the score 
+
+Score( c) = 12
+
+A(c) − Amin 
+
+max( Amax − Amin , ϵ ) + 12
+
+M (c) − Mmin 
+
+max( Mmax − Mmin , ϵ ) , (6) where A(c) is the mean validation AUC across tasks and M (c) is the measured training MFU. For X ∈ { A, M },
+
+Xmin and Xmax are the minimum and maximum of X over C, the set of architectures with valid measurements in the completed run, and ϵ = 10 −12 avoids division by zero. All candidates share the same training budget and evaluation protocol. The bounds are fixed for the whole run and are not recomputed for each generation, and test metrics are not used. The score is only used for comparison after the run. Survivors are selected during evolution by the constrained Pareto criterion. 
+
+Accuracy–efficiency trade-offs and search progress. Pushing either objective alone costs the other. The best-AUC candidates in Table 31 are all retokenizers. The signed-bucket retokenizer (generation 14) gains +6 .7 × 10 −4
+
+validation AUC but loses 8% MFU, because bucketing and hashing are memory-bound. The highest-MFU candidate (generation 7, +12% MFU) falls below the baseline in AUC. Both are discarded, and every survivor lies between 1.47% and 1.57% MFU. The Hadamard cross mixer appears in all five points of the Pareto front over all eligible candidates (Table 32). Paired with the low-rank task-basis router (P1), it is the only configuration that beats the baseline on validation AUC, test AUC and MFU. At the other end, P5 raises MFU by 9.8% over the baseline but gives up 7 × 10 −4
+
+validation AUC relative to P1. The per-generation log (Table 33) shows three phases. Generations 0–5 make structural edits that raise MFU, such as per-token FFNs and Hadamard mixing. Generations 7–16 try sequence modules placed before DIN, and retokenizers. They reach the best AUC of the run (generation 14), but the retokenizers are discarded for their MFU cost. From generation 17 onward the search moves toward task routing, and the low-rank router (generation 19) improves both objectives. Of the 180 candidates, 26% survive and 23 skills are promoted to Tier-2. After generation 2 the budget shifts from skill space (4/2) to code space (mostly 2/4), because the cheap recombinations of the library have been used up. Failures concentrate late in the run (15 of 33 in generations 23–29). Rising failures and fewer promotions could serve as a stopping signal. 38 Table 30 Skill inventory for generative ranking (92 skills, 10 categories). Model-specific skills are prefixed with their source model. 
+
+Category # Role Skill identifiers 
+
+embedding 17 Feature embeddings and model-specific feature-to-token transformations. 
+
+est_tokenization , feature_embedding , feature_embedding_dict ,
+
+hemix_tokenization , hiformer_tokenization ,
+
+hyformer_tokenization , infnet_tokenization , longer_tokenization ,
+
+mixformer_tokenization , onetrans_tokenization ,
+
+pretrained_embedding , rankmixer_tokenization ,
+
+tokenformer_tokenization , tokenmixer_tokenization ,
+
+ultrahstu_tokenization , unimixer_tokenization ,
+
+zenith_tokenization interaction 25 Explicit feature interactions, token mixing, and token-wise feed-forward or expert layers. 
+
+bilinear_interaction , bilinear_interaction_v2 ,
+
+compressed_interaction_net , cross_interaction , cross_net ,
+
+cross_net_mix , cross_net_v2 , factorization_machine ,
+
+hemix_hetero_mixer , hemix_token_mixing , holographic_interaction ,
+
+inner_product_interaction , interaction_machine ,
+
+mixformer_query_mixer , multi_head_token_mixing , per_token_ffn ,
+
+per_token_swiglu , rankmixer_block , sparse_moe , swiglu ,
+
+tokenformer_interaction_blocks , tokenmixer_blocks ,
+
+unimixer_lite_blocks , unimixer_lite_layer , unimixer_siamese_ffn attention 16 Self-, cross-, and target-aware attention, sequence transduction, and channel recalibration. 
+
+din_attention , est_cross_attention , hemix_hetero_attention ,
+
+hiformer_attention , longer_cross_causal_attention ,
+
+longer_self_causal_attention , mixformer_cross_attention ,
+
+multi_head_target_attention , onetrans_mixed_mha ,
+
+scaled_dot_product_attention , squeeze_excitation ,
+
+tokenformer_gated_mha , transformer_encoder ,
+
+ultrahstu_interaction_blocks , ultrahstu_transduction_unit ,
+
+zenith_self_attention tower 3 MLP towers and mixed feed-forward transformations. 
+
+est_mixed_ffn , mlp_block , onetrans_mixed_ffn block 10 Composite model-specific backbone blocks. 
+
+est_block , hiformer_block , hyformer_block , infnet_block ,
+
+longer_block , longer_inner_trans , mixformer_block ,
+
+onetrans_block , sasrec_block , zenith_block pooling 3 Masked sum/average aggregation and top-k
+
+pooling. 
+
+kmax_pooling , masked_average_pooling , masked_sum_pooling activation 2 Adaptive and smooth nonlinear activations. 
+
+dice , gelu head 2 Linear logits and per-task output activations. 
+
+logistic_regression , output_activation_list primitive 5 Basic PyTorch layers and containers. 
+
+dropout , embedding , identity , linear , sequential utility 9 Query processing, sequence representation, aggregation, broadcast, and fusion. 
+
+hyformer_query_boosting , hyformer_query_decoding ,
+
+hyformer_query_generation , hyformer_sequence_representation ,
+
+infnet_aggregation , infnet_broadcast ,
+
+infnet_broadcast_gated_unit , infnet_hub_aggregator ,
+
+mixformer_output_fusion ,
+
+Total 92 10 categories 
+
+39 Table 31 Top candidates on the RankMixer backbone, sorted by validation AUC. Gen. : generation; St. : outcome (S = survivor, D = discarded); Score : (6). Validation gAUC and logloss are omitted. Best candidate value per column in bold .
+
+Val Test Candidate Gen. St. AUC AUC gAUC Logloss MFU (%) Score 
+
+Baseline (RankMixer) — — 0.9295 0.9358 0.7833 0.0744 1.433 0.793 Signed-bucket retokenizer 14 D 0.9301 0.9365 0.7822 0.0740 1.317 0.868 Field-hash retokenizer 13 D 0.9301 0.9364 0.7815 0.0741 1.360 0.882 Markov bucket exchange 11 D 0.9300 0.9362 0.7833 0.0745 1.465 0.912 Field-covariance retokenizer 13 D 0.9300 0.9361 0.7831 0.0743 1.364 0.861 Low-rank task-basis router 19 S 0.9300 0.9360 0.7844 0.0744 1.477 0.911 Hadamard cross mixer 1 S 0.9300 0.9357 0.7825 0.0745 1.513 0.924 
+
+Directional-decay exchange 12 S 0.9299 0.9360 0.7834 0.0744 1.494 0.906 Lag-delta interest filter 7 S 0.9299 0.9359 0.7848 0.0744 1.472 0.888 Field-moment retokenizer 26 D 0.9299 0.9360 0.7813 0.0741 1.206 0.763 Orthogonal task-subspace fusion 22 S 0.9299 0.9360 0.7845 0.0744 1.488 0.891 Per-token FFN/GELU hybrid 25 D 0.9298 0.9358 0.7828 0.0743 1.535 0.907 Wider RankMixer block 21 S 0.9298 0.9362 0.7838 0.0743 1.506 0.893 Bidirectional context exchange 5 S 0.9293 0.9356 0.7821 0.0743 1.574 0.819 Per-token FFN/GELU hybrid 7 D 0.9290 0.9353 0.7828 0.0746 1.605 0.776 
+
+Table 32 Pareto front over all eligible candidates on validation AUC and MFU (RankMixer backbone), using the eligibility criteria in Section D.2. ∆: difference from the baseline in 10 −4 AUC. Rows run from highest AUC to highest MFU. Best value per column in bold .
+
+Val Test Model Gen. Architectural change AUC ∆ AUC ∆ MFU (%) 
+
+Baseline (RankMixer) — Original backbone 0.929477 — 0.935804 — 1.433 P1 19 Hadamard cross mixer + low-rank task-basis router 
+
+0.929986 +5.08 0.935978 +1.74 1.477 P2 1 Hadamard cross mixer 0.929963 +4 .86 0.935729 −0.75 1.513 P3 3 Hadamard cross mixer + per-token FFN/GELU 0.929632 +1 .54 0.935701 −1.03 1.565 P4 18 Signed-transition smoother + Hadamard +
+
+channel-group mixer + FFN/GELU 0.929462 −0.16 0.935401 −4.04 1.567 P5 5 Bidirectional token context + Hadamard +
+
+FFN/GELU 0.929273 −2.04 0.935614 −1.90 1.574 
+
+40 Table 33 Per-generation log on the RankMixer backbone. Change : the generation’s best-AUC candidate, with its outcome in St. MFU : the generation’s highest MFU, with that candidate’s outcome as superscript. K/C : skill-space/code-space split of the six candidates (Section 4.2.3). S/D/F/U : survived, discarded, failed, duplicate. P: skills promoted to Tier-2. Best values in bold .
+
+Val Test Gen. Change St. K/C AUC AUC MFU (%) S/D/F/U P
+
+0 token-mix + per-token FFN S 4/2 0.929776 0.935908 1.536 S 2/2/2/0 01 Hadamard cross post-attention S 4/2 0.929963 0.935729 1.519 S 2/4/0/0 12 token-mix + per-token FFN S 4/2 0.929473 0.935687 1.534 S 2/1/2/1 03 per-token FFN + GELU S 2/4 0.929631 0.935701 1.565 S 2/3/1/0 04 add FFN after RankMixer D 2/4 0.929623 0.935608 1.564 D 1/4/1/0 15 triangular token context before DIN S 2/4 0.929625 0.935573 1.574 S 2/4/0/0 26 consensus-disagreement fusion bridge D 3/3 0.929662 0.935807 1.467 D 0/6/0/0 07 lag-delta interest filter before DIN S 2/4 0.929876 0.935922 1.605 D 2/3/1/0 18 multi-scale delta exchange before DIN S 3/3 0.929747 0.935558 1.510 D 2/4/0/0 29 spectral token filter before DIN S 2/4 0.929713 0.935676 1.553 D 2/3/1/0 110 field-moment retokenizer D 2/4 0.929736 0.936431 1.542 D 0/4/2/0 011 Markov bucket exchange before DIN D 2/4 0.930017 0.936176 1.541 D 2/4/0/0 112 directional-decay exchange S 2/4 0.929915 0.936034 1.545 D 2/3/1/0 213 field-hash retokenizer D 2/4 0.930114 0.936423 1.585 D 2/3/1/0 014 signed-bucket retokenizer D 2/4 0.930143 0.936516 1.483 S 2/3/1/0 115 compact anchor reservoir retokenizer D 2/4 0.929599 0.935658 1.528 D 0/3/2/1 016 reuse multi-scale delta exchange S 2/4 0.929785 0.936061 1.521 D 2/4/0/0 117 linear EMA contrast S 2/4 0.929725 0.936000 1.540 S 2/2/1/1 118 token-transition Laplacian D 2/4 0.929845 0.935729 1.567 S 2/4/0/0 219 low-rank task-basis router S 2/4 0.929986 0.935977 1.577 D 2/3/1/0 220 reuse directional-decay exchange D 2/4 0.929838 0.936072 1.484 S 1/5/0/0 121 wider RankMixer block S 3/3 0.929823 0.936163 1.545 S 2/4/0/0 022 orthogonal task-subspace fusion S 2/4 0.929855 0.936027 1.533 D 2/3/1/0 123 per-token FFN + GELU S 2/4 0.929397 0.935656 1.531 D 1/1/3/1 024 rank-1 task-affinity fusion S 2/4 0.929540 0.935561 1.504 D 1/2/3/0 125 per-token FFN + GELU D 3/3 0.929823 0.935760 1.535 D 1/2/3/0 026 field-moment retokenizer D 2/4 0.929863 0.935986 1.530 D 2/3/1/0 127 causal token spline D 2/4 0.929593 0.935939 1.514 D 2/3/0/1 128 reuse task-axis contextual router S 2/4 0.929606 0.936007 1.471 S 1/3/2/0 029 affine-free task-token router D 2/4 0.929377 0.935614 1.533 S 1/1/3/1 0
+
+41 F Results with Different LLM Backbones 
+
+Table 34 Best candidate found by each LLM backbone. Best Round is the evolution round in which the best-performing candidate first appeared. Operation gives the operator type (Code: code-space generation; Skill: skill-space reuse; Template: template-level specialization) and the concrete architectural change it made. For MTL, the AUC is the mean over the two tasks. Datasets: Amazon-Books (CTR), Census-Income (MTL) and MovieLens (MDL); the runs start from DeepFM, Shared-Bottom and SAR-Net, respectively. Setting Backbone Val AUC Test AUC Best Round Operation CTR GLM-5.2 0.6937 0.6684 24 Skill: add a reciprocal field-subspace router DeepSeek-V4-Pro 0.6952 0.6686 18 Code: replace DCN-V2 cross fusion with sample-adaptive bilinear gated fusion (23 branches) GPT-5.6 (SOL) 0.6968 0.6722 6 Code: add a dual-anchor cross-lattice interaction module Claude Opus 4.8 0.6972 0.6738 23 Skill: add a complex Volterra resonance factor branch MTL GLM-5.2 0.9718 0.9739 11 Code: add hyperbolic (Poincaré) projection on field embeddings DeepSeek-V4-Pro 0.9714 0.9734 24 Code: add dimension-wise 1D-conv gating on field embeddings (residual) GPT-5.6 (SOL) 0.9714 0.9736 24 † Code: add Low-rank Neural Flow Claude Opus 4.8 0.9714 0.9734 18 Skill: add a bidirectional orthogonal task-exchange module (shared/private subspaces) MDL GLM-5.2 0.7957 0.7935 19 Code: add a low-rank relation mixer DeepSeek-V4-Pro 0.7954 0.7924 2 Template: replace the domain module with PLE; shared experts 
+
+1 → 2, specific experts 2 → 3
+
+GPT-5.6 (SOL) 0.7954 0.7931 21 Code: add a domain slot memory over fields Claude Opus 4.8 0.7955 0.7934 5 Code: add a domain-conditioned soft field selection      
+
+> †The round-1 candidate already reaches 0.97136 validation AUC; round 24 adds only 6.6×10 −6.
+
+We check whether the gains reported in the main text depend on the LLM that proposes mutations. To do so, we re-run the search in all three settings with four LLM backbones. Within each setting, all runs start from the same architecture and use the same operators and the same selection rule. Table 34 reports the results. All four backbones exceed the strongest manual model on CTR (Amazon-Books; Wide & Deep, 0.6587 test AUC) and on MTL (Census-Income; AITM, 0.9726 mean test AUC). On MDL (MovieLens), three backbones exceed the strongest manual model (SAR-Net, 
+
+0.7924 ), and DeepSeek-V4-Pro matches it. On MTL, three backbones reach the same validation mean AUC of 0.9714 .This suggests that the gains do not hinge on a single LLM. No backbone is best everywhere. Claude is best on CTR. GLM is best on MTL and MDL. On MTL it is the only backbone to pass the shared plateau, using a hyperbolic Poincaré projection of the field embeddings. On MDL, GLM, GPT and Claude each found a field-level, domain-conditioned module on their own: a low-rank relation mixer (GLM), a domain slot memory (GPT) and a soft field selection (Claude). The backbones differ mostly in how they search. GPT converges early: it finds its best CTR model at round 6, and its best MTL result is already reached at round 1. Claude and GLM keep improving until late rounds (rounds 18–24), and most of these late gains come from reusing skills stored in the library rather than from new code. DeepSeek tends to build wide ensembles: its best CTR model fuses 23 branches. On MDL, however, it only swapped existing templates and tuned their hyperparameters (switching to PLE with more experts), and its test AUC only matches that of the strongest manual model. This is the weakest result among the twelve runs, and it suggests that generating new modules in code matters when strong manual architectures already exist. One limitation is shared by all backbones: selecting only on AUC can hurt calibration. On CTR, every best model has a higher test LogLoss ( 0.533 –0.554 ) than 42 all manual models on Amazon-Books ( 0.495 –0.507 ). All results come from a single run per backbone, so differences between backbones below about 5 × 10 −4 AUC should be treated as ties. 43

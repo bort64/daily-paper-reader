@@ -1,0 +1,54 @@
+{
+  "label": "2026-10-03",
+  "date": "2026-10-03",
+  "generated_at": "2026-10-03T22:23:28",
+  "count": 3,
+  "papers": [
+    {
+      "paper_id": "202610/03/2609.34552v1-evoskillrec-skill-genome-evolution-for-recommender-architecture-discovery",
+      "section": "quick",
+      "title_en": "EvoSkillRec: Skill-Genome Evolution for Recommender Architecture Discovery",
+      "authors": "Xiaopeng Li, Kuo Cai, Bo Chen, Wenlin Zhang, Mengyang Ma, Yingyi Zhang, Zichuan Fu, Yu Yang, Qidong Liu, Yiyu Wang, Ruiming Tang, Wenwu Ou, Jiang Wu, Zhanbo Xu, Xiangyu Zhao",
+      "date": "2026-09-28",
+      "pdf": "https://arxiv.org/pdf/2609.34552v1",
+      "score": "6.0",
+      "evidence": "在扩展数据与参数的同时演化推荐架构",
+      "tldr": "现代推荐系统不仅靠数据和参数扩展，还依赖架构编码任务特定归纳偏置，但这类偏置多由人工设计或在预定义算子空间中搜索。LLM 驱动的代码进化虽扩展搜索空间，却常产生无效架构，且未充分利用已有设计知识、难以复用成功创新。EvoSkillRec 将推荐器分解为原子可执行技能，用带类型技能基因组表示架构，并在约束技能空间与开放代码空间中协同进化，配合自动控制器评估、诊断、检索、提升验证创新并自适应分配提案预算。在 CTR、多任务、多域及生成排序资源约束实验中均验证有效。",
+      "tags": "query:search-rec",
+      "abstract_en": "Modern recommender systems advance not only by scaling data and parameters, but also by encoding task-specific inductive biases through architecture, including sparse feature interactions for click-through rate (CTR) prediction, temporal attention for sequential recommendation, and expert routing for multi-task learning. However, these biases are typically human expert designed or searched within predefined operator spaces. Although Recent LLM-driven code evolution expands this space, unconstrained edits often produce invalid or ineffective architectures, underuse established architecture design knowledge, and fail to preserve successful innovations for reuse. We introduce EvoSkillRec, a promotion-and-reuse framework for cumulative recommender architecture evolution. It first decomposes recommenders into atomic executable skills and represents architectures as typed skill genomes, with each skill equipped with input--output types, semantic annotations, and implementation code. We then evolve models with different tasks through two coupled spaces: a constrained skill--space that mutates, recombines, specializes, and reuses validated skills, and an open-ended code--space in which LLM planners and synthesizers invent new skill modules using prior evolution traces and accumulated experience. An autoresearch controller evaluates candidates, diagnoses failures, retrieves relevant skills, promotes validated innovations into the skill library, and adaptively allocates the proposal budget between the two spaces. Extensive experiments on CTR prediction, multi-task learning, and multi-domain learning, including resource-constrained co-optimization of predictive quality and model FLOPs utilization in generative ranking models, consistently demonstrate the effectiveness of our proposed EvoSkillRec.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/03/2609.38999v1-when-llm-inferred-user-context-adds-value-in-production-streaming-recommendation",
+      "section": "quick",
+      "title_en": "When LLM-Inferred User Context Adds Value in Production Streaming Recommendation",
+      "authors": "Milad Sabouri, Neeraj Sharma, Sardar Hamidian, Shaghayegh Agah",
+      "date": "2026-09-30",
+      "pdf": "https://arxiv.org/pdf/2609.38999v1",
+      "score": "6.0",
+      "evidence": "LLM推断用户上下文用于生产推荐排序",
+      "tldr": "推荐系统正从静态上下文转向由行为推断的潜在表征，LLM可把交互历史总结成自然语言主题画像。论文在生产流媒体平台全目录排序中，以2×2设计比较聚合与LLM生成画像、整体历史与注意力融合的短期/长期上下文。约五分之四习惯型用户用聚合画像更优；探索型用户、后续行为语义偏离历史时，LLM画像更优。LLM画像存在流行度吸引效应：略增列表内多样性，却显著降低目录覆盖与新颖性。",
+      "tags": "query:search-rec",
+      "abstract_en": "Contextual information in recommender systems is shifting from static, predefined variables toward latent representations inferred from behavior. Large language models support this shift by rendering an unstructured interaction history as a natural-language summary, which yields a thematic user context that can be encoded and used in place of an aggregate profile. The conditions under which such generated profiles outperform aggregate embeddings have received limited characterization mainly at the domain level. We evaluate semantic user-profiling strategies on a production streaming platform, ranking against the full catalog. The evaluation covers a 2*2 design space crossing representation type (aggregate or LLM-generated) with contextual scope (holistic history or attention-fused short-term and long-term contexts). The relative ordering of the two representation types is conditional on the user's consumption regime. Aggregate profiles are consistently stronger under habitual consumption, which characterizes approximately four-fifths of the population, while LLM-generated profiles are stronger for exploratory users whose subsequent interactions diverge semantically from their history. We also observe a popularity-attractor effect in LLM-generated profiles, which modestly raises within-list diversity while substantially lowering catalog coverage and reducing novelty. These results indicate that a context-aware system can select a profiling strategy from the inferred consumption regime rather than applying one representation to all users.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/03/2610.00964v1-rptune-learned-context-curation-for-llm-catalog-search",
+      "section": "quick",
+      "title_en": "RPTune: Learned Context Curation for LLM Catalog Search",
+      "authors": "Chuxuan Hu, Hejie Cui, Norman Huang, Shubham Kumar Bharti, Wang-Chiew Tan, Sercan Ö. Arık",
+      "date": "2026-10-01",
+      "pdf": "https://arxiv.org/pdf/2610.00964v1",
+      "score": "6.0",
+      "evidence": "基于LLM的目录搜索与学习式上下文整理",
+      "tldr": "针对商品目录可放入长上下文的中小商家，全文提示虽替代多阶段检索，但LLM无法均匀利用长上下文。RPTune端到端框架将可学习目录策展与LLM后训练耦合：编码器-重组器策展器依据下游LLM反馈排序剪枝商品，策展后目录又以上下文相对奖励提升后训练效果。在7个真实商家、每商家100条复杂对话查询上，专有和开源LLM搜索准确率均提升，策展最多提升31.4个百分点，后训练平均再增10.3个百分点。为SMB目录搜索提供有效方案。",
+      "tags": "query:search-rec",
+      "abstract_en": "For small merchant businesses (SMBs) whose catalogs fit within a long-context LLM, full-catalog prompting offers a compelling alternative to multi-stage retrieval designed primarily for large marketplaces with millions of items. However, fitting the full catalog into the context window does not ensure that the model can use it effectively, since LLMs do not exploit long contexts uniformly. We therefore study in-context catalog search through two complementary questions: (1) how to curate and present catalogs to the LLM, and (2) how to adapt the LLM for product selection on curated contexts.   We propose RPTune, an end-to-end framework that couples learned catalog curation with LLM post-training using automatically generated, catalog-grounded supervision. An encoder-reorganizer curator orders and prunes products guided by downstream LLM feedback, while the resulting curated catalogs in turn improve the effectiveness of LLM post-training with a context-relative reward. We evaluate RPTune on 7 real merchants spanning distinct retail verticals, using 100 complex conversational queries per merchant. RPTune consistently improves search accuracy across both proprietary and open-weight LLMs, with context curation yielding gains of up to 31.4 percentage points and post-training adding a further 10.3 points on average.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}
