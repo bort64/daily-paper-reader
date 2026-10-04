@@ -1,0 +1,133 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-10-04T22:09:14.234453+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.37311v1",
+      "source": "arxiv",
+      "title": "ReMem: Rethinking Perception and Memory in Long-Context Recommendation Agents",
+      "abstract": "Recent Recommendation Agents (RecAgents) offer a promising alternative by shifting recommendation to an active, user-side paradigm, where generative agents autonomously perceive external platforms, reason over user preferences, and execute decisions. However, existing RecAgents still suffer from two critical limitations: brittle item perception based on noisy and heterogeneous item pages, and inefficient long-context reasoning over extended user histories and multi-step interaction traces. To address these challenges, we propose a novel recommendation agent framework, termed as ReMem, that combines OCR-based multimodal perception with time-evolving dynamic memory. Instead of parsing raw HTML, ReMem observes item pages through screenshots and extracts structured multimodal information via an OCR tool, enabling a more humanoid and platform-agnostic perception mechanism. To support long-horizon preference modeling, ReMem further introduces a chunk-wise sequential memory update strategy, where the agent selectively maintains a fixed-size memory of informative historical interactions while processing arbitrarily long contexts with linear inference complexity and bounded context length. This design allows the agent to preserve evolving user preferences without relying on external memory modules or disrupting the standard autoregressive generation process. To enhance the dynamic memory instruction, we further develop a multi-memory GRPO variant, which propagates the final-answer advantage to all intermediate conversations that contribute to the final response. Extensive experiments on three datasets demonstrate that ReMem consistently outperforms state-of-the-art baselines, achieving an average improvement of 5.16\\% across three recommendation agent tasks, namely searching, ranking, and judging.",
+      "authors": [
+        "Haohao Qu",
+        "Yongcheng Jing",
+        "Chun Hin Chan",
+        "Shanru Lin",
+        "Wenqi Fan",
+        "Dacheng Tao"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.IR"
+      ],
+      "published": "2026-09-29T11:46:23+00:00",
+      "link": "https://arxiv.org/pdf/2609.37311v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "generative recommendation agents with multimodal perception and dynamic memory",
+      "llm_evidence_cn": "具备多模态感知与动态记忆的生成式推荐智能体",
+      "llm_evidence": "具备多模态感知与动态记忆的生成式推荐智能体",
+      "canonical_evidence": "具备多模态感知与动态记忆的生成式推荐智能体",
+      "llm_tldr_en": "ReMem targets brittle item perception and inefficient long-context reasoning in recommendation agents by combining OCR-based multimodal perception with time-evolving dynamic memory.",
+      "llm_tldr_cn": "现有推荐智能体依赖噪声大、异构性强的商品页面解析，且在长用户历史与多步交互轨迹上的长上下文推理效率低下。本文提出 ReMem 框架，用基于 OCR 的多模态感知替代原始 HTML 解析，并引入随时间演化的动态记忆机制。实验表明该组合能更稳健地感知商品并高效利用长历史信息，从而提升推荐决策质量。该工作为生成式推荐智能体在真实平台上的可扩展部署提供了新思路。",
+      "llm_tldr": "现有推荐智能体依赖噪声大、异构性强的商品页面解析，且在长用户历史与多步交互轨迹上的长上下文推理效率低下。本文提出 ReMem 框架，用基于 OCR 的多模态感知替代原始 HTML 解析，并引入随时间演化的动态记忆机制。实验表明该组合能更稳健地感知商品并高效利用长历史信息，从而提升推荐决策质量。该工作为生成式推荐智能体在真实平台上的可扩展部署提供了新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.39043v1",
+      "source": "arxiv",
+      "title": "Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty",
+      "abstract": "Large language models (LLMs) enable rich semantic user profiles for recommendation, but such profiles are more expensive to generate and are not necessarily desirable to deploy uniformly. We study whether LLM-generated profiles can instead be invoked selectively within a production recommendation pipeline. Using a real-world streaming dataset covering movies, TV shows, and sports content, we train a serving-time routing gate that assigns each user to either a collaborative sequential recommendation model or a recommendation model driven by an LLM-generated profile. The gate uses only serving-time features and learns to identify users for whom profile-based routing can increase Novelty@10 while preserving ranking relevance. A routing threshold controls how aggressively users are sent to the generative model, exposing a tunable novelty--relevance trade-off. At an overall NDCG-loss budget of 5\\%, the learned gate increases Novelty@10 by 6.5\\% while routing 12.5\\% of users, outperforming simple heuristic and random routing policies at comparable relevance cost. These results show that LLM-generated user profiles can serve as a controllable complement to collaborative recommendation, while results with non-generative semantic profiles indicate that the benefit stems from selective routing rather than LLM generation alone.",
+      "authors": [
+        "Milad Sabouri",
+        "Neeraj Sharma",
+        "Sardar Hamidian",
+        "Shaghayegh Agah"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-30T05:53:08+00:00",
+      "link": "https://arxiv.org/pdf/2609.39043v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-generated profiles selectively routed in a production recommendation pipeline",
+      "llm_evidence_cn": "在生产推荐管线中选择性路由LLM生成的用户画像",
+      "llm_evidence": "在生产推荐管线中选择性路由LLM生成的用户画像",
+      "canonical_evidence": "在生产推荐管线中选择性路由LLM生成的用户画像",
+      "llm_tldr_en": "This work studies whether LLM-generated semantic user profiles should be invoked selectively, training a serving-time routing gate that assigns users to either collaborative or LLM-profile recommender models to boost novelty while preserving relevance.",
+      "llm_tldr_cn": "针对LLM生成语义用户画像成本高且未必应统一部署的问题，本文研究其在生产推荐管线中的选择性调用。方法是在真实流媒体数据集上训练一个仅依赖serving时特征的运行时路由门，将用户分配给协同序列推荐模型或LLM画像驱动的推荐模型。结果显示路由门能识别适合画像推荐的用户，在保持排序相关性的同时提升Novelty@10，为LLM推荐的经济化部署提供思路。",
+      "llm_tldr": "针对LLM生成语义用户画像成本高且未必应统一部署的问题，本文研究其在生产推荐管线中的选择性调用。方法是在真实流媒体数据集上训练一个仅依赖serving时特征的运行时路由门，将用户分配给协同序列推荐模型或LLM画像驱动的推荐模型。结果显示路由门能识别适合画像推荐的用户，在保持排序相关性的同时提升Novelty@10，为LLM推荐的经济化部署提供思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.40241v1",
+      "source": "arxiv",
+      "title": "Decision-Oriented Recommendation Reranking: An Empirical Study of Jev",
+      "abstract": "Large language models (LLMs) have shown promise for recommendation reranking, but their use introduces an important tradeoff between recommendation quality and serving efficiency. We investigate whether a decision-oriented model provides a useful alternative when the reranking task is fundamentally a structured choice among predefined candidate items. Specifically, we conduct a controlled empirical study of Jev, described by TypeSafe AI as a ``System One Model,'' for personalized recommendation reranking and compare it with recommendation-specific models and pointwise and listwise Qwen rerankers across multiple Amazon Reviews domains and candidate-set sizes, evaluating both recommendation effectiveness and observed serving latency. Our results show that Jev maintains strong recommendation effectiveness relative to the evaluated baselines while exhibiting substantially more gradual latency growth than the pointwise Qwen rerankers, although its observed serving latency remains substantially higher than that of recommendation-specific models. Together, these characteristics place Jev in a distinct quality--latency operating regime across candidate sizes and domains. These findings motivate further investigation of decision-oriented models for recommendation and other ranking tasks with structured output spaces.",
+      "authors": [
+        "Hanjia Lyu",
+        "Yinglong Xia"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.CL"
+      ],
+      "published": "2026-09-30T17:33:43+00:00",
+      "link": "https://arxiv.org/pdf/2609.40241v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Empirical study of LLM-based decision-oriented model for recommendation reranking",
+      "llm_evidence_cn": "面向推荐重排序的决策导向LLM模型实证研究",
+      "llm_evidence": "面向推荐重排序的决策导向LLM模型实证研究",
+      "canonical_evidence": "面向推荐重排序的决策导向LLM模型实证研究",
+      "llm_tldr_en": "This controlled study compares a decision-oriented System One model (Jev) against recommendation-specific and Qwen pointwise/listwise rerankers for personalized reranking across Amazon domains, measuring both effectiveness and serving latency.",
+      "llm_tldr_cn": "针对LLM用于推荐重排序时质量与serving效率之间的权衡问题，本文开展受控实证研究。作者将决策导向的Jev模型与推荐专用模型及pointwise与listwise的Qwen重排序器在多个Amazon Reviews领域与不同候选集规模下对比，同时评估推荐效果与实际serving延迟。研究为在结构化候选择优场景中选择合适的重排序模型提供了经验证据。",
+      "llm_tldr": "针对LLM用于推荐重排序时质量与serving效率之间的权衡问题，本文开展受控实证研究。作者将决策导向的Jev模型与推荐专用模型及pointwise与listwise的Qwen重排序器在多个Amazon Reviews领域与不同候选集规模下对比，同时评估推荐效果与实际serving延迟。研究为在结构化候选择优场景中选择合适的重排序模型提供了经验证据。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+Title: Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty
+
+URL Source: https://arxiv.org/pdf/2609.39043v1
+
+Published Time: Thu, 01 Oct 2026 00:58:32 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty 
+
+# Milad Sabouri 
+
+DePaul University / Comcast Technology AI Chicago, IL, USA msabouri@depaul.edu milad_sabouri@comcast.com 
+
+# Neeraj Sharma 
+
+Comcast Technology AI Sunnyvale, CA, USA neeraj_sharma@comcast.com 
+
+# Sardar Hamidian 
+
+Comcast Technology AI Washington, DC, USA sardar_hamidian@comcast.com 
+
+# Shaghayegh Agah ∗
+
+Comcast Technology AI Sunnyvale, CA, USA shaghayegh_agah@comcast.com 
+
+## Abstract 
+
+Large language models (LLMs) enable rich semantic user profiles for recommendation, but such profiles are more expensive to gen-erate and are not necessarily desirable to deploy uniformly. We study whether LLM-generated profiles can instead be invoked se-lectively within a production recommendation pipeline. Using a real-world streaming dataset covering movies, TV shows, and sports content, we train a serving-time routing gate that assigns each user to either a collaborative sequential recommendation model or a recommendation model driven by an LLM-generated profile. The gate uses only serving-time features and learns to identify users for whom profile-based routing can increase Novelty@10 while preserving ranking relevance. A routing threshold controls how aggressively users are sent to the generative model, exposing a tunable novelty–relevance trade-off. At an overall NDCG-loss bud-get of 5%, the learned gate increases Novelty@10 by 6.5% while routing 12.5% of users, outperforming simple heuristic and ran-dom routing policies at comparable relevance cost. These results show that LLM-generated user profiles can serve as a controllable complement to collaborative recommendation, while results with non-generative semantic profiles indicate that the benefit stems from selective routing rather than LLM generation alone. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems .
+
+## Keywords 
+
+Generative User Profiling, LLMs, Recommender Systems 
+
+## 1 Introduction 
+
+Collaborative sequential recommenders are a strong foundation for modern recommender systems because they learn regularities in users’ interaction sequences and typically provide highly rel-evant recommendations. Their reliance on observed interaction patterns, however, can favor well-covered and popular content. LLM-generated user profiles provide a complementary represen-tation: an LLM summarizes a user’s interaction history into a natural-language description of their preferences, which is then encoded into a semantic space for recommendation. Prior work 
+
+> ∗Corresponding author.
+
+has shown that such profiles can capture high-level and tempo-rally varying user preferences [9]. More recent production-scale evaluation found that their effectiveness relative to aggregate se-mantic profiles depends on user behavior and can involve substan-tial beyond-accuracy trade-offs, motivating adaptive rather than uniform use [11]. In our setting, profile-based recommendation models substantially increase exposure to less-popular content, but uniform deployment incurs a large loss in ranking relevance. LLM-based profiling also introduces additional generation and refresh cost, further motivating selective rather than global use. This tension motivates a different role for generative user pro-files. Rather than treating them as a replacement for collaborative recommendation, we ask whether they can be used selectively . A system that can identify users for whom profile-based routing is likely to provide additional novelty can retain the collaborative model as the default and invoke a recommendation model driven by an LLM-generated profile only when the expected trade-off is favorable. This is particularly relevant in production settings, where objectives extend beyond relevance alone and operators may be willing to exchange a bounded amount of relevance for increased exposure to less-popular content. We study this problem on a real-world production streaming dataset covering movies, TV shows, and sports content. We formu-late routing as a per-user prediction problem between a collabora-tive sequential recommendation model and candidate profile-based recommendation models, including the LLM-generated Narrative and TemporalNarrative representations and a non-generative Cen-troid profile. The routing gate observes only serving-time infor-mation derived from the user’s historical behavior and learned representations. It is trained to identify users for whom routing to a candidate model can increase recommendation novelty while preserving relevance. At inference time, the gate produces a routing score, and varying its decision threshold controls how aggressively users are routed away from the collaborative model. The result is a controllable novelty–relevance frontier rather than a single fixed hybrid policy. Our experiments show that selective routing can improve novelty while bounding overall relevance degradation. Using Narrative as the primary generative case study, a policy operating within an approximately 5% NDCG-loss budget increases Novelty@10 by 6.5% while routing only 12.5% of users. At comparable relevance cost, arXiv:2609.39043v1 [cs.IR] 30 Sep 2026 Sabouri et al. 
+
+the learned gate also produces larger novelty gains than random routing and simple heuristics. These results suggest that the value of generative profiling depends not only on how the representation is constructed, but also on deciding when to use it. Our contributions are twofold: (1) we formulate selective deploy-ment of profile-based recommendation models, including those driven by LLM-generated profiles, as a serving-time routing prob-lem with novelty as the reward and ranking relevance as a guardrail; and (2) we demonstrate on real-world production streaming data that a learned gate exposes a tunable novelty–relevance trade-off and allocates a fixed relevance budget more effectively than heuris-tic or random routing. 
+
+## 2 Related Work 
+
+Semantic and generative user profiling. Content-based recom-menders commonly construct user profiles by aggregating item representations [4], with sentence encoders such as Sentence-BERT providing dense semantic representations [8]. More recent ap-proaches use LLMs to generate natural-language summaries of user preferences that can be embedded for recommendation and explanation [5, 7, 10]. Temporal extensions generate separate short-and long-term preference summaries and combine their represen-tations through learned attention [9]. Production-scale evaluation has further shown that the relative effectiveness of LLM-generated and aggregate semantic profiles can vary across user consumption regimes and beyond-accuracy objectives [11]. We build on these profiling strategies but study a different question: when a gener-ative representation should be served instead of a collaborative sequential representation. 
+
+Beyond-accuracy objectives. Recommendation quality extends beyond ranking relevance to properties such as novelty and diver-sity [2, 12], while popularity bias remains a persistent concern in recommender systems [1]. Rather than optimizing novelty glob-ally, we treat Novelty@10 as a routing reward while constraining degradation in NDCG@10, yielding operating points that explicitly expose the relevance–novelty trade-off. 
+
+Adaptive routing and selective computation. Learned gating has been used to adaptively combine specialized experts in recommen-dation and multi-task learning [6], while model-cascade approaches selectively invoke models to balance predictive quality and com-putational cost [3]. Our setting differs in that the gate makes a serving-time, per-user choice between collaborative and profile-based recommendation models and varies its routing threshold to operate under an explicit relevance budget. 
+
+## 3 Methodology 
+
+We learn a per-user routing policy between the default collaborative sequential recommendation model, denoted by 𝐶 , and a candidate semantic recommendation model, denoted by 𝐺 . The semantic model uses one of the user representations described below. The router observes only information available at serving time and selects which recommendation model produces the final recom-mendation list for each user. 
+
+## 3.1 User Representations 
+
+We consider two LLM-generated user profiles following prior tem-poral profiling work [9] and its subsequent production-scale evalu-ation [11]. Narrative generates a single natural-language summary from the user’s interaction history and encodes it with SBERT. TemporalNarrative generates separate short- and long-term pref-erence summaries, encodes them with SBERT, and combines the resulting representations through learned attention. We addition-ally consider Centroid, a non-generative semantic profile obtained by mean-pooling the embeddings of items in the user’s interaction history. Each representation defines a separate semantic recom-mendation model, and a separate routing gate is trained for each one. 
+
+## 3.2 Learned Routing Gate 
+
+For each user 𝑢 , the gate observes a serving-safe feature vector 
+
+x𝑢 consisting of history length and its logarithm, mean and me-dian popularity of consumed items, the fraction of below-median-popularity items (niche ratio), and the norms of the collaborative and candidate semantic user representations. The gate is trained to identify users for whom routing from 𝐶 
+
+to 𝐺 increases recommendation novelty without reducing ranking relevance. We first compute the per-user differences 
+
+ΔNov 𝑢 = Novelty 𝐺 𝑢 − Novelty 𝐶 𝑢 , ΔNDCG 𝑢 = NDCG 𝐺 𝑢 − NDCG 𝐶 𝑢 .
+
+(1) The binary routing target is then defined as 
+
+𝑦 𝑢 = I [ΔNov 𝑢 > 0 ∧ ΔNDCG 𝑢 ≥ 0] , (2) where I[·] equals one when both conditions are satisfied and zero otherwise. A Gradient Boosting classifier trained with binary log-loss esti-mates 𝑞 𝑢 = 𝑃 (𝑦 𝑢 = 1 | x𝑢 ). Given a routing threshold 𝜏 , the serving policy is 
+
+𝜋 𝜏 (𝑢 ) =
+
+(
+
+𝐺, 𝑞 𝑢 ≥ 𝜏, 𝐶, 𝑞 𝑢 < 𝜏 . (3) Varying 𝜏 controls how many users are routed to the semantic model and consequently the novelty–relevance trade-off. We sweep 
+
+𝜏 and report operating points under different overall NDCG-loss budgets relative to always serving the collaborative model. These budgets are used only to select operating points after training; they are not part of the classifier objective. All routing predictions are generated using five-fold out-of-fold evaluation, so a user’s observed recommendation outcomes are not used to train the gate that produces that user’s routing score. 
+
+## 4 Experimental Evaluation 4.1 Experimental Setup 
+
+Data and recommendation setting. We evaluate on a sample of 10,000 users from a real-world production streaming platform covering movies, TV shows, and sports content. The default recom-mendation model is a collaborative sequential model that predicts a user’s next interaction from historical behavior. The candidate profile-based models use Centroid, Narrative, or TemporalNarra-tive as described in Section 3.1. All three use a common semantic Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty 
+
+(a) 0 2 4 6 8 10 NDCG@10 degradation (%) 0246810 12 Novelty@10 gain (%)  
+
+> 1% 2% 5% 10%
+> 5% budget
+> 12% routed
+> (a) Narrative learned-gate frontier
+
+(b) Learned gate Niche Random Short history 01234567Novelty@10 gain (%)  
+
+> +6.5% +4.7% +4.1% +2.7%
+> (b) Matched 5% NDCG-loss budget
+
+Figure 1: Controllable novelty–relevance routing with the Narrative profile at 𝐾 = 10 . (a) Sweeping the learned-gate probability threshold produces a controllable frontier between NDCG degradation and Novelty gain. (b) Using a finer coverage-ranked sweep, each policy selects its highest-Novelty feasible operating point under the same overall NDCG-loss budget of at most 5%; the learned gate obtains the largest Novelty gain. 
+
+item encoder, and recommendation is performed over the full el-igible catalog. Representation-generation details are provided in Appendix A. Because routing labels require outcomes from both the collaborative and candidate models, all policy comparisons are performed on the common test population for which outcomes are available from the collaborative model and all three profile-based models. This ensures that every routing policy is evaluated on the same users. The recommendation models and user representations are held fixed throughout the routing experiment; only the routing gate is learned. 
+
+Metrics and reporting. We measure ranking relevance using NDCG@10 and novelty using Novelty@10, defined as the mean self-information of the recommended items, Novelty@ 𝐾 (𝑢 ) = 1
+
+𝐾 ∑︁ 𝑖 ∈𝑅 𝐾 𝑢 
+
+− log 2 𝑝 (𝑖 ),
+
+where 𝑝 (𝑖 ) is item popularity estimated from training interac-tions [12]. Higher Novelty therefore indicates exposure to less-popular items. We focus on Novelty rather than intra-list diversity because the collaborative and profile-based recommendation mod-els operate in different representation geometries, making diversity less directly comparable across them. To preserve production confi-dentiality, all recommendation-performance results are reported as relative changes with respect to always serving the collaborative model. 
+
+Routing evaluation. A separate Gradient Boosting gate is trained for each candidate profile. Routing scores are generated using five-fold out-of-fold evaluation, such that each user’s score is produced by a gate trained on outcome-derived labels from the other folds. The held-out user’s observed recommendation out-comes are therefore not used to train the gate that produces that user’s routing score. We compare the learned Narrative gate against three simple policies: a niche heuristic that prioritizes users with higher niche ratios, a short-history heuristic that prioritizes users with shorter in-teraction histories, and uniform random routing. The two heuristic policies also test whether routing on a single intuitive user signal can reproduce the benefit of the multivariate gate. Because dif-ferent policies incur different relevance costs per routed user, we compare them at matched overall NDCG loss rather than matched routing rates. At the 5% budget, each policy is allowed to select the operating point on its frontier that yields the greatest Novelty gain while remaining within the relevance constraint. Bootstrap 95% confidence intervals are reported for the Narrative operating points, and paired Wilcoxon signed-rank tests [13] are applied to routed-user novelty differences. Additional implementation details are provided in Appendix A, and routing results for Centroid and TemporalNarrative are reported in Appendix B. 
+
+## 4.2 Results and Discussion 
+
+Uniform profile-based deployment motivates selective rout-ing. We first examine the trade-off obtained by serving each profile-based recommendation model uniformly. Table 1 shows that all three substantially increase Novelty@10, but at a large cost in NDCG@10. Uniform deployment confirms that both generative and non-generative semantic profiles substantially increase novelty but incur large relevance losses. The LLM-generated profiles yield the largest uniform novelty gains, although at greater relevance cost. The routing AUCs indicate that serving-time features contain predictive signal for each candidate model; because each gate predicts an arm-specific outcome, we do not use cross-arm AUC differences to rank the candidate models. We use Narrative as the primary case Sabouri et al. 
+
+Table 1: Semantic-arm characteristics at 𝐾 = 10 . Uniform-deployment columns serve the indicated semantic repre-sentation to all users and report changes relative to always-collaborative. Routing signal reports the out-of-fold ROC-AUC improvement above chance for the learned gate.              
+
+> Uniform deployment Learned gate Semantic arm ΔNDCG ΔNovelty AUC lift
+> Non-generative
+> Centroid −85 .1% +69 .0% +15.9 pp
+> Generative
+> TemporalNarrative −87 .5% +74 .7% +15.9 pp Narrative −94 .7% +75 .7% +18.4 pp
+
+Table 2: Narrative learned-gate operating points from the probability-threshold sweep at 𝐾 = 10 . Changes are relative to always serving the collaborative model. Novelty intervals are bootstrap 95% CIs.                       
+
+> Routing Outcome vs. collaborative NDCG budget Routed ΔNovelty [95% CI] ΔNDCG
+> ≤1% 2.9% +1.2% [1 .0, 1 .5] −0.9%
+> ≤2% 5.3% +2.5% [2 .1, 2 .9] −1.9%
+> ≤5% 12 .0% +6.2% [5.5,6.8]−4.8%
+> ≤10% 20 .0% +11 .1% [10 .3, 12 .0] −9.6%
+
+study because our focus is the selective deployment of an LLM-generated profile, while Appendix B reports corresponding results for Centroid and TemporalNarrative. 
+
+The learned gate exposes a controllable novelty–relevance trade-off. Rather than serving Narrative uniformly, we vary the routing threshold to control how selectively users are routed to the generative model. Table 2 shows a consistent progression. Un-der a 1% overall NDCG-loss budget, 2.9% of users are routed and Novelty@10 increases by 1.2%. Increasing the budget to 5% routes approximately 12.0% of users and increases novelty by 6.2%. At the 10% budget, approximately 20.0% of users are routed and novelty in-creases by 11.1%. The bootstrap confidence intervals remain above zero at all four operating points, and paired Wilcoxon tests indicate significant novelty improvements ( 𝑝 < 0.001). The zero-loss condition used to construct positive training exam-ples does not imply zero relevance loss after routing. The gate must infer the desired outcome from serving-time features and there-fore makes classification errors. The routing threshold controls the consequences of these errors: conservative thresholds route only high-confidence users, whereas lower thresholds route more users and obtain additional novelty at greater overall NDCG cost. Figure 1(a) visualizes this novelty–relevance trade-off. 
+
+Learning whom to route matters. We next ask whether the gains arise simply from exposing more users to the higher-novelty generative model. Figure 1(b) compares policies under a common overall NDCG-loss budget of at most 5%. Importantly, routing rates are not matched: each policy selects the point on its own fron-tier that maximizes Novelty while satisfying the same relevance constraint. The learned gate routes 12.5% of users and obtains a 6.5% Novelty@10 gain. At comparable relevance cost, niche-based routing obtains 4.7%, random routing 4.1%, and short-history rout-ing 2.7%. The learned gate therefore yields a 1.8-percentage-point larger novelty gain than the strongest heuristic while spending essentially the same relevance budget. The 5% budget is used only for comparison; deployment budgets are application-dependent. Table 2 uses a probability-threshold sweep, whereas Figure 1(b) uses a finer coverage-ranked sweep over the same Narrative gate scores to maximize Novelty within the 5% budget, yielding the slightly different 12.5% routed and +6.5% Novelty point. 
+
+The routing behavior generalizes across profile types. Ad-ditional results in Appendix B show the same routing pattern for Centroid and TemporalNarrative. Notably, Centroid yields compara-ble, and at the reported points slightly stronger, novelty–relevance trade-offs than Narrative. Thus, our results support selective routing of profile-based recommenders generally, rather than an inherent frontier advantage from LLM generation itself. Together, these results distinguish selective routing from simply replacing the collaborative model with a generative recommenda-tion model. Generative profiles provide substantially greater ex-posure to novel content when used globally, but their relevance loss makes such deployment undesirable. The learned gate instead uses serving-time user characteristics to concentrate generative routing on a relatively small subset of users while exposing a thresh-old through which the system can choose how much relevance to exchange for additional novelty. The study is offline and limited to one production streaming plat-form and the common test population across evaluated profiles. The reported operating points characterize an offline novelty–relevance frontier; online threshold calibration and robustness under distri-bution shift remain important future work. 
+
+## 5 Conclusion 
+
+We studied whether generative user profiles can be used selectively rather than uniformly in recommendation. While LLM-generated profiles can substantially increase novelty, deploying them glob-ally can incur large relevance losses. Our serving-time gate instead learns when to route a user from the default collaborative sequential model to a recommendation model driven by an LLM-generated pro-file using only serving-time features. Varying the routing threshold exposes a controllable novelty–relevance trade-off. On real-world streaming data, the learned gate increases Novelty@10 by 6.5% under an approximately 5% overall NDCG-loss budget and outper-forms random and simple heuristic routing at comparable relevance cost. Results with additional profile types support selective rout-ing more generally, rather than suggesting that generative profiles universally outperform simpler semantic alternatives. Score-level fusion and unified rankers provide complementary alternatives to per-user routing; comparing these approaches under a shared candidate universe and deployment cost model is an important direction for future work. Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty 
+
+## References                               
+
+> [1] Himan Abdollahpouri, Robin Burke, and Bamshad Mobasher. 2019. Managing Popularity Bias in Recommender Systems with Personalized Re-ranking. In
+> Proceedings of the 32nd International Florida Artificial Intelligence Research Society Conference (FLAIRS) . 413–418. [2] Pablo Castells, Neil J. Hurley, and Saúl Vargas. 2015. Novelty and Diversity in Recommender Systems. In Recommender Systems Handbook . Springer. [3] Lingjiao Chen, Matei Zaharia, and James Zou. 2024. FrugalGPT: How to use large language models while reducing cost and improving performance. Transactions on Machine Learning Research (2024). [4] Pasquale Lops, Marco De Gemmis, and Giovanni Semeraro. 2011. Content-based recommender systems: State of the art and trends. In Recommender Systems Handbook . Springer, 73–105. [5] Simon Lubos, Thi Ngoc Trang Tran, Alexander Felfernig, Seda Polat Erdeniz, and Viet Man Le. 2024. LLM-Generated Explanations for Recommender Systems. In Adjunct Proceedings of the 32nd ACM Conference on User Modeling, Adaptation and Personalization (UMAP) . 276–285. [6] Jiaqi Ma, Zhe Zhao, Xinyang Yi, Jilin Chen, Lichan Hong, and Ed H Chi. 2018. Modeling task relationships in multi-task learning with multi-gate mixture-of-experts. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining . 1930–1939. [7] Qiang Ma, Xinyi Ren, and Chao Huang. 2024. XRec: Large Language Models for Explainable Recommendation. In Findings of the Association for Computational Linguistics: EMNLP 2024 . 391–402. [8] Nils Reimers and Iryna Gurevych. 2019. Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing (EMNLP) .[9] Milad Sabouri, Masoud Mansoury, Kun Lin, and Bamshad Mobasher. 2025. Effec-tiveness of LLMs in Temporal User Profiling for Recommendation. In 2025 IEEE International Conference on Data Mining Workshops (ICDMW) . IEEE, 2330–2335. [10] Milad Sabouri, Masoud Mansoury, Kun Lin, and Bamshad Mobasher. 2025. To-wards Explainable Temporal User Profiling with LLMs. In Adjunct Proceedings of the 33rd ACM Conference on User Modeling, Adaptation and Personalization (UMAP) . 219–227. [11] Milad Sabouri, Neeraj Sharma, Sardar Hamidian, and Shaghayegh Agah. 2026. When LLM-Based User Profiling Adds Value in Production Streaming Recom-mendation. arXiv preprint arXiv:2609.27183 (2026). [12] Saúl Vargas and Pablo Castells. 2011. Rank and Relevance in Novelty and Diversity Metrics for Recommender Systems. In Proceedings of the Fifth ACM Conference on Recommender Systems (RecSys) . 109–116. [13] Frank Wilcoxon. 1945. Individual Comparisons by Ranking Methods. Biometrics Bulletin 1, 6 (1945), 80–83. https://doi.org/10.2307/3001968
+
+## A Routing Implementation and Reproducibility Details 
+
+Representation implementation. Narrative and TemporalNarra-tive profiles are generated with Llama 3.3 70B Instruct and encoded using SBERT all-MiniLM-L6-v2 (384 dimensions). Centroid is con-structed by mean-pooling item embeddings produced by the same SBERT encoder. 
+
+Routing features. The routing features are chosen to capture complementary aspects of a user’s observable history while remain-ing available at serving time. History length reflects the amount of behavioral evidence available, while its logarithm distinguishes short histories without allowing very long histories to dominate the scale. Mean and median item popularity capture the user’s general popularity orientation, with the median providing a more robust summary. The niche ratio measures the fraction of consumed items below the global median popularity. Finally, the norms of the col-laborative and candidate profile representations provide compact model-side signals about the representations available for routing. No feature is derived from future interactions or held-out recom-mendation outcomes. 
+
+Feature importance. Across the five out-of-fold classifiers, the collaborative representation norm is the most important feature for all three profile types, with mean importance of 0.30–0.35. The popularity characteristics of the user’s interaction history are also consistently informative, while history-length features provide sec-ondary signal. The candidate-profile norm contributes for Centroid and TemporalNarrative but is unused by the Narrative gate. These importances characterize the fitted Gradient Boosting models and should not be interpreted as causal effects. 
+
+Serving implication. The routing gate is trained offline using outcome-derived binary targets. User profiles can likewise be gen-erated and refreshed offline. At serving time, the gate uses serving-safe user features to produce a routing score, which is thresholded to select either the collaborative or profile-based recommendation model. For Narrative, the candidate-profile norm has zero impor-tance across all five folds, so the fitted gate does not require the Narrative representation itself to make this decision. 
+
+Gate implementation. A separate gate is trained for Centroid, Narrative, and TemporalNarrative using a Gradient Boosting clas-sifier with binary log-loss and a fixed random seed of 42; other-wise, default classifier settings are used. Missing feature values are median-imputed and no feature scaling is applied. The same preprocessing and classifier configuration are used for all three candidate recommendation models. 
+
+Out-of-fold evaluation. Routing scores are obtained using five-fold stratified out-of-fold evaluation. In each fold, the gate is trained on four folds and predicts the held-out fold, so every reported routing score is produced by a classifier that was not trained on that user’s outcome-derived routing label. The resulting out-of-fold scores are then thresholded to construct the routing policies. NDCG-loss budgets are applied only when selecting operating points after training and do not alter the classifier objective. 
+
+## B Additional Routing Results 
+
+Table 3 reports learned-gate operating points for Centroid and Tem-poralNarrative. These results complement the detailed Narrative analysis in the main paper. 
+
+Table 3: Additional learned-gate operating points at 𝐾 = 10 .Changes are relative to always serving the collaborative model. 
+
+Routing Outcome vs. collaborative NDCG budget Routed ΔNovelty ΔNDCG 
+
+Non-generative Centroid 
+
+≤ 1% 3.7% +1.7% −0.8% 
+
+≤ 2% 6.4% +3.0% −1.9% 
+
+≤ 5% 12 .5% +6.5% −4.5% 
+
+≤ 10% 22 .1% +12 .0% −9.6% 
+
+Generative TemporalNarrative 
+
+≤ 1% 2.2% +0.9% −0.9% 
+
+≤ 2% 6.0% +2.8% −1.9% 
+
+≤ 5% 12 .0% +6.2% −4.4% 
+
+≤ 10% 20 .2% +11 .2% −9.8% 
+
+Both additional profile types exhibit the same qualitative rout-ing pattern observed for Narrative: larger relevance budgets route more users and yield progressively greater novelty gains. Centroid Sabouri et al. 
+
+achieves slightly stronger point-estimate trade-offs than Narrative at the reported budgets, while TemporalNarrative shows compa-rable behavior. Thus, the routing pattern is not specific to a single profile type. 
+
+## Generative AI Usage Disclosure 
+
+LLMs were used to generate the Narrative and TemporalNarrative user profiles as described in the paper. Generative AI tools were also used to assist with code and manuscript editing; all experiments, reported results, and claims were verified by the authors.

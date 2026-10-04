@@ -1,0 +1,54 @@
+{
+  "label": "2026-10-04",
+  "date": "2026-10-04",
+  "generated_at": "2026-10-04T22:10:43",
+  "count": 3,
+  "papers": [
+    {
+      "paper_id": "202610/04/2609.37311v1-remem-rethinking-perception-and-memory-in-long-context-recommendation-agents",
+      "section": "quick",
+      "title_en": "ReMem: Rethinking Perception and Memory in Long-Context Recommendation Agents",
+      "authors": "Haohao Qu, Yongcheng Jing, Chun Hin Chan, Shanru Lin, Wenqi Fan, Dacheng Tao",
+      "date": "2026-09-29",
+      "pdf": "https://arxiv.org/pdf/2609.37311v1",
+      "score": "6.0",
+      "evidence": "具备多模态感知与动态记忆的生成式推荐智能体",
+      "tldr": "现有推荐智能体依赖噪声大、异构的原始HTML页面感知物品，并在长用户历史与多步交互中面临低效长上下文推理。ReMem 改用截图与OCR提取结构化多模态信息，实现类人且平台无关的物品感知；同时引入时间演化动态记忆，通过分块顺序更新维持固定大小记忆，以线性复杂度处理任意长上下文。作者还提出多记忆GRPO变体，将最终答案优势传播到所有中间对话。在搜索、排序、判断三个任务上，ReMem 平均提升5.16%，持续优于现有SOTA。",
+      "tags": "query:search-rec",
+      "abstract_en": "Recent Recommendation Agents (RecAgents) offer a promising alternative by shifting recommendation to an active, user-side paradigm, where generative agents autonomously perceive external platforms, reason over user preferences, and execute decisions. However, existing RecAgents still suffer from two critical limitations: brittle item perception based on noisy and heterogeneous item pages, and inefficient long-context reasoning over extended user histories and multi-step interaction traces. To address these challenges, we propose a novel recommendation agent framework, termed as ReMem, that combines OCR-based multimodal perception with time-evolving dynamic memory. Instead of parsing raw HTML, ReMem observes item pages through screenshots and extracts structured multimodal information via an OCR tool, enabling a more humanoid and platform-agnostic perception mechanism. To support long-horizon preference modeling, ReMem further introduces a chunk-wise sequential memory update strategy, where the agent selectively maintains a fixed-size memory of informative historical interactions while processing arbitrarily long contexts with linear inference complexity and bounded context length. This design allows the agent to preserve evolving user preferences without relying on external memory modules or disrupting the standard autoregressive generation process. To enhance the dynamic memory instruction, we further develop a multi-memory GRPO variant, which propagates the final-answer advantage to all intermediate conversations that contribute to the final response. Extensive experiments on three datasets demonstrate that ReMem consistently outperforms state-of-the-art baselines, achieving an average improvement of 5.16\\% across three recommendation agent tasks, namely searching, ranking, and judging.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/04/2609.39043v1-routing-between-generative-and-collaborative-user-profiles-a-serving-time-gate-for-controllable-novelty",
+      "section": "quick",
+      "title_en": "Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty",
+      "authors": "Milad Sabouri, Neeraj Sharma, Sardar Hamidian, Shaghayegh Agah",
+      "date": "2026-09-30",
+      "pdf": "https://arxiv.org/pdf/2609.39043v1",
+      "score": "6.0",
+      "evidence": "在生产推荐管线中选择性路由LLM生成的用户画像",
+      "tldr": "LLM生成的语义用户画像能提升推荐丰富度，但生成成本高且并非所有用户都适合统一部署。本文在生产级流媒体推荐中引入服务时路由门，用仅服务时可得的特征将用户分派给协同序列模型或LLM画像驱动模型，并通过阈值调节新颖性与相关性权衡。在NDCG损失预算5%时，该门路由12.5%用户，使Novelty@10提升6.5%，优于启发式和随机路由。结果表明LLM画像可作为协同推荐的可控补充，且收益主要来自选择性路由而非LLM生成本身。",
+      "tags": "query:search-rec",
+      "abstract_en": "Large language models (LLMs) enable rich semantic user profiles for recommendation, but such profiles are more expensive to generate and are not necessarily desirable to deploy uniformly. We study whether LLM-generated profiles can instead be invoked selectively within a production recommendation pipeline. Using a real-world streaming dataset covering movies, TV shows, and sports content, we train a serving-time routing gate that assigns each user to either a collaborative sequential recommendation model or a recommendation model driven by an LLM-generated profile. The gate uses only serving-time features and learns to identify users for whom profile-based routing can increase Novelty@10 while preserving ranking relevance. A routing threshold controls how aggressively users are sent to the generative model, exposing a tunable novelty--relevance trade-off. At an overall NDCG-loss budget of 5\\%, the learned gate increases Novelty@10 by 6.5\\% while routing 12.5\\% of users, outperforming simple heuristic and random routing policies at comparable relevance cost. These results show that LLM-generated user profiles can serve as a controllable complement to collaborative recommendation, while results with non-generative semantic profiles indicate that the benefit stems from selective routing rather than LLM generation alone.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/04/2609.40241v1-decision-oriented-recommendation-reranking-an-empirical-study-of-jev",
+      "section": "quick",
+      "title_en": "Decision-Oriented Recommendation Reranking: An Empirical Study of Jev",
+      "authors": "Hanjia Lyu, Yinglong Xia",
+      "date": "2026-09-30",
+      "pdf": "https://arxiv.org/pdf/2609.40241v1",
+      "score": "6.0",
+      "evidence": "面向推荐重排序的决策导向LLM模型实证研究",
+      "tldr": "大语言模型用于推荐重排时，常面临推荐质量与服务效率的权衡。本文针对候选集预定义、重排本质为结构化选择的任务，对决策导向模型 Jev 进行受控实证研究，并与推荐专用模型及 Qwen 逐点/列表重排器对比。在多个 Amazon Reviews 领域和不同候选规模下，Jev 保持较强推荐效果，延迟增长比逐点 Qwen 更平缓，但整体延迟仍高于推荐专用模型。结果揭示其独特质量—延迟区间，并推动决策导向模型在结构化排序任务中的进一步探索。",
+      "tags": "query:search-rec",
+      "abstract_en": "Large language models (LLMs) have shown promise for recommendation reranking, but their use introduces an important tradeoff between recommendation quality and serving efficiency. We investigate whether a decision-oriented model provides a useful alternative when the reranking task is fundamentally a structured choice among predefined candidate items. Specifically, we conduct a controlled empirical study of Jev, described by TypeSafe AI as a ``System One Model,'' for personalized recommendation reranking and compare it with recommendation-specific models and pointwise and listwise Qwen rerankers across multiple Amazon Reviews domains and candidate-set sizes, evaluating both recommendation effectiveness and observed serving latency. Our results show that Jev maintains strong recommendation effectiveness relative to the evaluated baselines while exhibiting substantially more gradual latency growth than the pointwise Qwen rerankers, although its observed serving latency remains substantially higher than that of recommendation-specific models. Together, these characteristics place Jev in a distinct quality--latency operating regime across candidate sizes and domains. These findings motivate further investigation of decision-oriented models for recommendation and other ranking tasks with structured output spaces.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

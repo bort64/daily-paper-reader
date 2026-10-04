@@ -1,0 +1,57 @@
+{
+  "date": "20261004",
+  "date_label": "",
+  "generated_at": "2026-10-04 22:10:42 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.37311v1",
+      "route": "202610/04/2609.37311v1-remem-rethinking-perception-and-memory-in-long-context-recommendation-agents",
+      "title": "ReMem: Rethinking Perception and Memory in Long-Context Recommendation Agents",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "具备多模态感知与动态记忆的生成式推荐智能体",
+      "first_seen_at": "2026-10-04 22:10:42 UTC",
+      "updated_at": "2026-10-04 22:10:42 UTC"
+    },
+    {
+      "paper_id": "2609.39043v1",
+      "route": "202610/04/2609.39043v1-routing-between-generative-and-collaborative-user-profiles-a-serving-time-gate-for-controllable-novelty",
+      "title": "Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "在生产推荐管线中选择性路由LLM生成的用户画像",
+      "first_seen_at": "2026-10-04 22:10:42 UTC",
+      "updated_at": "2026-10-04 22:10:42 UTC"
+    },
+    {
+      "paper_id": "2609.40241v1",
+      "route": "202610/04/2609.40241v1-decision-oriented-recommendation-reranking-an-empirical-study-of-jev",
+      "title": "Decision-Oriented Recommendation Reranking: An Empirical Study of Jev",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向推荐重排序的决策导向LLM模型实证研究",
+      "first_seen_at": "2026-10-04 22:10:42 UTC",
+      "updated_at": "2026-10-04 22:10:42 UTC"
+    }
+  ]
+}

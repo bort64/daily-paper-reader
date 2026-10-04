@@ -48,7 +48,7 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-10-03</span>
+      <span class="dpr-home-dashboard-kicker">2026-10-04</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
     <strong class="dpr-home-dashboard-count">共 3 篇</strong>
@@ -58,7 +58,7 @@
     <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-10-03 22:23:27 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-10-04 22:10:42 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日速读3篇推荐系统论文，精读0篇。三篇均获6.0分，方向分别聚焦技能基因组演化做架构发现、LLM推断用户上下文在生产流式推荐中的价值、以及LLM商品搜索的上下文筛选。建议普通读者优先从生产流式推荐那篇入手，关注LLM上下文何时真正有用。</p>
+<p>今日速读3篇推荐系统论文，聚焦长上下文智能体、用户画像路由与重排序决策。最值得看的是《ReMem》对长上下文推荐中感知与记忆的重新审视，以及生成式与协同画像在服务时可切换以控制新颖度。建议普通读者优先扫这两篇的摘要，留意推荐系统正从单一排序转向“何时用哪种画像”的动态决策。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -94,7 +94,7 @@
     <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="EvoSkillRec: Skill-Genome Evolution for Recommender Architecture Discovery">EvoSkillRec: Skill-Genome Evolution for Recommender Architecture Discovery</span></li><li><span class="dpr-home-dashboard-paper-title" title="When LLM-Inferred User Context Adds Value in Production Streaming Recommendation">When LLM-Inferred User Context Adds Value in Production Streaming Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="RPTune: Learned Context Curation for LLM Catalog Search">RPTune: Learned Context Curation for LLM Catalog Search</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="ReMem: Rethinking Perception and Memory in Long-Context Recommendation Agents">ReMem: Rethinking Perception and Memory in Long-Context Recommendation Agents</span></li><li><span class="dpr-home-dashboard-paper-title" title="Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty">Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty</span></li><li><span class="dpr-home-dashboard-paper-title" title="Decision-Oriented Recommendation Reranking: An Empirical Study of Jev">Decision-Oriented Recommendation Reranking: An Empirical Study of Jev</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
