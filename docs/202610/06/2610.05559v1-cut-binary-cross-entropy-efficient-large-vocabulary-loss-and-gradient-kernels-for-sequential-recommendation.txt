@@ -1,0 +1,253 @@
+Title: Cut Binary Cross Entropy: Efficient Large-Vocabulary Loss and Gradient Kernels for Sequential Recommendation
+
+URL Source: https://arxiv.org/pdf/2610.05559v1
+
+Published Time: Tue, 06 Oct 2026 02:01:43 GMT
+
+Number of Pages: 4
+
+Markdown Content:
+# Cut Binary Cross Entropy: Efficient Large-Vocabulary Loss and Gradient Kernels for Sequential Recommendation 
+
+Yaoyiran Li 
+
+Google Cloud 
+
+London, United Kingdom yaoyiran@google.com 
+
+Haowen Ning 
+
+Google Cloud 
+
+Mountain View, USA hning@google.com 
+
+Mohamed Hammad 
+
+Google Cloud 
+
+Mountain View, USA mibra@google.com 
+
+Abstract —Industrial sequential recommender systems operate over massive item catalogs (e.g., 10 5–10 7 items). Multi-label recommendation models are trained with Binary Cross-Entropy (BCE) loss over the full vocabulary, but standard BCE materializes a dense [B, N, V ] logits tensor in High Bandwidth Memory (HBM), incurring prohibitive O(BN V ) memory and fatal Out-Of-Memory (OOM) errors. While chunked loss optimizations exist for Softmax Cross-Entropy in LLMs, large-scale multi-label BCE optimization remains unexplored across deep learning ecosystems. We propose CutBCE, an exact, hardware-accelerated BCE loss and gradient operator implemented in JAX and Pallas for large-vocabulary workloads. CutBCE introduces (1) an exact fused reformulation evaluating dense background loss and sparse target corrections; (2) a custom Vector-Jacobian Product (VJP) with a dedicated Pallas TPU backward kernel computing logit tiles on-chip in both passes so logits and their gradients never reside in HBM; (3) dynamic VMEM budgeting and sharding-aware collective hoisting for distributed meshes; and (4) count-based zero-overhead training metrics. On single-chip TPU v5e/v6e mini-benchmarks, CutBCE eliminates OOM errors with up to 91.9% speedup. On 8-chip TPU slice training for multi-label SASRec with 876k items (Yambda-50M), CutBCE reduces peak HBM by 65.7% ( > 14 GiB saved per chip) and increases training speed by 225.9% with comparable accuracy. CutBCE is open-sourced at https://github .com/AI-Hypercomputer/RecML/blob/ main/recml/core/ops/binary cross entropy ops .py. 
+
+Index Terms —Binary Cross Entropy, Efficient Deep Learning, Sequential Recommendation, TPU Kernels, Pallas, JAX 
+
+I. I NTRODUCTION AND MOTIVATION 
+
+Sequential recommender systems are foundational to modern digital services, including e-commerce marketplaces, video streaming platforms, and app stores. These systems model user interaction trajectories to predict future user actions over massive item catalogs containing hundreds of thousands to tens of millions of item IDs [1], [3], [4]. Although text-based generative Large Language Models (LLMs) have demonstrated strong semantic reasoning capabilities for recom-mendation [2], ID-based sequential models (such as SASRec [3] and BERT4Rec [4]) remain the industry mainstream due to sub-millisecond serving latency via Approximate Nearest Neighbor (ANN) search and lightweight model architectures. In industrial sequential recommendation, users frequently interact with multiple related items in a single session. Because single-step next-item prediction is myopic and overfits to noisy clicks and arbitrary local order, models are increasingly trained to predict the next L items (e.g., L = 8 ) simultaneously [11], [12]. This multi-label objective provides richer supervision and captures multi-intent sessions. The standard training loss for multi-label classification is Binary Cross-Entropy (BCE) evaluated over the entire item vocabulary ( V is the vocab size). 
+
+A. The Logits Memory Wall in Standard BCE 
+
+Given batch size B, sequence length N , and hidden dimension D, the transformer backbone outputs activations 
+
+A ∈ RB×N ×D. To compute BCE loss, these activations are projected against an item embedding matrix E ∈ RV ×D to form a dense logits tensor: X = AE T ∈ RB×N ×V . When vocabulary size V reaches industrial scales (e.g., V = 876 , 939 
+
+in the Yambda dataset [1], comprising 876,938 items and one padding token), materializing X creates a severe memory wall. In distributed data-parallel training across an 8-chip TPU slice ( 2 × 4 topology), even with a moderate local batch size Blocal = 16 (global batch B = 128 ), sequence length 
+
+N = 256 , and vocab size V = 876 , 939 , storing the single local logits tensor Xlocal ∈ R16 ×256 ×876 ,939 in 32-bit float requires 16 × 256 × 876 , 939 × 4 B ≈ 13 .38 GiB. While this alone would consume nearly 83 .6% of a 16 GiB accelerator’s memory (e.g., TPU v5e), even on a 32 GiB TPU v6e (Trillium), allocating 13.38 GiB solely for logits leaves insufficient HBM for model parameters, embeddings, optimizer states, transformer activations, and compiler buffers, triggering fatal Out-Of-Memory (OOM) crashes at B = 128 , N = 256 
+
+(as observed in Table III). Furthermore, standard autodiff in JAX [8], PyTorch, and Keras [7] retains X in HBM across forward and backward passes (alongside dense targets and 
+
+∂L/∂ X), overlapping directly with transformer activations. 
+
+B. Research Gap and Key Contributions 
+
+To mitigate logit materialization bottlenecks, recent works have explored chunked loss operators, such as Cut Cross Entropy (CCE) [5], Liger Kernel [10], and Tokamax [6]. However, existing efforts suffer from two key limitations: arXiv:2610.05559v1 [cs.LG] 4 Oct 2026 1) Exclusive Focus on Softmax Cross-Entropy : Prior optimizations target Softmax Categorical Cross-Entropy (CE) for auto-regressive LLMs with global partition functions ( log PVv=1 exv ). In contrast, BCE evaluates independent Bernoulli negative log-likelihoods per class with sparse positive targets (where the number of positive labels L ≪ V ). BCE efficiency optimization for large vocabularies remains unexplored across deep learning ecosystems (e.g., PyTorch/GPU and JAX/TPU). 2) PyTorch and GPU Centricity : Prior loss kernels (e.g., Liger Kernel) rely on CUDA/Triton for Nvidia GPUs. In Google Cloud infrastructure, large-scale recommendation training is predominantly powered by JAX [8] on Tensor Processing Units (TPUs). Developing efficient, distributed, sharding-aware custom loss kernels in JAX and Pallas [9] presents distinct architectural requirements. To bridge this gap, this paper introduces CutBCE , an exact, hardware-accelerated BCE loss operator implemented in JAX and Pallas. The key contributions of this work are as follows:  
+
+> •
+
+Fused Direct BCE Formulation : Exact mathematical decomposition of BCE loss into dense background and sparse target correction.  
+
+> •
+
+Custom VJP & Pallas TPU Kernel : A hybrid JAX/XLA forward scan with a dedicated Pallas TPU backward kernel acting as an explicit rematerialization mechanism that never materializes full logits in HBM.  
+
+> •
+
+Hardware-Aware Distributed Optimizations : Dynamic VMEM budgeting, hierarchical sequence chunking, and sharding-aware collective hoisting across device meshes.  
+
+> •
+
+Zero-Overhead Cut Metrics : Linear count-based confu-sion matrix computation directly during the forward pass with zero auxiliary HBM overhead.  
+
+> •
+
+Empirical Demonstration : Rigorous validation on syn-thetic benchmarks and multi-label SASRec on the 876k-item Yambda dataset [1], demonstrating 65.7% HBM reduction and 225.9% speedup with comparable accuracy. II. R ELATED WORK 
+
+Loss Optimization for Large Vocabularies: As vocabulary sizes scale, output projection and loss computation dominate training memory and compute budgets. While approximate methods like negative sampling reduce computation by evalu-ating only a subset of negatives, they introduce sampling bias and alter the optimization objective. For exact full-vocabulary training, Cut Cross Entropy (CCE) [5] pioneered vocabulary-dimension chunking for LLM cross-entropy. In the GPU ecosystem, Liger Kernel [10] implemented Triton-based fused kernels in PyTorch for LLM fine-tuning. In the TPU ecosystem, Tokamax [6] provides Pallas-based linear softmax cross-entropy for PyTorch. However, all existing chunked loss frameworks exclusively target Softmax Categorical Cross-Entropy with global normalization. In contrast, multi-label recommendation evaluates independent Bernoulli negative log-likelihoods per class over the whole item vocabulary ( L ≪ V ). To the best of our knowledge, CutBCE is the first work (in both JAX/TPU and PyTorch/GPU) to optimize and hardware-accelerate exact BCE loss and gradients for large vocabularies. 
+
+JAX, Pallas, and Accelerator Kernels: JAX [8] compiles numerical programs via XLA and provides functional trans-formations such as custom_vjp and shard_map . For fine-grained control over accelerator memory hierarchies, Pallas [9], JAX’s kernel language, offers direct control over Vector Memory (VMEM), Matrix Multiply Units (MXUs), Vector Processing Units (VPUs), and DMA transfers on Google Cloud TPUs. While Pallas has been adopted for, e.g., attention and softmax CE kernels, Pallas kernels for large-vocabulary BCE have been absent. CutBCE fills this gap with a custom Pallas backward kernel optimized for TPU scratchpad hierarchies. 
+
+Sequential Recommendation Systems: Sequential recom-mender systems model user interaction trajectories over time. Self-attentive architectures (SASRec [3] and BERT4Rec [4]) and LLM alignment methods (CALRec [2]) predict future user engagement over catalogs with 10 5–10 7 item IDs. In industrial applications, multi-intent sessions motivate training with multi-label objectives [11], [12], making fast, memory-efficient BCE computation in JAX/Pallas crucial for scalable training. III. M ETHODOLOGY 
+
+A. Mathematical Formulation of Fused Direct BCE 
+
+Let a ∈ RD denote a model’s hidden representation at a sequence position, and E ∈ RV ×D denote the item output embedding matrix. The logit for class v ∈ { 1, . . . , V } is xv =
+
+a · eTv , and yv ∈ { 0, 1} denotes the binary target. The standard BCE loss for predicted probability pv = σ(xv ) = 11+ e−xv is 
+
+L(xv , y v ) = −yv log( σ(xv )) − (1 − yv ) log(1 − σ(xv )) . (1) Substituting σ(xv ) into (1) yields L(xv , y v ) = xv + log(1 + 
+
+e−xv )−yv xv , but the term log(1+ e−x) is numerically unstable for large negative x as e−x overflows floating-point range. Using the log-sum-exp identity x+log(1+ e−x) = max( x, 0)+ log(1 + e−| x|), we obtain the numerically stable formulation: 
+
+L(xv , y v ) = max( xv , 0) − yv xv + log(1 + e−| xv |)= L(xv , 0) − yv · xv , (2) where L(xv , 0) = max( xv , 0) + log(1 + e−| xv |) is the dense background loss, and yv · xv is the sparse target correction (active only for positive targets yv = 1 ). The total loss over the whole item vocabulary is defined as follows: 
+
+Ltotal = 1
+
+V
+
+> V
+
+X
+
+> v=1
+
+h
+
+max( xv , 0) + log(1 + e−| xv |) − yv · xv
+
+i
+
+. (3) 
+
+Vocabulary Chunking Algorithm: Rather than computing 
+
+X ∈ RB×N ×V globally, CutBCE tiles the vocabulary into blocks of size BV (block_v , e.g., BV = 4096 ). 1 For each block j ∈ { 0, . . . , ⌈V /B V ⌉ − 1}: (1) slice Ej ∈ RBV ×D;(2) compute chunked logits Xj = AE Tj ∈ RB×N ×BV ; (3) accumulate the block’s loss into a running sum; and (4) discard     
+
+> 1In practice, CutBCE flattens the batch and sequence dimensions into a single BN dimension and hierarchically tiles it (via sequence chunking and inner kernel tiles of size BN= 128 ) to respect accelerator VMEM capacity.
+
+TABLE I: Logit Memory Comparison.                  
+
+> Memory Footprint Standard BCE CutBCE
+> Logits [B, N, V ][BN, B V]on-chip tile Logit Gradient [B, N, V ][BN, B V]on-chip tile Complexity O(BN V )O(BN B V)
+
+Xj immediately. This reduces peak intermediate activation memory from O(BN V ) to O(BN B V ), achieving significant memory reductions. 
+
+B. Gradient Formulation and Custom VJP Rematerialization 
+
+The analytical gradient of the BCE loss with respect to logit 
+
+xv is ∂L 
+
+> ∂x v
+
+= 1 
+
+> V
+
+(σ(xv ) − yv ). Let Y denote the multi-hot target tensor. The gradients for activations A and embeddings E are given as follows: 
+
+∇AL = 1
+
+V (σ(X) − Y)E, ∇EL = 1
+
+V (σ(X) − Y)T A, (4) where A, X, and Y are viewed as 2D matrices with B and 
+
+N flattened into BN rows. Averaging the loss over the BN 
+
+positions adds a factor of 1/(BN ) to both; in practice, padding positions are excluded from this average. 
+
+Breaking Memory Overlap via Custom VJP: In standard autodiff, the forward pass records intermediate activations onto a reverse tape, keeping the full [B, N, V ] logits resident in HBM across forward and backward passes. CutBCE defines a custom Vector-Jacobian Product ( custom_vjp ). In the forward pass, only A, E, and sparse [B, N, L ] target IDs (L ≪ V ) are retained; no multi-hot target tensor is materialized. During backward pass, the custom kernel recomputes logits Xj
+
+chunk-by-chunk on the fly and accumulates gradients directly. As shown in Table I, no [B, N, V ] buffer is materialized in HBM, drastically lowering global peak memory. 
+
+C. Hybrid Architecture and Pallas TPU Backward Kernel 
+
+We engineer a Hybrid JAX/XLA Forward + Pallas TPU Backward architecture. The backward pass executes via a dedicated Pallas TPU kernel ( _bce_bwd_kernel ):  
+
+> •
+
+Local VMEM Scratchpad Accumulation : Embedding gradients ∇Ej L are accumulated in TPU VMEM across inner kernel tiles ( BN = 128 , matching the TPU vector lane width) before a single contiguous DMA write back to HBM, drastically reducing memory bus traffic.  
+
+> •
+
+Dynamic VMEM Budgeting & Sequence Chunking :CutBCE dynamically queries physical VMEM capacity via TPU device info. When the total sequence dimension 
+
+BN exceeds safe scratchpad limits, the chunking dis-patcher ( _bce_bwd_pallas_chunked_n ) partitions 
+
+BN into outer sequence chunks processed sequentially in HBM.  
+
+> •
+
+Sharding-Aware Collective Hoisting : For distributed meshes (Data, FSDP, or Vocab Parallelism), dispatcher 
+
+_bce_bwd_sharded leverages jax.shard_map to hoist weight replication constraints outside the loop, man-age per-shard vocab_offset , and perform collective 
+
+psum reductions across mesh axes. Listing 1: CutBCE drop-in usage in JAX/Keras 3.                
+
+> from recml.core.ops import binary_cross_entropy_ops
+> #activations: [B,N,D], embeddings: [V,D], targets: [B,N,L]
+> loss =binary_cross_entropy_ops.cut_binary_cross_entropy( activations=activations, embeddings=embeddings, targets=targets, weights=weights, block_v=4096, mesh=mesh, act_spec=act_spec, emb_spec=emb_spec)
+
+D. Zero-Overhead Cut Metrics for Training 
+
+Standard count-based metrics reconstruct the full [B, N, V ]
+
+logits during training, defeating memory savings. CutBCE introduces Cut Metrics : during the forward pass, it computes TP, FP, FN, and TN counts of shape [B, N ] without materi-alizing [B, N, V ] logits. Standard classification metrics (such as binary accuracy, precision, recall, and Fβ ) can then be calculated directly from these aggregated counts with zero auxiliary HBM overhead. 
+
+Training vs. Evaluation Metrics: Cut Metrics are designed exclusively for monitoring classification metrics during the 
+
+training phase without logit reconstruction. In contrast, ranking-based evaluation metrics (e.g., our multi-label Hit @8 , Sec-tion III-E) are evaluated during separate evaluation/test phases over full logits, completely decoupled from Cut Metrics. 
+
+E. Multi-Label SASRec-BCE Application Pipeline 
+
+We implement a causal, non-autoregressive multi-label sequential recommendation pipeline based on SASRec [3] with a GPT-2 transformer backbone. 
+
+Task Formulation: The model predicts the next L = 8 items simultaneously. Input and target item IDs lie in ZB×N and 
+
+ZB×N ×L, respectively. For a user sequence of length n: (1) the 
+
+test set uses the first n − 8 items as input and the last 8 items as targets; (2) the dev set uses the first n − 17 items as input and the following 8 items as targets; and (3) the training set 
+
+uses the first n − 26 items as input, where every non-padding position is trained via CutBCE to predict its next 8 items. In all splits, the input is truncated to at most the N most recent items and padded to length N . At evaluation, the hidden state at each user’s last non-padding position is projected to full-vocabulary logits ( RV , no negative sampling), and we report multi-label Hit@8: a user counts as a hit if at least one of the 8 held-out next items appears among the top-8 ranked items. IV. E XPERIMENTAL EVALUATION 
+
+Hardware Setup: Experiments are run on Google Cloud TPU v6e (Trillium, 32 GiB HBM) and TPU v5e (16 GiB HBM) with JAX and Keras 3. 
+
+A. Mini-Benchmark Experiments 
+
+We benchmark isolated loss + gradient step time on a single TPU chip (TPU v6e/v5e) across 500 steady-state iterations after JIT compilation. Here, “isolated loss + gradient” measures the loss and backward gradient computation in isolation without transformer backbone or optimizer overhead. Input tensors are generated synthetically: A ∼ N (0 , I) of shape [B, N, D ], E ∼N (0 , I) of shape [V, D ], and target labels sampled uniformly TABLE II: Mini-Benchmark: Standard Keras BCE vs. CutBCE on a Single TPU v6e/v5e ( D = 128 , L = 8 ). Step times averaged over 500 iterations.                                            
+
+> Batch ×SeqLen Vocab ( V)Keras (ms) CutBCE (ms) Speedup
+> Google Cloud TPU v6e (Trillium, 32 GiB HBM, Single Chip)
+> 128 ×128 100,000 OOM 6.93 –
+> 32 ×32 100,000 1.43 0.93 +53.8%
+> 32 ×32 200,000 2.86 1.49 +91.9%
+> Google Cloud TPU v5e (16 GiB HBM, Single Chip)
+> 128 ×128 100,000 OOM 12.79 –
+> 32 ×32 100,000 2.49 1.47 +69.4%
+> 32 ×32 200,000 4.62 2.52 +83.3%
+
+TABLE III: End-to-End Multi-Label SASRec on Yambda-50M (V = 876 , 939 ) on an 8-chip TPU v6e slice ( 2 × 4 Topology, 32 GiB HBM/chip).                                                         
+
+> Batch ×SeqLen Method HBM (GiB) Speed (steps/s) Hit@8
+> 64 ×256 SASRec-BCE 22.37 6.14 0.186
+> 64 ×256 SASRec-CutBCE 7.67 (-65.7% )20.01 (+225.9% )0.183
+> 128 ×256 SASRec-BCE OOM ––
+> 128 ×256 SASRec-CutBCE 7.89 15.82 0.166
+> 64 ×512 SASRec-BCE OOM ––
+> 64 ×512 SASRec-CutBCE 7.89 15.61 0.192
+> 128 ×512 SASRec-BCE OOM ––
+> 128 ×512 SASRec-CutBCE 8.94 10.74 0.211
+
+from [0 , V ) of shape [B, N, L ], with hidden dimension D =128 and L = 8 positive labels per position. 
+
+Numerical Equivalence: At B = N = 32 and V = 100 k, CutBCE matches standard Keras BCE on both TPU v5e and v6e within 1.1 × 10 −7 relative loss error and 7.1 × 10 −5 relative ℓ2
+
+error in ∇AL and ∇EL, i.e., negligible numerical differences. Our open-source unit tests further check CutBCE against Keras across unaligned N and V , padded and duplicate target IDs, and Pallas and pure-JAX backends. As shown in Table II: (1) OOM Elimination : At B =128 , N = 128 , V = 100 k, standard Keras BCE crashes with OOM, while CutBCE executes smoothly in 6.93 ms (TPU v6e) and 12.79 ms (TPU v5e). (2) Speedups : At B = 32 , N = 32 ,CutBCE delivers 53.8%–91.9% speedups on TPU v6e and 69.4%–83.3% on TPU v5e. (3) Vocabulary Scaling : Speedup improves as vocabulary grows due to high VMEM cache locality and reduced HBM bandwidth roundtrips. 
+
+B. Multi-Label SASRec Experiments on Yambda Dataset 
+
+We evaluate end-to-end training on Yambda-50M [1], filtering out users with ≤ 30 interactions (retaining 9,074 users, 46.46M interactions, average sequence length 5,120.56, 876,938 unique items). The model uses a 3-layer GPT-2 backbone (4 attention heads, hidden dim D = 256 ) and is trained for 
+
+300 , 000 steps with AdamW (lr= 5e − 4, 5, 000 warm-up steps). 
+
+Distributed Setup: Training is conducted on an 8-chip TPU v6e slice (2 × 4 topology) using Data Parallelism (keras.distribution.DataParallel ), where each chip receives 1/8 of the global batch (local batch Blocal = 8 
+
+for global B = 64 , and Blocal = 16 for global B = 128 ). Validation (dev) and test evaluation pipelines run concurrently on dedicated, physically independent TPU slices. Training, dev, and test execution never share or contend for TPU hardware. As shown in Table III: (1) 65.7% Training HBM Reduction :At global B = 64 , N = 256 , SASRec-BCE consumes 22.37 GiB HBM per chip, whereas SASRec-CutBCE requires only 7.67 GiB HBM (saving 14.70 GiB). (2) 225.9% Speedup :Training speed increases from 6.14 to 20.01 steps/second. (3) Larger Batch and Seq Length : At global B = 128 
+
+or N = 512 , standard BCE crashes with OOM, while CutBCE runs stably at 7.89 –8.94 GiB HBM. (4) Meet Accuracy Target :CutBCE achieves 0.183 Hit@8 vs 0.186 for standard BCE. V. C ONCLUSION AND OPEN SOURCE 
+
+We presented CutBCE, an exact, memory-efficient BCE operator for large-vocabulary sequential recommendation fea-turing fused direct BCE formulation, custom VJP remateri-alization with Pallas TPU backward kernels, sharding-aware collective hoisting, and count-based metrics. It achieves up to 225.9% training speedups, 65.7% HBM reduction, and unblocks large-batch, long-sequence training on 876k-item catalogs. CutBCE is open-sourced as a modular JAX operator in RecML at https://github .com/AI-Hypercomputer/RecML/blob/ main/recml/core/ops/binary cross entropy ops .py. It serves as a drop-in replacement for Keras and JAX models, handling tile sizes, sharding, and Pallas kernel dispatch automatically. LLMs assisted in improving the writing of this manuscript. ACKNOWLEDGMENT 
+
+We thank Google colleagues Zixiang Zhou, Aahil Mehta, Yaohui Guo, Xiang Zhai, Wen Tang, and Eugene Ie for their technical advice and helpful discussions. We also thank the anonymous reviewers for their constructive feedback. REFERENCES [1] A. Ploshkin, V. Tytskiy, A. Pismenny, V. Baikalov, E. Taychinov, A. Permiakov, D. Burlakov, E. Krofto, and N. Savushkin, “Yambda-5B – A large-scale multi-modal dataset for ranking and retrieval,” 
+
+arXiv:2505.22238 , 2025. [2] Y. Li, X. Zhai, M. Alzantot, K. Yu, I. Vuli´ c, A. Korhonen, and M. Hammad, “CALRec: Contrastive alignment of generative LLMs for sequential recommendation,” in Proc. RecSys ’24 , 2024, pp. 422–432. [3] W.-C. Kang and J. McAuley, “Self-attentive sequential recommendation,” in Proc. IEEE ICDM , 2018, pp. 197–206. [4] F. Sun, J. Liu, J. Wu, C. Pei, X. Lin, W. Ou, and P. Jiang, “BERT4Rec: Sequential recommendation with bidirectional encoder representations from transformer,” in Proc. ACM CIKM ’19 , 2019, pp. 1441–1450. [5] E. Wijmans, B. Huval, A. Hertzberg, V. Koltun, and P. Kraehenbuehl, “Cut your losses in large-vocabulary language models,” in Proc. ICLR ’25 , 2025. [6] OpenXLA Contributors, “Tokamax: A GPU and TPU kernel library,” 2024. [Online]. Available: https://github .com/openxla/tokamax [7] F. Chollet et al. , “Keras,” 2015. [Online]. Available: https://keras .io [8] J. Bradbury et al. , “JAX: Composable transformations of Python+NumPy programs,” 2018. [Online]. Available: http://github .com/jax-ml/jax [9] Google and JAX Contributors, Pallas: A JAX Kernel Language , 2024. [Online]. Available: https://docs .jax .dev/en/latest/pallas/index .html [10] P.-L. Hsu, Y. Dai, V. Kothapalli, Q. Song, S. Tang, S. Zhu, S. Shimizu, S. Sahni, H. Ning, and Y. Chen, “Liger kernel: Efficient triton kernels for LLM training,” arXiv:2410.10989 , 2025. [11] Q. Liu, J. Zhu, J. Wu, and T. Wu, “FANS: Fast non-autoregressive sequence generation for item list continuation,” in Proc. ACM Web Conf. (WWW) , 2023, pp. 3309–3318. [12] L. Huang et al., “SessionRec: Next session prediction paradigm for generative sequential recommendation,” arXiv:2502.10157 , 2025.

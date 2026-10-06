@@ -1,0 +1,251 @@
+Title: SPRIG: Semantic-ID-enhanced Paths for Knowledge Graph-based Generative Recommendation
+
+URL Source: https://arxiv.org/pdf/2610.06590v1
+
+Published Time: Tue, 06 Oct 2026 03:20:00 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# SPRIG: Semantic-ID-enhanced Paths for Knowledge Graph-based Generative Recommendation 
+
+## Justin Hangöbl 
+
+hangoebl.j@gmail.com Institute of Computational Perception, Johannes Kepler University Linz, Austria 
+
+## Marta Moscati 
+
+marta.moscati@jku.at Institute of Computational Perception, Johannes Kepler University Linz, Austria Albatross AI Linz, Austria 
+
+## Alessandro B. Melchiorre 
+
+alessandro.b.mel@gmail.com Criteo AI Lab Paris, France 
+
+## Shah Nawaz 
+
+shah.nawaz@jku.at Institute of Computational Perception, Johannes Kepler University Linz, Austria 
+
+## Markus Schedl 
+
+markus.schedl@jku.at Institute of Computational Perception, Johannes Kepler University Linz, Austria Human-centered AI Group, AI Lab, Linz Institute of Technology Linz, Austria 
+
+## Abstract 
+
+Recommender systems leveraging generative models often gen-erate item identifiers directly, rather than ranking catalog items by a recommendation score. Recent work extends beyond pure sequential interaction signals by incorporating item content and structured relationships among items, with two distinct directions emerging. Semantic IDs (SIDs) enrich item representations by replac-ing opaque, randomly initialized embeddings with hierarchically quantized discrete codes derived from item content. Knowledge-graph (KG) path reasoning instead generates entity-relation paths that ground recommendations in structured relationships between items, attributes, and external entities, thereby enriching the rela-tional context. These two lines have complementary limitations: SID-based models lack relational grounding, while KG-based gen-erative recommenders still represent items as arbitrary, opaque tokens tied to large embedding tables, limiting parameter sharing and generalization. We propose SPRIG , a generative recommender that integrates content-derived SIDs into KG path reasoning. SPRIG is trained on information-rich KG paths that terminate in items rep-resented as discrete, content-derived tokens, combining the advan-tages of both approaches. We evaluate SPRIG on movie and music recommendation datasets against baselines spanning sequential lan-guage models, KG-augmented methods, and SID-based approaches. Our results show that SPRIG achieves competitive performance over prior generative models while using fewer parameters and a lower compute cost. Code: https://github.com/justinhangoebl/semantic-id-knowledge-graph-recommender 
+
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> CIKM ’26, Rome, Italy
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2539-5/2026/11 https://doi.org/10.1145/3799682.3839870
+
+## CCS Concepts 
+
+• Information systems → Collaborative filtering ; Personaliza-tion ; Recommender systems ; Multimedia and multimodal retrieval .
+
+## Keywords 
+
+Generative Recommendation, Path reasoning, Path language mod-elling, Knowledge graph recommendation, Semantic identifiers, Hierarchical quantization, Residual quantization 
+
+ACM Reference Format: 
+
+Justin Hangöbl, Marta Moscati, Alessandro B. Melchiorre, Shah Nawaz, and Markus Schedl. 2026. SPRIG: Semantic-ID-enhanced Paths for Knowl-edge Graph-based Generative Recommendation. In Proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ’26), November 07–11, 2026, Rome, Italy. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3799682.3839870 
+
+## 1 Introduction and Related Work 
+
+Recommender systems have recently shifted from score-based re-trieval towards generative formulations, where a causal Transformer model trained on chronologically ordered interaction sequences autoregressively predicts the next item directly from a user’s his-tory [6, 15, 23]. While these advances brought substantial gains, two limitations persist: the vocabulary size required for items grows linearly with catalog size, and the sequential (collaborative) signal alone is not rich enough. Complementary directions have emerged to inject richer contextual information into generative recommendation. The first approach enriches the item representa-tion by replacing the arbitrary, opaque, randomly-initialized item IDs with semantically rich discrete codes, known as Semantic IDs (SIDs) [8, 9, 15, 18]. Because each item is encoded with codes from a small shared codebook, SIDs also substantially reduce the vocab-ulary size. The second enriches the relational context by ground-ing recommendation in knowledge graphs (KGs), which encode arXiv:2610.06590v1 [cs.IR] 5 Oct 2026 CIKM ’26, November 07–11, 2026, Rome, Italy Justin Hangöbl, Marta Moscati, Alessandro B. Melchiorre, Shah Nawaz, and Markus Schedl Quantization             
+
+> Item Features
+> (text / audio / ID)
+> Sampling
+> Generalization
+> Specialization
+> Tokenization &
+> Embedding
+> Model
+> Inference
+> Time Step #1 Time Step #2 Time Step #3
+> SPRIG Decoder SPRIG Decoder SPRIG Decoder
+> R12 SEM1 SEM2
+> [BOS] U20 R1 SEM1 SEM2 SEM3
+> 0
+> k
+> LS
+> 0
+> k
+> 0
+> k
+> +
+> Time Step #4
+> SPRIG Decoder
+> SEM4
+> R32 E439
+> Reconstructed
+> Feature
+
+Figure 1: SPRIG framework. Item features are encoded into hierarchical Semantic IDs; SID-augmented KG paths (generic for pretraining, user-to-item for fine-tuning) are tokenized and fed to a causal Transformer decoder that autoregressively generates paths. Section 2 follows a concrete movie example (Inception , Interstellar ) through all four stages. 
+
+structured relationships between items, attributes, and external entities [4, 20]. 
+
+Semantic IDs for Generative Recommendation. SIDs were popular-ized by TIGER [15], which represents each item as a short sequence of content-derived codes from an RQ-VAE over pretrained embed-dings [11, 15]. Sharing code prefixes across semantically similar items enables parameter sharing and cold-start generalization [17], and later work adds collaborative signals [19, 25] or end-to-end tokenization [12]. SPRIG adopts the TIGER formulation with the refined quantization of Generative Recommendation with Semantic IDs (GRID) [9], but unlike these methods grounds recommendation in a structured relational context. 
+
+Knowledge-Graph-Augmented Generative Recommendation. A par-allel line frames recommendation as explicit path reasoning over a KG, returning an item together with a human-interpretable multi-hop path. Early reinforcement-learning (RL)-based agents navigate from user to item [2, 3, 20]; the paradigm was later recast as autore-gressive language modeling over KG paths , with constrained decod-ing guaranteeing valid edges [1, 5]. KGGLM [4] is the state of the art in this line, pretraining a generative model on generic KG paths and fine-tuning for path-reasoning recommendation. However, all of these represent items as opaque, arbitrary IDs, preventing param-eter sharing and growing the vocabulary linearly with the catalog size. In this context, we propose SPRIG , a generative recommender framework that unifies content-derived SIDs with knowledge-graph path reasoning in a single autoregressive model. SPRIG ingests hierarchical SIDs pre-computed from item content features via a residual quantizer, replacing the opaque atomic item tokens of prior KG-based recommenders with semantically informed, parameter-sharing codes. Afterwards, it leverages the rich contextual structure of a KG to pretrain a causal Transformer decoder on generic entity-relation paths, before fine-tuning on user-to-item recommendation paths whose last tokens consist of SID sequences. The path genera-tor builds on KGGLM [4], which we also adopt as our primary KG baseline. This design simultaneously inherits the expressiveness of KG path reasoning [1, 4, 5, 20] and the parameter efficiency and cross-item generalization of SIDs [15, 19], while decoupling the out-put vocabulary from the catalog size. To the best of our knowledge, SPRIG is the first model to integrate SIDs with KG path reasoning for generative recommendation. Within this context, we investigate whether KG-based generative recommenders benefit from repre-senting item entities using semantically grounded identifiers ( RQ1 ), and whether the resulting shared code space reduces the output vocabulary without sacrificing recommendation quality ( RQ2 ). To answer these questions we make the following contributions: 
+
+• We propose SPRIG, the first generative recommender that unifies SIDs and KG path reasoning in a single autoregressive frame-work. 
+
+• We show in two recommendation domains (movies on ML-1M and music on Onion) that SPRIG achieves competitive perfor-mance against sequential language models, KG-augmented meth-ods, and SID-based baselines. 
+
+## 2 Methodology 
+
+SPRIG extends the path-language-modeling paradigm of KGGLM [4] by incorporating content-aware Semantic IDs inspired by TIGER [15], replacing atomic item identifiers with structured code sequences within a single shared vocabulary. SPRIG follows a three-stage design, illustrated in Figure 1. First, item content features are quantized into hierarchical SIDs (e. g., 
+
+Inception maps to (SEM1 , SEM2 , SEM3 ) and the similar Interstellar to 
+
+(SEM1 , SEM2 , SEM4 ), sharing the prefix (SEM1 , SEM2 ), while the un-related Barbie maps to (SEM5 , SEM6 , SEM7 )). These codes are then used to represent item entities within KG paths by expanding each item occurrence into its corresponding SID sequence (so 
+
+⟨𝑢, watched , Inception ⟩ becomes ⟨𝑢, watched , SEM1 , SEM2 , SEM3 ⟩), yielding a unified vocabulary of users, relations, attributes, and SID tokens. A causal Transformer decoder is subsequently trained in two stages: pretraining on generic KG paths to learn relational struc-ture without any collaborative signal (e. g., ⟨ SEM1 , SEM2 , SEM3 ,
+
+directed_by ,Nolan , directed , SEM1 , SEM2 , SEM4 ⟩), followed by fine-tuning on user-to-item paths to specialize the model for recommen-dation (e. g., ⟨ 𝑢 , watched , SEM1 , SEM2 , SEM3 , directed_by , Nolan ,
+
+directed , SEM1 , SEM2 , SEM4 ⟩). At inference, given a user 𝑢 and the watched relation, the model autoregressively emits a SID se-quence, e. g., SEM1 , SEM2 , SEM4 ), which an inverse SID lookup maps back to a catalog item ( Interstellar ). 
+
+## 2.1 Preliminaries 
+
+Let U, I, and A denote the sets of users, items, and attribute enti-ties, respectively. SPRIG operates on a heterogeneous knowledge SPRIG CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+graph G = (E , R, T ) with entities E = U ∪ I ∪ A , relation types 
+
+R, and triplets T ⊆ E × R × E . User-item interactions are encoded as triplets (𝑢, UI , 𝑖 ) ∈ T .A KG path of length 𝐿 is a sequence 𝑝 = 𝑒 0 𝑟 1 𝑒 1 . . . 𝑟 𝐿 𝑒 𝐿 with 
+
+(𝑒 ℓ −1, 𝑟 ℓ , 𝑒 ℓ ) ∈ T for all ℓ. SPRIG is trained on two corpora of such paths, sampled differently for pretraining and finetuning; since the sampling strategy is part of our approach, we define both in Section 2.2. Following TIGER and the broader SID literature [9, 15], a hier-archical quantizer with codebook size 𝐾 represents an item 𝑖 as a sequence SID (𝑖 ) =  𝑠 (1) 
+
+> 𝑖
+
+, . . . , 𝑠 (𝐿 𝑠 )
+
+> 𝑖
+
+ of 𝐿 𝑠 discrete codes 𝑠 (ℓ ) 
+
+> 𝑖
+
+∈{1, . . . , 𝐾 } derived from a content embedding 𝑧 𝑖 , where each succes-sive code refines the residual of the previous one. Because semanti-cally similar items thus share longer code prefixes, this representa-tion enables parameter sharing across related items [15]. Opaque identifiers cannot express this similarity: in KGGLM, I123 and I124 
+
+are adjacent tokens denoting unrelated items, and nothing in an identifier reflects that Inception and Interstellar are alike. SIDs in-stead express similarity level by level: Inception (SEM1 , SEM2 , SEM3 )
+
+and Interstellar (SEM1 , SEM2 , SEM4 ) agree on the coarse codes and differ only in the last, while Barbie (SEM5 , SEM6 , SEM7 ) diverges at the first, so SPRIG can share parameters across related items. SPRIG is agnostic to the quantizer and compatible with any scheme produc-ing SID (𝑖 ), e. g., RVQ [22], residual K-means [9], RQ-VAE [11, 15]. 
+
+## 2.2 SID-augmented Knowledge Graph Paths 
+
+SPRIG draws two path corpora from the same graph, mirroring the pretrain-then-finetune paradigm of KGGLM [4]. For pretraining ,we sample paths that start from an arbitrary item or attribute entity (𝑒 0 ∈ I ∪ A ), traverse only KG relations (user-item edges excluded), and have unconstrained endpoints, yielding a corpus Pgen that captures relational structure without any collaborative signal. For 
+
+finetuning , we sample paths that start at a user ( 𝑒 0 = 𝑢 ∈ U ), traverse the full graph including user-item edges, and terminate at a target item ( 𝑒 𝐿 = 𝑖 ∈ I ), this yields the corpus Prec .The central design choice of SPRIG is to inject the SIDs di-rectly into the KG path vocabulary. Given a raw KG path 𝑝 =
+
+⟨𝑒 0, 𝑟 1, 𝑒 1, . . . , 𝑟 𝐿 , 𝑒 𝐿 ⟩, we define its SID-augmented rewriting ˜𝑝 by replacing every item entity 𝑒 ℓ ∈ I with its SID sequence: ˜𝑝 = ⟨ ˜𝑒 0 𝑟 1 ˜𝑒 1 . . . 𝑟 𝐿 ˜𝑒 𝐿 ⟩ ˜𝑒 ℓ =
+
+(
+
+SID (𝑒 ℓ ) if 𝑒 ℓ ∈ I ,𝑒 ℓ otherwise . (1) Since every item occurrence is expressed as a tuple of SID tokens, a graph path of 𝐿 hops is represented as a longer token sequence ˜𝑝 = ⟨𝑡 1, . . . , 𝑡 𝑇 ⟩ with 𝑇 ≥ 𝐿 , on which SPRIG operates rather than on the graph path directly. 
+
+Unified vocabulary. All paths, generic and recommendation alike, share a single vocabulary given by V = Vsid ∪ V ent ∪ V rel ∪ V special ,where Vsid is the set of 𝐿 𝑠 · 𝐾 SID tokens ( 𝐾 codes per level across 
+
+𝐿 𝑠 levels), Vent = U ∪ A the atomic non-item entities, Vrel = R the relation types, and Vspecial the special tokens ( <bos> , <eos> , <pad> ). The total vocabulary size is |V | = 𝐿 𝑠 ·𝐾 + |U| + |A| + |R| + |V special |,
+
+in which the item-dependent component is the constant 𝐿 𝑠 · 𝐾 
+
+rather than growing as |I| . This decouples the vocabulary size from the catalog size, allowing SPRIG to scale to large catalogs while retaining the expressiveness of KG path reasoning, in contrast 
+
+Table 1: Dataset Characteristics of ML-1M and Onion                           
+
+> Collaborative Components Knowledge Components Characteristic ML-1M Onion Characteristic ML-1M Onion Users 6,040 12,784 Entities (Types) 13,804 (12) 26,701 (6) Items 2,984 18,415 Relations (Types) 193,089 (11) 172,232 (6) Interactions 932,295 1,375,341 Avg. Degree (All) 28.07 12.90 Density 0.05 0.01 Avg. Degree (Items) 64.86 9.35
+
+to PGPR-style models [1, 4, 20] whose vocabulary grows linearly with |I| .
+
+## 2.3 Decoder Model Training 
+
+Given the SID-augmented vocabulary V, SPRIG models a tokenized path ˜ 𝑝 = ⟨𝑡 1, . . . , 𝑡 𝑇 ⟩ with a causal Transformer decoder 𝜋 𝜃 that factorizes the sequence autoregressively, 𝜋 𝜃 ( ˜𝑝 ) = Î𝑇 𝑗 =1 𝜋 𝜃 (𝑡 𝑗 | 𝑡 <𝑗 ),as in KGGLM [4] and PEARLM [1]. Over a path corpus P, the parameters are trained to minimize the negative log-likelihood. 
+
+L( 𝜃 ; P) = − 1
+
+|P | ∑︁ ˜𝑝 ∈ P 
+
+> 𝑇
+
+∑︁ 
+
+> 𝑗 =1
+
+log 𝜋 𝜃 
+
+ 𝑡 𝑗 | 𝑡 < 𝑗 
+
+ . (2) Because the same objective is applied to every token, whether it denotes a user, relation, attribute, or SID code, SPRIG learns a single joint distribution over the relational vocabulary and the hierarchical item codes. Training proceeds in two stages over the same graph, differing only in the corpus P from which paths are sampled. 
+
+Pretraining. We first sample a generic corpus Pgen of paths that start from an arbitrary item or attribute entity ( 𝑒 0 ∈ I ∪ A ), tra-verse only KG relations (user-item edges excluded), and have uncon-strained endpoints, and minimize L( 𝜃 ; Pgen ). Mirroring KGGLM’s generic pretraining [4], this stage uses no user-item interaction as supervision; it lets the model absorb structural regularities of the graph, such as frequent relation chains and co-occurrence between attribute entities and SID prefixes. 
+
+Finetuning. We then sample a recommendation corpus Prec of paths that start at a user ( 𝑒 0 = 𝑢 ∈ U ), traverse the full graph including user-item edges, and terminate at a target item ( 𝑒 𝐿 =
+
+𝑖 ∈ I ). Continuing from the pretrained parameters, we minimize 
+
+L( 𝜃 ; Prec ), so the model learns to place weight on paths that both (i) respect the relational structure of the KG and (ii) terminate in a valid SID sequence identifying an item consumed by the user. 
+
+## 3 Experiments 
+
+In this section, we describe the setup of our experiments, which aim to uncover the effects of supplementing KG path reasoning with SIDs on recommendation accuracy and model size. 
+
+Datasets. Following KGGLM [4], we evaluate on two publicly available datasets spanning distinct domains: MovieLens-1M (ML-1M) [24] for movie recommendation and LFM-2B [16] for music track recommendation. We adopt the KG-enriched version of ML-1M available via RecBole [24]. We complement LFM-2B with the music content features from [13] and use artist, genre, album, and user-generated tags from the same dataset, to construct the KG. Given the scale of LFM-2B, we restrict to interactions in March– May 2018 and apply iterative 𝑘 -core filtering ( 𝑘 = 20) until the user and track sets stabilize, we call this combined dataset Onion. CIKM ’26, November 07–11, 2026, Rome, Italy Justin Hangöbl, Marta Moscati, Alessandro B. Melchiorre, Shah Nawaz, and Markus Schedl 
+
+Detailed statistics for both datasets after pre-processing are reported in Table 1. SIDs are generated offline with residual K-means [9] ( 𝐿 𝑠 =3 levels, 
+
+𝐾 =256 codes) on T5 / musicnn embeddings for ML-1M/ Onion, which performs best in our ablations (Sec. 4), in agreement with GRID [9]. This yields an item-token vocabulary of 𝐿 𝑠 · 𝐾 = 3 · 256 =
+
+768 shared codes, versus the |I| =2,984 (ML-1M) and 18 ,415 (Onion) item embeddings required by KGGLM. 
+
+Implementation Details. All experiments use an NVIDIA A40 GPU. Each model is run under its own best configuration from the original publications [4, 10, 15, 21] and verified on our splits, with identical dataset preprocessing and chronological splits across models. The DistilGPT-2 backbone (6 layers, 12 heads, 𝑑 =768) is used off-the-shelf and shared by SPRIG and KGGLM, so it is not tuned in SPRIG’s favor; SPRIG only lowers the learning rate and shortens the path length, as the longer 𝐿 𝑠 -token SIDs require. We pretrain on 500 5-hop KG random walks per entity for 3 epochs, then fine-tune on collaborative 3-hop paths (200 per user). 
+
+Task and Protocol. SPRIG performs top-k recommendation by path reasoning: conditioned on a user ( ⟨[ 𝐵𝑂𝑆 ], 𝑈 𝑖𝑑 , 𝑅 𝑈 𝐼 ⟩), it gen-erates user-to-item paths via diverse beam search and ranks the terminal items. We use a per-user chronological 60/20/20 split and evaluate under full ranking over the catalog against each user’s held-out interactions. We use diverse beam search with 60 beams in 5 groups, diversity penalty 0 .4, and length penalty 0, deterministi-cally generating 3-hop paths and returning up to 50 candidate paths per user. Terminal items are ranked by their path log-likelihood; when several beams reach the same item we keep its highest-scoring path. Because SPRIG and KGGLM share this decoding configura-tion, their comparison is controlled, whereas SASRec ranks the full catalog directly and therefore serves as a reference point rather than a head-to-head generative baseline. 
+
+Evaluation Metrics. We evaluate ranking quality with three stan-dard metrics at 𝐾 = 10. We assess statistical significance with a two-sided paired bootstrap test over per-user metric scores, com-paring SPRIG (gen + spec) against KGGLM (gen + spec). 
+
+Baselines. We compare SPRIG against baselines spanning sequen-tial, generative, and knowledge-aware recommendation paradigms. SASRec [10] is a strong sequential recommendation baseline based on self-attentive sequence modeling. Unlike the generative methods below, it directly ranks items from the full catalog rather than gen-erating recommendation paths or identifiers. OpenP5 [21] is a gen-erative recommender that represents items with atomic identifiers; we report both its sequential and collaborative indexing variants. TIGER [15] represents items with semantically grounded codes derived from item content, isolating the effect of SIDs in the identi-fier space. KGGLM [4] is the direct predecessor of SPRIG and our strongest knowledge-aware baseline: it incorporates KG structure but retains opaque item tokens, so the gap between KGGLM and SPRIG isolates the contribution of our SID scheme rather than the KG itself. For both KGGLM and SPRIG we report a generalization-only variant ( gen-only ), trained solely on the generative objective, and a specialized variant ( gen + spec ), further fine-tuned for recom-mendation. 
+
+Table 2: Models performance on ML-1M and Onion; all met-rics @10 . Bold: best, underlined: second best. ∗ marks SPRIG (gen + spec) results significantly better than KGGLM (gen + spec) (paired bootstrap, 𝑝 < 0.05 ).                                                              
+
+> ML-1M Onion Model nDCG MRR HR nDCG MRR HR TopPop 0.1086 0.1251 0.4396 0.0195 0.0487 0.1361 SASRec [10] 0.1261 0.0912 0.2416 0.1892 0.1514 0.3072
+> OpenP5 (seq.) [21] 0.0243 0.0158 0.0542 0.0029 0.0022 0.0050 OpenP5 (coll.) [21] 0.0192 0.0130 0.0397 0.0185 0.0121 0.0401 TIGER (GRID Variant) [9, 15] 0.0565 0.1324 0.2413 0.0252 0.0182 0.0480 KGGLM (gen-only) [4] 0.0281 0.0709 0.1930 0.0134 0.0301 0.0770 KGGLM (gen + spec) [4] 0.0864 0.1919 0.4407 0.0421 0.0911 0.2223 SPRIG (gen-only) 0.0375 0.0940 0.2879 0.0140 0.0433 0.0865 SPRIG (gen + spec) 0.1241 ∗0.2874 ∗0.5632 ∗0.0669 ∗0.1738 ∗0.2653 ∗
+
+## 4 Results 
+
+Table 2 reports the performance of SPRIG and all baselines on ML-1M and Onion. SPRIG (gen + spec) performs best among directly comparable generative models. We analyze these results to answer the RQs from Section 1. We first address RQ1 : whether replacing the opaque item tokens used in KG-based generative recommenders with semantically-grounded IDs improves recommendation quality. On ML-1M the fully specialized SPRIG (gen + spec) improves nDCG@10 by roughly 44% over its directly comparable baseline KGGLM (gen + spec). The same trend holds on the larger and sparser Onion, where SPRIG raises nDCG@10 by 58%. Since KGGLM and SPRIG share the same backbone and knowledge-graph signal, this gain stems from the SID-based item representation and its associated decoding rather than from the knowledge graph, answering RQ1 affirmatively. These improvements over KGGLM (gen + spec) are statistically significant across all metrics on both datasets (Table 2). Across representation paradigms, the generative baselines OpenP5 and TIGER are substantially outperformed by the knowledge-aware models, confirming that relational grounding adds signal that SID-based sequential models alone miss. SASRec attains the highest nDCG@10 on both datasets and the highest HR@10 on Onion, but it ranks the full catalog directly while the generative models decode over beam-search candidates, so the comparison is indicative rather than exact; its margin on Onion further reflects the sequentiality of music listening that the sampled setup discards. Among directly comparable generative models, the gap between SPRIG and KG-GLM shows that relational grounding and SIDs are complementary and the combination of them is strongest. Even without collaborative fine-tuning, SPRIG (gen-only) sur-passes KGGLM (gen-only) on every metric on both datasets (e. g., nDCG@10 improves from 0 .0281 to 0 .0375 on ML-1M). We attribute this to the parameter sharing induced by SIDs, which lets rarely seen items inherit signal from their prefix-level neighbors; the ad-vantage widens further after specialization. We now turn to RQ2 : whether representing items in a smaller, shared latent code space allows a generative recommender to reduce its output vocabulary while preserving accuracy. KGGLM allocates one embedding per item, so its item-dependent vocabulary grows linearly with the catalog ( |I| = 2,984 for ML-1M and 18 ,415 for Onion). SPRIG instead represents every item with 𝐿 𝑠 = 3 codes SPRIG CIKM ’26, November 07–11, 2026, Rome, Italy 
+
+drawn from 𝐾 = 256 shared entries, bounding the item-token vocabulary by the factor 𝐿 𝑠 · 𝐾 = 768 regardless of catalog size. On ML-1M this shrinks the item-token budget from |I| = 2,984 to 
+
+𝐿 𝑠 · 𝐾 = 768 (a ∼ 4× reduction), and the saving widens to ∼ 24 × on the larger Onion catalog (18 ,415 to 768). This compression does not cost capacity. On ML-1M, SPRIG is comparable in size to KGGLM (56 .1M vs. 57 .8M parameters) yet uses 11% fewer FLOPs per step, while reaching the higher accuracy in Table 2. This gap grows with the catalog. On Onion, where KG-GLM’s per-item embeddings dominate its parameter count, SPRIG uses 19% fewer parameters and nearly half the FLOPs. Decoupling the vocabulary from the catalog thus improves both accuracy and efficiency, and does so most where the catalog is largest. 
+
+Ablation: Robustness to Quantization and Item Representation. 
+
+To test the robustness of SPRIG to the quantization approach, we evaluate three residual quantizers for semantic-ID construction: RVQ [22], RQ-VAE [11, 15], and residual K-means [9]. Consistent with GRID [9], residual K-means attains the best accuracy, but the gap over RVQ and RQ-VAE is small ( ∼1%), indicating that SPRIG is largely insensitive to the choice of quantizer. We then test robust-ness to the item representation by comparing two audio feature extractors on Onion. Here the behavior differs: musicnn embed-dings [14] consistently outperform the MFCC bag-of-words [7] representation across all quantizers, showing that SPRIG is instead sensitive to the quality of the underlying item features. 
+
+## 5 Conclusions and Future Work 
+
+We introduced SPRIG, the first generative recommender to unify content-derived SIDs with KG path reasoning in a single autore-gressive framework. By rewriting every item entity in the KG as a short sequence of hierarchical tokens and training a causal Trans-former decoder over the resulting paths, SPRIG combines the rela-tional reasoning of KG-based recommenders with the parameter ef-ficiency and cross-item generalization of SIDs. Across two domains — movies on ML-1M and music on Onion— SPRIG outperforms prior generative recommenders spanning atomic-ID (OpenP5), SID-based (TIGER), and KG-augmented (KGGLM) families, surpassing its direct predecessor KGGLM on every metric, while remaining competitive with a strong sequential baseline (SASRec) at a lower parameter count and decoupling the output vocabulary from the catalog size. Several directions remain open. First, the use of SIDs offers as natural and promising application the use of SPRIG for item cold-start recommendation: a new item can be reached through the SID prefix it inherits from content-similar seen items, rather than requiring a dedicated embedding [15, 17]. A faithful evaluation, however, requires cold-start–specific splits and a path-sampling strategy for items absent from the user–item training edges, which we leave to future work. Second, while KG path reasoning is inher-ently explanatory, SPRIG’s paths terminate in SID codes that are less human-readable than named item entities; recovering faithful, interpretable justifications(e. g., by aligning the hierarchical code levels with the attribute entities that generated them) is a promis-ing but non-trivial direction rather than an existing feature of the model. In addition, our finding that the optimal quantizer differs from that reported for purely sequential SID models [9] motivates a deeper study of how tokenizer choice interacts with relational path modeling. We leave these research directions for future work. 
+
+## Acknowledgments 
+
+This research was funded in whole or in part by the Austrian Science Fund (FWF): 10.55776/COE12, 10.55776/DFH23, 10.55776/P36413. 
+
+## Generative AI Disclosure 
+
+In accordance with the ACM Policy on Authorship, the authors disclose the use of a large language model (Anthropic Claude, Opus 4 and Opus 5 model families) during the preparation of this work. The tool was used for (i) linguistic refinement and stylistic harmo-nization of author-written text, and (ii) coding assistance, including editor auto-complete, boilerplate components of standard, well-established routines (e.g., file serialization) according to author-provided specifications. All conceptual design, experimental pro-tocols, analysis, and reported results are the authors’ own. All AI-assisted text and code was reviewed, tested, and verified by the authors, who take full responsibility for the content of this work. 
+
+## References                      
+
+> [1] Giacomo Balloccu, Ludovico Boratto, Christian Cancedda, Gianni Fenu, and Mirko Marras. 2024. Faithful Path Language Modeling for Explainable Recom-mendation over Knowledge Graph. arXiv:2310.16452 [cs.IR] https://arxiv.org/ abs/2310.16452 [2] Giacomo Balloccu, Ludovico Boratto, Gianni Fenu, and Mirko Marras. 2022. Post Processing Recommender Systems with Knowledge Graphs for Recency, Popularity, and Diversity of Explanations. In Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval
+> (Madrid, Spain) (SIGIR ’22) . Association for Computing Machinery, New York, NY, USA, 646–656. doi:10.1145/3477495.3532041 [3] Giacomo Balloccu, Ludovico Boratto, Gianni Fenu, and Mirko Marras. 2023. Rein-forcement recommendation reasoning through knowledge graphs for explanation path quality. Knowledge-Based Systems 260 (2023), 110098. doi:10.1016/j.knosys. 2022.110098 [4] Giacomo Balloccu, Ludovico Boratto, Gianni Fenu, Mirko Marras, and Alessan-dro Soccol. 2024. KGGLM: A Generative Language Model for Generalizable Knowledge Graph Representation Learning in Recommendation. In Proceed-ings of the 18th ACM Conference on Recommender Systems (Bari, Italy) (RecSys ’24) . Association for Computing Machinery, New York, NY, USA, 1079–1084. doi:10.1145/3640457.3691703 [5] Shijie Geng, Zuohui Fu, Juntao Tan, Yingqiang Ge, Gerard de Melo, and Yongfeng Zhang. 2022. Path Language Modeling over Knowledge Graphs for Explainable Recommendation. In Proceedings of the ACM Web Conference 2022 (Virtual Event, Lyon, France) (WWW ’22) . Association for Computing Machinery, New York, NY, USA, 946–955. doi:10.1145/3485447.3511937 [6] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. 2022. Recommendation as Language Processing (RLP): A Unified Pretrain, Personalized Prompt & Predict Paradigm (P5). In Proceedings of the 16th ACM Conference on Recommender Systems (Seattle, WA, USA) (RecSys ’22) . Association for Computing Machinery, New York, NY, USA, 299–315. doi:10.1145/3523227.3546767 [7] Md. Afzal Hossan, Sheeraz Memon, and Mark A Gregory. 2010. A novel approach for MFCC feature extraction. In Proceedings of the 2010 4th International Confer-ence on Signal Processing and Communication Systems . IEEE, Gold Coast, QLD, Australia, 1–5. doi:10.1109/ICSPCS.2010.5709752 [8] Yupeng Hou, Zhankui He, Julian McAuley, and Wayne Xin Zhao. 2023. Learn-ing Vector-Quantized Item Representation for Transferable Sequential Recom-menders. In Proceedings of the ACM Web Conference 2023 (Austin, TX, USA)
+> (WWW ’23) . Association for Computing Machinery, New York, NY, USA, 1162– 1171. doi:10.1145/3543507.3583434 [9] Clark Mingxuan Ju, Liam Collins, Leonardo Neves, Bhuvesh Kumar, Louis Yufeng Wang, Tong Zhao, and Neil Shah. 2025. Generative Recommendation with Seman-tic IDs: A Practitioner’s Handbook. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management (Seoul, Republic of Ko-rea) (CIKM ’25) . Association for Computing Machinery, New York, NY, USA, 6420–6425. doi:10.1145/3746252.3761612 [10] Wang-Cheng Kang and Julian McAuley. 2018. Self-Attentive Sequential Rec-ommendation. In Proceedings of the 2018 IEEE International Conference on Data Mining (ICDM) . IEEE, Singapore, 197–206. doi:10.1109/ICDM.2018.00035
+
+CIKM ’26, November 07–11, 2026, Rome, Italy Justin Hangöbl, Marta Moscati, Alessandro B. Melchiorre, Shah Nawaz, and Markus Schedl 
+
+[11] Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho, and Wook-Shin Han. 2022. Autoregressive Image Generation using Residual Quantization. In Proceedings of the 2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) .IEEE, New Orleans, LA, USA, 11513–11522. doi:10.1109/CVPR52688.2022.01123 [12] Enze Liu, Bowen Zheng, Cheng Ling, Lantao Hu, Han Li, and Wayne Xin Zhao. 2025. Generative Recommender with End-to-End Learnable Item Tokenization. In Proceedings of the 48th International ACM SIGIR Conference on Research and De-velopment in Information Retrieval (Padua, Italy) (SIGIR ’25) . Association for Com-puting Machinery, New York, NY, USA, 729–739. doi:10.1145/3726302.3729989 [13] Marta Moscati, Emilia Parada-Cabaleiro, Yashar Deldjoo, Eva Zangerle, and Markus Schedl. 2022. Music4All-Onion – A Large-Scale Multi-faceted Content-Centric Music Recommendation Dataset. In Proceedings of the 31st ACM Interna-tional Conference on Information & Knowledge Management (Atlanta, GA, USA) 
+
+(CIKM ’22) . Association for Computing Machinery, New York, NY, USA, 4339– 4343. doi:10.1145/3511808.3557656 [14] Jordi Pons and Xavier Serra. 2019. musicnn: Pre-trained Convolutional Neural Networks for Music Audio Tagging. In Late-Breaking/Demo Session of the 20th International Society for Music Information Retrieval Conference (ISMIR) . Delft, The Netherlands. https://archives.ismir.net/ismir2019/latebreaking/000038.pdf [15] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Keshavan, Trung Vu, Lukasz Heidt, Lichan Hong, Yi Tay, Vinh Q. Tran, Jonah Samost, Maciej Kula, Ed H. Chi, and Maheswaran Sathiamoorthy. 2023. Recommender systems with generative retrieval. In Proceedings of the 37th International Conference on Neural Information Processing Systems (New Orleans, LA, USA) (NIPS ’23) . Curran Associates Inc., Red Hook, NY, USA, Article 452, 17 pages. [16] Markus Schedl, Stefan Brandl, Oleg Lesota, Emilia Parada-Cabaleiro, David Penz, and Navid Rekabsaz. 2022. LFM-2b: A Dataset of Enriched Music Listening Events for Recommender Systems Research and Fairness Analysis. In Proceedings of the 2022 Conference on Human Information Interaction and Retrieval (Regensburg, Germany) (CHIIR ’22) . Association for Computing Machinery, New York, NY, USA, 337–341. doi:10.1145/3498366.3505791 [17] Anima Singh, Trung Vu, Nikhil Mehta, Raghunandan Keshavan, Maheswaran Sathiamoorthy, Yilin Zheng, Lichan Hong, Lukasz Heldt, Li Wei, Devansh Tandon, Ed Chi, and Xinyang Yi. 2024. Better Generalization with Semantic IDs: A Case Study in Ranking for Recommendations. In Proceedings of the 18th ACM Conference on Recommender Systems (Bari, Italy) (RecSys ’24) . Association for Computing Machinery, New York, NY, USA, 1039–1044. doi:10.1145/3640457. 3688190 [18] Juntao Tan, Shuyuan Xu, Wenyue Hua, Yingqiang Ge, Zelong Li, and Yongfeng Zhang. 2024. IDGenRec: LLM-RecSys Alignment with Textual ID Learning. In 
+
+Proceedings of the 47th International ACM SIGIR Conference on Research and Devel-opment in Information Retrieval (Washington DC, USA) (SIGIR ’24) . Association for Computing Machinery, New York, NY, USA, 355–364. doi:10.1145/3626772. 3657821 [19] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-Kiong Ng, and Tat-Seng Chua. 2024. Learnable Item Tokenization for Generative Recommendation. In Proceedings of the 33rd ACM International Conference on Information and Knowledge Management (Boise, ID, USA) (CIKM ’24) . Association for Computing Machinery, New York, NY, USA, 2400–2409. doi:10.1145/3627673. 3679569 [20] Yikun Xian, Zuohui Fu, S. Muthukrishnan, Gerard de Melo, and Yongfeng Zhang. 2019. Reinforcement Knowledge Graph Reasoning for Explainable Recommendation. In Proceedings of the 42nd International ACM SIGIR Confer-ence on Research and Development in Information Retrieval (Paris, France) (SI-GIR ’19) . Association for Computing Machinery, New York, NY, USA, 285–294. doi:10.1145/3331184.3331203 [21] Shuyuan Xu, Wenyue Hua, and Yongfeng Zhang. 2024. OpenP5: An Open-Source Platform for Developing, Training, and Evaluating LLM-based Recommender Systems. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (Washington DC, USA) (SIGIR ’24) .Association for Computing Machinery, New York, NY, USA, 386–394. doi:10. 1145/3626772.3657883 [22] Neil Zeghidour, Alejandro Luebs, Ahmed Omran, Jan Skoglund, and Marco Tagliasacchi. 2021. SoundStream: An End-to-End Neural Audio Codec. IEEE/ACM Trans. Audio, Speech and Lang. Proc. 30 (Nov. 2021), 495–507. doi:10.1109/TASLP. 2021.3129994 [23] Jiaqi Zhai, Lucy Liao, Xing Liu, Yueming Wang, Rui Li, Xuan Cao, Leon Gao, Zhaojie Gong, Fangda Gu, Jiayuan He, Yinghai Lu, and Yu Shi. 2024. Actions speak louder than words: trillion-parameter sequential transducers for generative recommendations. In Proceedings of the 41st International Conference on Machine Learning (Vienna, Austria) (ICML ’24) . JMLR.org, Article 2414, 26 pages. [24] Wayne Xin Zhao, Yupeng Hou, Xingyu Pan, Chen Yang, Zeyu Zhang, Zihan Lin, Jingsen Zhang, Shuqing Bian, Jiakai Tang, Wenqi Sun, Yushuo Chen, Lanling Xu, Gaowei Zhang, Zhen Tian, Changxin Tian, Shanlei Mu, Xinyan Fan, Xu Chen, and Ji-Rong Wen. 2022. RecBole 2.0: Towards a More Up-to-Date Recommendation Library. In Proceedings of the 31st ACM International Conference on Information & Knowledge Management (Atlanta, GA, USA) (CIKM ’22) . Association for Comput-ing Machinery, New York, NY, USA, 4722–4726. doi:10.1145/3511808.3557680 [25] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming Chen, and Ji-Rong Wen. 2024. Adapting Large Language Models by Integrating Collaborative Semantics for Recommendation. In Proceedings of the 2024 IEEE 40th International Conference on Data Engineering (ICDE) . IEEE, Utrecht, Netherlands, 1435–1448. doi:10.1109/ICDE60146.2024.00118

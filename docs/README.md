@@ -51,14 +51,14 @@
       <span class="dpr-home-dashboard-kicker">2026-10-06</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 4 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 9 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
-    <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>1</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>2 次</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>6</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-10-06 00:40:30 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-10-06 23:28:56 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日共生成 4 篇推荐（精读 1 篇，速读 3 篇）</p>
-<p>精读：《When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation》（9.0/10）</p>
-<p>速读：《MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment》（6.0/10）, 《Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization》（6.0/10）, 《Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation》（6.0/10）</p>
+<p>今日共生成 9 篇推荐（精读 3 篇，速读 6 篇）</p>
+<p>精读：《When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation》（9.0/10）, 《SPRIG: Semantic-ID-enhanced Paths for Knowledge Graph-based Generative Recommendation》（9.0/10）</p>
+<p>速读：《Cut Binary Cross Entropy: Efficient Large-Vocabulary Loss and Gradient Kernels for Sequential Recommendation》（7.0/10）, 《Generate What You Can Trust: Content Credibility in Generative Recommenders》（7.0/10）, 《Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation》（6.0/10）</p>
 <p>这些结果覆盖了当下较热的方向，建议先看精读区论文的关键问题与方法。</p>
   </div>
 </section>
@@ -81,12 +81,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">1 篇</strong>
+    <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation">When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation">When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="SPRIG: Semantic-ID-enhanced Paths for Knowledge Graph-based Generative Recommendation">SPRIG: Semantic-ID-enhanced Paths for Knowledge Graph-based Generative Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Learning Robust Personalized Prompts for LLM-Driven Sequential Recommendation">Learning Robust Personalized Prompts for LLM-Driven Sequential Recommendation</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,12 +94,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">3 篇</strong>
+    <strong class="dpr-home-dashboard-count">6 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment">MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment</span></li><li><span class="dpr-home-dashboard-paper-title" title="Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization">Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization</span></li><li><span class="dpr-home-dashboard-paper-title" title="Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation">Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Cut Binary Cross Entropy: Efficient Large-Vocabulary Loss and Gradient Kernels for Sequential Recommendation">Cut Binary Cross Entropy: Efficient Large-Vocabulary Loss and Gradient Kernels for Sequential Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Generate What You Can Trust: Content Credibility in Generative Recommenders">Generate What You Can Trust: Content Credibility in Generative Recommenders</span></li><li><span class="dpr-home-dashboard-paper-title" title="Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation">Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>6</strong></span></div>
 </section>
 </div>
 

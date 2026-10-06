@@ -1,17 +1,55 @@
 {
   "mode": "standard",
-  "generated_at": "2026-10-06T00:34:21.219586+00:00",
+  "generated_at": "2026-10-06T23:25:10.862274+00:00",
   "stats": {
     "mode": "standard",
     "tag_count": 1,
-    "deep_divecandidates": 1,
+    "deep_divecandidates": 3,
     "deep_cap": 6,
-    "deep_selected": 1,
-    "quick_candidates": 3,
+    "deep_selected": 3,
+    "quick_candidates": 4,
     "quick_skim_target": 11,
-    "quick_selected": 3
+    "quick_selected": 4
   },
   "deep_dive": [
+    {
+      "id": "2610.06590v1",
+      "source": "arxiv",
+      "title": "SPRIG: Semantic-ID-enhanced Paths for Knowledge Graph-based Generative Recommendation",
+      "abstract": "Recommender systems leveraging generative models often generate item identifiers directly, rather than ranking catalog items by a recommendation score. Recent work extends beyond pure sequential interaction signals by incorporating item content and structured relationships among items, with two distinct directions emerging. Semantic IDs (SIDs) enrich item representations by replacing opaque, randomly initialized embeddings with hierarchically quantized discrete codes derived from item content. Knowledge-graph (KG) path reasoning instead generates entity-relation paths that ground recommendations in structured relationships between items, attributes, and external entities, thereby enriching the relational context. These two lines have complementary limitations: SID-based models lack relational grounding, while KG-based generative recommenders still represent items as arbitrary, opaque tokens tied to large embedding tables, limiting parameter sharing and generalization. We propose SPRIG, a generative recommender that integrates content-derived SIDs into KG path reasoning. SPRIG is trained on information-rich KG paths that terminate in items represented as discrete, content-derived tokens, combining the advantages of both approaches. We evaluate SPRIG on movie and music recommendation datasets against baselines spanning sequential language models, KG-augmented methods, and SID-based approaches. Our results show that SPRIG achieves competitive performance over prior generative models while using fewer parameters and a lower compute cost. Code: https://github.com/justinhangoebl/semantic-id-knowledge-graph-recommender",
+      "authors": [
+        "Justin Hangoebl",
+        "Marta Moscati",
+        "Alessandro B. Melchiorre",
+        "Shah Nawaz",
+        "Markus Schedl"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-05T16:04:55+00:00",
+      "link": "https://arxiv.org/pdf/2610.06590v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "generative recommendation generating item identifiers with semantic IDs and KG paths",
+      "llm_evidence_cn": "结合语义ID与知识图谱路径生成物品标识符的生成式推荐",
+      "llm_evidence": "结合语义ID与知识图谱路径生成物品标识符的生成式推荐",
+      "canonical_evidence": "结合语义ID与知识图谱路径生成物品标识符的生成式推荐",
+      "llm_tldr_en": "SPRIG integrates semantic IDs with knowledge-graph path reasoning to enhance generative recommendation that directly generates item identifiers.",
+      "llm_tldr_cn": "针对生成式推荐直接生成物品标识符、但仅依赖序列交互信号不足的问题，本文提出SPRIG框架，将两条路线融合：语义ID用从物品内容分层量化得到的离散码替代不透明嵌入，知识图谱路径推理则生成实体-关系路径以引入结构化关系上下文。该工作扩展了纯序列信号的生成式推荐，使模型能同时利用物品内容与结构化关系信息。这为直接生成物品标识符的生成式推荐系统提供了更强的表示与推理基础。",
+      "llm_tldr": "针对生成式推荐直接生成物品标识符、但仅依赖序列交互信号不足的问题，本文提出SPRIG框架，将两条路线融合：语义ID用从物品内容分层量化得到的离散码替代不透明嵌入，知识图谱路径推理则生成实体-关系路径以引入结构化关系上下文。该工作扩展了纯序列信号的生成式推荐，使模型能同时利用物品内容与结构化关系信息。这为直接生成物品标识符的生成式推荐系统提供了更强的表示与推理基础。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
     {
       "id": "2610.02600v1",
       "source": "arxiv",
@@ -42,14 +80,51 @@
         "keyword:search-rec",
         "query:search-rec"
       ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "LLM-based generative recommendation supervision",
-      "llm_evidence_cn": "基于LLM的生成式推荐监督",
-      "llm_evidence": "基于LLM的生成式推荐监督",
-      "canonical_evidence": "基于LLM的生成式推荐监督",
-      "llm_tldr_en": "Proposes AIMS, an asymmetric intervention-guided margin supervision for instruction-guided LLM generative recommendation, resolving conflicts where history overrides user requests and improving ranking.",
-      "llm_tldr_cn": "论文针对指令引导的LLM生成式推荐中历史事件可能压倒用户当前请求的问题，指出将单条历史事件影响转化为监督面临两大障碍：影响最大的事件未必支持目标项，且移除误导事件可能同时抬高竞争项分数。为此提出非对称干预引导的间隔监督AIMS，从排序视角修正监督信号。实验表明AIMS能缓解历史误导，在提升目标项分数的同时保证更优排序。该工作为平衡当前请求与历史偏好提供了有效监督方法。",
-      "llm_tldr": "论文针对指令引导的LLM生成式推荐中历史事件可能压倒用户当前请求的问题，指出将单条历史事件影响转化为监督面临两大障碍：影响最大的事件未必支持目标项，且移除误导事件可能同时抬高竞争项分数。为此提出非对称干预引导的间隔监督AIMS，从排序视角修正监督信号。实验表明AIMS能缓解历史误导，在提升目标项分数的同时保证更优排序。该工作为平衡当前请求与历史偏好提供了有效监督方法。",
+      "llm_score": 8.0,
+      "llm_evidence_en": "instruction-guided LLM generative recommendation with margin supervision",
+      "llm_evidence_cn": "指令引导LLM生成式推荐与边际监督",
+      "llm_evidence": "指令引导LLM生成式推荐与边际监督",
+      "canonical_evidence": "指令引导LLM生成式推荐与边际监督",
+      "llm_tldr_en": "Instruction-guided LLM recommenders let interaction history override the user's current request. The authors show supervising individual history events is unreliable for ranking, and propose Asymmetric Intervention-Guided Margin Supervision (AIMS) to optimize ranking margins directly.",
+      "llm_tldr_cn": "指令引导的生成式推荐中，基于LLM的推荐器需在用户当前请求与历史偏好之间取得平衡，但历史事件常常压倒请求。作者指出将单个历史事件效果转化为监督信号存在两大障碍：影响最大的事件未必支持目标物品，且移除误导事件后竞争物品得分可能提升更多。为此提出非对称干预引导边际监督AIMS，在训练中直接优化排序边际。实验表明该方法能有效缓解历史误导，提升生成式推荐的排序质量，为LLM推荐器的一致性对齐提供新思路。",
+      "llm_tldr": "指令引导的生成式推荐中，基于LLM的推荐器需在用户当前请求与历史偏好之间取得平衡，但历史事件常常压倒请求。作者指出将单个历史事件效果转化为监督信号存在两大障碍：影响最大的事件未必支持目标物品，且移除误导事件后竞争物品得分可能提升更多。为此提出非对称干预引导边际监督AIMS，在训练中直接优化排序边际。实验表明该方法能有效缓解历史误导，提升生成式推荐的排序质量，为LLM推荐器的一致性对齐提供新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2610.03923v1",
+      "source": "arxiv",
+      "title": "Learning Robust Personalized Prompts for LLM-Driven Sequential Recommendation",
+      "abstract": "LLM-driven sequential recommendation formulates next-item prediction as autoregressive generation conditioned on natural-language prompts. However, minor wording changes in semantically equivalent prompts can cause substantial performance fluctuations, undermining robustness and requiring costly manual prompt engineering. Continuous prompt learning reduces template dependence but faces two interacting challenges: shared task-level instructions lack user-specific reasoning guidance, while gradient updates can push continuous prompts outside the LLM's effective semantic space. Injecting personalized signals can further amplify this semantic drift. To address these challenges, we propose LRPRec, a learnable prompting framework that initializes continuous instruction prompts from discrete templates and introduces two complementary mechanisms. Personalized prompt injection encodes user behavior into a preference embedding and additively injects it into shared prompts, enabling parameter-efficient user-level adaptation. A semantic drift constraint regularizes the shared prompts within a trust region around their initialization anchors to preserve semantic validity during optimization. By constraining the shared component while allowing additive personalization, LRPRec decouples stability from expressiveness. Extensive experiments on three benchmark datasets demonstrate consistent improvements over strong baselines while eliminating the need for manual tuning of background and task inference templates.",
+      "authors": [
+        "Xiaolin Zheng",
+        "Qiyong Zhong",
+        "Jiajie Su",
+        "Xiang Chen"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-02T18:34:26+00:00",
+      "link": "https://arxiv.org/pdf/2610.03923v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM-driven sequential recommendation with autoregressive next-item generation",
+      "llm_evidence_cn": "LLM驱动的序列推荐，以自回归方式生成下一物品",
+      "llm_evidence": "LLM驱动的序列推荐，以自回归方式生成下一物品",
+      "canonical_evidence": "LLM驱动的序列推荐，以自回归方式生成下一物品",
+      "llm_tldr_en": "LRPRec tackles prompt brittleness in LLM-driven sequential recommendation by learning personalized continuous prompts that stay inside the LLM semantic space, improving next-item prediction robustness.",
+      "llm_tldr_cn": "LLM驱动的序列推荐将下一物品预测建模为基于自然语言提示的自回归生成，但语义等价提示的细微措辞变化会导致性能剧烈波动。论文提出LRPRec可学习提示框架，融合任务级指令与用户个性化信号，并约束连续提示不偏离LLM的有效语义空间。实验表明该方法减少了对人工模板的依赖并提升了推荐的鲁棒性，为生成式推荐的提示学习提供了实用方案。",
+      "llm_tldr": "LLM驱动的序列推荐将下一物品预测建模为基于自然语言提示的自回归生成，但语义等价提示的细微措辞变化会导致性能剧烈波动。论文提出LRPRec可学习提示框架，融合任务级指令与用户个性化信号，并约束连续提示不偏离LLM的有效语义空间。实验表明该方法减少了对人工模板的依赖并提升了推荐的鲁棒性，为生成式推荐的提示学习提供了实用方案。",
       "llm_tags": [
         "query:search-rec"
       ],
@@ -61,83 +136,44 @@
   ],
   "quick_skim": [
     {
-      "id": "2609.37574v2",
+      "id": "2610.05559v1",
       "source": "arxiv",
-      "title": "MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment",
-      "abstract": "Large Language Models (LLMs) are increasingly used to enrich user queries in information retrieval (IR) so that a standard retriever such as BM25 can bridge vocabulary gaps with the target corpus. Any single LLM, however, is limited by its training data and architectural biases, and its enrichment behavior depends on hand-crafted prompts that must be re-engineered for each new model -- an expensive and poorly scalable process. We present MERGE (Multi-LLM Ensemble for Retrieval via Generative Enrichment), a two-stage framework: three heterogeneous 7-8B open-source LLMs independently produce candidate expansions, and a larger LLM generatively synthesizes them into a single query. To make prompt engineering scalable across the ensemble, we integrate a task-grounded Automatic Prompt Optimization (APO) loop into both stages. Unlike APO methods that judge candidates with an LLM evaluator, our loop scores each candidate by its downstream retrieval performance and runs a small tournament between the current champion prompt and optimizer-proposed drafts, terminating once the champion survives two consecutive rounds; a history-augmented variant additionally feeds the recent tournament trajectory back to the optimizer. MERGE is retriever-agnostic and issues a single BM25 pass with no rank fusion, no supervised document expansion, and no re-indexing. On five BEIR benchmarks (NQ, SciFact, FiQA, Touche-2020, DBPedia), MERGE improves BM25 nDCG@10 over the original queries by +2.1 to +14.9 points and matches or outperforms strong LLM-based query-expansion baselines despite using only compact open-source models. Ablations confirm that the Stage-2 ensemble beats any single Stage-1 LLM, and that task-grounded APO converts large seed-prompt regressions into consistent gains without hand-tuning.",
+      "title": "Cut Binary Cross Entropy: Efficient Large-Vocabulary Loss and Gradient Kernels for Sequential Recommendation",
+      "abstract": "Industrial sequential recommender systems operate over massive item catalogs (e.g., 10^5--10^7 items). Multi-label recommendation models are trained with Binary Cross-Entropy (BCE) loss over the full vocabulary, but standard BCE materializes a dense [B, N, V] logits tensor in High Bandwidth Memory (HBM), incurring prohibitive $O(BNV)$ memory and fatal Out-Of-Memory (OOM) errors. While chunked loss optimizations exist for Softmax Cross-Entropy in LLMs, large-scale multi-label BCE optimization remains unexplored across deep learning ecosystems.   We propose CutBCE, an exact, hardware-accelerated BCE loss and gradient operator implemented in JAX and Pallas for large-vocabulary workloads. CutBCE introduces (1) an exact fused reformulation evaluating dense background loss and sparse target corrections; (2) a custom Vector-Jacobian Product (VJP) with a dedicated Pallas TPU backward kernel computing logit tiles on-chip in both passes so logits and their gradients never reside in HBM; (3) dynamic VMEM budgeting and sharding-aware collective hoisting for distributed meshes; and (4) count-based zero-overhead training metrics. On single-chip TPU v5e/v6e mini-benchmarks, CutBCE eliminates OOM errors with up to 91.9% speedup. On 8-chip TPU slice training for multi-label SASRec with 876k items (Yambda-50M), CutBCE reduces peak HBM by 65.7% (>14 GiB saved per chip) and increases training speed by 225.9% with comparable accuracy. CutBCE is open-sourced at https://github.com/AI-Hypercomputer/RecML/blob/main/recml/core/ops/binary_cross_entropy_ops.py.",
       "authors": [
-        "Tzu-I Ho",
-        "Yung-Yu Shih",
-        "Shang-Yu Su",
-        "Dongzhe Wang",
-        "Yun-Nung Chen"
-      ],
-      "primary_category": "cs.IR",
-      "categories": [
-        "cs.IR",
-        "cs.CL"
-      ],
-      "published": "2026-09-29T13:39:54+00:00",
-      "link": "https://arxiv.org/pdf/2609.37574v2",
-      "tags": [
-        "keyword:search-rec",
-        "query:search-rec"
-      ],
-      "llm_score": 6.0,
-      "llm_evidence_en": "generative LLM query enrichment for retrieval",
-      "llm_evidence_cn": "面向检索的生成式LLM查询增强",
-      "llm_evidence": "面向检索的生成式LLM查询增强",
-      "canonical_evidence": "面向检索的生成式LLM查询增强",
-      "llm_tldr_en": "MERGE ensembles three heterogeneous open-source LLMs to generate query expansions and a larger LLM to synthesize them, making generative query enrichment for retrieval scalable without per-model prompt engineering.",
-      "llm_tldr_cn": "LLM常被用于增强查询以帮助BM25等检索器弥合词表鸿沟，但单个LLM受训练数据与架构偏置限制，且提示工程需针对每个新模型重新设计，成本高且难以扩展。MERGE提出两阶段框架：三个异构7-8B开源LLM独立生成候选扩展，再由更大LLM生成式合成单一查询。该方法使提示工程可跨集成复用，提升了生成式检索增强的规模化能力。",
-      "llm_tldr": "LLM常被用于增强查询以帮助BM25等检索器弥合词表鸿沟，但单个LLM受训练数据与架构偏置限制，且提示工程需针对每个新模型重新设计，成本高且难以扩展。MERGE提出两阶段框架：三个异构7-8B开源LLM独立生成候选扩展，再由更大LLM生成式合成单一查询。该方法使提示工程可跨集成复用，提升了生成式检索增强的规模化能力。",
-      "llm_tags": [
-        "query:search-rec"
-      ],
-      "matched_query_tag": "query:search-rec",
-      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
-      "matched_requirement_id": "req-8",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "6"
-    },
-    {
-      "id": "2610.01375v1",
-      "source": "arxiv",
-      "title": "Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization",
-      "abstract": "A user's movie, news, and dialogue histories differ in their native actions and outputs, yet each interaction supplies evidence that can update user memory. We study whether these histories can train one reusable update mechanism. An action-on-item schema pairs a mapped interaction role with a content embedding, allowing shared update parameters to operate on separate user states. We establish invariance to native relabeling, bounded state changes under item-embedding perturbations, and a pooled-training bound under explicit compatibility conditions. The Multi-Timescale State Hypothesis (MTSH) specifies how this evidence enters, persists, and is consumed; PerTIDE implements it with action gating, three state-space traces, fusion, and command-conditioned readout. On PENS, the same history encoder supports both next-news prediction and personalized headline generation. In a controlled PENS-to-MovieLens experiment, a frozen source-trained core exceeds an identically structured random core by 15.23 MRR points after fitting the same target consumer. On MIND, PerTIDE retains a 4.12-point MRR advantage over a same-input three-branch state-space control. Action, readout, and trace interventions identify complementary contributions to these gains. Together, the theory and experiments support learning history updates across compatible sources and reusing them through predictive and generative consumers.",
-      "authors": [
-        "Parthiv Chatterjee",
-        "Kashish Kanjaria",
-        "Vashisth Purani",
-        "Sourish Dasgupta",
-        "Tanmoy Chakraborty"
+        "Yaoyiran Li",
+        "Haowen Ning",
+        "Mohamed Hammad"
       ],
       "primary_category": "cs.LG",
       "categories": [
-        "cs.LG"
+        "cs.LG",
+        "cs.AI",
+        "cs.AR",
+        "cs.IR"
       ],
-      "published": "2026-10-01T09:42:46+00:00",
-      "link": "https://arxiv.org/pdf/2610.01375v1",
+      "published": "2026-10-04T21:47:02+00:00",
+      "link": "https://arxiv.org/pdf/2610.05559v1",
       "tags": [
         "keyword:search-rec",
         "query:search-rec"
       ],
-      "llm_score": 6.0,
-      "llm_evidence_en": "Shared event schema for predictive and generative personalization",
-      "llm_evidence_cn": "面向预测式与生成式个性化的共享事件模式",
-      "llm_evidence": "面向预测式与生成式个性化的共享事件模式",
-      "canonical_evidence": "面向预测式与生成式个性化的共享事件模式",
-      "llm_tldr_en": "PerTIDE uses an action-on-item schema and multi-timescale state to unify predictive and generative personalization across heterogeneous interaction histories.",
-      "llm_tldr_cn": "用户在不同场景下的行为历史动作与输出各异，却都能更新用户记忆，但能否共享一套更新机制尚不清楚。作者提出action-on-item事件模式，让共享更新参数作用于分离的用户状态，并给出不变性与训练界。基于多时间尺度状态假设实现PerTIDE，含动作门控与多条状态轨迹，统一了预测式与生成式个性化。",
-      "llm_tldr": "用户在不同场景下的行为历史动作与输出各异，却都能更新用户记忆，但能否共享一套更新机制尚不清楚。作者提出action-on-item事件模式，让共享更新参数作用于分离的用户状态，并给出不变性与训练界。基于多时间尺度状态假设实现PerTIDE，含动作门控与多条状态轨迹，统一了预测式与生成式个性化。",
+      "llm_score": 7.0,
+      "llm_evidence_en": "efficient large-vocabulary loss and gradient kernels for scaling sequential recommendation",
+      "llm_evidence_cn": "面向大规模序列推荐的高效大词表损失与梯度算子",
+      "llm_evidence": "面向大规模序列推荐的高效大词表损失与梯度算子",
+      "canonical_evidence": "面向大规模序列推荐的高效大词表损失与梯度算子",
+      "llm_tldr_en": "CutBCE is an exact hardware-accelerated BCE loss and gradient operator in JAX and Pallas that removes O(BNV) memory bottlenecks for large-vocabulary sequential recommendation.",
+      "llm_tldr_cn": "针对工业序列推荐在10^5至10^7级物品词表上训练多标签模型时，标准BCE会物化稠密的[B,N,V]张量、造成O(BNV)显存开销与OOM的问题，本文提出CutBCE。它是一种精确、硬件加速的BCE损失与梯度算子，用JAX和Pallas实现，专为大词表负载设计。该工作填补了LLM中已有Softmax分块优化之外、大规模多标签BCE优化缺失的空白，显著提升了大词表推荐的训练效率与可扩展性。",
+      "llm_tldr": "针对工业序列推荐在10^5至10^7级物品词表上训练多标签模型时，标准BCE会物化稠密的[B,N,V]张量、造成O(BNV)显存开销与OOM的问题，本文提出CutBCE。它是一种精确、硬件加速的BCE损失与梯度算子，用JAX和Pallas实现，专为大词表负载设计。该工作填补了LLM中已有Softmax分块优化之外、大规模多标签BCE优化缺失的空白，显著提升了大词表推荐的训练效率与可扩展性。",
       "llm_tags": [
         "query:search-rec"
       ],
       "matched_query_tag": "query:search-rec",
-      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
-      "matched_requirement_id": "req-2",
+      "matched_query_text": "papers that study scaling up search advertising and recommendation systems including model size, data scale, and training efficiency",
+      "matched_requirement_id": "req-7",
       "selection_source": "fresh_fetch",
-      "quick_tier": "6"
+      "quick_tier": "7"
     },
     {
       "id": "2610.02968v1",
@@ -161,13 +197,91 @@
         "query:search-rec"
       ],
       "llm_score": 6.0,
-      "llm_evidence_en": "LLM-based recommendation with verifiable preference proofs",
-      "llm_evidence_cn": "基于大模型的可验证偏好证明推荐",
-      "llm_evidence": "基于大模型的可验证偏好证明推荐",
-      "canonical_evidence": "基于大模型的可验证偏好证明推荐",
-      "llm_tldr_en": "LLM recommendations generate rationales that may not actually drive ranking; PROVE-REC builds verifiable preference proofs and predicts the next item only from those proofs.",
-      "llm_tldr_cn": "LLM推荐生成的偏好理由未必真正支撑最终排序，存在依据与影响之间的鸿沟。本文提出PROVE-REC框架，先用Pass A把完整历史压缩为可验证的偏好证明，再用Pass B仅依据证明及其证据预测下一物品。实验验证了证明的可验证性及其对排序的实际影响，提升了LLM推荐的可解释性与可信度。",
-      "llm_tldr": "LLM推荐生成的偏好理由未必真正支撑最终排序，存在依据与影响之间的鸿沟。本文提出PROVE-REC框架，先用Pass A把完整历史压缩为可验证的偏好证明，再用Pass B仅依据证明及其证据预测下一物品。实验验证了证明的可验证性及其对排序的实际影响，提升了LLM推荐的可解释性与可信度。",
+      "llm_evidence_en": "verifiable preference proofs for LLM-based recommendation",
+      "llm_evidence_cn": "面向大模型推荐的可验证偏好证明",
+      "llm_evidence": "面向大模型推荐的可验证偏好证明",
+      "canonical_evidence": "面向大模型推荐的可验证偏好证明",
+      "llm_tldr_en": "LLM recommendation rationales may not reflect the evidence actually driving ranking. PROVE-REC builds verifiable preference proofs linked to evidence and predicts the next item from the proof, closing the grounding-influence gap.",
+      "llm_tldr_cn": "大语言模型可从交互历史与评论中推断用户偏好，但其生成的推荐理由未必反映真正用于推荐的信息，导致偏好主张证据不足或对最终排序影响甚微，作者称之为接地-影响鸿沟。本文提出PROVE-REC框架，先由完整历史构造包含正向与规避主张并链接证据的紧凑偏好证明，再仅依据该证明预测下一物品。实验显示该框架提升了推荐理由的可验证性，同时保持或改善了下一次物品预测效果，为可信LLM推荐提供了新范式。",
+      "llm_tldr": "大语言模型可从交互历史与评论中推断用户偏好，但其生成的推荐理由未必反映真正用于推荐的信息，导致偏好主张证据不足或对最终排序影响甚微，作者称之为接地-影响鸿沟。本文提出PROVE-REC框架，先由完整历史构造包含正向与规避主张并链接证据的紧凑偏好证明，再仅依据该证明预测下一物品。实验显示该框架提升了推荐理由的可验证性，同时保持或改善了下一次物品预测效果，为可信LLM推荐提供了新范式。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2610.05670v1",
+      "source": "arxiv",
+      "title": "Generate What You Can Trust: Content Credibility in Generative Recommenders",
+      "abstract": "Generative recommendation (GR) represents items with semantic IDs (i.e., discrete token sequences) and generates target item tokens as recommendations. Despite its promising results, existing methods predominantly optimize for accuracy while neglecting the credibility of the recommendations they generate. This oversight inevitably exposes users to uncredible content (e.g., fake news) with serious societal consequences, including user distrust, reputation harm to platforms, and broader social instability. To address this critical yet underexplored challenge, we propose CreGR, the first credible GR model that jointly tackles content credibility across the two core stages of GR: tokenization and generation. In the tokenization stage, we design a new credibility-aware tokenizer that explicitly encourages the model to learn discriminative tokens respectively for credible and uncredible items, thereby disentangling credibility signals at the token level. Building on this, in the generation stage, we propose a novel accuracy-preserving and credibility-oriented generator grounded in discrete diffusion. Specifically, we introduce an asymmetric masking probability reduction strategy that selectively diminishes the contribution of tokens associated with uncredible content to the generation process, while leaving tokens encoding user preference signals unaffected so as to preserve recommendation accuracy. Experiments on three real-world datasets demonstrate the effectiveness of CreGR.",
+      "authors": [
+        "Zhuo Cai",
+        "Guanghao Wu",
+        "Shoujin Wang",
+        "Peilin Zhou",
+        "Victor W. Chu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-05T01:33:29+00:00",
+      "link": "https://arxiv.org/pdf/2610.05670v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "credibility-aware generative recommendation with semantic IDs",
+      "llm_evidence_cn": "基于语义ID的可信生成式推荐",
+      "llm_evidence": "基于语义ID的可信生成式推荐",
+      "canonical_evidence": "基于语义ID的可信生成式推荐",
+      "llm_tldr_en": "Generative recommendation encodes items as semantic IDs and generates target tokens, but existing methods only optimize accuracy. The authors propose CreGR, the first credible GR model that jointly handles content credibility in tokenization and generation.",
+      "llm_tldr_cn": "生成式推荐以语义ID表示物品并自回归生成目标物品词元，但现有方法只追求准确率而忽视推荐内容的可信度，可能向用户暴露虚假新闻等不可信内容。作者提出首个可信生成式推荐模型CreGR，在语义ID分词与生成两个核心阶段联合建模内容可信度。实验显示其在保持推荐性能的同时显著提升可信度，为生成式推荐的负责任部署提供了新方案。",
+      "llm_tldr": "生成式推荐以语义ID表示物品并自回归生成目标物品词元，但现有方法只追求准确率而忽视推荐内容的可信度，可能向用户暴露虚假新闻等不可信内容。作者提出首个可信生成式推荐模型CreGR，在语义ID分词与生成两个核心阶段联合建模内容可信度。实验显示其在保持推荐性能的同时显著提升可信度，为生成式推荐的负责任部署提供了新方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2610.05619v1",
+      "source": "arxiv",
+      "title": "SCOUT: Supply-Aware Cold-Start Proactive Query Suggestion for Travel Search",
+      "abstract": "Generative query suggestion, powered by Large Language Models (LLMs), has become increasingly popular in search and conversational systems to reduce user friction and guide intent formulation. Existing approaches align suggestions with user preferences (e.g., clicks or conversions). This works for open-ended applications like chatbots and personal assistants, where the result space is unconstrained or historical user free-text queries are abundant.   However, applying these methods to travel search presents two limitations. First, travel search is fundamentally constrained by physical inventory; a query (e.g., \"romantic beachfront villa\") may yield abundant results in Bali but few in Tokyo, so aligning with user preferences is not by itself grounded in what can be offered. Second, travel platforms traditionally rely on faceted search interfaces with no free-text queries. This creates a cold-start problem: without historical query logs there is no demand-side data for alignment, and without a seed query at request time, suggestions must be generated proactively from structured context alone.   To address these challenges, we propose SCOUT, a bootstrapping framework for supply-aware proactive query suggestion. SCOUT overcomes the data gap by substituting missing demand-side user feedback with supply-side system feedback. It treats the search engine as a reinforcement learning environment, deriving a dense reward from the production reranker's query-listing match scores, and optimizes the policy with Group Relative Policy Optimization (GRPO). SCOUT improves inventory match rate (IMR@18) by 12.3% while preserving diversity, matching a compute-intensive best-of-8 policy at zero marginal inference cost and making supply-aware suggestion deployable on a real-time travel search path.",
+      "authors": [
+        "Hao Li",
+        "Shashank Reddy",
+        "Kedar Bellare",
+        "Ashish Jain",
+        "Stephanie Moyerman"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-04T23:30:41+00:00",
+      "link": "https://arxiv.org/pdf/2610.05619v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-powered generative query suggestion for constrained travel search",
+      "llm_evidence_cn": "大模型驱动的生成式查询建议用于受约束的旅行搜索",
+      "llm_evidence": "大模型驱动的生成式查询建议用于受约束的旅行搜索",
+      "canonical_evidence": "大模型驱动的生成式查询建议用于受约束的旅行搜索",
+      "llm_tldr_en": "Generative query suggestion aligns with user preferences, but travel search is constrained by physical inventory. SCOUT introduces supply-aware cold-start proactive query suggestion, improving satisfiability and guidance in inventory-constrained search.",
+      "llm_tldr_cn": "由大语言模型驱动的生成式查询建议广泛用于搜索与对话系统，但既有方法主要对齐用户偏好，在受物理库存约束的旅行搜索中，偏好对齐本身不足以给出可满足的查询。本文提出SCOUT，面向冷启动场景引入供给侧可用性，生成供给感知的主动查询建议。实验表明该方法在库存受限条件下能提升建议的可满足性与用户引导效果，为约束型搜索的生成式建议提供了新思路。",
+      "llm_tldr": "由大语言模型驱动的生成式查询建议广泛用于搜索与对话系统，但既有方法主要对齐用户偏好，在受物理库存约束的旅行搜索中，偏好对齐本身不足以给出可满足的查询。本文提出SCOUT，面向冷启动场景引入供给侧可用性，生成供给感知的主动查询建议。实验表明该方法在库存受限条件下能提升建议的可满足性与用户引导效果，为约束型搜索的生成式建议提供了新思路。",
       "llm_tags": [
         "query:search-rec"
       ],
