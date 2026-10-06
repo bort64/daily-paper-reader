@@ -1,0 +1,73 @@
+{
+  "date": "20261006",
+  "date_label": "",
+  "generated_at": "2026-10-06 00:40:30 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2610.02600v1",
+      "route": "202610/06/2610.02600v1-when-history-misleads-asymmetric-margin-supervision-for-instruction-guided-llm-generative-recommendation",
+      "title": "When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "基于LLM的生成式推荐监督",
+      "first_seen_at": "2026-10-06 00:40:30 UTC",
+      "updated_at": "2026-10-06 00:40:30 UTC"
+    },
+    {
+      "paper_id": "2609.37574v2",
+      "route": "202610/06/2609.37574v2-merge-multi-llm-ensemble-for-retrieval-via-generative-enrichment",
+      "title": "MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向检索的生成式LLM查询增强",
+      "first_seen_at": "2026-10-06 00:40:30 UTC",
+      "updated_at": "2026-10-06 00:40:30 UTC"
+    },
+    {
+      "paper_id": "2610.01375v1",
+      "route": "202610/06/2610.01375v1-action-on-item-preference-flow-a-shared-event-schema-for-predictive-and-generative-personalization",
+      "title": "Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向预测式与生成式个性化的共享事件模式",
+      "first_seen_at": "2026-10-06 00:40:30 UTC",
+      "updated_at": "2026-10-06 00:40:30 UTC"
+    },
+    {
+      "paper_id": "2610.02968v1",
+      "route": "202610/06/2610.02968v1-reasoning-with-evidence-not-merely-rationales-verifiable-preference-proofs-for-llm-based-recommendation",
+      "title": "Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "基于大模型的可验证偏好证明推荐",
+      "first_seen_at": "2026-10-06 00:40:30 UTC",
+      "updated_at": "2026-10-06 00:40:30 UTC"
+    }
+  ]
+}

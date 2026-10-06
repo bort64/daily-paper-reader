@@ -1,0 +1,1784 @@
+Reasoning with Evidence, Not Merely Rationales:
+Verifiable Preference Proofs for LLM-Based Recommendation
+Yu Hou
+School of Mathematics and Computing (Computational
+Science and Engineering), Yonsei University
+Seoul, Republic of Korea
+houyu@yonsei.ac.kr
+Nathaniel Kang
+School of Computer Science and Engineering, Kyungpook
+National University
+Daegu, Republic of Korea
+natekang@knu.ac.kr
+Pengkai Wang
+Department of Electrical and Computer Engineering,
+Sungkyunkwan University
+Suwon, Republic of Korea
+wangpengkai@g.skku.edu
+Hua Li∗
+Department of Industrial Engineering, Yonsei University
+Seoul, Republic of Korea
+li_hua611@yonsei.ac.kr
+Abstract
+Large language models (LLMs) can infer user preferences from inter-
+action histories and reviews, yet the rationales they generate may
+not reflect the information actually used for recommendation. A
+preference claim may be weakly supported by its selected evidence,
+or may have little effect on the final ranking. We refer to these two
+failures as the grounding–influence gap. We introduce PROVE-Rec,
+a general framework for verifiable preference reasoning in LLM-
+based recommendation. Pass A converts the complete pre-target
+history into a compact preference proof consisting of positive and
+avoidance claims linked to selected evidence entries. Pass B predicts
+the next item using only the proof and its selected evidence, prevent-
+ing the recommender from bypassing the reasoning path. To verify
+evidence-to-proof grounding, we compare the effect of masking se-
+lected evidence with masking a comparable control entry. To verify
+proof-to-recommendation influence, we remove a preference claim
+and measure the resulting decrease in the target item’s ranking
+margin. A ranking-preservation objective further retains useful in-
+formation from the complete history. Comprehensive experiments
+on wide-ranging real-world datasets demonstrate that PROVE-Rec
+consistently outperforms strong sequential, generative, and LLM-
+enhanced baselines, with improvements of up to 7.45%. Controlled
+ablations confirm the effectiveness of the two-pass architecture
+and verification objectives. Moreover, PROVE-Rec produces claims
+that are more strongly grounded in historical evidence and more
+influential to recommendation while preserving ranking quality.
+Keywords
+LLM-based Recommendation, Preference Reasoning, Verifiable Rea-
+soning, Evidence Grounding, Decision Influence, Explainable Rec-
+ommendation
+1
+Introduction
+LLM-based recommendation is moving beyond item-pattern match-
+ing toward richer preference modeling and reasoning [2, 8, 17].
+Modern systems can combine collaborative histories with language
+knowledge, item text, and user reviews before ranking or generating
+∗Corresponding author.
+Figure 1: The grounding–influence gap through one running
+example. E1 and E2 are selected by the preference proof,
+while E3 serves as a comparable control entry. A rationale
+may appear plausible even if masking E1 does not weaken the
+comfort claim, or if flipping the comfort-related preference
+does not reduce the target headset’s ranking advantage.
+items [10, 15, 18, 27, 31]. Recent studies further explore rationale-
+enhanced user modeling, unified LLMs for multiple recommen-
+dation tasks, and reinforcement-learning-based optimization of
+recommendation behavior [6, 13, 26]. This capability is appealing
+because recommendation is not only a question of what a user
+consumed; it is also a question of which aspects the user valued or
+rejected.
+Historical reviews provide unusually direct evidence for this
+distinction [5, 22]. As shown in Figure 1, consider a user with three
+previous audio-product interactions: E1, a five-star headphone re-
+view stating “Very comfortable for long listening”; E2, a two-star
+earbud review stating “The battery dies too quickly”; and E3, a
+five-star headset review praising microphone clarity. The next item
+is a comfortable, long-battery over-ear headset. An item-only tra-
+jectory can reveal that the user often consumes audio products. The
+reviews further suggest a positive preference for comfort and an
+avoidance preference for short battery life.
+Plausibility, however, leaves two questions unanswered. First,
+does E1 actually support the inferred preference for comfort, or
+is the evidence link merely decorative? Second, does the comfort
+claim affect the target ranking, or can the recommender ignore the
+proof and rely on category transitions, item popularity, or other
+shortcuts? As illustrated in Figure 1, the former failure occurs when
+masking E1 barely changes the likelihood of the comfort claim,
+1
+arXiv:2610.02968v1  [cs.AI]  2 Oct 2026
+
+
+Hou et al.
+whereas the latter occurs when changing comfort from a positive
+preference to an avoidance preference leaves the target item’s rank-
+ing margin nearly unchanged. Existing reasoning-enhanced recom-
+menders primarily optimize recommendation accuracy, rationale
+likelihood, or trajectory-level reward [10, 18, 32]. These objectives
+do not verify whether the stated evidence supports the preference
+or whether the preference affects the recommendation. Other LLM
+recommenders incorporate collaborative signals or reviews to im-
+prove recommendation quality [30, 31], while rationale-faithfulness
+research examines whether explanations reflect the evidence be-
+hind model predictions [5]. However, these directions do not jointly
+verify both dependencies in LLM-based recommendation.
+We use the term grounding–influence gap to describe two
+distinct operational dependencies. Evidence-to-proof grounding asks
+whether the generation of a preference claim is selectively depen-
+dent on the historical evidence linked to that claim, relative to a
+comparable control entry. Proof-to-recommendation influence asks
+whether the current ranking is locally sensitive to the claim when
+the selected evidence is held fixed. These two properties provide
+complementary views of the model’s reasoning behavior, but they
+do not define preference correctness. A semantically valid prefer-
+ence may be redundant with other claims or irrelevant to a particu-
+lar target and therefore exhibit little measurable influence in that
+recommendation.
+Our method is built on two complementary ideas.
+(Idea 1): make evidence-to-proof grounding explicit. Instead of
+producing unrestricted chain-of-thought text, the LLM generates a
+structured preference proof : a compact set of positive or avoidance
+claims, each linked to one or more evidence identifiers. We use
+the term proof operationally rather than logically; it denotes a
+checkable claim–evidence structure rather than a formal derivation.
+This structure exposes the evidence-to-proof link to a controlled
+dependence test. For each claim, we mask its selected evidence and
+compare the resulting decrease in claim likelihood with that caused
+by masking a comparable control entry. A grounded claim should
+depend more strongly on its selected evidence than on the control
+entry.
+(Idea 2): make proof-to-recommendation influence explicit.
+The subsequent recommendation pass receives only the prefer-
+ence proof and the history entries selected by it. This proof-gated
+path prevents the model from generating a rationale while still
+predicting directly from the complete history. We then test the
+proof-to-recommendation link by removing one preference claim
+while keeping the selected evidence and the remaining proof un-
+changed. If the claim is functionally used, its removal should reduce
+the target item’s ranking margin. A format control changes only
+the presentation of the proof, separating semantic influence from
+generic prompt sensitivity. Finally, a listwise preservation objective
+keeps the proof-gated ranking distribution close to that obtained
+from the complete history.
+The framework is not tied to a particular item representation.
+It applies to any autoregressive LLM recommender that can score
+the token sequence used to identify or describe an item. In our
+experiments, we instantiate PROVE-Rec on a strong generative
+recommender [23, 31]; this choice defines the experimental imple-
+mentation rather than the scope of the framework.
+Our contributions are summarized as follows:
+• We identify the grounding–influence gap in LLM-based rec-
+ommendation, where a generated preference rationale may
+be weakly supported by its selected evidence or have little
+effect on the final recommendation.
+• We introduce a compact preference proof and a proof-gated
+recommendation architecture that explicitly links prefer-
+ence claims to historical evidence and prevents the recom-
+mender from bypassing the generated proof.
+• We develop evidence-masking, claim-ablation, and ranking-
+preservation objectives to verify the evidence-to-proof and
+proof-to-recommendation links while maintaining recom-
+mendation utility.
+• We provide theoretical results that bound grounding and
+influence failures and characterize when the proof-gated
+model preserves the top-𝐾ranking of the full-history rec-
+ommender.
+The remainder of this paper is organized as follows. Section 3 in-
+troduces the recommendation setting, evidence history, and preference-
+proof formulation. Section 4 presents PROVE-Rec, including preference-
+proof induction, proof-gated recommendation, evidence-to-proof
+grounding, proof-to-recommendation influence, and ranking preser-
+vation. Section 5 describes the experimental setup and evaluates
+PROVE-Rec in terms of recommendation performance, component
+contributions, qualitative behavior, and direct verification of the
+evidence–proof–recommendation path. Finally, we summarize the
+main findings and conclude the paper.
+2
+Related Work
+2.1
+LLM-Based Recommendation
+Early work such as P5 reformulated multiple recommendation
+tasks as language-processing problems, enabling a shared sequence-
+to-sequence model to consume interaction histories, metadata,
+and natural-language prompts [8]. Subsequent methods adapted
+general-purpose LLMs to recommendation through parameter-
+efficient tuning, collaborative-semantic alignment, or explicit in-
+terfaces between behavioral representations and language mod-
+els [2, 17, 29, 31]. More recently, RALLRec+ combines retrieval-
+augmented recommendation with LLM reasoning, further demon-
+strating the potential of integrating retrieved behavioral evidence
+with language-model inference [19]. These studies show that lan-
+guage knowledge and collaborative signals can complement each
+other for recommendation. However, they primarily focus on rec-
+ommendation quality and model adaptation rather than directly
+examining whether an explicit preference claim selectively depends
+on particular historical evidence or contributes to the resulting
+ranking.
+2.2
+Generative Recommendation and Item
+Tokenization
+Generative recommenders identify items through autoregressive to-
+ken sequences instead of scoring every item independently. TIGER
+introduced semantic identifiers for generative retrieval, while LET-
+TER learned item codes that better combine semantic and collabo-
+rative information [23, 25]. LC-Rec further integrates collaborative
+semantics into LLM adaptation, and DIGER studies differentiable
+2
+
+
+Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation
+semantic identifiers for end-to-end generative recommendation
+[7, 31]. Beyond single-domain tokenization, UniTok develops a uni-
+fied item-tokenization framework for multi-domain LLM-based
+recommendation, combining shared and domain-specific experts
+with codebook-based identifiers to preserve both transferable and
+domain-specific item semantics [12]. These studies demonstrate the
+importance of item representations in connecting the discrete item
+space with autoregressive language models. In contrast, PROVE-
+Rec leaves the underlying item representation unchanged and in-
+stead modifies the information path through which historical evi-
+dence and explicit preference claims contribute to item prediction.
+2.3
+Review-Aware and Reasoning-Enhanced
+Recommendation
+Reviews provide fine-grained signals about user preferences and
+item characteristics that are often absent from item-only interac-
+tion sequences. Prior review-aware recommenders have used deep
+Transformer architectures to extract textual preference signals and
+improve personalized recommendation [9]. AENAR further models
+aspect-level information from reviews to capture diverse user pref-
+erences and provide interpretable evidence for rating prediction
+[28]. More recently, RAGR directly incorporates review represen-
+tations into generative user sequences and aligns the resulting
+representations with item prediction [30]. In contrast, PROVE-Rec
+organizes historical reviews into a compact set of evidence-linked
+preference claims and explicitly examines whether each claim de-
+pends selectively on its cited evidence.
+Recent reasoning-enhanced recommenders generate explicit or
+latent reasoning before predicting an item. OneRec-Think intro-
+duces in-text reasoning for generative recommendation, SIDRea-
+soner reasons over semantic identifiers, R2Rank optimizes reason-
+ing for ranking utility, and RE2 studies reasoning for more inter-
+pretable recommendation predictions [4, 10, 18, 32]. RALLRec+
+additionally combines retrieval augmentation with reasoning LLMs
+to enhance recommendation [19]. These methods demonstrate that
+intermediate reasoning can improve recommendation, but recom-
+mendation accuracy or trajectory-level objectives alone do not
+directly reveal how individual reasoning statements depend on
+historical evidence or affect a particular ranking decision. PROVE-
+Rec focuses on these two complementary dependencies through
+evidence-to-proof grounding and proof-to-recommendation influ-
+ence.
+2.4
+Rationale Grounding and
+Intervention-Based Evaluation
+A fluent rationale can appear plausible without revealing how it
+relates to the evidence or the model’s final prediction. ERASER
+evaluates rationales through evidence-based metrics and pertur-
+bation tests [5]. Faithful Chain-of-Thought makes an intermediate
+symbolic reasoning representation necessary for producing the
+final answer, while later work examines whether generated reason-
+ing traces have measurable effects on model predictions [20, 22].
+Related work in recommender systems has also explored post-hoc
+explainability through deletion-based diagnostics that measure how
+individual user or item information affects recommendation behav-
+ior [1]. These studies motivate intervention-based evaluation, but
+they do not jointly address recommendation-specific questions
+such as preference polarity, evidence selection from sequential
+user histories, claim-level ranking effects, and preservation of rec-
+ommendation utility. PROVE-Rec carries this intervention-based
+perspective into LLM-based recommendation with two paired tests
+on the evidence–proof–recommendation path: whether masking a
+claim’s linked evidence lowers its score more than masking a com-
+parable control entry, and whether removing the claim lowers the
+target item’s ranking margin while the selected evidence remains
+fixed.
+3
+Preliminaries
+3.1
+Task and Evidence History
+Let U and I denote the user and item sets. For user 𝑢at prediction
+time 𝑡, the ordered evidence history observed before the target
+interaction is
+H𝑡
+𝑢= [𝐸𝑢,1, . . . , 𝐸𝑢,𝑛𝑢],
+(1)
+where 𝑛𝑢= |H𝑡
+𝑢| is the number of historical entries. The 𝑗-th
+evidence entry is
+𝐸𝑢,𝑗= (𝑖𝑢,𝑗,𝑟𝑢,𝑗, 𝑣𝑢,𝑗),
+(2)
+where 𝑖𝑢,𝑗∈I is the historical item, 𝑟𝑢,𝑗∈{1, . . . , 5} ∪{∅} is its
+star rating, with ∅marking a missing rating, and 𝑣𝑢,𝑗is its review
+text. Each item 𝑖also carries a category label 𝜅(𝑖) from its metadata.
+The ordering of H𝑡
+𝑢preserves chronology, so the position 𝑗encodes
+recency and timestamps are omitted. Item titles and other item text
+may appear in the prompt but are omitted from the notation.
+Within each training example, the entries are identified in the
+prompt as E1, E2, and so on. The identifier is retained in every
+counterfactual view of that example, even when the entry’s content
+is masked. The ground-truth next item is 𝑦𝑢= 𝑖𝑢,𝑡. Neither the
+target review nor any future interaction is included in H𝑡
+𝑢.
+An LLM recommender represents item 𝑖by an output token
+sequence c(𝑖) = [𝑐𝑖,1, . . . ,𝑐𝑖,𝐿𝑐], where 𝐿𝑐is the output length [23,
+25]. The representation can be a textual identifier, a learned item
+token sequence, or a semantic code. With model parameters 𝜃, the
+normalized teacher-forced item score under a context 𝑋is
+𝑠𝜃(𝑖| 𝑋) = 1
+𝐿𝑐
+𝐿𝑐
+∑︁
+ℓ=1
+log𝑝𝜃(𝑐𝑖,ℓ| 𝑋,𝑐𝑖,<ℓ).
+(3)
+3.2
+Preference Proof
+For each user 𝑢, we represent the preference proof as a compact
+sequence of 𝑚𝑢structured claims:
+𝑃𝑢= [𝐶𝑢,1, . . . ,𝐶𝑢,𝑚𝑢],
+𝐶𝑢,𝑘= (𝜎𝑢,𝑘,𝑎𝑢,𝑘,𝑆𝑢,𝑘),
+(4)
+where 𝜎𝑢,𝑘∈{+1, −1} is the polarity of the claim, rendered in the
+proof text as prefer for +1 and avoid for −1, 𝑎𝑢,𝑘is a normalized
+preference aspect, and 𝑆𝑢,𝑘⊆{1, . . . ,𝑛𝑢} contains the indices of
+the evidence entries cited for the claim. For example,
+𝐶𝑢,1 = (+1, comfort, {1})
+indicates that the first claim for user 𝑢expresses a positive prefer-
+ence for “comfort” and is supported by evidence entry E1.
+The complete set of evidence selected by the proof is
+𝑆𝑢=
+𝑚𝑢
+Ø
+𝑘=1
+𝑆𝑢,𝑘.
+(5)
+3
+
+
+Hou et al.
+Evidence entries indexed by 𝑆𝑢are selected evidence; the remaining
+entries, indexed by 𝑈𝑢= {1, . . . ,𝑛𝑢} \ 𝑆𝑢, are unselected evidence.
+An unselected entry is not assumed to be irrelevant; the current
+proof simply does not cite it.
+To keep the proof concise and auditable, we restrict both the
+number of claims and the number of selected evidence entries:
+1 ≤𝑚𝑢≤𝐾𝐶,
+1 ≤|𝑆𝑢| ≤𝐾𝐸,
+(6)
+where 𝐾𝐶and 𝐾𝐸are the claim and evidence budgets. The data-
+validation filter of Section 5 enforces the same two budgets, written
+there as 𝐶max = 𝐾𝐶and 𝐸max = 𝐾𝐸. Unselected entries supply the
+control entries of Section 4.4, so a history in which every entry is
+selected (𝑈𝑢= ∅) contributes no grounding term.
+4
+Methodology
+4.1
+Method Overview
+Figure 2 follows PROVE-Rec through the audio-product example.
+The evidence history H𝑡
+𝑢contains three entries: a positive review
+praising the comfort of over-ear headphones (E1), a low-rated re-
+view criticizing the short battery life of sports earbuds (E2), and a
+positive review praising the microphone of an office headset (E3).
+Pass A generates a preference proof 𝑃𝑢with two claims: the user
+prefers comfort, citing E1, and avoids short battery life, citing E2.
+Pass B then uses only the proof and the selected entries E1 and E2
+to generate the next item 𝑦𝑢, a comfortable over-ear headset with
+long battery life.
+The same LLM is used in both passes:
+H𝑡
+𝑢
+Pass A
+−−−−−→𝑃𝑢,
+𝑋𝑃
+𝑢
+Pass B
+−−−−→c(𝑦𝑢),
+(7)
+where c(𝑦𝑢) is the token sequence representing the target item. The
+input to Pass B is the proof-gated context
+𝑋𝑃
+𝑢= 𝜙 𝑃𝑢, H𝑡
+𝑢[𝑆𝑢] ,
+(8)
+where H𝑡
+𝑢[𝑆𝑢] keeps the selected entries in chronological order.
+The function 𝜙inserts the proof and the selected evidence into a
+fixed prompt template and has no trainable parameters.
+The two-pass model factorizes the joint prediction as
+𝑝𝜃(𝑃𝑢, c(𝑦𝑢) | H𝑡
+𝑢) = 𝑝𝜃(𝑃𝑢| H𝑡
+𝑢)𝑝𝜃(c(𝑦𝑢) | 𝑋𝑃
+𝑢).
+(9)
+Training checks one link in each factor: whether the selected ev-
+idence drives the claims of the proof (Section 4.4), and whether
+the claims drive the recommendation (Section 4.5). A ranking-
+preservation term (Section 4.6) limits the information lost by re-
+stricting Pass B to the proof-gated context.
+4.2
+Preference-Proof Induction
+Pass A maps the complete pre-target evidence history H𝑡
+𝑢to a
+structured preference proof 𝑃𝑢, rendered in a fixed textual format.
+We train Pass A with the token-normalized generation loss
+Lproof = −1
+|𝑃𝑢| log𝑝𝜃(𝑃𝑢| H𝑡
+𝑢),
+(10)
+where |𝑃𝑢| is the number of tokens in the rendered proof. Positive
+and avoidance claims share one format and differ only in 𝜎𝑢,𝑘, so
+a low-rated review supports an avoidance claim in the same way
+that a high-rated review supports a positive one.
+Pass A is supervised with offline preference proofs generated
+from the pre-target history only. A proof is retained only if it passes
+automatic checks on format, evidence identifiers, polarity labels,
+the budgets in Eq. (6), and temporal leakage (Section 5.1). These
+checks ensure that every claim cites valid pre-target entries within
+budget. Whether the cited content actually drives the claim inside
+the model is what the grounding contrast of Section 4.4 measures.
+4.3
+Proof-Gated Recommendation
+Pass B predicts the next item from the proof-gated context 𝑋𝑃
+𝑢,
+which contains only the preference proof and its selected evidence
+entries. The rest of the history is not accessible to Pass B. The
+token-level generation loss for the target item 𝑦𝑢is
+Lrec = −1
+𝐿𝑐
+log𝑝𝜃
+
+c(𝑦𝑢) | 𝑋𝑃
+𝑢
+
+.
+(11)
+For item-level ranking, let N𝑢be a set of 𝑁≥1 sampled non-
+target items and C𝑢= {𝑦𝑢} ∪N𝑢the comparison set, so that |C𝑢| =
+𝑁+ 1. For any context 𝑋, the candidate distribution over C𝑢is
+𝑞𝜃(𝑖| 𝑋, C𝑢) =
+exp(𝑠𝜃(𝑖| 𝑋)/𝜏𝑟)
+Í
+ℎ∈C𝑢exp(𝑠𝜃(ℎ| 𝑋)/𝜏𝑟) ,
+𝑖∈C𝑢,
+(12)
+where 𝑠𝜃is the item score of Eq. (3) and 𝜏𝑟> 0 is a ranking temper-
+ature. The proof-gated item distribution is
+𝑞proof (𝑖) = 𝑞𝜃(𝑖| 𝑋𝑃
+𝑢, C𝑢),
+(13)
+and the item loss is
+Litem = −log𝑞proof (𝑦𝑢).
+(14)
+At inference, Pass B performs constrained generation over the
+full item catalog but still receives only 𝑋𝑃
+𝑢, so unselected history
+cannot enter the recommendation through a side channel.
+4.4
+Evidence-to-Proof: Does the Claim Come
+from the Selected Evidence?
+The first check asks whether a claim depends on the entries cited for
+it. For each claim 𝐶𝑢,𝑘, the normalized teacher-forced claim score
+under a history H is
+𝑔𝜃(𝐶𝑢,𝑘| H) =
+1
+len(𝐶𝑢,𝑘) log𝑝𝜃
+ 𝐶𝑢,𝑘| H, 𝑃𝑢,<𝑘
+ ,
+(15)
+where len(𝐶𝑢,𝑘) is the number of tokens in the claim and 𝑃𝑢,<𝑘
+contains the preceding claims in the fixed proof order.
+Masking and control entries. Let M𝑗(H𝑡
+𝑢) denote the history
+obtained by replacing the content of 𝐸𝑢,𝑗(item text, rating, and
+review) with a fixed mask token while keeping its identifier and
+position. For a link (𝑘, 𝑗) with 𝑗∈𝑆𝑢,𝑘, the control entry is taken
+from the unselected positions 𝑈𝑢. We group ratings by polarity,
+𝜋(𝑟) =
+
+
++1,
+𝑟≥4,
+−1,
+𝑟≤2,
+0,
+𝑟= 3 or 𝑟= ∅,
+(16)
+and choose the unselected entry of the same polarity that is nearest
+in position,
+𝑐(𝑗) =
+arg min
+𝑗′∈𝑈𝑢: 𝜋(𝑟𝑢,𝑗′ )=𝜋(𝑟𝑢,𝑗)
+|𝑗−𝑗′|,
+(17)
+4
+
+
+Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation
+Figure 2: Overview of PROVE-Rec on the audio example of Figure 1. Pass A converts the full history into a compact preference
+proof that selects E1 and E2. Pass B predicts the next item from the proof and the selected evidence only. The grounding check
+compares the comfort-claim score after masking the selected entry E1 with the score after masking the control entry E3. The
+influence check deletes the comfort claim, keeps E1 and E2 in the prompt, and measures the change in the target ranking
+margin. A preservation term aligns the proof-gated ranking distribution with the distribution the same model assigns from the
+full history.
+breaking ties first in favor of an entry whose item shares the cate-
+gory𝜅(𝑖𝑢,𝑗) and then in favor of the earlier position. If no unselected
+entry shares the polarity of 𝐸𝑢,𝑗, the minimization in Eq. (17) runs
+over all of𝑈𝑢. When a history carries no ratings, every entry has po-
+larity 0 and the rule reduces to recency with category tie-breaking.
+A link therefore lacks a control only when 𝑈𝑢is empty, and the
+valid grounding links of user 𝑢are
+G𝑢=
+
+(𝑘, 𝑗) : 1 ≤𝑘≤𝑚𝑢, 𝑗∈𝑆𝑢,𝑘, 𝑈𝑢≠∅
+	
+.
+(18)
+Grounding contrast. For each (𝑘, 𝑗) ∈G𝑢, the grounding contrast
+is
+Δgrd(𝑘, 𝑗) = 𝑔𝜃
+ 𝐶𝑢,𝑘| M𝑐(𝑗) (H𝑡
+𝑢) −𝑔𝜃
+ 𝐶𝑢,𝑘| M𝑗(H𝑡
+𝑢) .
+(19)
+Both terms are scored on masked histories, so the contrast compares
+the selected entry with its control rather than with the intact history.
+A positive value means that hiding the selected entry lowers the
+claim score more than hiding the control. A non-positive value, ties
+included, is a grounding failure. In Figure 2, masking the over-ear
+headphone review (E1) should lower the comfort-claim score more
+than masking the office-headset review (E3). The control is not
+assumed to be irrelevant to the user; it supplies a local baseline for
+the perturbation that any mask causes.
+The grounding loss averages a softplus penalty over the valid
+links,
+Lgrd =
+1
+|G𝑢|
+∑︁
+(𝑘,𝑗)∈G𝑢
+softplus
+
+−Δgrd(𝑘, 𝑗)
+𝜏𝑔
+
+,
+(20)
+where softplus(𝑥) = log(1 + exp(𝑥)) and 𝜏𝑔> 0 sets the sharpness
+of the comparison. Users with G𝑢= ∅contribute no grounding
+term.
+4.5
+Proof-to-Recommendation: Does the Claim
+Affect the Recommendation?
+The second check asks whether a claim moves the recommendation.
+For claim 𝐶𝑢,𝑘, the claim-deleted proof 𝑃\𝑘
+𝑢removes 𝐶𝑢,𝑘and keeps
+the other claims in order. The selected evidence set 𝑆𝑢is unchanged,
+which gives the claim-deleted context
+𝑋\𝑘
+𝑢= 𝜙
+
+𝑃\𝑘
+𝑢, H𝑡
+𝑢[𝑆𝑢]
+
+.
+(21)
+When 𝑚𝑢= 1, 𝑃\𝑘
+𝑢is the empty proof, which the template renders
+as an empty claim list, so Pass B sees only the selected evidence.
+Because 𝑆𝑢is held fixed, the contrast measures what the claim text
+adds beyond the evidence it cites.
+For a proof-gated context 𝑋, the target ranking margin is the
+gap between the target and its strongest sampled competitor,
+𝑀𝜃(𝑋) = 𝑠𝜃(𝑦𝑢| 𝑋) −max
+𝑖∈N𝑢𝑠𝜃(𝑖| 𝑋).
+(22)
+The margin is measured on the sampled slate C𝑢rather than on the
+full-catalog ranking produced at inference. The influence contrast
+of claim 𝑘is
+Δinf (𝑘) = 𝑀𝜃(𝑋𝑃
+𝑢) −𝑀𝜃(𝑋\𝑘
+𝑢),
+(23)
+and a positive value means that deleting the claim reduces the
+target’s lead. A non-positive value, ties included, is an influence
+5
+
+
+Hou et al.
+failure. The influence loss averages over the claims of the proof,
+Linf = 1
+𝑚𝑢
+𝑚𝑢
+∑︁
+𝑘=1
+softplus
+
+−Δinf (𝑘)
+𝜏𝑝
+
+,
+(24)
+where 𝜏𝑝> 0 controls the smoothness of the pairwise objective.
+The loss asks for a smaller margin rather than a change of the
+top-1 item because several claims usually support the same target.
+A correct claim that repeats another claim can still show a small
+Δinf (𝑘). The loss counts it as a failure, which pushes Pass B to draw
+on each retained claim rather than on one of them.
+4.6
+Ranking Preservation
+The proof-gated context keeps the recommendation path inspectable,
+but it can drop useful signals from the unselected history. We there-
+fore score the same comparison set from the full-history prompt
+with the same parameters,
+𝑞full(𝑖) = 𝑞𝜃(𝑖| H𝑡
+𝑢, C𝑢),
+(25)
+and align the proof-gated distribution with it:
+Lpres = 𝐷KL
+ sg[𝑞full] ∥𝑞proof
+ ,
+(26)
+where sg[·] stops gradients through 𝑞full. The distribution 𝑞full is
+not a separately trained full-history recommender. No item loss
+is applied to the full-history prompt, and the stop-gradient pre-
+vents Lpres from moving 𝑞full toward 𝑞proof; it is a passive probe of
+the ranking the current parameters would give if Pass B saw the
+complete history. Both distributions use the same comparison set,
+scoring function, and temperature, so Lpres constrains relative item
+order without asking the two contexts to share representations.
+The term controls agreement, while ranking accuracy comes from
+Lrec and Litem on the proof-gated context.
+4.7
+Training Objective
+The per-example objectives are grouped by role:
+Ltask = 1
+3 (Lproof + Litem + Lrec),
+(27)
+Lverify = 1
+2 (Lgrd + Linf),
+(28)
+and the final objective is
+L = Ltask + 𝜆Lverify + 𝜇Lpres,
+(29)
+where 𝜆≥0 sets the verification strength and 𝜇≥0 the strength
+of ranking preservation. For a user without valid grounding links,
+Lverify reduces to 1
+2 Linf. Training proceeds in three phases. We first
+train Pass A to generate preference proofs from evidence histories,
+then train Pass B to predict the target item from the proof-gated con-
+text, and finally optimize Eq. (29) jointly with the masked-evidence
+and claim-deleted views defined above.
+4.8
+What the Theory Guarantees
+Both results are stated for the quantities defined above, and their
+complete proofs are in Appendix A. Let 𝜈grd be the distribution
+that draws a training user 𝑢with G𝑢≠∅uniformly and then a
+link (𝑘, 𝑗) uniformly from G𝑢, and let 𝜈inf draw a training user
+uniformly and then a claim 𝑘uniformly from {1, . . . ,𝑚𝑢}. Under
+these distributions, the expected softplus penalty equals the user-
+averaged Lgrd of Eq. (20) and Linf of Eq. (24), respectively.
+Theorem 1 (Two-link failure-rate control). Let 𝜏𝑔,𝜏𝑝> 0.
+If
+E𝜈grd
+
+softplus −Δgrd/𝜏𝑔
+
+≤𝜖grd,
+E𝜈inf
+
+softplus −Δinf/𝜏𝑝
+
+≤𝜖inf.
+(30)
+then
+Pr
+𝜈grd(Δgrd ≤0) ≤𝜖grd
+log 2,
+Pr
+𝜈inf (Δinf ≤0) ≤𝜖inf
+log 2.
+(31)
+Proof sketch. On a failure event the softplus argument is non-negative,
+so the penalty is at least log 2. The failure indicator is therefore at
+most the penalty divided by log 2, and taking expectations gives
+Eq. (31). The complete proof is in A.1.
+□
+A grounding failure is a link whose selected-entry mask hurts
+the claim no more than the control mask, and an influence failure is
+a claim whose deletion leaves the target’s lead on the sampled slate
+intact. Theorem 1 turns an average verification loss into a ceiling
+on how often either happens, and the ceiling constrains training
+once 𝜖falls below log 2. Because both views in Δgrd are masked, the
+bound concerns the selected entry relative to its control, not either
+mask relative to the intact history.
+Theorem 2 (Top-𝐾preservation). Let 𝑞full and 𝑞proof be the
+distributions of Eqs. (25) and (13) on the comparison set C𝑢of one
+user, and let 1 ≤𝐾< |C𝑢|. Order the items so that 𝑞full(𝑖(1)) ≥· · · ≥
+𝑞full(𝑖(| C𝑢|)), and define the boundary margin
+𝛾𝐾= 𝑞full(𝑖(𝐾)) −𝑞full(𝑖(𝐾+1)).
+(32)
+If 𝐷KL(𝑞full∥𝑞proof) ≤𝛿and 𝛾𝐾>
+√
+2𝛿, then the 𝐾most probable
+items form the same set under both distributions,
+TopK(𝑞full) = TopK(𝑞proof).
+(33)
+Proof sketch. Pinsker’s inequality [3] bounds the total-variation
+distance, and hence every coordinate difference |𝑞full(𝑖) −𝑞proof (𝑖)|,
+by
+√︁
+𝛿/2. Two such perturbations cannot close a gap larger than
+√
+2𝛿, so every item above the boundary under𝑞full stays above every
+item below it under 𝑞proof. The complete proof is in A.2.
+□
+Since 𝛾𝐾> 0, the top-𝐾set under 𝑞full is unique, and the conclu-
+sion makes it unique under 𝑞proof as well. The per-example value
+of Lpres is exactly the divergence in the hypothesis, so Theorem 2
+is a condition on the preservation loss: where the full-history rank-
+ing separates ranks 𝐾and 𝐾+ 1 clearly, a small Lpres keeps the
+proof-gated ranking of the slate on the same top-𝐾set. The guar-
+antee lives on the sampled comparison set C𝑢. Full-catalog Recall
+and NDCG in Section 5 are measured separately and fall under the
+theorem only when C𝑢is the whole catalog.
+5
+Experimental Evaluation
+We conduct comprehensive experiments to evaluate the recommen-
+dation effectiveness of PROVE-Rec, analyze the contribution of its
+main components, and directly examine the behavior of the gener-
+ated preference proofs. Specifically, we investigate the following
+five research questions (RQs):
+• RQ1: Does verifiable preference reasoning improve recom-
+mendation performance?
+• RQ2: How do the main components of PROVE-Rec con-
+tribute to recommendation performance?
+6
+
+
+Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation
+Table 1: Statistics of the processed datasets. Density is
+100|R|/(|U||I|), and review coverage denotes the percentage
+of interactions with nonempty aligned review text.
+Dataset
+Users
+Items Interactions Density (%) Avg. length Review cov. (%)
+Grocery 14,681
+8,713
+151,254
+0.1182
+10.30
+99.99
+Tools
+16,638 10,217
+134,476
+0.0791
+8.08
+99.95
+Yelp
+30,431 20,033
+316,354
+0.0519
+10.40
+98.87
+• RQ3: Which information sources and reasoning designs
+are most effective?
+• RQ4: How does PROVE-Rec select evidence, construct pref-
+erence proofs, and support recommendations in a qualita-
+tive case study?
+• RQ5: Do the verification objectives strengthen evidence
+dependence and decision relevance of the generated prefer-
+ence proofs?
+5.1
+Datasets, Preprocessing, and
+Preference-Proof Construction
+We evaluate PROVE-Rec on on two Amazon review domains [21],
+Grocery and Tools, together with Yelp1 All datasets contain user–
+item interactions together with textual reviews, enabling us to
+construct evidence-enriched interaction histories and preference
+proofs. Table 1 summarizes the processed datasets.
+Data preprocessing. For each user, interactions are ordered chrono-
+logically. The last interaction is used for testing, the second-to-last
+for validation, and the remaining interactions for training. Each
+model input contains only interactions that occur before the corre-
+sponding target, and previously interacted items are excluded from
+the recommendation candidates during evaluation.
+Each example retains at most 20 pre-target interactions. Ratings
+and reviews are included for the three most recent entries, with
+review text truncated to 64 characters and review summaries to 32
+characters. Reviews are aligned with the processed interaction se-
+quences using user and item identifiers, while ambiguous duplicate
+matches are excluded. The target item, its rating and review, and
+all future interactions are removed from both Pass A and Pass B to
+prevent temporal leakage.
+Preference-proof construction. Pass A is supervised using offline
+preference proofs constructed exclusively from the pre-target his-
+tory. Each proof consists of at most 𝐾𝐶preference claims and selects
+at most 𝐾𝐸historical evidence entries. Each claim contains a nor-
+malized preference aspect, a polarity (prefer or avoid), and one or
+more identifiers of supporting history entries.
+Candidate proofs are retained only if they satisfy the required
+output format, contain valid and unique evidence identifiers, respect
+the claim and evidence budgets, and contain no target or future
+information. We additionally check that every cited identifier refers
+to an entry in the corresponding pre-target history. These filters en-
+sure structural validity, referential consistency, budget compliance,
+and explicit leakage prevention; they are not treated as tests of
+semantic entailment between a claim and its cited evidence. Table 2
+reports the resulting proof statistics.
+1https://www.yelp.com/dataset/.
+Table 2: Statistics of the offline preference proofs. Proofs are
+constructed from histories of at most 20 interactions with
+an evidence budget of 𝐾𝐸= 3. Acceptance rate denotes the
+percentage of candidate proofs retained after structural and
+leakage validation.
+Dataset
+Proofs
+Claims/proof
+Selected/proof
+Accept rate
+Grocery
+136,559
+1.189
+2.409
+99.990%
+Tools
+117,829
+1.145
+2.398
+99.992%
+Yelp
+274,625
+1.000
+2.675
+96.049%
+5.2
+Experimental Setup
+Implementation Details. Our implementation uses a semantic-
+code generative recommender built on TIGER and LC-Rec [23, 31].
+For each example, we retain up to 20 historical evidence entries and
+include ratings and reviews for the three most recent entries. Review
+text and item metadata are truncated to fixed lengths. We preserve
+the original item tokenizer, recommendation objective, and catalog-
+constrained decoding procedure. Additional implementation and
+hyperparameter details are provided in the supplementary material.
+Baselines. We compare PROVE-Rec with three groups of rep-
+resentative methods: 1) Traditional and transformer-based recom-
+menders include SASRec [14] and BERT4Rec [24]; 2) Item-tokenization-
+based LLM recommenders include P5-SemID [8], TIGER [23], LC-
+Rec [31], and DIGER [7]; 3) LLM-enhanced recommenders include
+CoLLM [29], LLM-SRec [16], SIDReasoner [11], and RE2 [4].
+For controlled analysis, we additionally construct same-backbone
+variants that remove or replace individual components of PROVE-
+Rec, including direct recommendation, free-form rationale genera-
+tion, structured preference proofs without verification, and variants
+without grounding, influence, or ranking preservation.
+Evaluation Metrics. We evaluate recommendation performance
+using Recall@𝑀(R@𝑀) and NDCG@𝑀(N@𝑀), where 𝑀∈{5, 10}.
+For each user, previously interacted items are excluded from the
+candidate set. All generative methods use catalog-constrained de-
+coding to ensure that generated item codes correspond to valid
+catalog items [23, 31].
+5.3
+RQ1: Does Verifiable Preference Reasoning
+Improve Recommendation Performance?
+Table 3 compares PROVE-Rec with traditional and transformer-
+based recommenders, item-tokenization-based LLM recommenders,
+and LLM-enhanced recommenders on Grocery, Tools, and Yelp. We
+examine whether verifiable preference reasoning improves rec-
+ommendation accuracy while preserving the effectiveness of the
+underlying generative recommender.
+Overall performance. PROVE-Rec achieves the best result on
+all three datasets. Compared with the strongest baseline for each
+metric, the relative improvements range from 2.01% to 7.45%, with
+an average gain of 4.17%. These results show that introducing a
+compact preference proof and a proof-gated recommendation path
+not only preserves recommendation utility, but also consistently
+improves target-item ranking. The improvements are especially
+7
+
+
+Hou et al.
+Grocery
+Tools
+Yelp
+Method
+R@5
+R@10
+N@5
+N@10
+R@5
+R@10
+N@5
+N@10
+R@5
+R@10
+N@5
+N@10
+Traditional and Transformer-based Recommenders
+SASRec
+0.0359
+0.0509
+0.0183
+0.0276
+0.0135
+0.0175
+0.0117
+0.0134
+0.0163
+0.0354
+0.0122
+0.0183
+BERT4Rec
+0.0294
+0.0448
+0.0187
+0.0237
+0.0106
+0.0184
+0.0067
+0.0092
+0.0155
+0.0272
+0.0094
+0.0131
+Item-tokenization-based LLM Recommenders
+P5-SemID
+0.0367
+0.0524
+0.0201
+0.0285
+0.0177
+0.0297
+0.0108
+0.0133
+0.0187
+0.0324
+0.0129
+0.0188
+TIGER
+0.0423
+0.0635
+0.0273
+0.0341
+0.0216
+0.0327
+0.0139
+0.0175
+0.0241
+0.0397
+0.0155
+0.0205
+LC-Rec
+0.0437
+0.0622
+0.0281
+0.0349
+0.0232
+0.0351
+0.0148
+0.0207
+0.0232
+0.0388
+0.0147
+0.0195
+DIGER
+0.0440
+0.0641
+0.0279
+0.0345
+0.0241
+0.0355
+0.0153
+0.0212
+0.0247
+0.0391
+0.0161
+0.0199
+LLM-enhanced Recommenders
+CoLLM
+0.0398
+0.0619
+0.0281
+0.0340
+0.0203
+0.0315
+0.0142
+0.0181
+0.0237
+0.0389
+0.0158
+0.0202
+LLM-SRec
+0.0431
+0.0642
+0.0268
+0.0347
+0.0221
+0.0334
+0.0136
+0.0173
+0.0248
+0.0395
+0.0153
+0.0198
+SIDReasoner
+0.0415
+0.0625
+0.0274
+0.0329
+0.0214
+0.0321
+0.0129
+0.0165
+0.0231
+0.0377
+0.0146
+0.0184
+RE2
+0.0377
+0.0602
+0.0266
+0.0322
+0.0209
+0.0327
+0.0144
+0.0184
+0.0211
+0.0364
+0.0139
+0.0188
+PROVE-Rec
+0.0450
+0.0659
+0.0294
+0.0356
+0.0253
+0.0371
+0.0162
+0.0221
+0.0262
+0.0408
+0.0173
+0.0211
+Improvement
+2.27%
+2.65%
+4.63%
+2.01%
+4.98%
+4.51%
+5.88%
+4.25%
+5.65%
+2.77%
+7.45%
+2.93%
+Table 3: Performance comparison among PROVE-Rec and representative recommendation competitors on the three benchmark
+datasets. The best and second-best results will be highlighted by bold and underline after all experiments are completed.
+Grocery
+Tools
+Yelp
+Method
+R@10
+N@10
+R@10
+N@10
+R@10
+N@10
+Direct Recommendation
+0.0608
+0.0317
+0.0321
+0.0187
+0.0366
+0.0181
+PROVE-Rec without Evidence-to-Proof Grounding
+0.0633
+0.0339
+0.0347
+0.0204
+0.0387
+0.0193
+PROVE-Rec without Proof-to-Recommendation Influence
+0.0640
+0.0342
+0.0355
+0.0210
+0.0393
+0.0198
+PROVE-Rec without Ranking Preservation
+0.0651
+0.0348
+0.0362
+0.0215
+0.0401
+0.0202
+PROVE-Rec
+0.0659
+0.0356
+0.0371
+0.0221
+0.0408
+0.0211
+Table 4: Recommendation performance of PROVE-Rec and its variants on the three datasets.
+pronounced on Tools and Yelp, where the average gains over the
+strongest baselines are 4.91% and 4.70%, respectively. The largest
+improvement, 7.45%, is obtained on Yelp for NDCG@5. This sug-
+gests that review-derived preference claims are particularly useful
+when item-transition patterns alone cannot capture fine-grained
+user preferences.
+Item-tokenization-based LLM recommenders generally outper-
+form traditional sequential models, confirming the benefit of language-
+compatible item representations. Nevertheless, PROVE-Rec consis-
+tently surpasses strong tokenization and LLM-enhanced baselines,
+including DIGER, LLM-SRec, CoLLM, and SIDReasoner. This indi-
+cates that the gains of PROVE-Rec cannot be attributed solely to
+LLM representations or intermediate reasoning. Explicitly ground-
+ing preference claims in selected historical evidence and making
+these claims part of the recommendation path provides additional
+predictive value.
+5.4
+RQ2: Are Preference Claims Grounded and
+Influential?
+We conduct an ablation study to assess the contribution of each
+major component. Direct Recommendation removes the two-pass
+architecture and predicts the next item directly from the complete
+history. The remaining variants remove evidence-to-proof ground-
+ing, proof-to-recommendation influence, or ranking preservation,
+respectively. All variants use the same backbone, item representa-
+tion, training data, and evaluation settings.
+As shown in Table 4, the full model achieves the best Recall@10
+and NDCG@10 on all three datasets. Direct Recommendation per-
+forms worst, with an average relative decrease of 12.0%. This con-
+firms the benefit of first extracting a compact preference proof and
+then recommending from the proof and its selected evidence. Re-
+moving evidence-to-proof grounding and proof-to-recommendation
+influence leads to average decreases of 6.1% and 4.3%, respectively.
+Thus, encouraging preference claims to depend on their selected ev-
+idence and to affect the final recommendation also improves target-
+item ranking. Removing ranking preservation causes a smaller but
+consistent decrease of 2.4%, showing that it helps retain useful
+information from the complete history. Overall, the two-pass archi-
+tecture provides the largest gain, while grounding, influence, and
+preservation offer complementary improvements.
+8
+
+
+Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation
+Variant
+Grocery
+Tools
+Yelp
+Information Sources
+Item Only
+0.0265
+0.0143
+0.0147
++ Rating
+0.0272
+0.0146
+0.0153
++ Review
+0.0297
+0.0176
+0.0172
++ Rating + Review
+0.0317
+0.0187
+0.0181
+Reasoning Design
+Direct Review Input
+0.0333
+0.0192
+0.0189
+Free-Form Rationale
+0.0328
+0.0196
+0.0186
+Structured Preference Proof
+0.0344
+0.0209
+0.0197
+PROVE-Rec
+0.0356
+0.0221
+0.0211
+Table 5: NDCG@10 of different input signals and reasoning
+designs on the three datasets.
+Table 6: A Grocery case illustrating evidence selection,
+preference-proof generation, and next-item recommenda-
+tion. Ratings are shown in parentheses.
+Selected Evidence
+E1: Korean noodle soup (5)–tasty, healthy, and easy to prepare.
+E3: Herbal tea (5)–healthy, fresh, and good tasting.
+E5: Instant miso ramen (4)–tasty and easy to prepare.
+Preference Proof
+Preference claims: Savory Asian soup products [E1, E5]; easy preparation [E1,
+E5]; healthy products with good taste [E1, E3].
+Evidence selection: Retains E1, E3, and E5, while excluding three interactions
+that provide weaker support for these claims.
+Recommendation
+Target: Instant miso soup (5), which matches the inferred preferences for savory
+soup, easy preparation, and healthy taste.
+Result: The target is ranked 1st.
+5.5
+RQ3: Which Information Sources and
+Reasoning Designs Matter?
+Table 5 compares different input signals and reasoning designs un-
+der the same backbone and evaluation settings. Ratings consistently
+improve over item-only histories by providing preference polarity,
+while reviews yield larger gains by revealing fine-grained aspects
+of user feedback. Combining ratings and reviews performs best
+among the input-only variants, confirming that the two signals are
+complementary.
+For reasoning design, Direct Review Input predicts directly from
+the review-enriched history, while Free-Form Rationale generates
+an unconstrained natural-language rationale before recommenda-
+tion. Structured Preference Proof instead represents reasoning as
+compact claims linked to selected evidence. Free-form rationales
+do not consistently outperform direct review input, suggesting that
+unconstrained reasoning may introduce noise or be weakly used
+by the recommender. Structured preference proofs perform better
+across all datasets, showing the benefit of a concise and evidence-
+linked intermediate representation. The full PROVE-Rec achieves
+the strongest performance by further verifying the evidence-to-
+proof and proof-to-recommendation links while preserving recom-
+mendation utility.
+5.6
+RQ4: Qualitative Case Study
+Table 6 presents a representative example from Grocery to illus-
+trate the complete reasoning path of PROVE-Rec, from evidence
+selection to preference-proof construction and next-item recom-
+mendation. The user’s pre-target history contains multiple inter-
+actions, from which PROVE-Rec selects three entries, E1, E3, and
+E5, as evidence for the generated preference claims. In particular,
+E1 and E5 both describe positively rated soup or ramen products
+and explicitly mention ease of preparation, supporting the prefer-
+ences for savory Asian soup products and easy preparation. E3, a
+positively rated herbal tea, provides complementary evidence for
+the broader preference for healthy products with good taste. The
+remaining interactions are not included in the proof because they
+provide weaker support for these selected claims.
+The resulting proof therefore summarizes several aspects of the
+user’s history rather than relying on a single recent interaction.
+These aspects are also consistent with the held-out target, instant
+miso soup: its product type is related to the soup-oriented prefer-
+ence supported by E1 and E5, while its convenience and health-
+related characteristics are connected to the remaining claims. Using
+the proof together with its selected evidence, PROVE-Rec ranks
+the held-out target at 1st. This case does not by itself establish a
+general performance advantage, but it illustrates how PROVE-Rec
+exposes an inspectable path from historical evidence to explicit
+preference claims and, subsequently, to the final recommendation.
+5.7
+RQ5: Do the Verification Objectives
+Strengthen Evidence Dependence and
+Decision Relevance of Preference Proofs?
+The previous experiments establish the recommendation utility of
+PROVE-Rec. We further evaluate whether the generated prefer-
+ence proofs exhibit the two behaviors targeted by our verification
+objectives: whether a claim depends selectively on its linked his-
+torical evidence and whether it is locally relevant to the resulting
+recommendation.2 Direct Recommendation is excluded from these
+diagnostics because it does not produce an intermediate preference
+proof.
+5.7.1
+Evidence-to-Proof Verification. For each valid claim–evidence
+link, we construct two counterfactual histories: one masks the
+selected evidence and the other masks a matched control entry
+with similar rating polarity and recency. The evidence identifier
+and position remain unchanged, and the same claim is teacher-
+forced under both histories. This comparison tests whether claim
+generation depends more strongly on the linked evidence than on
+a comparable interaction.
+As shown in Table 7, the Structured Proof baseline shows little
+distinction between selected and control evidence, with grounding
+success close to 50% on all three datasets. Removing the grounding
+objective provides only modest improvements. In contrast, the full
+2For evidence-to-proof verification, 𝐷sel and 𝐷ctrl denote the decreases in claim log-
+likelihood after masking the selected and matched-control evidence, respectively, and
+Δgrd = 𝐷sel −𝐷ctrl. Grounding success denotes the proportion of valid interventions
+with Δgrd > 0. For proof-to-recommendation verification, Δinf is the decrease in
+the target ranking margin after removing a claim, and influence success denotes the
+proportion with Δinf > 0. Format sensitivity measures the absolute target-margin
+change under a meaning-preserving formatting perturbation.
+9
+
+
+Hou et al.
+Table 7: Evidence-to-proof verification. Values are averaged
+over valid claim–evidence interventions; users without a
+valid matched control entry are excluded. Higher contrast
+and success indicate stronger selective dependence on the
+linked evidence.
+Dataset
+Variant
+Sel. drop
+Ctrl. drop
+Contrast
+Success
+Grocery
+Structured Proof
+0.012
+0.010
+0.002
+51.9%
+w/o Grounding
+0.018
+0.011
+0.007
+55.6%
+PROVE-Rec
+0.061
+0.012
+0.049
+76.8%
+Tools
+Structured Proof
+0.011
+0.010
+0.001
+51.1%
+w/o Grounding
+0.017
+0.012
+0.005
+54.8%
+PROVE-Rec
+0.054
+0.013
+0.041
+73.9%
+Yelp
+Structured Proof
+0.010
+0.009
+0.001
+50.9%
+w/o Grounding
+0.014
+0.010
+0.004
+53.7%
+PROVE-Rec
+0.037
+0.012
+0.025
+67.4%
+Table 8: Proof-to-recommendation verification. Influence is
+the decrease in the target ranking margin after claim ablation.
+Higher influence and success indicate stronger local decision
+relevance, while lower format sensitivity is preferred.
+Dataset
+Variant
+Influence
+Success
+Format sens.
+Grocery
+Structured Proof
+0.018
+53.2%
+0.041
+w/o Influence
+0.071
+63.8%
+0.033
+PROVE-Rec
+0.244
+82.1%
+0.019
+Tools
+Structured Proof
+0.015
+52.7%
+0.044
+w/o Influence
+0.064
+62.4%
+0.036
+PROVE-Rec
+0.221
+80.3%
+0.021
+Yelp
+Structured Proof
+0.010
+51.8%
+0.038
+w/o Influence
+0.047
+58.9%
+0.032
+PROVE-Rec
+0.153
+72.6%
+0.023
+PROVE-Rec produces substantially larger grounding contrasts of
+0.049, 0.041, and 0.025 on Grocery, Tools, and Yelp, respectively, with
+success rates of 76.8%, 73.9%, and 67.4%. These results indicate that
+the grounding objective makes generated claims more selectively
+dependent on their linked historical evidence.
+5.7.2
+Proof-to-Recommendation Verification. We next examine whether
+individual preference claims contribute to the current recommenda-
+tion beyond the selected evidence itself. For each claim, we remove
+only that claim while keeping the selected evidence and all remain-
+ing claims fixed, and then recompute the target ranking margin. We
+additionally use an evaluation-only format control that changes the
+presentation of the proof without changing its semantic content,
+allowing us to distinguish claim-level effects from generic prompt
+sensitivity.
+Table 8 shows a clear difference across variants. The Structured
+Proof baseline has influence success rates close to chance, ranging
+from 51.8% to 53.2%. Without the influence objective, the rates
+increase moderately to 58.9–63.8%. The full PROVE-Rec reaches
+82.1%, 80.3%, and 72.6% on Grocery, Tools, and Yelp, respectively,
+together with substantially larger influence contrasts. At the same
+time, its format sensitivity remains small and is lower than that
+of the Structured Proof baseline. This suggests that the observed
+ranking changes are associated more strongly with claim content
+than with superficial changes to the prompt format.
+5.7.3
+Empirical Check of the Theoretical Bound. We further com-
+pare the empirical rates of non-positive grounding and influence
+Table 9: Empirical rates of non-positive grounding and in-
+fluence contrasts and their theoretical upper bounds from
+Theorem 1. The bounds use 𝜏𝑔= 𝜏𝑝= 1 and are computed as
+E[softplus(−Δ)]/log 2.
+Dataset
+Grd. rate
+Grd. bound
+Inf. rate
+Inf. bound
+Grocery
+23.2%
+96.8%
+17.9%
+84.2%
+Tools
+26.1%
+97.4%
+19.7%
+85.7%
+Yelp
+32.6%
+98.6%
+27.4%
+90.2%
+contrasts with the upper bounds established in Theorem 1. For
+each dataset, the empirical rate is computed directly from the same
+valid interventions used above, while the corresponding bound is
+obtained from the average verification loss.
+As reported in Table 9, all empirical rates remain below their the-
+oretical upper bounds. For example, Grocery has empirical ground-
+ing and influence rates of 23.2% and 17.9%, compared with bounds
+of 96.8% and 84.2%, respectively. Similar behavior is observed on
+Tools and Yelp. The bounds are intentionally conservative and are
+not intended to tightly estimate the empirical rates; rather, the
+results confirm the one-sided guarantee derived in Theorem 1.
+5.7.4
+Efficiency. Finally, we measure the computational overhead
+introduced by the two-pass design on a single NVIDIA RTX A6000.
+Table 10 compares direct recommendation with uncached and
+cached versions of PROVE-Rec. Without caching, PROVE-Rec re-
+quires two model passes and increases latency from approximately
+65 ms to 313 ms per example. This overhead mainly comes from
+generating the preference proof in Pass A. Because the proof only
+needs to be updated when the user’s history changes, it can be
+cached for repeated recommendation requests. In this setting, on-
+line inference requires only Pass B and takes approximately 63 ms,
+which is comparable to direct recommendation. Thus, the two-pass
+reasoning procedure introduces additional cost when constructing
+a new proof but little additional online latency when the proof can
+be reused.
+6
+Conclusion
+We presented PROVE-Rec, a framework for verifiable preference
+reasoning in LLM-based recommendation. PROVE-Rec represents
+reasoning as compact preference claims linked to selected historical
+evidence and uses a proof-gated recommendation path to prevent
+the model from bypassing the generated proof. Its verification ob-
+jectives examine whether the selected evidence supports each claim
+and whether the claim influences the target-item ranking, while a
+preservation objective maintains recommendation quality under
+the compact proof representation. Experiments on three review-rich
+benchmark datasets show that PROVE-Rec improves recommen-
+dation performance while achieving stronger evidence grounding
+and decision influence than review-aware and reasoning-enhanced
+baselines. These results suggest that recommendation reasoning
+should be evaluated not only by whether it appears plausible, but
+also by whether its evidence supports the stated preferences and
+whether those preferences affect the final recommendation.
+10
+
+
+Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation
+Table 10: Efficiency on one NVIDIA RTX A6000. Input and proof lengths are averages per example, latency is measured per
+example, and memory denotes peak PyTorch-allocated GPU memory.
+Method
+Input tokens
+Proof tokens
+Passes
+Latency
+Peak memory
+Direct Recommendation
+∼160
+–
+1
+∼65 ms
+∼80 MiB
+PROVE-Rec (uncached)
+∼219 (190 + 29)
+∼57
+2
+∼313 ms
+∼85 MiB
+PROVE-Rec (cached proof)
+∼29 online
+57 cached
+1 online
+∼63 ms
+∼80 MiB
+Broader Impact. PROVE-Rec can improve the transparency and
+auditability of LLM-based recommendation by linking preference
+claims to historical evidence. However, inferred preferences may
+expose sensitive information or encourage over-trust in gener-
+ated explanations. Deployment should therefore include privacy
+safeguards and clear communication that preference proofs reflect
+model reasoning rather than definitive user intent.
+A
+Detailed Theoretical Analysis
+This appendix proves Theorems 1 and 2. Notation follows Section 4.
+A.1
+Proof of Theorem 1: Two-link failure-rate
+control
+We prove the grounding bound; the influence bound uses the same
+steps. Write Δ = Δgrd(𝑘, 𝑗) for a link drawn from 𝜈grd, 𝜏= 𝜏𝑔> 0,
+and
+ℓ(Δ) = log(1 + exp(−Δ/𝜏))
+(34)
+for its softplus penalty, so that E𝜈grd [ℓ(Δ)] ≤𝜖grd by Eq. (30). Let
+𝐹= {Δ ≤0} be the failure event.
+We begin by bounding the penalty on 𝐹. On this event,
+−Δ/𝜏≥0
+(Δ ≤0 and 𝜏> 0)
+ℓ(Δ) ≥log 1 + 𝑒0
+(𝑥↦→log(1 + 𝑒𝑥) is increasing)
+= log 2.
+(evaluating at 𝑥= 0)
+Off 𝐹the indicator of 𝐹is zero while ℓ(Δ) > 0. Combining both
+cases gives the pointwise bound
+I{𝐹} ≤ℓ(Δ)
+log 2.
+(35)
+It remains to take expectations under 𝜈grd:
+Pr
+𝜈grd(Δgrd ≤0) = E𝜈grd [I{𝐹}]
+(probability as an expected indicator)
+≤
+E𝜈grd [ℓ(Δ)]
+log 2
+(expectation of Eq. (35))
+≤𝜖grd
+log 2.
+(hypothesis in Eq. (30))
+Replacing (Δgrd,𝜏𝑔,𝜈grd,𝜖grd) by (Δinf,𝜏𝑝,𝜈inf,𝜖inf) in every line proves
+the influence bound.
+■
+The bound treats every non-positive contrast alike. For a margin
+𝜂≥0, the same steps applied to the event {Δ ≤−𝜂}, with log 2
+replaced by log(1 + 𝑒𝜂/𝜏), give
+Pr
+𝜈grd(Δgrd ≤−𝜂) ≤
+𝜖grd
+log
+
+1 + 𝑒𝜂/𝜏𝑔
+ ,
+(36)
+which bounds the rate of large failures more tightly than Eq. (31).
+A.2
+Proof of Theorem 2: Top-𝐾preservation
+Both 𝑞full and 𝑞proof are softmax distributions over the finite com-
+parison set C𝑢, so each has full support there, and 1 ≤𝐾< |C𝑢|
+guarantees that the items 𝑖(𝐾) and 𝑖(𝐾+1) in Eq. (32) exist. Let
+TV(𝑞full,𝑞proof) = 1
+2
+∑︁
+𝑖∈C𝑢
+𝑞full(𝑖) −𝑞proof (𝑖)
+
+(37)
+denote the total-variation distance.
+We begin by bounding every coordinate difference. For any 𝑖∈
+C𝑢,
+𝑞full(𝑖) −𝑞proof (𝑖)
+ ≤TV(𝑞full,𝑞proof)
+(singleton event {𝑖})
+≤
+√︃
+1
+2𝐷KL(𝑞full∥𝑞proof)
+(Pinsker’s inequality [3])
+≤
+√︁
+𝛿/2.
+(hypothesis 𝐷KL ≤𝛿)
+Hence
+max
+𝑖∈C𝑢
+𝑞full(𝑖) −𝑞proof (𝑖)
+ ≤
+√︁
+𝛿/2.
+(38)
+We now show that the boundary survives. Take any𝑎∈TopK(𝑞full)
+and any 𝑏∈C𝑢\ TopK(𝑞full), so that 𝑞full(𝑎) −𝑞full(𝑏) ≥𝛾𝐾by
+Eq. (32). Then
+𝑞proof (𝑎) −𝑞proof (𝑏) ≥𝑞full(𝑎) −𝑞full(𝑏)
+−
+𝑞proof (𝑎) −𝑞full(𝑎)
+
+−
+𝑞proof (𝑏) −𝑞full(𝑏)
+
+(triangle inequality)
+≥𝛾𝐾−2
+√︁
+𝛿/2
+(Eqs. (32), (38))
+= 𝛾𝐾−
+√
+2𝛿
+(simplification)
+> 0.
+(𝛾𝐾>
+√
+2𝛿)
+Every item of the full-history top-𝐾set therefore has strictly larger
+probability under 𝑞proof than every item outside it. The 𝐾most
+probable items under 𝑞proof are thus unique and coincide with
+TopK(𝑞full), which is Eq. (33).
+■
+When C𝑢is the full catalog, the same argument gives top-𝐾
+preservation for full-catalog recommendation. With sampled non-
+target items, it gives preservation within the sampled comparison
+set.
+References
+[1] Irina Arévalo and Jose L. Salmeron. 2026. Model-Agnostic Post-Hoc Explainability
+for Recommender Systems. Expert Systems with Applications 298 (2026), 129608.
+doi:10.1016/j.eswa.2025.129608
+[2] Keqin Bao, Jizhi Zhang, Yang Zhang, Wenjie Wang, Fuli Feng, and Xiangnan
+He. 2023. Tallrec: An effective and efficient tuning framework to align large
+language model with recommendation. In Proceedings of the 17th ACM conference
+on recommender systems. 1007–1014.
+[3] Clément L Canonne. 2022. A short note on an inequality between KL and TV.
+arXiv preprint arXiv:2202.07198 (2022).
+11
+
+
+Hou et al.
+[4] Zhi-Yuan Chen, Siyu Lu, Qiang Liu, Xingxing Wang, and Yankai Lin. 2026. From
+Prediction to Understanding: Leveraging Reasoning in Large Language Model-
+based Recommendations. In Proceedings of the ACM Web Conference 2026. 6171–
+6182.
+[5] Jay DeYoung, Sarthak Jain, Nazneen Fatema Rajani, Eric Lehman, Caiming Xiong,
+Richard Socher, and Byron C Wallace. 2020. ERASER: A benchmark to evalu-
+ate rationalized NLP models. In Proceedings of the 58th annual meeting of the
+association for computational linguistics. 4443–4458.
+[6] Hongxun Ding, Keqin Bao, Jizhi Zhang, Yi Fang, Wenxin Xu, Fuli Feng, and
+Xiangnan He. 2026. Towards Sample-Efficient and Stable Reinforcement Learning
+for LLM-Based Recommendation. arXiv preprint arXiv:2602.00632 (2026).
+[7] Junchen Fu, Xuri Ge, Alexandros Karatzoglou, Ioannis Arapakis, Suzan Verberne,
+Joemon M Jose, and Zhaochun Ren. 2026. Differentiable Semantic ID for Gen-
+erative Recommendation. In Proceedings of the 49th International ACM SIGIR
+Conference on Research and Development in Information Retrieval. 369–379.
+[8] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. 2022.
+Recommendation as language processing (rlp): A unified pretrain, personalized
+prompt & predict paradigm (p5). In Proceedings of the 16th ACM conference on
+recommender systems. 299–315.
+[9] Shivangi Gheewala, Shuxiang Xu, Soonja Yeom, and Sumbal Maqsood. 2024.
+Exploiting Deep Transformer Models in Textual Review Based Recommender
+Systems. Expert Systems with Applications 235 (2024), 121120. doi:10.1016/j.eswa.
+2023.121120
+[10] Yingzhi He, Yan Sun, Junfei Tan, Yuxin Chen, Xiaoyu Kong, Chunxu Shen, Xiang
+Wang, An Zhang, and Tat-Seng Chua. 2026. Reasoning over Semantic IDs
+Enhances Generative Recommendation. In Proceedings of the 32nd ACM SIGKDD
+Conference on Knowledge Discovery and Data Mining.
+[11] Yingzhi He, Yan Sun, Junfei Tan, Yuxin Chen, Xiaoyu Kong, Chunxu Shen,
+Xiang Wang, An Zhang, and Tat-Seng Chua. 2026. Reasoning over semantic ids
+enhances generative recommendation. In Proceedings of the 32nd ACM SIGKDD
+Conference on Knowledge Discovery and Data Mining V. 2. 1638–1649.
+[12] Yu Hou and Won-Yong Shin. 2026. Tokenize Once, Recommend Anywhere:
+Unified Item Tokenization for Multi-domain LLM-based Recommendation. In
+Proceedings of the AAAI Conference on Artificial Intelligence, Vol. 40. 14848–14855.
+doi:10.1609/aaai.v40i17.38505
+[13] Junguang Jiang, Yanwen Huang, Bin Liu, Xiaoyu Kong, Ziru Xu, Han Zhu, Jian
+Xu, and Bo Zheng. 2025. Large Language Models Are Universal Recommendation
+Learners. arXiv preprint arXiv:2502.03041 (2025).
+[14] Wang-Cheng Kang and Julian McAuley. 2018. Self-attentive sequential recom-
+mendation. In 2018 IEEE international conference on data mining (ICDM). 197–206.
+[15] Sein Kim, Hongseok Kang, Seungyoon Choi, Donghyun Kim, Minchul Yang, and
+Chanyoung Park. 2024. Large language models meet collaborative filtering: An
+efficient all-round llm-based recommender system. In Proceedings of the 30th
+ACM SIGKDD Conference on Knowledge Discovery and Data Mining. 1395–1406.
+[16] Sein Kim, Hongseok Kang, Kibum Kim, Jiwan Kim, Donghyun Kim, Minchul Yang,
+Kwangjin Oh, Julian McAuley, and Chanyoung Park. 2025. Lost in Sequence: Do
+Large Language Models Understand Sequential Recommendation?. In Proceedings
+of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.
+2. 1160–1171.
+[17] Jiayi Liao, Sihang Li, Zhengyi Yang, Jiancan Wu, Yancheng Yuan, Xiang Wang,
+and Xiangnan He. 2024. Llara: Large language-recommendation assistant. In
+Proceedings of the 47th International ACM SIGIR Conference on Research and
+Development in Information Retrieval. 1785–1795.
+[18] Zhanyu Liu, Shiyao Wang, Xingmei Wang, Rongzhou Zhang, Jiaxin Deng,
+Honghui Bao, Jinghao Zhang, Wuchao Li, Pengfei Zheng, Xiangyu Wu, Yifei
+Hu, Qigen Hu, Xinchen Luo, Lejian Ren, Zixing Zhang, Qianqian Wang, Kuo
+Cai, Yunfan Wu, Hongtao Cheng, Zexuan Cheng, Lu Ren, Huanjie Wang, Yi
+Su, Ruiming Tang, Kun Gai, and Guorui Zhou. 2025. OneRec-Think: In-Text
+Reasoning for Generative Recommendation. arXiv preprint arXiv:2510.11639
+(2025).
+[19] Sichun Luo, Jian Xu, Xiaojie Zhang, Linrong Wang, Sicong Liu, Hanxu Hou,
+and Linqi Song. 2026. RALLRec+: Retrieval Augmented Large Language Model
+Recommendation with Reasoning. Expert Systems with Applications 297 (2026),
+129508. doi:10.1016/j.eswa.2025.129508
+[20] Qing Lyu, Shreya Havaldar, Adam Stein, Li Zhang, Delip Rao, Eric Wong, Mar-
+ianna Apidianaki, and Chris Callison-Burch. 2023. Faithful chain-of-thought
+reasoning. In Proceedings of the 13th International Joint Conference on Natural
+Language Processing and the 3rd Conference of the Asia-Pacific Chapter of the
+Association for Computational Linguistics (Volume 1: Long Papers). 305–329.
+[21] Jianmo Ni, Jiacheng Li, and Julian McAuley. 2019. Justifying Recommendations
+Using Distantly-Labeled Reviews and Fine-Grained Aspects. In Proceedings of
+the 2019 Conference on Empirical Methods in Natural Language Processing and the
+9th International Joint Conference on Natural Language Processing.
+[22] Debjit Paul, Robert West, Antoine Bosselut, and Boi Faltings. 2024. Making
+reasoning matter: Measuring and improving faithfulness of chain-of-thought
+reasoning. In Findings of the Association for Computational Linguistics: EMNLP
+2024. 15012–15032.
+[23] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan H. Keshavan, Trung
+Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Q. Tran, Jonah Samost, Maciej Kula,
+Ed H. Chi, and Maheswaran Sathiamoorthy. 2023. Recommender Systems with
+Generative Retrieval. In NeurIPS.
+[24] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang.
+2019. BERT4Rec: Sequential Recommendation with Bidirectional Encoder Rep-
+resentations from Transformer. In Proceedings of the 28th ACM International
+Conference on Information and Knowledge Management. 1441–1450.
+[25] Wenjie Wang, Honghui Bao, Xinyu Lin, Jizhi Zhang, Yongqi Li, Fuli Feng, See-
+Kiong Ng, and Tat-Seng Chua. 2024. Learnable Item Tokenization for Generative
+Recommendation. In Proceedings of the 33rd ACM International Conference on
+Information and Knowledge Management. 2400–2409.
+[26] Xinfeng Wang, Jin Cui, Yoshimi Suzuki, and Fumiyo Fukumoto. 2024. RDRec:
+Rationale Distillation for LLM-Based Recommendation. In Proceedings of the
+62nd Annual Meeting of the Association for Computational Linguistics (Volume 2:
+Short Papers). Association for Computational Linguistics, 65–74. doi:10.18653/
+v1/2024.acl-short.6
+[27] Wei Wei, Xubin Ren, Jiabin Tang, Qinyong Wang, Lixin Su, Suqi Cheng, Junfeng
+Wang, Dawei Yin, and Chao Huang. 2024. Llmrec: Large language models
+with graph augmentation for recommendation. In Proceedings of the 17th ACM
+international conference on web search and data mining. 806–815.
+[28] Tianwei Zhang, Chuanhou Sun, Zhiyong Cheng, and Xiangjun Dong. 2022.
+AENAR: An Aspect-Aware Explainable Neural Attentional Recommender Model
+for Rating Predication. Expert Systems with Applications 198 (2022), 116717.
+doi:10.1016/j.eswa.2022.116717
+[29] Yang Zhang, Fuli Feng, Jizhi Zhang, Keqin Bao, Qifan Wang, and Xiangnan He.
+2025. Collm: Integrating collaborative embeddings into large language models
+for recommendation. IEEE Transactions on Knowledge and Data Engineering
+(2025), 2329–2340.
+[30] Yingyi Zhang, Junyi Li, Yejing Wang, Wenlin Zhang, Xiaowei Qian, Sheng
+Zhang, Yue Feng, Yichao Wang, Yong Liu, Xiangyu Zhao, and Xianneng Li.
+2026. RAGR: Review-Augmented Generative Recommendation. arXiv preprint
+arXiv:2605.17267 (2026).
+[31] Bowen Zheng, Yupeng Hou, Hongyu Lu, Yu Chen, Wayne Xin Zhao, Ming
+Chen, and Ji-Rong Wen. 2024. Adapting Large Language Models by Integrating
+Collaborative Semantics for Recommendation. In 2024 IEEE 40th International
+Conference on Data Engineering (ICDE). 1435–1448.
+[32] Kehan Zheng, Deyao Hong, Qian Li, Jun Zhang, Huan Yu, Jie Jiang, and Hongning
+Wang. 2026. Reasoning to Rank: An End-to-End Solution for Exploiting Large
+Language Models for Recommendation. arXiv preprint arXiv:2602.12530 (2026).
+12

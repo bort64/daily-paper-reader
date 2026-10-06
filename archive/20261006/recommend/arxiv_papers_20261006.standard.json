@@ -1,0 +1,181 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-10-06T00:34:21.219586+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 1,
+    "deep_cap": 6,
+    "deep_selected": 1,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [
+    {
+      "id": "2610.02600v1",
+      "source": "arxiv",
+      "title": "When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation",
+      "abstract": "In instruction-guided generative recommendation, LLM-based recommenders need to balance two goals: responding to the user's current request and aligning with the preferences in their interaction history. When the two conflict, history events can override the request. We show that turning the effect of individual history events into supervision faces two obstacles. First, the events that most influence a recommendation are not necessarily the ones that support the target item. Second, removing a misleading event can raise the target's score but a competing item's score even more, so a higher target score alone does not guarantee a better ranking. We propose Asymmetric Intervention-Guided Margin Supervision (AIMS), which converts the effect of removing individual history events into ranking supervision. For training requests already ranked correctly, a frozen reference model identifies request-specific deletions that improve both the target's score and its margin over a competitor near the recommendation cutoff. These margins serve as training targets, while the complete history is retained as input. Training combines cross-entropy with an asymmetric auxiliary loss that penalizes margin shortfalls and routes its gradient only through the competitor score. Inference is unchanged, requiring no history editing or deletion search. Across six LLM backbones on an industrial dataset and two public benchmarks, AIMS improves Recall and NDCG over strong baselines. Ablations support request-specific margins and asymmetric supervision, and the selected deletions preferentially remove constraint-violating history.",
+      "authors": [
+        "Ming Yin",
+        "Yuhan Yang",
+        "Chen Chen",
+        "Xinyu Lin",
+        "Wentao Shi",
+        "Fangcong Yin",
+        "Chaofei Yang",
+        "Chao Yang",
+        "Jiyan Yang",
+        "Hui Zhang",
+        "Ning Jiang",
+        "Yiran Chen",
+        "Qifan Wang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-01T23:53:42+00:00",
+      "link": "https://arxiv.org/pdf/2610.02600v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "LLM-based generative recommendation supervision",
+      "llm_evidence_cn": "基于LLM的生成式推荐监督",
+      "llm_evidence": "基于LLM的生成式推荐监督",
+      "canonical_evidence": "基于LLM的生成式推荐监督",
+      "llm_tldr_en": "Proposes AIMS, an asymmetric intervention-guided margin supervision for instruction-guided LLM generative recommendation, resolving conflicts where history overrides user requests and improving ranking.",
+      "llm_tldr_cn": "论文针对指令引导的LLM生成式推荐中历史事件可能压倒用户当前请求的问题，指出将单条历史事件影响转化为监督面临两大障碍：影响最大的事件未必支持目标项，且移除误导事件可能同时抬高竞争项分数。为此提出非对称干预引导的间隔监督AIMS，从排序视角修正监督信号。实验表明AIMS能缓解历史误导，在提升目标项分数的同时保证更优排序。该工作为平衡当前请求与历史偏好提供了有效监督方法。",
+      "llm_tldr": "论文针对指令引导的LLM生成式推荐中历史事件可能压倒用户当前请求的问题，指出将单条历史事件影响转化为监督面临两大障碍：影响最大的事件未必支持目标项，且移除误导事件可能同时抬高竞争项分数。为此提出非对称干预引导的间隔监督AIMS，从排序视角修正监督信号。实验表明AIMS能缓解历史误导，在提升目标项分数的同时保证更优排序。该工作为平衡当前请求与历史偏好提供了有效监督方法。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.37574v2",
+      "source": "arxiv",
+      "title": "MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment",
+      "abstract": "Large Language Models (LLMs) are increasingly used to enrich user queries in information retrieval (IR) so that a standard retriever such as BM25 can bridge vocabulary gaps with the target corpus. Any single LLM, however, is limited by its training data and architectural biases, and its enrichment behavior depends on hand-crafted prompts that must be re-engineered for each new model -- an expensive and poorly scalable process. We present MERGE (Multi-LLM Ensemble for Retrieval via Generative Enrichment), a two-stage framework: three heterogeneous 7-8B open-source LLMs independently produce candidate expansions, and a larger LLM generatively synthesizes them into a single query. To make prompt engineering scalable across the ensemble, we integrate a task-grounded Automatic Prompt Optimization (APO) loop into both stages. Unlike APO methods that judge candidates with an LLM evaluator, our loop scores each candidate by its downstream retrieval performance and runs a small tournament between the current champion prompt and optimizer-proposed drafts, terminating once the champion survives two consecutive rounds; a history-augmented variant additionally feeds the recent tournament trajectory back to the optimizer. MERGE is retriever-agnostic and issues a single BM25 pass with no rank fusion, no supervised document expansion, and no re-indexing. On five BEIR benchmarks (NQ, SciFact, FiQA, Touche-2020, DBPedia), MERGE improves BM25 nDCG@10 over the original queries by +2.1 to +14.9 points and matches or outperforms strong LLM-based query-expansion baselines despite using only compact open-source models. Ablations confirm that the Stage-2 ensemble beats any single Stage-1 LLM, and that task-grounded APO converts large seed-prompt regressions into consistent gains without hand-tuning.",
+      "authors": [
+        "Tzu-I Ho",
+        "Yung-Yu Shih",
+        "Shang-Yu Su",
+        "Dongzhe Wang",
+        "Yun-Nung Chen"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.CL"
+      ],
+      "published": "2026-09-29T13:39:54+00:00",
+      "link": "https://arxiv.org/pdf/2609.37574v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "generative LLM query enrichment for retrieval",
+      "llm_evidence_cn": "面向检索的生成式LLM查询增强",
+      "llm_evidence": "面向检索的生成式LLM查询增强",
+      "canonical_evidence": "面向检索的生成式LLM查询增强",
+      "llm_tldr_en": "MERGE ensembles three heterogeneous open-source LLMs to generate query expansions and a larger LLM to synthesize them, making generative query enrichment for retrieval scalable without per-model prompt engineering.",
+      "llm_tldr_cn": "LLM常被用于增强查询以帮助BM25等检索器弥合词表鸿沟，但单个LLM受训练数据与架构偏置限制，且提示工程需针对每个新模型重新设计，成本高且难以扩展。MERGE提出两阶段框架：三个异构7-8B开源LLM独立生成候选扩展，再由更大LLM生成式合成单一查询。该方法使提示工程可跨集成复用，提升了生成式检索增强的规模化能力。",
+      "llm_tldr": "LLM常被用于增强查询以帮助BM25等检索器弥合词表鸿沟，但单个LLM受训练数据与架构偏置限制，且提示工程需针对每个新模型重新设计，成本高且难以扩展。MERGE提出两阶段框架：三个异构7-8B开源LLM独立生成候选扩展，再由更大LLM生成式合成单一查询。该方法使提示工程可跨集成复用，提升了生成式检索增强的规模化能力。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2610.01375v1",
+      "source": "arxiv",
+      "title": "Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization",
+      "abstract": "A user's movie, news, and dialogue histories differ in their native actions and outputs, yet each interaction supplies evidence that can update user memory. We study whether these histories can train one reusable update mechanism. An action-on-item schema pairs a mapped interaction role with a content embedding, allowing shared update parameters to operate on separate user states. We establish invariance to native relabeling, bounded state changes under item-embedding perturbations, and a pooled-training bound under explicit compatibility conditions. The Multi-Timescale State Hypothesis (MTSH) specifies how this evidence enters, persists, and is consumed; PerTIDE implements it with action gating, three state-space traces, fusion, and command-conditioned readout. On PENS, the same history encoder supports both next-news prediction and personalized headline generation. In a controlled PENS-to-MovieLens experiment, a frozen source-trained core exceeds an identically structured random core by 15.23 MRR points after fitting the same target consumer. On MIND, PerTIDE retains a 4.12-point MRR advantage over a same-input three-branch state-space control. Action, readout, and trace interventions identify complementary contributions to these gains. Together, the theory and experiments support learning history updates across compatible sources and reusing them through predictive and generative consumers.",
+      "authors": [
+        "Parthiv Chatterjee",
+        "Kashish Kanjaria",
+        "Vashisth Purani",
+        "Sourish Dasgupta",
+        "Tanmoy Chakraborty"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-10-01T09:42:46+00:00",
+      "link": "https://arxiv.org/pdf/2610.01375v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Shared event schema for predictive and generative personalization",
+      "llm_evidence_cn": "面向预测式与生成式个性化的共享事件模式",
+      "llm_evidence": "面向预测式与生成式个性化的共享事件模式",
+      "canonical_evidence": "面向预测式与生成式个性化的共享事件模式",
+      "llm_tldr_en": "PerTIDE uses an action-on-item schema and multi-timescale state to unify predictive and generative personalization across heterogeneous interaction histories.",
+      "llm_tldr_cn": "用户在不同场景下的行为历史动作与输出各异，却都能更新用户记忆，但能否共享一套更新机制尚不清楚。作者提出action-on-item事件模式，让共享更新参数作用于分离的用户状态，并给出不变性与训练界。基于多时间尺度状态假设实现PerTIDE，含动作门控与多条状态轨迹，统一了预测式与生成式个性化。",
+      "llm_tldr": "用户在不同场景下的行为历史动作与输出各异，却都能更新用户记忆，但能否共享一套更新机制尚不清楚。作者提出action-on-item事件模式，让共享更新参数作用于分离的用户状态，并给出不变性与训练界。基于多时间尺度状态假设实现PerTIDE，含动作门控与多条状态轨迹，统一了预测式与生成式个性化。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2610.02968v1",
+      "source": "arxiv",
+      "title": "Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation",
+      "abstract": "Large language models (LLMs) can infer user preferences from interaction histories and reviews, yet the rationales they generate may not reflect the information actually used for recommendation. A preference claim may be weakly supported by its selected evidence, or may have little effect on the final ranking. We refer to these two failures as the grounding-influence gap. We introduce PROVE-REC, a general framework for verifiable preference reasoning in LLM-based recommendation. Pass A converts the complete pre-target history into a compact preference proof consisting of positive and avoidance claims linked to selected evidence entries. Pass B predicts the next item using only the proof and its selected evidence, preventing the recommender from bypassing the reasoning path. To verify evidence-to-proof grounding, we compare the effect of masking selected evidence with masking a comparable control entry. To verify proof-to-recommendation influence, we remove a preference claim and measure the resulting decrease in the target item's ranking margin. A ranking-preservation objective further retains useful information from the complete history. Comprehensive experiments on wide-ranging real-world datasets demonstrate that PROVE-REC consistently outperforms strong sequential, generative, and LLM-enhanced baselines, with improvements of up to 7.45%. Controlled ablations confirm the effectiveness of the two-pass architecture and verification objectives. Moreover, PROVE-REC produces claims that are more strongly grounded in historical evidence and more influential to recommendation while preserving ranking quality.",
+      "authors": [
+        "Yu Hou",
+        "Nathaniel Kang",
+        "Pengkai Wang",
+        "Hua Li"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-10-02T08:05:43+00:00",
+      "link": "https://arxiv.org/pdf/2610.02968v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based recommendation with verifiable preference proofs",
+      "llm_evidence_cn": "基于大模型的可验证偏好证明推荐",
+      "llm_evidence": "基于大模型的可验证偏好证明推荐",
+      "canonical_evidence": "基于大模型的可验证偏好证明推荐",
+      "llm_tldr_en": "LLM recommendations generate rationales that may not actually drive ranking; PROVE-REC builds verifiable preference proofs and predicts the next item only from those proofs.",
+      "llm_tldr_cn": "LLM推荐生成的偏好理由未必真正支撑最终排序，存在依据与影响之间的鸿沟。本文提出PROVE-REC框架，先用Pass A把完整历史压缩为可验证的偏好证明，再用Pass B仅依据证明及其证据预测下一物品。实验验证了证明的可验证性及其对排序的实际影响，提升了LLM推荐的可解释性与可信度。",
+      "llm_tldr": "LLM推荐生成的偏好理由未必真正支撑最终排序，存在依据与影响之间的鸿沟。本文提出PROVE-REC框架，先用Pass A把完整历史压缩为可验证的偏好证明，再用Pass B仅依据证明及其证据预测下一物品。实验验证了证明的可验证性及其对排序的实际影响，提升了LLM推荐的可解释性与可信度。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-10-04</span>
+      <span class="dpr-home-dashboard-kicker">2026-10-06</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 3 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 4 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>1</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-10-04 22:10:42 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-10-06 00:40:30 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,10 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日速读3篇推荐系统论文，聚焦长上下文智能体、用户画像路由与重排序决策。最值得看的是《ReMem》对长上下文推荐中感知与记忆的重新审视，以及生成式与协同画像在服务时可切换以控制新颖度。建议普通读者优先扫这两篇的摘要，留意推荐系统正从单一排序转向“何时用哪种画像”的动态决策。</p>
+<p>今日共生成 4 篇推荐（精读 1 篇，速读 3 篇）</p>
+<p>精读：《When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation》（9.0/10）</p>
+<p>速读：《MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment》（6.0/10）, 《Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization》（6.0/10）, 《Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation》（6.0/10）</p>
+<p>这些结果覆盖了当下较热的方向，建议先看精读区论文的关键问题与方法。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +81,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">0 篇</strong>
+    <strong class="dpr-home-dashboard-count">1 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation">When History Misleads: Asymmetric Margin Supervision for Instruction-Guided LLM Generative Recommendation</span></li></ul>
   </div>
-
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,7 +97,7 @@
     <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="ReMem: Rethinking Perception and Memory in Long-Context Recommendation Agents">ReMem: Rethinking Perception and Memory in Long-Context Recommendation Agents</span></li><li><span class="dpr-home-dashboard-paper-title" title="Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty">Routing Between Generative and Collaborative User Profiles: A Serving-Time Gate for Controllable Novelty</span></li><li><span class="dpr-home-dashboard-paper-title" title="Decision-Oriented Recommendation Reranking: An Empirical Study of Jev">Decision-Oriented Recommendation Reranking: An Empirical Study of Jev</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment">MERGE: Multi-LLM Ensemble for Retrieval via Generative Enrichment</span></li><li><span class="dpr-home-dashboard-paper-title" title="Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization">Action-On-Item Preference Flow: A Shared Event Schema for Predictive and Generative Personalization</span></li><li><span class="dpr-home-dashboard-paper-title" title="Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation">Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
 </section>
