@@ -1,0 +1,481 @@
+Title: A Systematic Study of Semantic ID Spaces for Generative Information Retrieval
+
+URL Source: https://arxiv.org/pdf/2610.08732v1
+
+Published Time: Wed, 07 Oct 2026 01:55:45 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# A Systematic Study of Semantic ID Spaces for Generative Information Retrieval 
+
+# Alexia Allal 
+
+alexia.allal@artefact.com Artefact Research Center Paris, France 
+
+# Hicham Randrianarivo 
+
+hicham.randrianarivo@artefact.com Artefact Research Center Paris, France 
+
+# Sylvain Lamprier 
+
+sylvain.lamprier@univ-angers.fr LERIA, Angers University Angers, France 
+
+## Abstract 
+
+Generative Information Retrieval (GIR) has emerged as a transfor-mative paradigm, shifting document retrieval from a traditional “retrieve-and-rank” workflow to sequence-to-sequence generation, where a model directly predicts document identifiers (DocIDs). While the semantic design of these DocIDs is known to be critical for performance, a fundamental question remains under-explored: what makes a good DocID? Current approaches rely heavily on computationally expensive downstream evaluations, hindering sys-tematic analysis and rapid iteration. In this work, we address this challenge by presenting a comprehensive study on the proper-ties, metrics, and trade-offs that define effective numerical DocIDs. Specifically, our contributions are threefold: First, we propose a uni-fied framework that unifies Product Quantization (PQ) and Residual Quantization (RQ), and their hybrid variants within a single design space. This enables us to systematically study key DocID proper-ties, such as hierarchy versus parallelism, as well as the impact of hyperparameters like DocID length and codebook size. Second, we define a suite of training-free, intrinsic metrics, to quantify DocID quality and evaluate structural fidelity without the overhead of full model training. Through extensive experiments on MS MARCO 300K and NQ320K, we analyze how these structural properties influence retrieval effectiveness. 
+
+## Keywords 
+
+Generative Retrieval, Hierarchical document identifiers, Document retrieval, Encoder-decoder, Information retrieval 
+
+## 1 Introduction 
+
+Generative Information Retrieval (GIR) [27] has emerged as a com-pelling paradigm, shifting document retrieval from a traditional "retrieve-and-rank" workflow to sequence-to-sequence generation, where a model directly predicts a discrete document identifier (Do-cID) given a query. The success of GIR hinges on DocID design: structuring documents under semantic codes induces a coarse-to-fine taxonomy, allowing the model to make high-level neighbor-hood decisions early in decoding [27, 29]. DocIDs can be either textual (e.g., titles, URLs, or n-grams) or numerical codes ranging from arbitrary identifiers (e.g., sequen-tial counters or random integers) to structured semantic codes produced by vector quantization. Our work focuses on the latter, where the dominant paradigms are Product Quantization (PQ) [10], which decomposes the embedding space into independent parallel subspaces quantized separately (PQ), and Residual Quantization (RQ) [5], which iteratively encodes a vector by quantizing the resid-ual error of the preceding step. We study two RQ variants that differ in how the codebooks are trained: R-KMeans [7, 31] fits each layer by 𝑘 -means on the residuals of the previous one, and R-VQ [14, 22] learns all layers end-to-end on a reconstruction loss (Section 2). Despite their prevalence, existing studies have three notable limitations. First, most papers fix a single quantization method and configuration of codebook vocabulary size 𝑉 and DocID length 
+
+𝑀 [17, 27, 29, 31], leaving the design space unexplored. Second, parallel (PQ) and residual (RQ) schemes are treated as disjoint paradigms, overlooking hybrid configurations that combine parallel factorization with local residual depth. Finally, evaluating DocID quality relies almost exclusively on full end-to-end model training, treating identifier construction as an opaque preprocessing step without probing its underlying geometric and statistical properties. We structure our investigation around three research questions. 
+
+RQ1: How do the codebook size 𝑉 , the DocID length 𝑀 and the codebook training affect downstream retrieval, and how do resid-ual variants (R-KMeans, R-VQ) compare with PQ across the design space? RQ2: Can a hybrid Product–Residual Quantization (PQ ×RQ) scheme bridge parallel factorization and residual hierarchy to im-prove retrieval trade-offs? RQ3: Can training-free intrinsic metrics diagnose DocID structural viability prior to full model training? Our contributions are fourfold. We propose a parameterized framework that unifies PQ, R-KMeans and R-VQ into a single fam-ily and exposes a regime not studied systematically for GIR, hy-brid Product–Residual Quantization (PQ ×RQ), which lets us probe the trade-off between parallel factorization and hierarchical depth. Within this family, we train and evaluate generative retrieval models on 60 MS MARCO 300K and 48 Natural Questions (NQ) configura-tions, isolating the effect of the encoding method, codebook size, DocID length and codebook training. To diagnose DocID spaces before any training, we define a set of training-free intrinsic metrics: the Uniqueness Ratio U, Normalized Entropy H , Shared Semantic Similarity S, and Contrastive Alignment Preservation A.
+
+## 2 Background 2.1 Generative Retrieval 
+
+GIR [27, 37] replaces traditional retrieve-and-rank pipelines by training a sequence-to-sequence model 𝑃 𝜃 to directly generate the identifier (DocID) of a relevant document given a query. Formally, let X = {𝑑 (1) , . . . , 𝑑 (𝑁 ) } be a document corpus and Q
+
+a query set, where each query 𝑞 ∈ Q has a relevant subset 𝑞 (X) ⊆ X. An encoding function 𝜙 : X → Ω = {1, . . . , 𝑉 }𝑀 maps each document 𝑑 to a discrete DocID sequence 𝜙 (𝑑 ) = y = (𝑦 1, . . . , 𝑦 𝑀 )
+
+of 𝑀 tokens, each from a codebook of size 𝑉 . The autoregressive model minimizes token-level cross-entropy: 
+
+L = −∑︁  
+
+> 𝑞 ∈ Q
+
+∑︁ 𝑑 ∈𝑞 ( X) 
+
+> 𝑀
+
+∑︁ 
+
+> 𝑚 =1
+
+log 𝑃 𝜃 (𝜙 (𝑑 )𝑚 | 𝜙 (𝑑 )<𝑚 , 𝑞 ), (1) arXiv:2610.08732v1 [cs.IR] 6 Oct 2026 Allal et al. 
+
+where 𝜙 (𝑑 )𝑚 denotes the 𝑚 -th token of the code of document 𝑑 ,and 𝜙 (𝑑 )<𝑚 denotes the preceding tokens. At inference, candidate DocIDs are generated via prefix tree-constrained beam search [2] to guarantee valid sequences, which map deterministically back to documents via collection lookup. 
+
+## 2.2 DocID Encoding 
+
+Literature classifies DocIDs into content-derived strings, such as document titles, URLs [23], N-grams [33], or pseudo-queries [15, 26], and computationally-generated numerical codes. While early nu-merical approaches used arbitrary integer strings [20, 27], or hash-ing [24], modern methods apply vector quantization to preserve continuous semantic structure [1, 5, 9, 28]. In this setting, the encoder factorizes as 𝜙 = 𝜙 𝑦 ◦ 𝜙 𝑧 , where 
+
+𝜙 𝑧 : X → Z ≡ Rℎ is a pre-trained embedder (e.g., DPR [12] or GTR [19]) producing continuous representations 𝑧 (𝑖 ) of dimension 
+
+ℎ, and 𝜙 𝑦 : Z → Ω is a quantizer mapping 𝑧 (𝑖 ) to a discrete sequence y(𝑖 ) .
+
+Product Quantization (PQ) [10] splits 𝑧 into 𝐶 sub-vectors 𝑧 =
+
+𝑧 1 ⊕· · ·⊕ 𝑧 𝐶 of dimension ℎ/𝐶 and quantizes each one independently with its own codebook of 𝑉 codewords C𝑐 = (𝑣 𝑐 
+
+> 1
+
+, . . . , 𝑣 𝑐 𝑉 ) ∈ R𝑉 ×ℎ/𝐶 :
+
+𝑦 𝑐 = arg min 
+
+> 𝑢
+
+∥𝑧 𝑐 − 𝑣 𝑐 𝑢 ∥, 𝑐 = 1, . . . , 𝐶, (2) giving the DocID y = (𝑦 1, . . . , 𝑦 𝐶 ) [36]. Training each subspace codebook via offline 𝑘 -means or a reconstruction loss is mathemat-ically equivalent; we thus denote this single-layer baseline simply as PQ. 
+
+Residual Quantization (RQ) [5, 22] instead builds a coarse-to-fine DocID y = (𝑦 1, . . . , 𝑦 𝐿 ) of 𝐿 layers, as tree-based clustering did in early work [20, 27, 29, 37]: starting from 𝑧 0 = 𝑧 , each layer 𝑙 
+
+quantizes the residual of the previous one with a codebook C𝑙 =
+
+(𝑣 𝑙 
+
+> 1
+
+, . . . , 𝑣 𝑙 𝑉 ) ∈ R𝑉 ×ℎ :
+
+𝑦 𝑙 = arg min 
+
+> 𝑢
+
+∥𝑧 𝑙 −1 − 𝑣 𝑙 𝑢 ∥, 𝑧 𝑙 = 𝑧 𝑙 −1 − 𝑣 𝑙 𝑦 𝑙 , 𝑙 = 1, . . . , 𝐿. (3) Residual codebooks are trained either offline, by sequential 𝑘 -means on the residuals of each layer (R-KMeans) [6, 7, 31], or end-to-end, by gradient descent on the reconstruction loss LRQ (𝑧 ) =
+
+Í𝐿 𝑙 =1 ∥𝑧 𝑙 −1 − 𝑣 𝑙 𝑦 𝑙 ∥2 (R-VQ) [8, 11, 14]. 
+
+## 3 Semantic ID Spaces Study through a Unified Framework 3.1 Unifying Parallelism and Hierarchy: The Product–Residual Continuum 
+
+We formalize semantic DocID construction by modeling horizontal decomposition (PQ-style) and vertical refinement (RQ-style) as lim-iting cases of a single discrete encoding operator 𝜙 𝑦 𝜆 (𝜆 = (𝐶, 𝐿, 𝑉 )). Depicted in Figure 1, an input embedding 𝑧 ∈ Rℎ is first split into 
+
+𝐶 parallel sub-vectors 𝑧 𝑐 ∈ Rℎ/𝐶 . Each sub-vector 𝑧 𝑐 then under-goes an 𝐿 -step Residual Quantization (RQ) process (Section 2), with residuals 𝑧 𝑐,𝑙 and codebooks C𝑐,𝑙 = (𝑣 𝑐,𝑙  
+
+> 1
+
+, . . . , 𝑣 𝑐,𝑙 𝑉 ) ∈ R𝑉 ×ℎ/𝐶 (𝑐 ≤ 𝐶 ,
+
+𝑙 ≤ 𝐿 ). Codebooks are trained either via sequential 𝑘 -means on residual vectors (PQ ×R-KMeans) or end-to-end gradient minimiza-tion (PQ ×R-VQ). With 𝑧 𝑐, 0 = 𝑧 𝑐 , each sub-vector is quantized by the residual recursion 
+
+𝑦 𝑐,𝑙 = arg min 
+
+> 𝑢
+
+∥𝑧 𝑐,𝑙 −1 − 𝑣 𝑐,𝑙 𝑢 ∥, 𝑧 𝑐,𝑙 = 𝑧 𝑐,𝑙 −1 − 𝑣 𝑐,𝑙 𝑦 𝑐,𝑙 , (4) giving the DocID y = (𝑦 𝑐,𝑙 )𝑐 ≤𝐶, 𝑙 ≤𝐿 of 𝑀 = 𝐶 × 𝐿 tokens (Figure 1); 
+
+𝐶 = 1 gives RQ (3) and 𝐿 = 1 gives PQ (2) with 𝑦 𝑐 = 𝑦 𝑐, 1. The autoregressive decoder consumes y flattened column-by-column into (𝑦 1, . . . , 𝑦 𝑀 ) to preserve hierarchy. The interior ( 𝐶, 𝐿 > 1) is the hybrid PQ ×RQ regime. Unlike OneSearch [3], which applies PQ only to the final residual of a global RQ, and PRQ-KMeans [16], a purely residual tokenizer despite its name, PQ ×RQ splits 𝑧 upfront into 𝐶 sub-spaces with an 𝐿 -step hierarchy within each, so that the model navigates parallel hierarchies simultaneously. 
+
+## 3.2 Intrinsic Structural Properties 
+
+Evaluating DocIDs solely through downstream generative model training is computationally expensive and leaves a blind spot re-garding their structural integrity. To circumvent this, intrinsic evaluation of discrete codebooks has recently emerged as a crucial diagnostic paradigm in generative recommendation [4]. Extending this perspective to GIR, we assess the structural viability of candidate DocID spaces prior to sequence-to-sequence training with the metrics below. 
+
+3.2.1 Distribution and Balance Metrics. To prevent training insta-bility caused by highly skewed document assignments (where many documents collapse into few clusters), we evaluate the usage of the identifier space. 
+
+Uniqueness Ratio U. In GIR, when distinct documents are as-signed the exact same DocID, an identifier collision occurs, mechan-ically capping maximum achievable recall. We define the Unique-ness Ratio U ∈ ( 0, 1] simply as the proportion of unique DocID sequences generated across the corpus of 𝑁 documents. While 
+
+U = 1 is the intuitive goal, documents with identical texts always share a DocID, so U cannot exceed the fraction of distinct texts, 
+
+U𝑚𝑎𝑥 .
+
+Normalized Entropy H . To measure the uniformity of token assignments, we compute the Shannon entropy across individual token positions. For position 𝑚 ∈ { 1, . . . , 𝑀 }, let V𝑚 be the set of codewords 𝑢 used at position 𝑚 , and 𝑃 𝑚 (𝑢 ) the fraction of the 
+
+𝑁 documents with 𝑦 𝑚 = 𝑢 . Normalized Entropy H is the mean normalized entropy across all 𝑀 positions: 
+
+H = 1
+
+𝑀 
+
+> 𝑀
+
+∑︁ 
+
+> 𝑚 =1
+
+H𝑚 , where H𝑚 = − Í𝑢 ∈ V 𝑚 𝑃 𝑚 (𝑢 ) log 𝑃 𝑚 (𝑢 )
+
+log |V 𝑚 | . (5) A value of H = 1.0 indicates that the tokens used at a position are used equally often; unused codebook entries do not lower H .
+
+3.2.2 Shared Semantic Similarity S. To evaluate local semantic coherence, Shared Semantic Similarity ( S) measures the average continuous embedding similarity between documents sharing iden-tical discrete identifiers under a budget of 𝑘 ∈ { 1, . . . , 𝑀 } unmasked tokens. While any DocID representation y ∈ R𝐶 ×𝐿 (𝑀 = 𝐶 × 𝐿 ) can be evaluated under any paradigm, the budget masking function 
+
+𝑓 𝑘 (y) adapts to three structural assumptions: A Systematic Study of Semantic ID Spaces for Generative Information Retrieval                     
+
+> input document 𝑑
+> Embedder
+> 𝜙 𝑧
+> 𝑧 ∈Rℎ𝑧 1∈Rℎ/𝐶 C1,1C1,𝐿 𝑦 1,1
+> · · ·
+> 𝑧 1,𝑙 𝑦 1,𝐿 𝑧 2∈Rℎ/𝐶 C2,1C2,𝐿 𝑦 2,1
+> · · ·
+> 𝑧 2,𝑙 𝑦 2,𝐿 𝑧 𝐶 ∈Rℎ/𝐶 C𝐶, 1C𝐶,𝐿 𝑦 𝐶, 1
+> · · ·
+> 𝑧 𝐶,𝑙 𝑦 𝐶,𝐿
+> Output DocID y
+> 𝑦 1,1· · · 𝑦 1,𝐿
+> .... . ....𝑦 𝐶, 1· · · 𝑦 𝐶,𝐿
+> Stage 1:
+> Dense Embedding
+> Stage 2:
+> Subspace Partitioning (PQ)
+> Stage 3:
+> Residual Iteration (RQ)
+
+Figure 1. Unified framework for semantic DocID encoding. Stage 1: the embedder 𝜙 𝑧 maps a document 𝑑 to a dense vector 𝑧 . Stage 2 splits 𝑧 into 
+
+𝐶 sub-vectors 𝑧 𝑐 (PQ, 𝐶 > 1). Stage 3 quantizes each sub-vector with 𝐿 residual codebooks C𝑐,𝑙 of 𝑉 codewords (RQ, 𝐿 > 1), each step emitting one token 𝑦 𝑐,𝑙 of the DocID y (𝑀 = 𝐶 × 𝐿 tokens). (𝐶, 𝐿 ) and the codebook training ( 𝑘 -means or learned) recover PQ ( 𝐿 = 1), R-KMeans and R-VQ ( 𝐶 = 1), and the hybrids PQ ×R-KMeans and PQ ×R-VQ ( 𝐶, 𝐿 > 1). 
+
+• Parallel (suited for PQ): 𝑓 𝑘 retains a random subset of 𝑘 
+
+distinct positions, ignoring positional hierarchy. 
+
+• Hierarchical (suited for RQ): Assuming a single sequence (𝐶 = 1, 𝐿 = 𝑀 ), 𝑓 𝑘 retains the strictly contiguous prefix of length 𝑘 .
+
+• Adapted (generalized hybrid): Distributes 𝑘 tokens across 𝐶 parallel subspaces ( Í 𝑘 𝑐 = 𝑘, 𝑘 𝑐 ≤ 𝐿 ), retaining the hierarchical prefix of length 𝑘 𝑐 in each. Note that Adapted 
+
+generalizes both paradigms, reducing to Parallel when 
+
+𝐿 = 1 (PQ) and to Hierarchical when 𝐶 = 1 (RQ). Given a masking function 𝑓 𝑘 , S( 𝑘 ) is the conditional expectation of cosine similarity 𝑆 𝑐 between documents sharing identical masked representations: 
+
+S( 𝑘 ) = E
+
+h
+
+𝑆 𝑐 (𝑧 (𝑖 ) , 𝑧 ( 𝑗 ) ) 𝑓 𝑘 (y(𝑖 ) ) = 𝑓 𝑘 (y( 𝑗 ) )
+
+i
+
+. (6) We report the global mean S averaged over all budget levels 𝑘 .
+
+3.2.3 Contrastive Alignment Preservation A. Contrastive Align-ment Preservation ( A) measures how faithfully discrete DocID distances preserve relative continuous embedding proximities. We first define a parameterized discrete similarity operator 𝑆 ( ˆ𝐶, ˆ𝐿 ) 
+
+> 𝑑
+
+be-tween two identifier matrices y(𝑖 ) , y( 𝑗 ) over evaluated subspace dimensions ˆ 𝐶 and depth levels ˆ 𝐿 :
+
+𝑆 ( ˆ𝐶, ˆ𝐿 ) 
+
+> 𝑑
+
+(y(𝑖 ) , y( 𝑗 ) ) = 1
+
+𝑀 
+
+> ˆ𝐶
+
+∑︁ 
+
+> 𝑐 =1ˆ𝐿
+
+∑︁ 
+
+> 𝑙 =1
+
+1{y(𝑖 ) 
+
+> 𝑐, 1: 𝑙
+
+= y( 𝑗 ) 
+
+> 𝑐, 1: 𝑙
+
+}, (7) where y𝑐, 1: 𝑙 denotes the prefix up to level 𝑙 within subspace 𝑐 . Setting 
+
+( ˆ𝐶, ˆ𝐿 ) recovers the metric variants corresponding to our structural paradigms: 
+
+• Hierarchical ( 𝑆 hier  
+
+> 𝑑
+
+): Setting ˆ 𝐶 = 1, ˆ𝐿 = 𝑀 evaluates the normalized longest continuous common prefix, making it strictly adapted to purely hierarchical DocIDs (RQ). 
+
+• Parallel ( 𝑆 parallel  
+
+> 𝑑
+
+): Setting ˆ 𝐶 = 𝑀, ˆ𝐿 = 1 measures the un-ranked proportion of matching tokens across independent subspaces, tailored to flat parallel DocIDs (PQ). 
+
+• Adapted ( 𝑆 adapted  
+
+> 𝑑
+
+): Setting ˆ 𝐶 = 𝐶, ˆ𝐿 = 𝐿 computes the average hierarchical prefix length across all 𝐶 parallel sub-spaces, yielding a hybrid metric natively suited for Product-Residual spaces (PQxRQ). We sample document triplets (𝑑 (𝑖 ) , 𝑑 ( 𝑗 ) , 𝑑 (𝑘 ) ) from the corpus, discarding tied states ( 𝑆 𝑑 (y(𝑖 ) , y( 𝑗 ) ) = 𝑆 𝑑 (y(𝑖 ) , y(𝑘 ) )) to build an evaluation set of 𝑇 = 1,000 valid triplets. The alignment rate A
+
+measures the probability that relative continuous embedding simi-larity 𝑆 𝑐 aligns with discrete DocID ordering 𝑆 𝑑 :
+
+A = 𝑃  𝑆 𝑐 (𝑧 (𝑖 ) , 𝑧 ( 𝑗 ) ) > 𝑆 𝑐 (𝑧 (𝑖 ) , 𝑧 (𝑘 ) ) 𝑆 𝑑 (y(𝑖 ) , y( 𝑗 ) ) > 𝑆 𝑑 (y(𝑖 ) , y(𝑘 ) ).
+
+(8) A higher A confirms that discrete DocID paths faithfully preserve local relative ordering. 
+
+## 4 Results 4.1 Experimental Setup 
+
+Training pipeline. We follow a decoupled two-stage setup based on the DDRO codebase [17]. First, static document embeddings are generated using a frozen gtr-t5-base [19] ( ℎ = 768) and quantized into DocIDs. Second, a sequence-to-sequence model is trained by supervised fine-tuning only, in DDRO’s three supervised steps (doc-ument, pseudo-query, then query to DocID), without its pairwise relevance optimization [17]. 
+
+Datasets. We evaluate on MS MARCO 300K [18], processed as in DDRO and NCI [17, 29] (319 ,927 documents with a positive query) and Natural Questions (NQ320K, hereafter NQ) [13, 29] (109 ,739 documents after deduplication). Following the strict DDRO protocol [17], NQ is deduplicated by title with a strict one-to-one query-document mapping and disjoint train/eval document splits. 
+
+Configurations. We evaluate codebook sizes 𝑉 ∈ { 128 , 256 , 512 }
+
+and structural dimensions 𝐶, 𝐿 ∈ { 1, 2, 4, 6, 8, 12 , 16 , 24 }, testing hy-brid PQ ×RQ configurations at 𝑉 = 256 across sequence budgets 
+
+𝑀 = 𝐶 × 𝐿 ∈ [ 4, 48 ]. R-VQ codebooks are initialized via 𝑘 -means and optimized for 100 epochs using AdamW to minimize the resid-ual reconstruction loss (Equation (3)). For generative retrieval, we fine-tune a t5-small [21] model (batch size 128, AdamW, learning rate 10 −3 with linear decay) and report Recall@1, Recall@10 and Allal et al.  
+
+> 0.9
+> 26.7
+> 40.9 43.8 43.8 44.5 43.4 2.6 31.6 45.7 43.3 46.3 45.4 44.0
+> 14.8
+> 44.0 44.6 44.3 44.0 43.9 23.3 42.4 44.6 33.5 43.0 38.7 42.7 44.2 43.8 112244668812 12 16 16 24 24
+
+Parallel subspaces 𝐶  
+
+> Residual layers  𝐿
+> 47 30
+> <30
+> MRR@10
+
+(a) MS MARCO, 𝑘 -means codebooks  
+
+> 44.0
+> 46.1 45.8
+> 45.4
+> 2.6 29.1 45.5 47.2 44.7 44.0 43.8
+> 14.8
+> 43.0 45.6 45.4 23.3 44.8 45.1 33.5 44.7 38.7 44.2 44.2 43.8 112244668812 12 16 16 24 24
+
+Parallel subspaces 𝐶  
+
+> Residual layers  𝐿
+> 47 30
+> <30
+> MRR@10
+
+(b) MS MARCO, learned codebooks   
+
+> 11.7 50.5 54.0 54.0 53.5 7.3 26.7 53.6 54.5 54.0 24.9 53.4 54.7 54.0 54.7 47.2 55.0 53.2 54.5 53.5
+> 112244668812 12 16 16 24 24
+
+Parallel subspaces 𝐶  
+
+> Residual layers  𝐿
+> 57 45
+> <45
+> MRR@10
+
+(c) NQ, 𝑘 -means codebooks    
+
+> 20.7 54.5 55.1 54.6 52.3 7.3 46.1 55.0 54.3 24.9 54.3 54.7 47.2 54.5 53.5
+> 112244668812 12 16 16 24 24
+
+Parallel subspaces 𝐶  
+
+> Residual layers  𝐿
+> 57 45
+> <45
+> MRR@10
+
+(d) NQ, learned codebooks 
+
+Figure 2. MRR@10 (%) over the grid of 𝐶 parallel subspaces and 𝐿 residual layers, with 𝑉 = 256 codewords per codebook. PQ has only one training regime: its row ( 𝐿 = 1) is the same in every panel. Red outline: best cell of the panel; pale cells lie below the color range; italics: no run at 𝑉 = 256 , mean over 𝑉 ∈ { 128 , 512 }.
+
+MRR@10 on the MS MARCO dev queries and the 1 ,713 NQ evalu-ation queries. Decoding uses prefix-constrained beam search (10 beams for validation during training, 100 for all reported results); models are trained for 10, 20 and 10 epochs over the three stages. We release the code, DocIDs and datasets. 1
+
+## 4.2 Downstream Performance along the Parallelism vs. Hierarchy Continuum 
+
+4.2.1 Main Method Comparison. The best configurations of the five families lie within 2 .2 MRR@10 points on both datasets (Fig-ure 2; RQ1). While PQ favors large parallel factorization ( 𝐶 = 16), pure hierarchical residual schemes (R-KMeans, R-VQ) score above it in Recall@10 and MRR@10 on both MS MARCO and NQ, and R-VQ reaches the best NQ result (56 .64%). With 𝑘 -means codebooks, the hybrid PQ ×R-KMeans reaches 46 .30% MRR@10 on MS MARCO, the best result of the study, and 55 .04% on NQ by combining coarse parallel subspaces with local residual depth, above pure R-KMeans (45 .47% and 54 .70%). 
+
+4.2.2 Codebook Size and Document Encoder. Downstream re-trieval is stable across codebook sizes: at fixed family and 𝑀 ,varying 𝑉 between 128 and 512 moves MRR@10 by 1 .06 (MS MARCO) and 1 .53 (NQ) points. Retrieval is equally stable across document encoders: with R-KMeans (1 ×16 ×512) on MS MARCO, five encoders ( gtr-t5-base , -large , -xl , bge-base-en-v1.5 ,
+
+ModernBERT-base ) keep MRR@10 between 42 .31% and 45 .39%, with the standard gtr-t5-base highest. 
+
+4.2.3 Exploring the Design Space: Sequence Length 𝑀 and Hybrid Configurations. To analyze how structural choices shape down-stream effectiveness, Figure 2 maps the empirical performance surface across the entire (𝐶, 𝐿 ) design grid, for 𝑉 = 256. The total sequence length 𝑀 = 𝐶 × 𝐿 acts as the primary driver of per-formance variance, but resilience to sequence compression varies 
+
+> 1
+
+Released upon acceptance. A Systematic Study of Semantic ID Spaces for Generative Information Retrieval 
+
+significantly across quantization paradigms. PQ exhibits steep per-formance degradation once 𝐶 falls below 16 (38 .70% MRR@10 at 
+
+𝐶 = 12 on MS MARCO, 47 .23% at 𝐶 = 8 on NQ), as factorizing vectors into uncoordinated parallel chunks forces sub-tokens to compress too much information. Conversely, hierarchical residual schemes demonstrate substan-tially greater structural robustness: offline R-KMeans holds 43 .80% at 𝐿 = 8 but drops to 40 .90% at 𝐿 = 6 on MS MARCO, while end-to-end trained R-VQ remains remarkably resilient even under extreme compression ( 𝐿 = 4). Across all schemes, NQ maintains accept-able retrieval performance at shorter sequence budgets than MS MARCO, consistent with its smaller corpus. The interior of the grid ( 𝐶 > 1, 𝐿 > 1) holds the hybrid spaces and answers RQ2. At their best, hybrids reach the top of the design space: PQ ×R-KMeans peaks at 46 .3% MRR@10 ( 𝐶 = 2, 𝐿 = 8), the best MS MARCO result (Figure 2). Under tight budgets, residual depth is what preserves effectiveness: at 𝑀 = 4 on MS MARCO, R-VQ ( 𝐿 = 4, 𝑉 = 512) reaches 44 .0%, against 31 .6% and 26 .2% for PQ ×R-KMeans and PQ ×R-VQ ( 𝐶 = 𝐿 = 2), in line with its higher uniqueness ( U = 0.95, against 0 .66 for PQ ×R-VQ). 
+
+## 4.3 Intrinsic DocID Metric Analysis 
+
+Uniqueness Ratio. As collisions cap recall, downstream MRR@10 collapses when U drops below 0 .9 (Figures 3a and 3b; 𝑅 2 = 0.94 and 0 .96). The ceiling U𝑚𝑎𝑥 is 0 .9819 on MS MARCO. Evaluating uniqueness across sequence lengths 𝑀 reveals con-trasting resilience among encoding schemes (Figure 3c). PQ suf-fers from catastrophic collisions under tight budgets (from 𝐶 = 8) as parallel chunks run out of capacity. R-KMeans maintains high uniqueness down to 𝐿 = 8 before degrading at 𝐿 = 4. Conversely, R-VQ remains robust even at 𝐿 = 4, consistent with its more uniform codebook usage (see Normalized Entropy). Similar trends hold on NQ, where the smaller corpus delays collisions. These results highlight a fundamental insight for Generative Retrieval (RQ3): the Uniqueness Ratio U is the gate a DocID space must pass; beyond it, the 60 (MS MARCO) and 48 (NQ) spaces with U ≥ 0.9 lie within 4.0 and 4.3 MRR@10 points of each other. Dataset PQ R-Kmeans R-VQ PR-Kmeans PR-VQ             
+
+> MS MARCO 99.51 75.55 97.95 74.29 98.40 NQ 99.48 69.86 94.21 70.71 94.88
+> Table 1. Mean entropy Hper encoding method
+
+Normalized Entropy. Sequential residual 𝑘 -means is the only pure scheme that uses its codes unevenly: on both MS MARCO and NQ, PQ-KMeans and RQ-VAE reach H ≥ 0.92 in every configuration, against 0 .62–0 .85 for RQ-KMeans (Table 1). H characterizes code-book usage on its own terms: collapsed PQ-KMeans spaces keep 
+
+H ≥ 0.99, and RQ-KMeans stays competitive with uneven codes. Among residual schemes, even usage goes with uniqueness under short DocIDs: at 𝐿 = 4, RQ-VAE keeps U = 0.95 where RQ-KMeans falls to 0 .53 (Figure 3c). This structural disparity provides a key diagnostic explanation for the downstream performance resilience of R-VQ observed un-der truncated identifier budgets ( 𝑀 ). Because offline R-Kmeans performs greedy, layer-by-layer clustering on remaining residual error vectors, token assignments heavily concentrate on a few dom-inant centroids in early layers, leading to cluster collapse and severe codebook under-utilization. In contrast, joint end-to-end gradient optimization in R-VQ evenly distributes document representations across the discrete codebook space. This high information density enables R-VQ to preserve discriminative capacity and maintain robust retrieval performance even when the identifier sequence length 𝑀 is heavily compressed. 
+
+Shared Similarity ( S). measures the average continuous embed-ding similarity between documents grouped under common prefix constraints. As expected, Figure 3d shows that S scales monoton-ically with sequence depth 𝑀 across all schemes, as deeper pre-fixes restrict document clusters to increasingly compact semantic neighborhoods. End-to-end trained Residual Vector Quantization (R-VQ) consistently maintains the highest local coherence, outper-forming flat Product Quantization (PQ) across all sequence budgets, regardless of whether similarity is evaluated via unstructured token overlap ( Parallel ), common prefix length ( Hier ), or subspace-wise prefix matching ( Adapted )
+
+Contrastive Alignment Preservation ( A). diagnoses whether dis-crete DocID distances reflect the continuous relative proximity of document triplets. Figures 3(g–i) highlight a strong interaction between the struc-tural design of the DocIDs and the evaluation metric: 
+
+• Hierarchical and Hybrid metrics ( Hier , Adapted ): Un-der hierarchical evaluation (Figs. 3g and 3h), alignment scores remain consistently high ( ∼ 0.85–0 .95) for most configurations, showing only a slight degradation as 𝑀 in-creases for PQ DocIDs. Hierarchical RQ DocIDs perform particularly well under these metrics because early code positions capture broad cluster semantics, preserving rank alignment. 
+
+• Parallel metric ( Parallel ): Conversely, when evaluated with the Parallel metric (Fig. 3i), which measures unstruc-tured token overlap, hierarchical RQ structures experience a noticeable decrease in alignment ( Aparallel dropping below 0.6 for certain configurations). In contrast, pure Product Quantization (PQ) DocIDs maintain higher relative stability under this metric. Importantly, this distinct divergence in behavior between paral-lel and hierarchical DocIDs across the variants of A serves as an effective diagnostic tool. It allows us to explicitly observe and quan-tify the intrinsic hierarchy property of a given DocID scheme: strong performance under Ahier coupled with degradation under Aparallel 
+
+confirms that semantic information is strictly concentrated in se-quential prefix order rather than distributed across independent tokens. 
+
+## 5 Conclusion 
+
+We presented a systematic study of numerical DocIDs for Genera-tive Information Retrieval. The Uniqueness Ratio, measured before Allal et al.        
+
+> PQ R-KMeans PQ ×R-KMeans R-VQ PQ ×R-VQ
+> 0.40.80.90.98 010 20 30 40 50
+
+Uniqueness Ratio U  
+
+> MRR@10 (%)
+> (a) MS MARCO
+> 0.90.99 0.999 010 20 30 40 50 60
+
+Uniqueness Ratio U   
+
+> MRR@10 (%)
+> (b) NQ
+> 4816 24
+> 0.40.60.81
+
+DocID length 𝑀  
+
+> Uniqueness Ratio  U
+> (c)
+
+U vs. 𝑀    
+
+> 4816 24
+> 0.70.80.9
+
+DocID length 𝑀  
+
+> Shared Similarity  Sadapted
+> (d)
+
+S (Adapted) vs. 𝑀    
+
+> 4816 24
+> 0.70.80.9
+
+DocID length 𝑀  
+
+> Shared Similarity  Shier
+> (e)
+
+S (Hier) vs. 𝑀    
+
+> 4816 24
+> 0.70.80.9
+
+DocID length 𝑀  
+
+> Shared Similarity  Sparallel
+> (f)
+
+S (Parallel) vs. 𝑀    
+
+> 4816 24
+> 0.60.8
+
+DocID length 𝑀  
+
+> Alignment  Aadapted
+> (g)
+
+A (Adapted) vs. 𝑀    
+
+> 4816 24
+> 0.60.8
+
+DocID length 𝑀  
+
+> Alignment  Ahier
+> (h)
+
+A (Hier) vs. 𝑀    
+
+> 4816 24
+> 0.60.8
+
+DocID length 𝑀  
+
+> Alignment  Aparallel
+> (i)
+
+A (Parallel) vs. 𝑀 
+
+Figure 3. Uniqueness Ratio U, Shared Semantic Similarity S and Contrastive Alignment Preservation A. (a) and (b) Uniqueness U vs. MRR@10 on MS MARCO and NQ, one marker per configuration (color and shape: family), hollow: U < 0.9, measured or implied by 𝑉 𝑀 < 0.9𝑁 (at most 
+
+𝑉 𝑀 distinct DocIDs); U axis stretched toward 1 (log scale of the collision rate), dashed line: U = 0.9. 𝑅 2 of MRR@10 on the metric, MS MARCO / NQ: U 0.94 / 0.97 . (c) to (i): Impact of DocID length 𝑀 and evaluation formulation on Uniqueness ( U), Shared Similarity ( S) and Alignment (A) MS MARCO: full lines, NQ: dashed lines. (d) to (f): S, (g) to (i): A, in their Adapted (Section 3.2.2), Hier and Full variants 
+
+training, decides whether a DocID space is usable. The 60 (MS MARCO) and 48 (NQ) spaces with U ≥ 0.9 lie within 4 .0 and 4 .3MRR@10 points of each other. These findings come from a single parameterized family that unifies PQ, R-KMeans and R-VQ and exposes the hybrid Product– Residual Quantization (PQ ×RQ) space. Within it, hybrids reach the best MS MARCO result (46 .3% MRR@10), while R-VQ leads on Natural Questions (56 .6%) and is the most robust under tight sequence budgets ( 𝑀 ≤ 8). In practice, U should be checked before training, and R-VQ preferred when DocIDs must be short. 
+
+Limitations and future work. To isolate the DocID space, we fix the rest of the pipeline: a t5-small model trained without DDRO’s pairwise relevance optimization [17] and decoded by prefix-constrained beam search [2, 30] rather than look-ahead [32]; DocIDs quantized post hoc from a frozen retrieval encoder, not learned jointly with the decoder [25]; collisions left unresolved, without suffix tokens or reassignment [34]; static corpora of at most 300K documents, while generative retrieval degrades at millions of passages [20] and new documents require re-quantization [35]. U
+
+flags collapse ( U < 0.9), but no intrinsic metric explains MRR@10 among usable spaces ( 𝑅 2 ≤ 0.30). Future work follows from these results. 
+
+## References     
+
+> [1] Artem Babenko and Victor Lempitsky. 2014. Additive Quantization for Extreme Vector Compression. In 2014 IEEE Conference on Computer Vision and Pattern Recognition . 931–938. doi:10.1109/CVPR.2014.124 [2] Nicola De Cao, Gautier Izacard, Sebastian Riedel, and Fabio Petroni. 2021. Autore-gressive Entity Retrieval. In International Conference on Learning Representations .https://openreview.net/forum?id=5k8F6UU39V
+
+A Systematic Study of Semantic ID Spaces for Generative Information Retrieval 
+
+[3] Ben Chen, Xian Guo, Siyuan Wang, Zihan Liang, Yufei Ma, Yue Lv, Chenyi Lei, Yuqing DING, Wenwu Ou, Han Li, and Kun Gai. 2026. OneSearch: A Preliminary Exploration of the Unified End-to-End Generative Framework for E-commerce Search. In Forty-third International Conference on Machine Learning . https: //openreview.net/forum?id=JKGgHY9FKa [4] Yufei Chen, Junchen Fu, Jujia Zhao, Yukun Zhao, and Zhaochun Ren. 2026. What Makes a Good Semantic ID for Generative Recommendation? A Reproducibility Study. arXiv:2609.24430 [cs.IR] https://arxiv.org/abs/2609.24430 [5] Yongjian Chen, Tao Guan, and Cheng Wang. 2010. Approximate Nearest Neigh-bor Search by Residual Vector Quantization. Sensors (Basel, Switzerland) 10 (2010), 11259 – 11273. https://api.semanticscholar.org/CorpusID:33774240 [6] Edoardo D’Amico, Marco De Nadai, Praveen Chandar, Divita Vohra, Shawn Lin, Max Lefarov, Paul Gigioli, Gustavo Penha, Ilya Kopysitsky, Ivo Joel Senese, Darren Mei, Francesco Fabbri, Oguz Semerci, Yu Zhao, Vincent Tang, Brian St. Thomas, Alexandra Ranieri, Matthew N. K. Smith, Aaron Bernkopf, Bryan Leung, Ghazal Fazelnia, Mark VanMiddlesworth, Timothy Christopher Heath, Petter Pehrson Skiden, Alice Y. Wang, Doug J. Cole, Andreas Damianou, Maya Hristakeva, Reid Wilbur, Tarun Chillara, Vladan Radosavljevic, Pooja Chitkara, Sainath Adapa, Juan Elenter, Bernd Huber, Jacqueline Wood, Saaketh Vedantam, Jan Stypka, Sandeep Ghael, Martin D. Gould, David Murgatroyd, Yves Raimond, Mounia Lalmas, and Paul N. Bennett. 2026. Deploying Semantic ID-based Generative Retrieval for Large-Scale Podcast Discovery at Spotify. arXiv:2603.17540 [cs.IR] https://arxiv.org/abs/2603.17540 [7] Jiaxin Deng, Shiyao Wang, Kuo Cai, Lejian Ren, Qigen Hu, Weifeng Ding, Qiang Luo, and Guorui Zhou. 2025. OneRec: Unifying Retrieve and Rank with Genera-tive Recommender and Iterative Preference Alignment. doi:10.48550/arXiv.2502. 18965 [8] Patrick Esser, Robin Rombach, and Bjorn Ommer. 2021. Taming Transformers for High-Resolution Image Synthesis. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) . 12873–12883. [9] Tiezheng Ge, Kaiming He, Qifa Ke, and Jian Sun. 2014. Optimized Product Quantization. IEEE Transactions on Pattern Analysis and Machine Intelligence 36, 4 (2014), 744–755. doi:10.1109/TPAMI.2013.240 [10] Hervé Jégou, Matthijs Douze, and Cordelia Schmid. 2011. Product Quantization for Nearest Neighbor Search. IEEE Transactions on Pattern Analysis and Machine Intelligence 33, 1 (2011), 117–128. [11] Clark Mingxuan Ju, Liam Collins, Leonardo Neves, Bhuvesh Kumar, Louis Yufeng Wang, Tong Zhao, and Neil Shah. 2025. Generative Recommendation with Seman-tic IDs: A Practitioner’s Handbook. In Proceedings of the 34th ACM International Conference on Information and Knowledge Management (Seoul, Republic of Ko-rea) (CIKM ’25) . Association for Computing Machinery, New York, NY, USA, 6420–6425. doi:10.1145/3746252.3761612 [12] Vladimir Karpukhin, Barlas Oğuz, Sewon Min, Patrick Lewis, Ledell Wu, Sergey Edunov, Danqi Chen, and Wen-tau Yih. 2020. Dense Passage Retrieval for Open-Domain Question Answering. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) . Association for Computational Linguistics, 6769–6781. https://aclanthology.org/2020.emnlp-main.550 [13] Tom Kwiatkowski, Jennimaria Palomaki, Olivia Redfield, Michael Collins, Ankur Parikh, Chris Alberti, Danielle Epstein, Illia Polosukhin, Jacob Devlin, Kenton Lee, Kristina Toutanova, Llion Jones, Matthew Kelcey, Ming-Wei Chang, Andrew M. Dai, Jakob Uszkoreit, Quoc Le, and Slav Petrov. 2019. Natural Questions: A Benchmark for Question Answering Research. Transactions of the Association for Computational Linguistics 7 (2019), 452–466. doi:10.1162/tacl_a_00276 [14] Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho, and Wook-Shin Han. 2022. Autoregressive Image Generation using Residual Quantization. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) .11523–11532. [15] Yongqi Li, Nan Yang, Liang Wang, Furu Wei, and Wenjie Li. 2023. Multiview Identifiers Enhanced Generative Retrieval. In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) ,Anna Rogers, Jordan Boyd-Graber, and Naoaki Okazaki (Eds.). Association for Computational Linguistics, Toronto, Canada, 6636–6648. doi:10.18653/v1/2023. acl-long.366 [16] Yunxiao Luo, Siyuan Wang, Ben Chen, Chenyi Lei, and Qingpeng Cai. 2026. PRQ-KMeans: Projection Residual Quantization for Semantic ID Tokenization. arXiv:2608.24207 [cs.LG] https://arxiv.org/abs/2608.24207 [17] Kidist Amde Mekonnen, Yubao Tang, and Maarten de Rijke. 2025. Lightweight and Direct Document Relevance Optimization for Generative Information Re-trieval. In Proceedings of the 48th International ACM SIGIR Conference on Re-search and Development in Information Retrieval (SIGIR ’25) . ACM, 1327–1338. doi:10.1145/3726302.3730023 [18] Tri Nguyen, Mir Rosenberg, Xia Song, Jianfeng Gao, Saurabh Tiwary, Rangan Majumder, and Li Deng. 2016. MS MARCO: A Human Generated MA-chine Reading COmprehension Dataset. https://www.microsoft.com/en-us/research/publication/ms-marco-human-generated-machine-reading-comprehension-dataset/ arXiv:1611.09268. [19] Jianmo Ni, Chen Qu, Jing Lu, Zhuyun Dai, Gustavo Hernandez Abrego, Ji Ma, Vincent Zhao, Yi Luan, Keith Hall, Ming-Wei Chang, et al. 2022. Large dual encoders are generalizable retrievers. In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing . 9844–9855. [20] Ronak Pradeep, Kai Hui, Jai Gupta, Adam Lelkes, Honglei Zhuang, Jimmy Lin, Donald Metzler, and Vinh Tran. 2023. How Does Generative Retrieval Scale to Millions of Passages?. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , Houda Bouamor, Juan Pino, and Kalika Bali (Eds.). Association for Computational Linguistics, Singapore, 1305–1321. doi:10.18653/v1/2023.emnlp-main.83 [21] Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, and Peter J. Liu. 2020. Exploring the limits of transfer learning with a unified text-to-text transformer. J. Mach. Learn. Res. 21, 1, Article 140 (Jan. 2020), 67 pages. [22] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Keshavan, Trung Vu, Lukasz Heidt, Lichan Hong, Yi Tay, Vinh Q. Tran, Jonah Samost, Maciej Kula, Ed H. Chi, and Maheswaran Sathiamoorthy. 2023. Recommender systems with generative retrieval. In Proceedings of the 37th International Conference on Neural Information Processing Systems (New Orleans, LA, USA) (NIPS ’23) . Curran Associates Inc., Red Hook, NY, USA, Article 452, 17 pages. [23] Ruiyang Ren, Wayne Xin Zhao, Jing Liu, Hua Wu, Ji-Rong Wen, and Haifeng Wang. 2023. TOME: A two-stage approach for model-based retrieval. In Proceed-ings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) . 6102–6114. [24] Ruslan Salakhutdinov and Geoffrey Hinton. 2009. Semantic Hashing. Interna-tional Journal of Approximate Reasoning 50, 7 (2009), 969–978. [25] Weiwei Sun, Lingyong Yan, Zheng Chen, Shuaiqiang Wang, Haichao Zhu, Pengjie Ren, Zhumin Chen, Dawei Yin, Maarten de Rijke, and Zhaochun Ren. 2023. Learning to Tokenize for Generative Retrieval. arXiv:2304.04171 [cs.IR] https: //arxiv.org/abs/2304.04171 [26] Yubao Tang, Ruqing Zhang, Jiafeng Guo, Jiangui Chen, Zuowei Zhu, Shuaiqiang Wang, Dawei Yin, and Xueqi Cheng. 2023. Semantic-Enhanced Differentiable Search Index Inspired by Learning Strategies. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (Long Beach, CA, USA) (KDD ’23) . Association for Computing Machinery, New York, NY, USA, 4904–4913. doi:10.1145/3580305.3599903 [27] Yi Tay, Vinh Q. Tran, Mostafa Dehghani, Jianmo Ni, Dara Bahri, Harsh Mehta, Zhen Qin, Kai Hui, Zhe Zhao, Jai Gupta, Tal Schuster, William W. Cohen, and Donald Metzler. 2022. Transformer memory as a differentiable search index. In 
+
+Proceedings of the 36th International Conference on Neural Information Processing Systems (New Orleans, LA, USA) (NIPS ’22) . Curran Associates Inc., Red Hook, NY, USA, Article 1587, 13 pages. [28] Jianfeng Wang, Jingdong Wang, Jingkuan Song, Xin-Shun Xu, Heng Tao Shen, and Shipeng Li. 2015. Optimized Cartesian K-Means . IEEE Transactions on Knowledge & Data Engineering 27, 01 (Jan. 2015), 180–192. doi:10.1109/TKDE. 2014.2324592 [29] Yujing Wang, Yingyan Hou, Haonan Wang, Ziming Miao, Shibin Wu, Hao Sun, Qi Chen, Yuqing Xia, Chengmin Chi, Guoshuai Zhao, Zheng Liu, Xing Xie, Hao Allen Sun, Weiwei Deng, Qi Zhang, and Mao Yang. 2022. A neural corpus indexer for document retrieval. In Proceedings of the 36th International Conference on Neural Information Processing Systems (New Orleans, LA, USA) (NIPS ’22) .Curran Associates Inc., Red Hook, NY, USA, Article 1856, 15 pages. [30] Shiguang Wu, Zhaochun Ren, Xin Xin, Jiyuan Yang, Mengqi Zhang, Zhumin Chen, Maarten de Rijke, and Pengjie Ren. 2025. Constrained Auto-Regressive Decoding Constrains Generative Retrieval. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval .ACM. doi:10.1145/3726302.3729934 [31] Hansi Zeng, Chen Luo, Bowen Jin, Sheikh Muhammad Sarwar, Tianxin Wei, and Hamed Zamani. 2024. Scalable and Effective Generative Information Retrieval. In Proceedings of the ACM Web Conference 2024 (Singapore, Singapore) (WWW ’24) . Association for Computing Machinery, New York, NY, USA, 1441–1452. doi:10.1145/3589334.3645477 [32] Hansi Zeng, Chen Luo, and Hamed Zamani. 2024. Planning Ahead in Generative Retrieval: Guiding Autoregressive Generation through Simultaneous Decoding. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval . ACM. doi:10.1145/3626772.3657746 [33] Peitian Zhang, Zheng Liu, Yujia Zhou, Zhicheng Dou, Fangchao Liu, and Zhao Cao. 2024. Generative Retrieval via Term Set Generation. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Infor-mation Retrieval (Washington DC, USA) (SIGIR ’24) . Association for Computing Machinery, New York, NY, USA, 458–468. doi:10.1145/3626772.3657797 [34] Ruohan Zhang, Jiacheng Li, Julian McAuley, and Yupeng Hou. 2025. Purely Semantic Indexing for LLM-based Generative Recommendation and Retrieval. arXiv:2509.16446 [cs.IR] https://arxiv.org/abs/2509.16446 [35] Zhen Zhang, Xinyu Ma, Weiwei Sun, Pengjie Ren, Zhumin Chen, Shuaiqiang Wang, Dawei Yin, Maarten de Rijke, and Zhaochun Ren. 2025. Replication and Exploration of Generative Retrieval over Dynamic Corpora. In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval . ACM. doi:10.1145/3726302.3730314 Allal et al. 
+
+[36] Yujia Zhou, Jing Yao, Zhicheng Dou, Ledell Wu, Peitian Zhang, and Ji-Rong Wen. 2022. Ultron: An Ultimate Retriever on Corpus with a Model-based Indexer. arXiv:2208.09257 [cs.IR] https://arxiv.org/abs/2208.09257 [37] Shengyao Zhuang, Houxing Ren, Linjun Shou, Jian Pei, Ming Gong, Guido Zuccon, and Daxin Jiang. 2023. Bridging the Gap Between Indexing and Retrieval for Differentiable Search Index with Query Generation. arXiv:2206.10128 [cs.IR] https://arxiv.org/abs/2206.10128

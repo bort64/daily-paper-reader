@@ -1,0 +1,121 @@
+{
+  "date": "20261007",
+  "date_label": "",
+  "generated_at": "2026-10-07 23:29:10 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2610.08732v1",
+      "route": "202610/07/2610.08732v1-a-systematic-study-of-semantic-id-spaces-for-generative-information-retrieval",
+      "title": "A Systematic Study of Semantic ID Spaces for Generative Information Retrieval",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 10.0,
+      "evidence": "生成式检索直接预测文档标识符并研究语义ID空间",
+      "first_seen_at": "2026-10-07 23:29:10 UTC",
+      "updated_at": "2026-10-07 23:29:10 UTC"
+    },
+    {
+      "paper_id": "2610.07402v1",
+      "route": "202610/07/2610.07402v1-rethinking-semantic-id-construction-for-generative-recommendation-simhash-with-parallel-decoding-and-semantic-alignment",
+      "title": "Rethinking Semantic ID Construction for Generative Recommendation: SimHash with Parallel Decoding and Semantic Alignment",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "基于语义ID的生成式推荐与自回归解码",
+      "first_seen_at": "2026-10-07 23:29:10 UTC",
+      "updated_at": "2026-10-07 23:29:10 UTC"
+    },
+    {
+      "paper_id": "2610.08716v1",
+      "route": "202610/07/2610.08716v1-disentangling-paradigm-identifier-and-decoding-in-generative-retrieval",
+      "title": "Disentangling Paradigm, Identifier, and Decoding in Generative Retrieval",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "生成文档标识符的生成式检索",
+      "first_seen_at": "2026-10-07 23:29:10 UTC",
+      "updated_at": "2026-10-07 23:29:10 UTC"
+    },
+    {
+      "paper_id": "2610.08136v1",
+      "route": "202610/07/2610.08136v1-adapting-generative-recommenders-for-multi-turn-interaction",
+      "title": "Adapting Generative Recommenders for Multi-Turn Interaction",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "把解码物品的生成式推荐扩展到多轮交互",
+      "first_seen_at": "2026-10-07 23:29:10 UTC",
+      "updated_at": "2026-10-07 23:29:10 UTC"
+    },
+    {
+      "paper_id": "2609.38455v2",
+      "route": "202610/07/2609.38455v2-adam-rec-adaptive-modality-routing-for-multimodal-recommendation",
+      "title": "AdaM-Rec: Adaptive Modality Routing for Multimodal Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "基于LLM的推荐框架，采用自适应模态路由",
+      "first_seen_at": "2026-10-07 23:29:10 UTC",
+      "updated_at": "2026-10-07 23:29:10 UTC"
+    },
+    {
+      "paper_id": "2610.05750v1",
+      "route": "202610/07/2610.05750v1-beyond-semantic-similarity-performance-and-costs-of-agentic-retrieval-for-complex-tasks",
+      "title": "Beyond Semantic Similarity: Performance and Costs of Agentic Retrieval for Complex Tasks",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "结合大模型推理与检索器的代理式检索用于复杂搜索任务",
+      "first_seen_at": "2026-10-07 23:29:10 UTC",
+      "updated_at": "2026-10-07 23:29:10 UTC"
+    },
+    {
+      "paper_id": "2610.06050v1",
+      "route": "202610/07/2610.06050v1-mate-adaptive-long--and-short-term-user-memory-for-llm-based-recommendation",
+      "title": "MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "search-rec"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "基于LLM的自适应用户记忆序列推荐",
+      "first_seen_at": "2026-10-07 23:29:10 UTC",
+      "updated_at": "2026-10-07 23:29:10 UTC"
+    }
+  ]
+}

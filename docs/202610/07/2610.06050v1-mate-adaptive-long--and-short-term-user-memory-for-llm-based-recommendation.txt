@@ -1,0 +1,605 @@
+Title: MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation
+
+URL Source: https://arxiv.org/pdf/2610.06050v1
+
+Published Time: Tue, 06 Oct 2026 02:40:18 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+# Remembering What Lasts, Adapting to What Changes: Better User Understanding for LLM-Enhanced Sequential Recommendation 
+
+# Yu Hou 
+
+School of Mathematics and Computing (Computational Science and Engineering), Yonsei University Seoul, Republic of Korea houyu@yonsei.ac.kr 
+
+## Abstract 
+
+Large language model (LLM)-enhanced recommender systems leverage rich item semantics to support personalized recommenda-tion. However, semantic representations alone do not determine which historical behaviors reflect persistent preferences and which mainly indicate recent interests, leaving an important aspect of user understanding unresolved. Recent advances in LLM inference show that newly available information can be used to refine the internal state during inference, thereby improving subsequent predictions. Inspired by this principle, we propose MATE (Memory Adaptation with Temporal Evidence), an adaptive user modeling framework for LLM-enhanced sequential recommendation. MATE first evaluates each newly observed interaction from two temporal perspectives: whether it is repeatedly supported by historical behaviors and whether it is consistent with recent interactions. The resulting temporal evidence controls the updates of two user-specific memories, where the long-term memory conservatively preserves persistent preferences while the short-term memory rapidly adapts to recent interests. For each recommendation, a recent-context representation dynamically determines how strongly the two memories contribute to the current user representation. During offline training, next-item prediction is jointly optimized with temporal supervision, while during online adaptation, the shared model remains fixed and only the two user memories are updated from newly observed interactions. Experiments on MovieLens-10M, Amazon Luxury Beauty, and KuaiRec show that MATE 
+
+improves mean NDCG@10 over the strongest external baseline by 7.0–13.2%. Further analyses support its ability to adapt to recent interests while retaining useful information about recurring earlier preferences. 
+
+## Keywords 
+
+Sequential recommendation, Large language models, User model-ing, Long- and short-term interests, Fast-weight memory, Online adaptation 
+
+## 1 Introduction 
+
+Large language models (LLMs) have recently emerged as a promis-ing paradigm for recommender systems, benefiting from their strong language understanding, semantic modeling, and generaliza-tion capabilities [3, 11, 13]. Unlike conventional recommendation methods that primarily rely on discrete item IDs and user–item interactions, language-model-enhanced recommenders can exploit rich textual information to construct more informative represen-tations of items and user behaviors. Recent studies have explored 
+
+Figure 1: Motivation of MATE. Users exhibit both persistent preferences and newly emerging interests over time. Exist-ing strategies may overemphasize either long-term history or recent behavior, motivating a balanced user model that preserves what lasts while adapting to what changes. 
+
+different ways of incorporating such knowledge, including formu-lating recommendation as a language modeling task [3], learning semantic representations from item content [11], developing se-mantic item representations from different domains for LLM-based recommendation [9], integrating collaborative signals with LLM representations [13], and reasoning over historical evidence for preference understanding [5]. These advances provide a stronger semantic foundation for personalized recommendation; however, richer item representations alone do not necessarily lead to a better understanding of how user interests evolve over time. Accurately understanding users remains challenging because user preferences are inherently dynamic and may exhibit different temporal characteristics. Some preferences can persist over long periods, whereas others emerge from recent behaviors and may rapidly change. Sequential recommendation methods have been developed to capture behavioral dependencies over interaction his-tories [10, 12], while several studies further distinguish long- and short-term user interests [25, 28]. Although these approaches have demonstrated the importance of modeling multiple temporal sig-nals, they mainly focus on how historical behaviors are encoded or combined into user representations. A less explored question is how each newly observed interaction should change the user model itself. Treating all new behaviors with the same update mech-anism may respond too slowly to emerging interests, or conversely, allow a small number of recent interactions to excessively affect useful preferences that have been repeatedly observed over a longer period. Interestingly, recent advances in LLM inference provide a useful perspective for addressing this issue. Recent studies have shown 
+
+> 1arXiv:2610.06050v1 [cs.IR] 5 Oct 2026 Yu Hou
+
+that LLM performance can be further improved after offline training by allocating additional computation during inference, for example by searching over candidate reasoning paths, revising intermediate predictions, or adaptively refining the model state [16, 19]. The key insight is that inference need not remain a single passive for-ward process: newly available information can be used to refine the internal state on which subsequent predictions are made. In-Place Test-Time Training (TTT) further demonstrates that such adaptation can be implemented by updating a subset of the model’s existing weights using the observed context [2]. This principle naturally aligns with sequential recommendation: as new user in-teractions become observable, they provide additional evidence for refining the current understanding of the user, which can in turn improve subsequent recommendations. This motivates us to rethink user modeling as a continuous adaptive process rather than solely as a fixed encoding of the observed interaction history. In this context, a natural question arising is: “How can we better understand evolving users by preserving their long-term preferences while adapting to recent interests?” To answer this question, we outline the following two design challenges: 
+
+• C1. Identifying the temporal role of each interaction. 
+
+A newly observed interaction does not explicitly indicate whether it reflects a persistent preference or a recent interest . Simply treating earlier interactions as long-term and recent ones as short-term may be unreliable, since the same behavior can reinforce an existing preference while also being part of an active recent interest. Therefore, the model should determine how much evidence each observed interaction provides to the two temporal aspects. 
+
+• C2. Adapting the user state without losing useful his-torical information. Even after identifying the temporal role of an interaction, it remains unclear how this evidence should modify the user model. A uniform update may ei-ther respond too slowly to newly emerging interests or excessively overwrite useful preferences accumulated over a longer period. Moreover, the stored long-term and short-term information should not necessarily contribute equally to every recommendation. To address these aforementioned challenges, we propose MATE ,a Memory Adaptation with Temporal Evidence for better user understanding in LLM-enhanced sequential recommendation. an adaptive user modeling framework for LLM-enhanced sequential recommendation. Our key idea is to use temporal evidence to continuously update two ser-specific memories that capture long-term preferences and short-term interests, while dynamically de-termining how the two memories should contribute to the current recommendation. 
+
+(Idea 1): Temporal evidence for understanding user behav-iors. Instead of assigning interactions to long-term or short-term interests solely according to their timestamps, we evaluate each newly observed behavior from two complementary perspectives. We regard behaviors that repeatedly appear across separated his-torical periods as stronger evidence of long-term preference ,while consistency with recent interactions provides evidence of 
+
+short-term interest . Importantly, the two types of evidence are not mutually exclusive, allowing the same interaction to contribute to both user states with different strengths. In this way, the model captures the temporal meaning of each observed behavior before updating the user representation, thereby addressing C1 .
+
+(Idea 2): Adaptive user memories for continuously refining user understanding. Inspired by recent adaptive LLM inference methods, we allow newly observed interactions to directly refine the user state instead of only serving as additional inputs to a fixed forward process. Specifically, we maintain a long-term memory 
+
+and a short-term memory for each user, which follow different up-date and retention dynamics. The long-term memory changes more conservatively to preserve persistent behavioral patterns, whereas the short-term memory responds more rapidly to recent interests. Furthermore, the recent interaction context dynamically controls how much the two memories contribute to the current recommen-dation. This design separates what should be remembered from 
+
+what should be emphasized now , thereby addressing C2 .Overall, our framework follows a simple adaptive process: newly observed interactions are first evaluated through temporal evidence, then used to update the long-term and short-term user memories, and finally the two memories are selectively utilized for next-item recommendation. The shared recommendation model is learned offline and remains fixed during inference, while the user-specific memories continue to evolve only after real user interactions be-come observable. Our main contributions are summarized as follows: 
+
+• Adaptive user understanding: We connect temporal user modeling with recent advances in adaptive inference and investigate how newly observed interactions can continu-ously refine user understanding in LLM-enhanced sequen-tial recommendation. Different from methods that primarily encode or combine temporal representations, we focus on how behavioral evidence should modify the user state itself .
+
+• Evidence-guided dual-memory modeling: We propose 
+
+MATE , which uses temporal evidence to control the up-dates of long-term and short-term user memories with dif-ferent adaptation dynamics. A context-aware mechanism further determines how strongly the two memories con-tribute to each recommendation, enabling the model to preserve persistent preferences while adapting to recent changes. 
+
+• Comprehensive evaluations: Experiments on three real-world datasets show that MATE (a) improves mean NDCG@10 over the strongest external baseline by 7.0– 13.2%, (b) improves prediction of both recent interests and returns to recurring earlier themes, and (c) uses 1 MiB of adaptive memory per user, with 1.25–1.32 ms additional processing per event. 
+
+## 2 Related Work 2.1 LLM-Enhanced Sequential Recommendation 
+
+Recent advances in language models have enabled recommender systems to exploit rich semantic information beyond conventional item IDs. Early language-based recommendation frameworks, such 
+
+> 2Remembering What Lasts, Adapting to What Changes
+
+as P5, formulate recommendation tasks in a unified text-to-text par-adigm [3]. Other studies leverage textual item information to learn transferable or semantically enriched representations for sequen-tial recommendation, including UniSRec [7] and Recformer [11]. More recent approaches further integrate collaborative signals with language models [13], employ LLMs for candidate ranking [26], or represent items using semantic identifiers for generative retrieval and scalable item tokenization [9, 15]. LLMs have also been used to reason over historical evidence for more explicit and verifiable preference modeling [5]. These studies demonstrate that language models provide rich semantic representations for modeling items and user–item inter-actions. In this work, we use frozen language-model embeddings to represent item semantics and instead focus on how such se-mantic evidence can support a more adaptive understanding of users. Specifically, we study how persistent preferences and recently emerging interests can be accumulated and selectively utilized as the user’s interaction history evolves. 
+
+## 2.2 Temporal User Modeling in Sequential Recommendation 
+
+Sequential recommendation has extensively studied how user pref-erences evolve over interaction histories. Representative models employ recurrent networks [4], self-attention [10], bidirectional Transformers [18], and explicit temporal intervals [12] to capture sequential dependencies. Beyond modeling a single evolving rep-resentation, several studies explicitly distinguish preferences at different temporal scales. SLi-Rec models long- and short-term user preferences and adaptively aggregates them for recommenda-tion [25]. Particularly related to our work, CLSR disentangles long- and short-term interests using separate encoders and constructs history-derived proxies to supervise the two representations [28]. This demonstrates that temporal interests benefit from explicit model-ing rather than being implicitly compressed into a single user state. However, CLSR primarily separates and aggregates representations .Our work investigates a different question: whether temporal evi-dence should also determine how user states are updated . Instead of assigning interactions exclusively to one temporal representation, an observed interaction may update both persistent and recent memories with different strengths according to cross-period recur-rence and recent behavioral consistency. 
+
+## 2.3 Adaptive Inference for User Modeling 
+
+Recent inference-time learning methods provide a complementary perspective in which observed context is not only encoded as in-put, but also used to update an internal model state. Test-Time Training (TTT) introduces self-supervised adaptation during infer-ence [20], while TTT layers formulate the hidden state itself as a learnable model that is continuously updated as new tokens are observed [19]. In-Place TTT further implements this idea within standard Transformer MLP blocks by treating existing projection matrices as fast weights and updating them with prediction-aligned local learning objectives [2]. Earlier fast-weight models similarly demonstrate that matrix-valued associative memories can store and retrieve recent contextual information [1]. The idea of adaptive inference has also been explored in recom-mendation. Related efforts have investigated advanced generative modeling and post-training optimization, including diffusion-based collaborative filtering [8] and reinforcement-learning-based fine-tuning of diffusion recommenders [6]. More directly, TTT4Rec introduces TTT-style state updates into sequential recommenda-tion, allowing newly observed interactions to modify the internal sequence state during inference [24]. Related work further studies adaptation under distribution shift [23], temporal alignment for changing user interests [27], and retrieval-based adaptation without parameter updates [21]. Existing temporal recommenders model user interests at differ-ent time scales, while adaptive inference methods update user states from newly observed interactions. However, how temporal evidence should guide such adaptation remains underexplored. We therefore maintain two user-specific fast-weight memories for persistent and recent interests, using cross-period recurrence and recent-window consistency to control memory updates, while the current context determines their contributions to the next recommendation. 
+
+## 3 Methodology 3.1 Task Formulation 
+
+Let U and I denote the sets of users and items. Each item 𝑖 ∈ I is associated with textual metadata 
+
+x𝑖 = {title 𝑖 , categories 𝑖 , features 𝑖 , description 𝑖 }, (1) which is encoded by a frozen language-model encoder 𝑔 (·) to obtain a semantic item representation 
+
+e𝑖 = 𝑔 (x𝑖 ) ∈ R𝑑 . (2) For each user 𝑢 , we observe a chronological interaction sequence 
+
+S𝑢 = (𝑖 1, 𝑡 1, 𝑟 1), . . . , (𝑖 𝑇 , 𝑡 𝑇 , 𝑟 𝑇 ), (3) where 𝑖 𝑡 , 𝑡 𝑡 , and 𝑟 𝑡 denote the interacted item, timestamp, and observed feedback, respectively. Given the observed history 
+
+H𝑢,𝑡 = (𝑖 1, 𝑡 1, 𝑟 1), . . . , (𝑖 𝑡 , 𝑡 𝑡 , 𝑟 𝑡 ), (4) our goal is to predict the next item 𝑖 𝑡 +1.Different from conventional sequential recommendation that derives the user state mainly from the current interaction sequence, we maintain two user-specific adaptive memories, long-term mem-ory M𝐿 𝑢,𝑡 and short-term memory M𝑆 𝑢,𝑡 , which are designed to cap-ture persistent preferences and recent interests, respectively. Given 
+
+H𝑢,𝑡 and the two memories, the recommender produces a user representation 
+
+h𝑢,𝑡 = 𝑓 𝜃 
+
+
+
+H𝑢,𝑡 , M𝐿 𝑢,𝑡 , M𝑆 𝑢,𝑡 
+
+
+
+, (5) and scores a candidate item 𝑖 by 
+
+𝑠 𝑢,𝑡 (𝑖 ) = h⊤ 
+
+> 𝑢,𝑡
+
+e𝑖 . (6) The shared parameters 𝜃 are learned offline, whereas the user-specific memories evolve sequentially from observed interactions. The recommendation objective is to predict the next item based only on the observed history and the current user memories. Formally, ˆ𝑖 𝑢,𝑡 = arg max  
+
+> 𝑖 ∈ I
+
+
+
+𝑠 𝑢,𝑡 (𝑖 ) | H 𝑢,𝑡 , M𝐿 𝑢,𝑡 , M𝑆 𝑢,𝑡 
+
+
+
+. (7) 
+
+> 3Yu Hou
+
+After the true interaction 𝑖 𝑢,𝑡 is observed, it is used to update the user memories for future recommendation: 
+
+
+
+M𝐿 𝑢,𝑡 +1, M𝑆 𝑢,𝑡 +1
+
+
+
+= A
+
+
+
+M𝐿 𝑢,𝑡 , M𝑆 𝑢,𝑡 , H𝑢,𝑡 , 𝑖 𝑢,𝑡 
+
+
+
+. (8) where A (·) denotes the user-memory adaptation process. There-fore, 𝑖 𝑢,𝑡 is used to update the memories only after its prediction has been evaluated, preventing future information from leaking into the current recommendation 1.
+
+## 3.2 Overview 
+
+Recent studies on LLM inference have shown that model perfor-mance can be further improved after pretraining by making better use of computation and information available at inference time. For example, inference-time scaling improves reasoning by allocating additional computation to explore, evaluate, or refine candidate solutions [17], while test-time learning further allows the model state itself to adapt to the observed context [19]. These approaches improve prediction not by simply enlarging the pretrained model, but by extracting more useful information from the current input and using it to guide subsequent inference. Motivated by this idea, we propose a three-stage adaptive user modeling framework, illustrated in Fig. 2. First, Temporal Evi-dence examines whether a newly observed behavior is repeat-edly supported by the user’s earlier history or is mainly consistent with recent interactions, providing evidence for long-term prefer-ence and short-term interest, respectively. Second, Adaptive User Memory uses these signals to update two user-specific memories: a long-term memory that preserves relatively stable preferences and a short-term memory that quickly adapts to recent interests. The shared recommendation model remains fixed during infer-ence, while the two user memories evolve as new interactions are observed. Third, Context-Aware Recommendation determines how strongly the two memories should contribute under the current context and produces the user representation for next-item ranking. Frozen language-model embeddings provide semantic item repre-sentations throughout the framework. During offline training, the shared recommender and memory-control mechanisms are jointly learned, while during inference the shared parameters remain fixed and only the user-specific memories evolve after real interactions are observed. 
+
+## 3.3 Temporal Evidence 
+
+As illustrated in Fig. 2, the first stage determines how much a newly observed interaction reflects the user’s long-term preference and short-term interest. Instead of dividing the interaction history into two fixed subsets, we evaluate each observed interaction using two independent temporal signals. This allows the same interaction to contribute to both user states when supported by the corresponding evidence. Let 𝑖 𝑢,𝑡 denote the newly observed item for user 𝑢 at time 𝜏 𝑢,𝑡 ,and let e𝑢,𝑡 be its normalized semantic embedding. Since all item embeddings are ℓ2-normalized, the semantic similarity between two interacted items is computed as sim (𝑖 𝑢,𝑡 , 𝑖 𝑢,𝑗 ) = e⊤ 
+
+> 𝑢,𝑡
+
+e𝑢,𝑗 . (9) 
+
+> 1The detailed memory writing, reading, and learning mechanisms are introduced in the following sections.
+
+We regard two interactions as semantically related when sim (𝑖 𝑢,𝑡 , 𝑖 𝑢,𝑗 ) ≥ 𝛿, (10) where 𝛿 is a similarity threshold. 
+
+Short-term evidence. Short-term evidence measures whether the current interaction is consistent with the user’s recent behaviors. Let 
+
+R𝑢,𝑡 = { 𝑗 < 𝑡 | 𝜏 𝑢,𝑡 − 𝜏 𝑢,𝑗 ≤ Δ𝑆 } (11) denote the recent interaction window, where Δ𝑆 controls the short-term time span. We compute the proportion of semantically related interactions within this window as 
+
+𝐶 𝑆 𝑢,𝑡 =
+
+Í𝑗 ∈ R 𝑢,𝑡 I e⊤ 
+
+> 𝑢,𝑡
+
+e𝑢,𝑗 ≥ 𝛿 
+
+|R 𝑢,𝑡 | . (12) The resulting short-term evidence is 
+
+𝑤 𝑆 𝑢,𝑡 = 𝜖 + ( 1 − 𝜖 )𝐶 𝑆 𝑢,𝑡 , (13) where 𝜖 > 0 provides a minimum write strength for newly emerging interests. Therefore, an interaction can still enter the short-term state even when no similar recent behavior has yet been observed, while repeated recent interactions produce stronger evidence. 
+
+Long-term evidence. Long-term evidence focuses on behavioral patterns that repeatedly appear across different periods rather than within a single burst of activity. We first exclude the recent window and group the remaining historical interactions by calendar month. Let M𝑢,𝑡 denote the set of non-empty historical months before the recent window, and let B𝑚 𝑢,𝑡 denote the interactions belonging to month 𝑚 ∈ M 𝑢,𝑡 .For each historical month, we define whether it contains at least one interaction semantically related to the current item: 
+
+𝑧 𝑚 𝑢,𝑡 = I
+
+"
+
+max  
+
+> 𝑗 ∈ B 𝑚 𝑢,𝑡
+
+e⊤ 
+
+> 𝑢,𝑡
+
+e𝑢,𝑗 ≥ 𝛿 
+
+#
+
+. (14) The number of supporting months is then 
+
+𝑁 𝐿 𝑢,𝑡 =∑︁ 
+
+> 𝑚 ∈ M 𝑢,𝑡
+
+𝑧 𝑚 𝑢,𝑡 . (15) We assign non-zero long-term evidence only when the related behavior appears in at least 𝐾 𝐿 distinct historical periods and spans a sufficient temporal range Δ𝐿 . Accordingly, 
+
+𝑤 𝐿 𝑢,𝑡 =
+
+
+
+𝑁 𝐿 𝑢,𝑡 
+
+|M 𝑢,𝑡 | , 𝑁 𝐿 𝑢,𝑡 ≥ 𝐾 𝐿 and span 𝑢,𝑡 ≥ Δ𝐿 ,
+
+0, otherwise ,
+
+(16) where span 𝑢,𝑡 denotes the time interval between the current inter-action and its earliest supporting historical interaction. This design prevents a dense burst of similar behaviors within a single period from being immediately treated as a persistent pref-erence. In contrast, repeatedly observed semantic patterns across separated periods provide stronger evidence that the behavior re-flects a relatively stable user preference 2.The two evidence scores 𝑤 𝐿 𝑢,𝑡 and 𝑤 𝑆 𝑢,𝑡 are computed indepen-dently and are not constrained to sum to one. Thus, an interaction may simultaneously reinforce an existing long-term preference                  
+
+> 2In our implementation, we use Δ𝑆 =7days, 𝐾 𝐿 =2,Δ𝐿 =30 days, 𝛿 =0.7, and
+> 𝜖 =0.2by default, while treating them as configurable hyperparameters. 4Remembering What Lasts, Adapting to What Changes
+
+Figure 2: Overview of MATE . A newly observed interaction is first evaluated by temporal evidence, which determines how strongly it updates the user’s long-term memory and short-term memory. For the next-item prediction, the model reads from both memories according to the current context, enabling MATE to preserve persistent preferences while adapting to recent interests. 
+
+and reflect an active recent interest. Importantly, both scores are computed exclusively from interactions observed before or at the current step; no future interaction is used. The resulting evidence weights are passed to the adaptive user-memory module described in the next section. 
+
+## 3.4 Adaptive User Memory 
+
+As illustrated in the second stage of Fig. 2, the temporal evidence obtained in the previous section is used to update two user-specific memories: a long-term memory M𝐿 𝑢,𝑡 for relatively persistent pref-erences and a short-term memory M𝑆 𝑢,𝑡 for recently emerging in-terests. The two memories are maintained separately for each user and evolve only from observed interactions, while the shared rec-ommendation model is common to all users. For an observed interaction 𝑖 𝑢,𝑡 , let k𝑢,𝑡 −1 denote the internal representation produced by the final feed-forward layer before the current interaction is revealed, 3 and let e𝑢,𝑡 denote the semantic embedding of the newly observed item. The memory update as-sociates the preceding user context k𝑢,𝑡 −1 with the subsequently observed item e𝑢,𝑡 .            
+
+> 3h𝑢,𝑡 denotes the final user representation used for item scoring, while k𝑢,𝑡 −1is the intermediate feed-forward representation used for memory writing. In our implemen-tation, k𝑢,𝑡 −1∈R512 and h𝑢,𝑡 ∈R256 .
+
+For the long-term memory, we define 
+
+ℓ𝐿 𝑢,𝑡 = −𝑤 𝐿 𝑢,𝑡 e⊤ 
+
+> 𝑢,𝑡
+
+M𝐿 𝑢,𝑡 −1k𝑢,𝑡 −1 + 𝛾 𝐿 
+
+2 M𝐿 𝑢,𝑡 −1 
+
+> 2
+> 𝐹
+
+, (17) where 𝑤 𝐿 𝑢,𝑡 is the long-term evidence introduced in Section 3.3, and 
+
+𝛾 𝐿 controls the retention of previously stored long-term informa-tion. Similarly, the short-term memory objective is 
+
+ℓ𝑆 𝑢,𝑡 = −𝑤 𝑆 𝑢,𝑡 e⊤ 
+
+> 𝑢,𝑡
+
+M𝑆 𝑢,𝑡 −1k𝑢,𝑡 −1 + 𝛾 𝑆 
+
+2 M𝑆 𝑢,𝑡 −1 
+
+> 2
+> 𝐹
+
+, (18) where 𝑤 𝑆 𝑢,𝑡 denotes the short-term evidence and 𝛾 𝑆 controls the retention of short-term information. Applying one local gradient step with update rates 𝜂 𝐿 and 𝜂 𝑆 
+
+gives the long-term memory update 
+
+M𝐿 𝑢,𝑡 = (1 − 𝜂 𝐿 𝛾 𝐿 )M𝐿 𝑢,𝑡 −1 + 𝜂 𝐿 𝑤 𝐿 𝑢,𝑡 e𝑢,𝑡 k⊤ 
+
+> 𝑢,𝑡 −1
+
+, (19) and the short-term memory update 
+
+M𝑆 𝑢,𝑡 = (1 − 𝜂 𝑆 𝛾 𝑆 )M𝑆 𝑢,𝑡 −1 + 𝜂 𝑆 𝑤 𝑆 𝑢,𝑡 e𝑢,𝑡 k⊤ 
+
+> 𝑢,𝑡 −1
+
+. (20) Each update contains two components. The first preserves previ-ously accumulated information, while the second writes the newly observed interaction according to its corresponding temporal evi-dence. Therefore, interactions supported by repeated historical pat-terns produce stronger updates to the long-term memory, whereas interactions that are consistent with recent behaviors contribute 
+
+> 5Yu Hou
+
+more strongly to the short-term memory. Since 𝑤 𝐿 𝑢,𝑡 and 𝑤 𝑆 𝑢,𝑡 are computed independently, the same interaction may update both memories when it simultaneously reflects an established preference and an active recent interest. The two memories also use different update dynamics. The long-term memory is updated more conservatively and retains previous information for longer, whereas the short-term memory reacts more quickly to newly observed behaviors and discounts older in-formation more strongly. Thus, temporal evidence determines what 
+
+should be written, whereas the memory-specific update dynamics determine how quickly the user state should change. Importantly, M𝐿 𝑢,𝑡 and M𝑆 𝑢,𝑡 are user-specific adaptive memories rather than globally shared model parameters. During offline train-ing, the shared parameters are optimized through the recommenda-tion objective, while the two memories are generated sequentially by the above update rules. During inference, the shared parameters remain fixed, and only the user memories continue to evolve after real interactions are observed. The updated memories are then used for subsequent recommendations, as described in the next section. 
+
+## 3.5 Context-Aware Recommendation 
+
+After updating the long-term and short-term memories, the final stage in Fig. 2 determines how much information from each mem-ory should contribute to the current recommendation. Although both memories summarize observed user behaviors, their relevance may vary across prediction steps. We therefore use the recent in-teraction context to dynamically control their contributions rather than combining them with fixed weights. Given the observed history H𝑢,𝑡 , we construct a recent-context representation q𝑢,𝑡 from the item embeddings within the same recent window Δ𝑆 introduced in Section 3.3. Specifically, 
+
+q𝑢,𝑡 =∑︁    
+
+> 𝑗 ∈ R 𝑢,𝑡 ∪{ 𝑡 }
+
+𝑎 𝑢,𝑡,𝑗 e𝑢,𝑗 ,𝑎 𝑢,𝑡,𝑗 = exp −𝜆 (𝜏 𝑢,𝑡 − 𝜏 𝑢,𝑗 )Í𝑘 ∈ R 𝑢,𝑡 ∪{ 𝑡 } exp −𝜆 (𝜏 𝑢,𝑡 − 𝜏 𝑢,𝑘 ) .
+
+(21) where 𝜆 controls the temporal decay, such that more recent inter-actions contribute more strongly to the current context. Based on q𝑢,𝑡 , a small gating network produces two independent memory-reading weights, 
+
+𝛼 𝐿 𝑢,𝑡 , 𝛼 𝑆 𝑢,𝑡 
+
+ = 𝜎  MLP (q𝑢,𝑡 ) , (22) where 𝜎 (·) denotes the sigmoid function. The two weights are independently estimated and are therefore not constrained to sum to one. This allows the model to emphasize either memory, both memories, or reduce their contributions when they are less relevant to the current context. The long-term and short-term memories are incorporated into the final feed-forward transformation as 
+
+h𝑢,𝑡 = Norm 
+
+
+
+Wdown k𝑢,𝑡 + 𝛼 𝐿 𝑢,𝑡 M𝐿 𝑢,𝑡 k𝑢,𝑡 + 𝛼 𝑆 𝑢,𝑡 M𝑆 𝑢,𝑡 k𝑢,𝑡 
+
+
+
+, (23) where Wdown belongs to the shared model parameters 𝜃 , while M𝐿 𝑢,𝑡 
+
+and M𝑆 𝑢,𝑡 are the user-specific memories updated in Section 3.4. Norm (·) denotes the normalization used to obtain the final user representation h𝑢,𝑡 .The resulting user representation is matched with the frozen semantic embedding of each candidate item: 
+
+𝑠 𝑢,𝑡 (𝑖 ) = h⊤ 
+
+> 𝑢,𝑡
+
+e𝑖 , (24) and candidate items are ranked according to 𝑠 𝑢,𝑡 (𝑖 ).It is important to distinguish memory writing from memory read-ing. The temporal evidence 𝑤 𝐿 𝑢,𝑡 and 𝑤 𝑆 𝑢,𝑡 determines how strongly an observed interaction updates the two memories, whereas 𝛼 𝐿 𝑢,𝑡 
+
+and 𝛼 𝑆 𝑢,𝑡 determine how strongly the stored long-term and short-term information is used for the current recommendation. There-fore, information can remain in a user memory without necessarily contributing equally to every subsequent prediction. 
+
+## 3.6 Joint Learning and Online Adaptation 
+
+The shared model parameters are learned offline, while the long-term and short-term memories are updated sequentially using the observed interactions of each user. During training, the model fol-lows the same causal process as in inference: it first predicts the next item using the current memories, and only after the true interaction is revealed are the memories updated according to Section 3.4. For next-item prediction, given the user representation h𝑢,𝑡 , the recommendation loss is defined as 
+
+Lrec = −∑︁ 
+
+> 𝑢,𝑡
+
+log exp  𝑠 𝑢,𝑡 (𝑖 𝑢,𝑡 +1)Í𝑖 ∈ C 𝑢,𝑡 exp  𝑠 𝑢,𝑡 (𝑖 ) , (25) where C𝑢,𝑡 denotes the candidate set and 𝑖 𝑢,𝑡 +1 is the next observed item. To encourage the two memories to preserve information consis-tent with their temporal roles, we additionally construct a long-term target p𝐿 𝑢,𝑡 and a short-term target p𝑆 𝑢,𝑡 from the observed history. The former summarizes repeatedly supported historical behaviors, while the latter summarizes recent interactions. Let ˆ p𝐿 𝑢,𝑡 and ˆ p𝑆 𝑢,𝑡 
+
+denote the corresponding representations read only from M𝐿 𝑢,𝑡 and 
+
+M𝑆 𝑢,𝑡 . We define 
+
+Ltime = ˆp𝐿 𝑢,𝑡 − p𝐿 𝑢,𝑡  
+
+> 22
+
++ ˆp𝑆 𝑢,𝑡 − p𝑆 𝑢,𝑡  
+
+> 22
+
+, (26) where a term is omitted when the corresponding temporal target cannot be reliably constructed. The overall offline training objective is 
+
+L = Lrec + 𝜆 Ltime , (27) where 𝜆 controls the temporal supervision. The shared parameters, including the sequential recommender and the memory-reading components, are optimized with this objective. The user memories themselves are not globally shared trainable parameters; instead, they are generated and updated sequentially through the memory-update equations in Section 3.4. During online adaptation, all shared parameters are fixed. For each user, M𝐿 𝑢,𝑡 and M𝑆 𝑢,𝑡 continue to evolve whenever a new real interaction is observed. Thus, newly observed behaviors can influ-ence subsequent recommendations without modifying the shared recommendation model, while future interactions are never used to update the memories before they are predicted. 
+
+> 6Remembering What Lasts, Adapting to What Changes
+
+## 3.7 Theoretical Analysis 
+
+We analyze two properties of MATE : how temporal evidence re-stricts sporadic long-term writes, and how an individual memory update influences subsequent user states. The results characterize the memory mechanism under explicit assumptions, rather than guarantee improvements in recommendation accuracy. Proofs are provided in Appendix A. Theorem 1 (Selective long-term writing). Fix a user and a newly observed item. Let 𝑛 = |M 𝑢,𝑡 | ≥ 2 and 𝐾 𝐿 = 2. Conditional on this item and the available historical month bins, suppose that the monthly support indicators 𝑧 𝑚 𝑢,𝑡 are independent, with Pr (𝑧 𝑚 𝑢,𝑡 = 1) ≤ 
+
+𝑝 for every month, where 𝑝 ∈ [ 0, 1]. Then 
+
+E[𝑤 𝐿 𝑢,𝑡 ] ≤ 𝑝 1 − ( 1 − 𝑝 )𝑛 −1  ≤ ( 𝑛 − 1)𝑝 2. (28) For a fixed number of historical months, the bound is quadratic in 𝑝 when individual monthly matches are rare. Thus, requiring repeated support limits the expected strength of sporadic long-term writes. The additional time-span requirement can only reduce this strength. Meanwhile, 𝑤 𝑆 𝑢,𝑡 ≥ 𝜖 allows new behaviors to contribute to short-term memory without established long-term support. Theorem 2 (Stability of memory adaptation). Let 𝜌 𝐿 = 1 −
+
+𝜂 𝐿 𝛾 𝐿 and 𝜌 𝑆 = 1 − 𝜂 𝑆 𝛾 𝑆 , with 0 < 𝜌 𝑆 < 𝜌 𝐿 < 1. Assume radial Frobenius-norm clipping of each write increment at 𝑐 > 0 and each updated memory at 𝐵 > 0.Compare MATE with a reference trajectory eM𝐿 , eM𝑆 that omits only the additive write for 𝑖 𝑢,𝑡 , retaining the decay at that step. Both trajectories have identical memories before 𝑡 and use the same observed history, context representations, and write evidence thereafter. For any integer 𝑠 ≥ 0,
+
+∥M𝐿 𝑢,𝑡 +𝑠 − eM𝐿 𝑢,𝑡 +𝑠 ∥𝐹 ≤ 𝜌 𝑠 𝐿 min {𝑐, 𝜂 𝐿 𝑤 𝐿 𝑢,𝑡 ∥k𝑢,𝑡 −1 ∥2 }. (29) 
+
+∥M𝑆 𝑢,𝑡 +𝑠 − eM𝑆 𝑢,𝑡 +𝑠 ∥𝐹 ≤ 𝜌 𝑠 𝑆 min {𝑐, 𝜂 𝑆 𝑤 𝑆 𝑢,𝑡 ∥k𝑢,𝑡 −1 ∥2 }. (30) The influence of an individual write cannot grow under identical subsequent inputs. Temporal evidence controls its initial magnitude, while the memory-specific retention factors govern its subsequent influence bound. In particular, 𝑤 𝐿 𝑢,𝑡 = 0 introduces no new asso-ciation into long-term memory, while the short-term branch can respond to the same event. Here, 𝑠 counts memory updates, not elapsed days. 
+
+## 4 Experiments 
+
+We evaluate MATE from the perspectives of recommendation ac-curacy, component effectiveness, user adaptation, computational cost, and individual recommendation behavior. The experiments address the following research questions ( RQs ): 
+
+• RQ1: Overall Effectiveness . How does MATE perform compared with representative sequential recommendation competitors? 
+
+• RQ2: Component Effectiveness . How do temporal evidence, dual user memories, temporal supervision, and context-aware reading affect performance? 
+
+• RQ3: User Adaptation. Does MATE retain useful long-term information while adapting to recent interests? 
+
+• RQ4: Efficiency Analysis. What computational and stor-age costs accompany user-memory adaptation? 
+
+• RQ5: Qualitative User Understanding. How do memory updates and reading affect recommendations for individual users? 
+
+## 4.1 Experimental Setup 
+
+Datasets and preprocessing. We use MovieLens-10M 4, Amazon Luxury Beauty 2018 5, and KuaiRec 2.0 6. Positive interactions are ratings of at least four for MovieLens and Luxury Beauty, and a watch ratio greater than two for KuaiRec. We retain the first posi-tive event for each user–item pair and remove events without item metadata. Item text contains movie titles and genres; product titles, categories, features, and descriptions; or video captions, categories, cover text, and topic tags. Review text, MovieLens user tags, ag-gregate ratings, and feedback counts are excluded. Timestamps represent rating, review, or video-interaction times; Luxury Beauty records are not interpreted as purchases. After filtering, we split each dataset globally by time into approx-imately 80% training, 10% validation, and 10% test, keeping equal timestamps in the same partition. We then select at most 1,000 users using only training-period activity, requiring at least 10, 8, and 10 positive training interactions on the three datasets, respectively. The user cohorts are fixed across training seeds. Consequently, their partition counts need not follow the global 80/10/10 ratio. Table 1 reports the resulting statistics. The recent-context representation is derived from observed history; no explicit user query is supplied. 
+
+Candidate and evaluation protocol. All methods rank the same fixed metadata catalog exactly, without sampled evaluation nega-tives. Previously interacted items are masked, and evaluation tar-gets are never added to the catalog. Validation begins by replaying training history; test evaluation independently replays training and validation history. Shared parameters remain frozen. Each target is predicted and scored before it is revealed and used to update memory. States are isolated by user, events are not written twice, and generated recommendations are never treated as feedback. 
+
+Baselines. We compare MATE with GRU4Rec [4], SASRec [10], TiSASRec [12], CLSR [28], and TTT4Rec [24]. We also include Ora-cle4Rec [22] and PCTM [14]. CLSR uses long–short fusion without the original contrastive objective. PCTM uses training-only transi-tion statistics and no item embeddings. Base uses MATE ’s backbone without adaptive memories, while Single uses one user-memory matrix. All methods share the data split, candidate catalog, and evaluation protocol. 
+
+Evaluation metrics. We report event-averaged Recall@ 𝐾 and NDCG@ 𝐾 for 𝐾 ∈ { 5, 10 }. Each event has one relevant next item, so Recall equals Hit Rate. Overall metrics include uncovered targets with zero credit; covered-only metrics use targets in the catalog. Coverage is 100% here, so these two results coincide. Stochastic methods use 3 seeds with means and sample standard deviations reported. PCTM is deterministic and uses one validation-selected fit. Paired uncertainty estimates resample users with their event sequences intact. 
+
+> 4https://grouplens.org/datasets/movielens/10m/
+> 5https://cseweb.ucsd.edu/~jmcauley/datasets/amazon_v2/
+> 6https://zenodo.org/records/18164998 7Yu Hou
+
+Table 1: Statistics of the selected user cohorts. The user count includes all selected users, not only users with test events. Train counts retained positive interactions; validation and test count scored next-item targets. Candidates comprise the full static metadata catalog. Coverage is the proportion of targets contained in this catalog.                             
+
+> Dataset Users Candidates Train Validation Test Val. coverage Test coverage MovieLens-10M 1,000 10,681 76,016 1,651 913 100% 100% Luxury Beauty 2018 948 12,111 10,789 981 491 100% 100% KuaiRec 2.0 1,000 10,728 98,378 12,647 12,421 100% 100%
+
+Implementation details. Item text is encoded offline with 
+
+qwen3-embedding:4b through Ollama into frozen, 256-dimensional, 
+
+ℓ2-normalized vectors. MATE uses two pre-normalized causal Trans-former layers with four heads, hidden size 256, FFN size 512, and a context of at most 64 interactions. Each user has two 256 × 512 memory matrices. During evaluation, memory replay covers the full observed history, beyond the context window. The recent window is seven days, the similarity threshold is 0.7, and the short-write floor is 𝜖 = 0.2. Long writes require matches in at least two older calendar months and at least 30 days between the earliest match and the revealed event. We use (𝜂 𝐿 , 𝛾 𝐿 ) = (0.03 , 0.001 ),
+
+(𝜂 𝑆 , 𝛾 𝑆 ) = (0.15 , 0.1), score temperature 0.07, and temporal-loss coefficient 0.1. Write increments and memory matrices are norm-limited. Internal variants use AdamW with learning rate 3 × 10 −4, weight decay 0.01, and training blocks of eight events. Within each seed, they share a two-epoch Base warm start, followed by five continua-tion epochs per method, including Base. External neural adapters train for seven epochs with 63 sampled training negatives and method-specific objectives and batch settings; equal epochs do not imply equal optimizer steps or compute. KuaiRec training uses at most the first 200 events per user, while evaluation retains the full observed history. Hyperparameter and checkpoint selection use validation NDCG@10 only. Experiments use PyTorch 2.14.0 on a Mac mini with an M4 chip and 16 GB unified memory: internal models run on MPS and external baselines on CPU. 
+
+## 4.2 Overall Effectiveness 
+
+To answer RQ1 , we compare MATE with sequential baselines under the same chronological split, fixed candidate catalog, observed-history mask, and exact full-ranking protocol. Hyperparameters and checkpoints are selected by validation NDCG@10, with the test split reserved for final evaluation. Base, Single, and MATE use a two-epoch warm-start selection budget followed by five continuation epochs per method. External neural adapters train for seven epochs; however, different objectives and batch settings mean that equal epoch counts do not imply equal computation. Table 2 summarizes the overall results. 
+
+MATE achieves the best mean performance across all reported metrics on all three datasets. Relative to the strongest external base-line on NDCG@10, its improvements are approximately 8.6% on MovieLens-10M, 13.2% on Luxury Beauty, and 7.0% on KuaiRec. Its lead at both cutoffs indicates that the benefit is not restricted to one recommendation-list length. The strongest alternatives differ across datasets: TTT4Rec leads the external baselines on MovieLens-10M, whereas PCTM leads on Luxury Beauty. On KuaiRec, TTT4Rec is the strongest external method on three metrics, while Oracle4Rec has the highest external NDCG@5. Thus, MATE ’s advantage holds against different competitive approaches rather than a single con-sistently weak comparator. Within the shared-backbone family, MATE improves NDCG@10 over Base by approximately 93.8%, 46.6%, and 28.1% on MovieLens-10M, Luxury Beauty, and KuaiRec, respectively. Single also outper-forms Base on all reported metrics, suggesting that user-memory adaptation adds useful predictive information beyond the shared backbone and frozen item semantics. MATE further improves on Single across all three datasets. This pattern is consistent with the motivation for maintaining persistent and recent information sepa-rately, rather than writing every interaction into one undifferenti-ated memory. Nevertheless, Single has half the adaptive-memory capacity, so this comparison cannot isolate temporal decomposi-tion from additional storage. The equal-capacity ablations provide the more direct component comparisons; the overall results estab-lish the performance ordering without attributing the gains to any single mechanism. 
+
+## 4.3 Component Effectiveness 
+
+For RQ2 , we examine memory writing, temporal supervision, dy-namic reading, and continued online adaptation through controlled variants of MATE . Base retains the shared recommendation back-bone and frozen item embeddings but has no user memory. Single 
+
+replaces the long- and short-term matrices with one matrix, uses a unit write coefficient for every revealed interaction, and reads both temporal auxiliary targets from that same memory. w/o Temporal Evidence retains the two matrices, their separate update rates and decay settings, temporal supervision, and dynamic reading, but sets 𝑤 𝐿 = 𝑤 𝑆 = 1. It therefore removes evidence-dependent write weighting rather than removing memory adaptation. 
+
+w/o Temporal Supervision sets the coefficient of Ltime to zero while retaining evidence-weighted writes and dynamic reading. 
+
+Fixed Reading retains both memories, temporal evidence, and su-pervision, but replaces the learned reading gates with 𝛼 𝐿 = 𝛼 𝑆 = 0.5during training and testing. Frozen Online Memory reuses the full MATE checkpoint: memories are constructed by replaying train-ing and validation history, then held fixed during testing. Newly revealed test interactions still update the observed history, recent context, and candidate mask. MATE retains all components and con-tinues writing after each real test interaction is revealed. Training-time variants are retrained under the same budget, with hyperpa-rameters and checkpoints selected using validation data. All test predictions precede target revelation. 
+
+> 8Remembering What Lasts, Adapting to What Changes
+
+Table 2: Overall recommendation results. The best result in each column is bold, and the second-best is underlined. For the MovieLens-10M, Luxury Beauty, and KuaiRec datasets, a paired t-test is conducted, yielding p-values of 0.0129, 0.0203, and 0.0211, respectively, all below the threshold of 0.05, indicating statistically significant results. 
+
+MovieLens-10M Luxury Beauty KuaiRec Method R@5 R@10 N@5 N@10 R@5 R@10 N@5 N@10 R@5 R@10 N@5 N@10 GRU4Rec 0.0099 0.0179 0.0070 0.0096 0.0075 0.0170 0.0041 0.0071 0.0128 0.0155 0.0115 0.0124 SASRec 0.0073 0.0117 0.0047 0.0061 0.0027 0.0143 0.0013 0.0049 0.0153 0.0171 0.0138 0.0149 TiSASRec 0.0095 0.0146 0.0060 0.0076 0.0068 0.0122 0.0032 0.0050 0.0136 0.0152 0.0124 0.0137 CLSR 0.0058 0.0084 0.0031 0.0039 0.0088 0.0129 0.0052 0.0066 0.0151 0.0169 0.0146 0.0158 TTT4Rec 0.0131 0.0226 0.0085 0.0116 0.0136 0.0177 0.0069 0.0083 0.0211 0.0230 0.0191 0.0213 Oracle4Rec 0.0117 0.0204 0.0076 0.0104 0.0095 0.0177 0.0046 0.0072 0.0208 0.0227 0.0192 0.0205 PCTM 0.0099 0.0164 0.0070 0.0092 0.0143 0.0183 0.0102 0.0114 0.0188 0.0198 0.0183 0.0195 Base 0.0073 0.0135 0.0045 0.0065 0.0093 0.0156 0.0067 0.0088 0.0177 0.0182 0.0163 0.0178 Single 0.0114 0.0189 0.0084 0.0093 0.0103 0.0164 0.0087 0.0103 0.0202 0.0227 0.0184 0.0201 
+
+MATE 0.0149 0.0234 0.0105 0.0126 0.0157 0.0207 0.0119 0.0129 0.0228 0.0253 0.0204 0.0228 
+
+Table 3 shows that MATE outperforms every retrained variant on both metrics across all three datasets. Removing temporal evidence or temporal supervision lowers NDCG@10 by approximately 4.4– 19.0% and 6.6–25.4%, respectively, relative to MATE . Fixed Reading produces the largest reduction among the retrained two-memory variants, lowering NDCG@10 by 32.5–56.3%. These comparisons support evidence-dependent writing, memory-specific supervision, and context-dependent reading under the evaluated settings. Single also trails MATE , but its smaller state capacity prevents attribut-ing that difference solely to temporal decomposition. The other retrained memory ablations retain the same two-matrix capacity. Frozen Online Memory matches MATE on both metrics at the reported precision across all three datasets. Thus, these results do not demonstrate an additional Top-10 benefit from continued test-time writing. This control remains relevant because it separates the use of adapted memory from the benefit of further online updates; equality of rounded means does not establish identical predictions or event-level outcomes. 
+
+## 4.4 User Adaptation 
+
+For RQ3 , we test whether MATE can adapt to a recent interest while retaining useful earlier information. Predicting recent behav-ior alone could reward excessive recency bias; predicting actual returns to an earlier theme additionally tests retention. We iden-tify observed histories with a recurring earlier theme A followed by a distinct recent theme B. A recurs in at least two older calen-dar months spanning 30 days. B forms a consecutive suffix within seven days and accounts for at most 20% of older labeled interac-tions. Themes are fixed metadata groups or training-fitted semantic groups used only for analysis, never additional model inputs. After 1, 2, 3, or 5 observed B interactions, Continue B evaluates a real next item belonging to B, testing adaptation. Return to A evaluates a real next item belonging to A, testing prediction of a return rather than merely assigning high scores to A items. Eligibility uses only the observed prefix; the target theme labels the evaluation outcome. Predictions precede target revelation and memory updating. Table 4 pools the preset B-count positions. MATE exceeds Base and Single in mean NDCG@10 for both outcomes on all three datasets. Better Continue B performance supports adaptation to recent behavior, while better Return to A performance suggests that this responsiveness does not sacrifice prediction of recurring earlier interests in these cohorts. Together, these outcomes support the intended adaptation–retention balance, without isolating the long-term matrix’s causal contribution. Small cohorts and pooled B counts limit conclusions about individual users or adaptation at each streak length. Frozen matches MATE at the reported precision, so these results do not establish an additional benefit from test-period memory writes. Table 5 adds diagnostics over all test events. Long writes trigger in 62–65% of MovieLens/Luxury events but only 6.1% of KuaiRec events; mean short-memory read contributions exceed long-memory contributions on every dataset. These statistics show dataset-dependent memory usage, but activity alone does not es-tablish useful retention. The comparisons are descriptive, without a statistical-significance claim. 
+
+## 4.5 Efficiency Analysis 
+
+For RQ4 , we compare Base, Single, and MATE using the same candidate catalog, sequence-length setting, and batch size within each dataset. For each of three seeds, we time 200 sequential posi-tions over three repetitions after 10 warm-up events, synchronizing the accelerator at every timing boundary. We separately measure scoring before target revelation and processing after revelation, including temporal evidence and any memory update. Their sum is the total processing cost per event, not scoring-only latency. Base also computes temporal evidence, so event processing is not a pure memory-write measurement. Offline embedding generation and initial-history replay are excluded. 
+
+> 9Yu Hou
+
+Table 3: Ablation results averaged over three seeds. Bold marks the best mean in each column, including ties. Memory denotes adaptive matrices stored in float32, excluding model weights and cached history. Frozen Online Memory reuses the MATE checkpoint without retraining. 
+
+## MovieLens-10M Luxury Beauty KuaiRec Variant R@10 N@10 R@10 N@10 R@10 N@10 Memory (MiB/user) Base 0.0135 0.0065 0.0156 0.0088 0.0182 0.0178 0Single 0.0189 0.0093 0.0164 0.0103 0.0227 0.0201 0.5 w/o Temporal Evidence 0.0202 0.0102 0.0187 0.0117 0.0236 0.0218 1.0 w/o Temporal Supervision 0.0197 0.0094 0.0184 0.0113 0.0241 0.0213 1.0 Fixed Reading 0.0110 0.0055 0.0144 0.0079 0.0166 0.0154 1.0 Frozen Online Memory 0.0234 0.0126 0.0207 0.0129 0.0253 0.0228 1.0 
+
+## MATE 0.0234 0.0126 0.0207 0.0129 0.0253 0.0228 1.0 
+
+Table 4: NDCG@10 for recent-theme continuation (Continue B) and actual returns to the recurring earlier theme (Return to A). Values are means over three training seeds, pooling observed-B counts 1, 2, 3, and 5. 𝑁 /𝑈 denotes unique evaluated events/users per seed. Bold marks the best mean, including ties. Frozen disables test-period memory writes. Candidate coverage is 100%. 
+
+Dataset Next real target 𝑁 /𝑈 Base Single MATE Frozen MovieLens-10M Continue B 74/21 0.0055 0.0068 0.0146 0.0146 
+
+MovieLens-10M Return to A 149/24 0.0032 0.0037 0.0049 0.0049 
+
+Luxury Beauty Continue B 51/44 0.0067 0.0109 0.0141 0.0141 
+
+Luxury Beauty Return to A 49/44 0.0041 0.0076 0.0103 0.0103 
+
+KuaiRec Continue B 280/209 0.0197 0.0214 0.0247 0.0247 
+
+KuaiRec Return to A 991/496 0.0135 0.0152 0.0184 0.0184 
+
+Table 5: MATE mechanism statistics over all real test events. Long writes satisfy 𝑤 𝐿 > 0; strong short writes satisfy 𝑤 𝑆 > 𝜖 = 0.2;valid long proxies have available supervision targets. Write evidence is measured after event revelation; actual reads ∥𝛼 𝑟 𝑀 𝑟 𝑧 ∥2
+
+are measured before the prediction target is revealed. Read contributions are means over three seeds; evidence rates are shared across seeds. 𝑁 /𝑈 denotes events/users per seed. 
+
+Dataset 𝑁 /𝑈 
+
+Long write (%) Strong short write (%) Valid long proxy (%) Long read Short read MovieLens-10M 913/30 62.3 11.1 99.9 17.727 45.927 Luxury Beauty 491/234 65.2 8.8 99.4 0.852 4.594 KuaiRec 12421/934 6.1 12.3 73.2 1.712 19.967 
+
+Table 6 and Figs. 3–5 report the measured costs. Relative to Base, Single increases mean total cost by 18.3%, 24.1%, and 21.2% on MovieLens-10M, Luxury Beauty, and KuaiRec, respectively. The corresponding increases for MATE are 27.1%, 37.7%, and 32.6%. In absolute terms, MATE adds approximately 1.25–1.32 ms per event over Base and 0.42–0.48 ms over Single. Thus, the additional cost of maintaining two memories is smaller than the cost of introducing adaptation beyond Base. Tail costs follow the same ordering: MATE increases P95 total cost over Base by 22.9%, 36.9%, and 25.6%, respectively. Candidate-scoring time, however, changes by at most 3.0% relative to Base. Most additional online cost therefore comes from processing re-vealed interactions rather than ranking candidates. Training times include the shared warm-start stage. On MovieLens-10M, Luxury Beauty, and KuaiRec, Single increases training time over Base by 20.0%, 23.3%, and 13.6%, respectively. 
+
+> 10 Remembering What Lasts, Adapting to What Changes
+
+Figure 3: Computational and storage costs on MovieLens 10M (10,681 candidate items). (a) Mean per-event cost decomposed into candidate scoring and revealed-event processing; open diamonds show the mean of the per-seed P95 total costs. (b) End-to-end training time including the shared warm-start stage. (c) Float32 fast-weight state per active user. Bars show means over three seeds; error bars on the P95 markers and training bars show sample standard deviations. Offline item-embedding generation and initial-history replay are excluded. 
+
+Figure 4: Computational and storage costs on Luxury Beauty (12,111 candidate items). (a) Mean per-event cost decomposed into candidate scoring and revealed-event processing; open diamonds show the mean of the per-seed P95 total costs. (b) End-to-end training time including the shared warm-start stage. (c) Float32 fast-weight state per active user. Bars show means over three seeds; error bars on the P95 markers and training bars show sample standard deviations. Offline item-embedding generation and initial-history replay are excluded. 
+
+The corresponding increases for MATE are 28.7%, 45.2%, and 22.3%. These are descriptive three-seed measurements; the greater between-seed variability of MATE on Luxury Beauty limits how precisely its training overhead can be characterized. At float32 precision, Base has no fast-weight matrix, Single uses 0.5 MiB per active user, and MATE uses 1.0 MiB. Maintaining sep-arate long- and short-term memories therefore doubles Single’s adaptive state. These values exclude cached histories, temporal statistics, item embeddings, shared model weights, and temporary buffers. Peak process memory was not measured, so they represent incremental adaptive storage rather than the full deployment foot-print. The state size is predictable, while online overhead is small in absolute milliseconds but non-negligible relative to Base. 
+
+## 4.6 Qualitative User Understanding 
+
+For RQ5 , we present one real Luxury Beauty example that makes the memory mechanism directly inspectable. This is an outcome-conditioned positive case selected after evaluation for readability; 
+
+Figure 5: Computational and storage costs on KuaiRec (10,728 candidate items). (a) Mean per-event cost decomposed into candidate scoring and revealed-event processing; open di-amonds show the mean of the per-seed P95 total costs. (b) End-to-end training time including the shared warm-start stage. (c) Float32 fast-weight state per active user. Bars show means over three seeds; error bars on the P95 markers and training bars show sample standard deviations. Offline item-embedding generation and initial-history replay are excluded. 
+
+it was not used for checkpoint or hyperparameter selection and is not an estimate of how often MATE improves recommendations. The user identifier is anonymized, while item IDs, dates, ratings, and saved predictions remain traceable to the experiment records. Table 7 contains the observed prefix, write evidence, subsequent memory read, and recommendations in one place. The prefix con-tains an OPI thinner interaction and eight essie polish interactions in 2016, followed by another observed OPI polish in 2018. After that last event was revealed, similar behavior was supported in both historical months across a 540-day span. It therefore received a full long-term write ( 𝑤 𝐿 = 1.0). No matching behavior occurred in the seven-day short window ( 𝐶 = 0.0), so the short memory received its minimum write ( 𝑤 𝑆 = 0.2). At the following prediction, both memory gates were ac-tive ( 𝛼 𝐿 = 0.619, 𝛼 𝑆 = 0.567). The actual read contributions were ∥𝛼 𝐿 𝑀 𝐿 𝑘 ∥2 = 0.157 and ∥𝛼 𝑆 𝑀 𝑆 𝑘 ∥2 = 3.242; hence the short-memory contribution was 20.7 times the long-memory contribution. Thus, a nonzero long-term read coexists with a much larger short-term read at this position. This is a mechanism diagnostic rather than proof that either branch alone caused the ranking change. The real next item was another OPI polish. Under the same 12,111-item catalog, identical history masking, and the same 10-event prefix, its rank improves from 18 for Base and 3 for Single to 2 for MATE . MATE ’s Top-3 also contains two OPI products, with the real target at position 2. Frozen Online Memory ties MATE at rank 2; therefore, this example shows that the dual-memory MATE 
+
+configuration ranks the target above Base and Single, but it does not isolate an additional discrete-rank benefit from the latest test-time write. All ranks and recommendation lists were saved before event 10 was revealed. The write weights computed from that target are excluded and can affect only later predictions. Events 9 and 10 share the same date-level timestamp, so their sequence follows the recorded event IDs; the data do not establish a within-day clock-time order. 
+
+> 11 Yu Hou
+
+Table 6: Computational and storage costs, averaged over three seeds. Scoring and event processing are mean times; P95 is the mean of per-seed 95th-percentile total costs. Training includes the shared warm-start stage. Memory counts float32 adaptive matrices only. 
+
+Dataset Method Scoring (ms) Event processing (ms) Total (ms) P95 total (ms) Training (h) Memory (MiB/user) MovieLens-10M Base 3.377 1.392 4.769 5.717 1.479 0.0 MovieLens-10M Single 3.461 2.180 5.641 6.571 1.775 0.5 MovieLens-10M MATE 3.479 2.584 6.063 7.027 1.904 1.0 Luxury Beauty Base 3.233 0.268 3.501 3.745 0.219 0.0 Luxury Beauty Single 3.303 1.041 4.343 4.596 0.270 0.5 Luxury Beauty MATE 3.324 1.498 4.822 5.126 0.318 1.0 KuaiRec Base 3.261 0.555 3.817 4.423 1.803 0.0 KuaiRec Single 3.323 1.301 4.624 5.147 2.047 0.5 KuaiRec MATE 3.330 1.732 5.062 5.554 2.205 1.0 
+
+Table 7: One positive real-user case from Luxury Beauty (seed 42). All methods use the same 12,111-item catalog and history mask at the same observed prefix before the real target is revealed. Lower target rank is better; a bold title marks the real target when it appears in a Top-3. The case is a mechanism illustration, not a representative performance estimate.                                               
+
+> Phase Date/method Observed interaction or saved Top-3 Evidence/result Observed 2016-10-10 LUX18_B000PZ8E62 :OPI Nail Lacquer Thinner, 2 Fl Oz Rating 5.0 Observed 2016-11-18 Eight distinct essie Nail Color Polish items Eight interactions, all rating 5.0 Observed 2018-04-03 LUX18_B000142FVW :OPI Nail Lacquer, Not So Bora-Bora-ing Pink, 0.5 Fl Oz Rating 5.0; after reveal: 𝑤 𝐿 =
+> 1.0, 𝑤 𝑆 =0.2; 2/2 matching months MATE read Before target 𝛼 𝐿 =0.619, 𝛼 𝑆 =0.567; both proxies valid Contributions: L=0.157, S=3.242 Prediction Base 1. essie Nail Color Polish; 2. essie Nail Color Polish; 3. essie Nail Color Polish Target rank 18 Prediction Single 1. essie Nail Color Polish; 2. essie Nail Color Polish; 3. OPI Nail Lacquer, Cajun Shrimp, 0.5 fl. oz.
+> Target rank 3 Prediction Frozen Online Memory 1. essie Nail Color Polish; 2. OPI Nail Lacquer, Cajun Shrimp, 0.5 fl. oz. ; 3. OPI Nail Lacquer, My Very First Knockwurst, 0.5 fl. oz.
+> Target rank 2
+> Prediction MATE 1. essie Nail Color Polish; 2. OPI Nail Lacquer, Cajun Shrimp, 0.5 fl. oz. ; 3. OPI Nail Lacquer, My Very First Knockwurst, 0.5 fl. oz.
+> Target rank 2
+> Target 2018-04-03 LUX18_B000NG80GM :OPI Nail Lacquer, Cajun Shrimp, 0.5 fl. oz. Rating 5.0; revealed only af-ter ranking
+
+## 5 Conclusion and Broad Impact 
+
+In this work, we studied evolving user interests in LLM-enhanced sequential recommendation with frozen item embeddings. We pro-posed MATE , a memory adaptation framework that uses temporal evidence to update two user-specific memories with different adap-tation dynamics. Long-term evidence captures recurring behavior across periods, while short-term evidence reflects recent consis-tency. Context-dependent reading determines their contributions to the current recommendation. The shared model is trained offline, and user memories are updated only after real interactions become observable. Experiments on MovieLens-10M, Amazon Luxury Beauty, and KuaiRec show that MATE achieves the best mean performance across the reported recommendation metrics. Equal-capacity abla-tions support the roles of temporal evidence, temporal supervision, and dynamic reading. Real-sequence analyses further show im-proved prediction of both continued recent interests and actual returns to earlier recurring themes. However, Frozen Online Mem-ory matches MATE ’s reported Top-𝐾 metrics, so these experiments do not establish an additional benefit from continued test-time writing. Efficiency measurements show that adaptation introduces additional computation and user-state storage. Together, the results support temporal evidence as a useful control signal for memory adaptation, while leaving its incremental online benefit open to further evaluation. 
+
+> 12
+
+Remembering What Lasts, Adapting to What Changes 
+
+Broad Impact. MATE offers a framework for personalized recom-mendation that combines persistent information with adaptation to recent behavior. This design may also inform other interactive sys-tems with evolving user states. Its deployment nevertheless requires careful handling of behavioral histories and persistent memories. Privacy protection, memory management, and safeguards against reinforcing narrow or outdated interests remain important con-siderations. Predictive improvements should not be interpreted as direct understanding of users’ motivations, and practical evaluation should consider user benefit alongside recommendation accuracy and computational cost. 
+
+## A Detailed Theoretical Analysis 
+
+Proof of Theorem 1. Let 𝑁 = 𝑁 𝐿 𝑢,𝑡 = Í𝑚 ∈ M 𝑢,𝑡 𝑧 𝑚 𝑢,𝑡 . Removing the time-span condition can only increase the long-term write evidence. Hence, 0 ≤ 𝑤 𝐿 𝑢,𝑡 ≤ 𝑁 𝑛 I[𝑁 ≥ 2]. (31) By independence and the upper bound on each monthly support probability, 𝑁 is stochastically dominated by e𝑁 ∼ Binomial (𝑛, 𝑝 ).This follows by coupling the indicators using independent uniform random variables and increasing each success probability to 𝑝 . Since 
+
+𝑥 ↦ → ( 𝑥 /𝑛 )I[𝑥 ≥ 2] is nondecreasing on the nonnegative integers, 
+
+E[𝑤 𝐿 𝑢,𝑡 ] ≤ E
+
+" e𝑁 𝑛 I[ e𝑁 ≥ 2]
+
+#
+
+(32) 
+
+= E[ e𝑁 ]
+
+𝑛 − Pr ( e𝑁 = 1)
+
+𝑛 (33) 
+
+= 𝑝 − 𝑝 (1 − 𝑝 )𝑛 −1. (34) Finally, applying 1 − ( 1 − 𝑝 )𝑛 −1 ≤ ( 𝑛 − 1)𝑝 gives 
+
+E[𝑤 𝐿 𝑢,𝑡 ] ≤ 𝑝 1 − ( 1 − 𝑝 )𝑛 −1  ≤ ( 𝑛 − 1)𝑝 2. (35) The additional time-span condition cannot invalidate this upper bound because it only suppresses otherwise eligible writes. □
+
+Proof of Theorem 2. For 𝑎 > 0, define radial clipping by 
+
+Π𝑎 (X) = X min 
+
+
+
+1, 𝑎 
+
+∥X∥𝐹 
+
+
+
+, Π𝑎 (0) = 0. (36) This is projection onto the Frobenius-norm ball of radius 𝑎 . Projec-tion optimality and the Cauchy–Schwarz inequality give 
+
+∥Π𝑎 (X) − Π𝑎 (Y)∥ 2
+
+> 𝐹
+
+≤ ⟨ Π𝑎 (X) − Π𝑎 (Y), X − Y⟩𝐹 
+
+≤ ∥ Π𝑎 (X) − Π𝑎 (Y)∥ 𝐹 ∥X − Y∥𝐹 . (37) Thus, clipping is nonexpansive: 
+
+∥Π𝑎 (X) − Π𝑎 (Y)∥ 𝐹 ≤ ∥ X − Y∥𝐹 . (38) The following argument applies to either memory. Fix 𝑟 = 𝐿 or 
+
+𝑟 = 𝑆 . Including the clipping operations, the update is 
+
+M𝑟 𝑢,𝑗 = Π𝐵 
+
+
+
+𝜌 𝑟 M𝑟 𝑢,𝑗 −1 + Π𝑐 
+
+
+
+𝜂 𝑟 𝑤 𝑟 𝑢,𝑗 e𝑢,𝑗 k⊤ 
+
+> 𝑢,𝑗 −1
+
+ 
+
+. (39) At step 𝑡 , the reference retains Π𝐵 (𝜌 𝑟 M𝑟 𝑢,𝑡 −1) but omits the addi-tive write. Since ∥e𝑢,𝑡 ∥2 = 1, nonexpansiveness gives 
+
+∥M𝑟 𝑢,𝑡 − eM𝑟 𝑢,𝑡 ∥𝐹 
+
+≤ Π𝑐 
+
+ 𝜂 𝑟 𝑤 𝑟 𝑢,𝑡 e𝑢,𝑡 k⊤ 
+
+> 𝑢,𝑡 −1
+
+
+
+> 𝐹
+
+≤ min 𝑐, 𝜂 𝑟 𝑤 𝑟 𝑢,𝑡 ∥k𝑢,𝑡 −1 ∥2 . (40) For every later step 𝑗 > 𝑡 , the two trajectories receive identical write increments. These increments cancel inside the projection comparison, yielding 
+
+∥M𝑟 𝑢,𝑗 − eM𝑟 𝑢,𝑗 ∥𝐹 
+
+≤ 𝜌 𝑟 ∥M𝑟 𝑢,𝑗 −1 − eM𝑟 𝑢,𝑗 −1 ∥𝐹 . (41) Iterating for 𝑠 steps proves Eqs. (29) and (30). When clipping is inactive, the difference is exactly 
+
+M𝑟 𝑢,𝑡 +𝑠 − eM𝑟 𝑢,𝑡 +𝑠 = 𝜌 𝑠 𝑟 𝜂 𝑟 𝑤 𝑟 𝑢,𝑡 e𝑢,𝑡 k⊤ 
+
+> 𝑢,𝑡 −1
+
+. (42) With clipping, every updated memory additionally satisfies 
+
+∥M𝑟 𝑢,𝑗 ∥𝐹 ≤ 𝐵. (43) 
+
+□
+
+## References 
+
+[1] Jimmy Ba, Geoffrey Hinton, Volodymyr Mnih, Joel Z. Leibo, and Catalin Ionescu. 2016. Using Fast Weights to Attend to the Recent Past. In Advances in Neural Information Processing Systems , Vol. 29. https://arxiv.org/abs/1610.06258 [2] Guhao Feng, Shengjie Luo, Kai Hua, Ge Zhang, Di He, Wenhao Huang, and Tianle Cai. 2026. In-Place Test-Time Training. arXiv:2604.06169 https://arxiv. org/abs/2604.06169 [3] Shijie Geng, Shuchang Liu, Zuohui Fu, Yingqiang Ge, and Yongfeng Zhang. 2022. Recommendation as Language Processing (RLP): A Unified Pretrain, Personalized Prompt & Predict Paradigm (P5). In Proceedings of the Sixteenth ACM Conference on Recommender Systems . doi:10.1145/3523227.3546767 [4] Balázs Hidasi, Alexandros Karatzoglou, Linas Baltrunas, and Domonkos Tikk. 2016. Session-Based Recommendations with Recurrent Neural Networks. In 
+
+International Conference on Learning Representations . https://arxiv.org/abs/1511. 06939 [5] Yu Hou, Nathaniel Kang, Pengkai Wang, and Hua Li. 2026. Reasoning with Evidence, Not Merely Rationales: Verifiable Preference Proofs for LLM-Based Recommendation. arXiv:2610.02968 [cs.IR] [6] Yu Hou, Hua Li, Ha Young Kim, and Won-Yong Shin. 2025. Fine-Tuning Diffusion-Based Recommender Systems via Reinforcement Learning with Reward Function Optimization. arXiv:2511.06937 [cs.IR] [7] Yupeng Hou, Shanlei Mu, Wayne Xin Zhao, Yaliang Li, Bolin Ding, and Ji-Rong Wen. 2022. Towards Universal Sequence Representation Learning for Recom-mender Systems. In Proceedings of the 28th ACM SIGKDD Conference on Knowl-edge Discovery and Data Mining . doi:10.1145/3534678.3539381 [8] Yu Hou, Jin-Duk Park, and Won-Yong Shin. 2024. Collaborative Filtering Based on Diffusion Models: Unveiling the Potential of High-Order Connectivity. In 
+
+Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval . 1360–1369. doi:10.1145/3626772.3657742 [9] Yu Hou and Won-Yong Shin. 2026. Tokenize Once, Recommend Anywhere: Unified Item Tokenization for Multi-domain LLM-based Recommendation. In 
+
+Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 40. 14848–14855. doi:10.1609/aaai.v40i17.38505 [10] Wang-Cheng Kang and Julian McAuley. 2018. Self-Attentive Sequential Rec-ommendation. In 2018 IEEE International Conference on Data Mining (ICDM) .197–206. doi:10.1109/ICDM.2018.00035 [11] Jiacheng Li, Ming Wang, Jin Li, Jinmiao Fu, Xin Shen, Jingbo Shang, and Julian McAuley. 2023. Text Is All You Need: Learning Language Representations for Sequential Recommendation. In Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining . doi:10.1145/3580305.3599519 [12] Jiacheng Li, Yujie Wang, and Julian McAuley. 2020. Time Interval Aware Self-Attention for Sequential Recommendation. In Proceedings of the 13th International Conference on Web Search and Data Mining . doi:10.1145/3336191.3371786 [13] Jiayi Liao, Sihang Li, Zhengyi Yang, Jiancan Wu, Yancheng Yuan, Xiang Wang, and Xiangnan He. 2024. LLaRA: Large Language-Recommendation Assistant. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval . doi:10.1145/3626772.3657690 13 Yu Hou 
+
+[14] Aleksandr V. Petrov, Praveen Chandar, Paul N. Bennett, Hugues Bouchard, and Mounia Lalmas. 2026. Do Sequential Recommendation Benchmarks Re-ally Require Higher-Order Sequence Modelling?. In Proceedings of the 20th ACM Conference on Recommender Systems (Minneapolis, MN, USA) (RecSys ’26) . Association for Computing Machinery. arXiv:2608.19833 [cs.IR] https: //arxiv.org/abs/2608.19833 Accepted at RecSys 2026. [15] Shashank Rajput, Nikhil Mehta, Anima Singh, Raghunandan Hulikal Kesha-van, Trung Vu, Lukasz Heldt, Lichan Hong, Yi Tay, Vinh Tran, Jonah Samost, Maciej Kula, Ed Chi, and Maheswaran Sathiamoorthy. 2023. Recommender Systems with Generative Retrieval. In Advances in Neural Information Processing Systems , Vol. 36. https://proceedings.neurips.cc/paper_files/paper/2023/hash/ 20dcab0f14046a5c6b02b61da9f13229-Abstract-Conference.html [16] Charlie Snell, Jaehoon Lee, Kelvin Xu, and Aviral Kumar. 2024. Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters. arXiv:2408.03314 [cs.LG] [17] Charlie Victor Snell, Jaehoon Lee, Kelvin Xu, and Aviral Kumar. 2025. Scaling LLM Test-Time Compute Optimally Can Be More Effective than Scaling Parameters for Reasoning. In International Conference on Learning Representations .[18] Fei Sun, Jun Liu, Jian Wu, Changhua Pei, Xiao Lin, Wenwu Ou, and Peng Jiang. 2019. BERT4Rec: Sequential Recommendation with Bidirectional Encoder Repre-sentations from Transformer. In Proceedings of the 28th ACM International Con-ference on Information and Knowledge Management . doi:10.1145/3357384.3357895 [19] Yu Sun, Xinhao Li, Karan Dalal, Jiarui Xu, Arjun Vikram, Genghan Zhang, Yann Dubois, Xinlei Chen, Xiaolong Wang, Sanmi Koyejo, Tatsunori Hashimoto, and Carlos Guestrin. 2025. Learning to (Learn at Test Time): RNNs with Expressive Hidden States. In Proceedings of the 42nd International Conference on Machine Learning (Proceedings of Machine Learning Research, Vol. 267) . 57503–57522. https: //arxiv.org/abs/2407.04620 [20] Yu Sun, Xiaolong Wang, Zhuang Liu, John Miller, Alexei A. Efros, and Moritz Hardt. 2020. Test-Time Training with Self-Supervision for Generalization under Distribution Shifts. In Proceedings of the 37th International Conference on Machine Learning (Proceedings of Machine Learning Research, Vol. 119) . PMLR, 9229–9248. https://proceedings.mlr.press/v119/sun20b.html [21] Xing Tang, Ziqiang Cui, Jingyang Bin, Xiaokun Zhang, Fuyuan Lyu, Jingyan Jiang, Dugang Liu, Chen Ma, Ruiming Tang, and Xiuqiang He. 2026. Retrieve-then-Adapt: Test-Time Retrieval-Augmentation for Sequential Recommendation. arXiv:2604.05379 [cs.IR] https://arxiv.org/html/2604.05379v2 Version 2; title and author list follow the manuscript. [22] Jiafeng Xia, Dongsheng Li, Hansu Gu, Tun Lu, Peng Zhang, Li Shang, and Ning Gu. 2025. Oracle-guided Dynamic User Preference Modeling for Sequential Recommendation. In Proceedings of the Eighteenth ACM International Conference on Web Search and Data Mining (Hannover, Germany) (WSDM ’25) . Association for Computing Machinery. arXiv:2412.00813 doi:10.1145/3701551.3703542 [23] Xihong Yang, Yiqi Wang, Jin Chen, Wenqi Fan, Xiangyu Zhao, En Zhu, Xinwang Liu, and Defu Lian. 2025. Dual Test-Time Training for Out-of-Distribution Recommender System. IEEE Transactions on Knowledge and Data Engineering 
+
+(2025). doi:10.1109/TKDE.2025.3548160 [24] Zhaoqi Yang, Yanan Wang, and Yong Ge. 2024. TTT4Rec: A Test-Time Training Approach for Rapid Adaption in Sequential Recommendation. arXiv:2409.19142 [cs.IR] https://arxiv.org/abs/2409.19142 [25] Zeping Yu, Jianxun Lian, Ahmad Mahmoody, Gongshen Liu, and Xing Xie. 2019. Adaptive User Modeling with Long and Short-Term Preferences for Personal-ized Recommendation. In Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence . 4213–4219. doi:10.24963/ijcai.2019/585 [26] Zhenrui Yue, Sara Rabhi, Gabriel de Souza Pereira Moreira, Dong Wang, and Even Oldridge. 2023. LlamaRec: Two-Stage Recommendation Using Large Language Models for Ranking. arXiv:2311.02089 [cs.IR] https://arxiv.org/abs/2311.02089 Accepted to PGAI at CIKM 2023. [27] Changshuo Zhang, Xiao Zhang, Teng Shi, Jun Xu, and Ji-Rong Wen. 2025. Test-Time Alignment with State Space Model for Tracking User Interest Shifts in Sequential Recommendation. In Proceedings of the Nineteenth ACM Conference on Recommender Systems . 461–471. doi:10.1145/3705328.3748060 [28] Yu Zheng, Chen Gao, Jianxin Chang, Yanan Niu, Yang Song, Depeng Jin, and Yong Li. 2022. Disentangling Long and Short-Term Interests for Recommendation. In Proceedings of the ACM Web Conference 2022 . 2256–2267. doi:10.1145/3485447. 3512098 14

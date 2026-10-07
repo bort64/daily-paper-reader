@@ -1,0 +1,295 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-10-07T23:24:03.826254+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 4,
+    "deep_cap": 6,
+    "deep_selected": 4,
+    "quick_candidates": 3,
+    "quick_skim_target": 11,
+    "quick_selected": 3
+  },
+  "deep_dive": [
+    {
+      "id": "2610.08732v1",
+      "source": "arxiv",
+      "title": "A Systematic Study of Semantic ID Spaces for Generative Information Retrieval",
+      "abstract": "Generative Information Retrieval (GIR) has emerged as a transformative paradigm, shifting document retrieval from a traditional \"retrieve-and-rank\" workflow to sequence-to-sequence generation, where a model directly predicts document identifiers (DocIDs). While the semantic design of these DocIDs is known to be critical for performance, a fundamental question remains under-explored: what makes a good DocID? Current approaches rely heavily on computationally expensive downstream evaluations, hindering systematic analysis and rapid iteration. In this work, we address this challenge by presenting a comprehensive study on the properties, metrics, and trade-offs that define effective numerical DocIDs. Specifically, our contributions are threefold: First, we propose a unified framework that unifies Product Quantization (PQ) and Residual Quantization (RQ), and their hybrid variants within a single design space. This enables us to systematically study key DocID properties, such as hierarchy versus parallelism, as well as the impact of hyperparameters like DocID length and codebook size. Second, we define a suite of training-free, intrinsic metrics, to quantify DocID quality and evaluate structural fidelity without the overhead of full model training. Through extensive experiments on MS MARCO 300K and NQ320K, we analyze how these structural properties influence retrieval effectiveness.",
+      "authors": [
+        "Alexia Allal",
+        "Hicham Randrianarivo",
+        "Sylvain Lamprier"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.CL"
+      ],
+      "published": "2026-10-06T17:33:32+00:00",
+      "link": "https://arxiv.org/pdf/2610.08732v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 10.0,
+      "llm_evidence_en": "generative IR directly predicting document identifiers, study of semantic ID spaces",
+      "llm_evidence_cn": "生成式检索直接预测文档标识符并研究语义ID空间",
+      "llm_evidence": "生成式检索直接预测文档标识符并研究语义ID空间",
+      "canonical_evidence": "生成式检索直接预测文档标识符并研究语义ID空间",
+      "llm_tldr_en": "Generative Information Retrieval replaces retrieve-and-rank with seq2seq DocID generation; this work systematically studies what makes a good numerical DocID without costly downstream evaluation.",
+      "llm_tldr_cn": "生成式信息检索将文档检索从先检索后排序转变为序列到序列生成，由模型直接预测文档标识符。然而何种DocID才是好DocID这一问题缺乏系统研究，现有方法依赖昂贵的下游评测。本文系统研究数值DocID的性质、度量与权衡，提出可快速迭代的分析方法。该工作为生成式检索的语义ID设计提供了系统性的指导与评估依据。",
+      "llm_tldr": "生成式信息检索将文档检索从先检索后排序转变为序列到序列生成，由模型直接预测文档标识符。然而何种DocID才是好DocID这一问题缺乏系统研究，现有方法依赖昂贵的下游评测。本文系统研究数值DocID的性质、度量与权衡，提出可快速迭代的分析方法。该工作为生成式检索的语义ID设计提供了系统性的指导与评估依据。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative retrieval models that directly generate document identifiers for web search",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2610.07402v1",
+      "source": "arxiv",
+      "title": "Rethinking Semantic ID Construction for Generative Recommendation: SimHash with Parallel Decoding and Semantic Alignment",
+      "abstract": "Semantic ID-based generative recommendation represents each item as a sequence of discrete tokens, enabling structured modeling of item semantics. A critical challenge is constructing semantic IDs that are both semantically expressive and computationally efficient. While recent approaches favor complex learned quantization, simple hashing-based methods such as SimHash are widely regarded as fundamentally inferior. In this work, we challenge this consensus by showing that the apparent performance gap does not stem from inherent limitations of hashing, but rather from a structural mismatch with autoregressive decoding, coupled with the inevitable information loss during rigid discretization. Based on this insight, we propose FLASH, a two-stage framework that revitalizes training-free SimHash tokenization through parallel decoding and explicit semantic alignment. Despite its simplicity, FLASH achieves state-of-the-art performance across multiple datasets without requiring any tokenizer training, while exhibiting stronger generalization in cold-start scenarios. Notably, we demonstrate that semantic alignment acts as a universally effective mechanism across diverse paradigms. Our findings suggest that, with compatible decoding and semantic grounding, simple and efficient tokenizers can achieve performance comparable to complex learned counterparts in generative recommendation. Our code is available at https://github.com/KevinC2015/Flash.",
+      "authors": [
+        "Yuqing Liu",
+        "Huiyuan Chen",
+        "Yibo Wang",
+        "Wooseong Yang",
+        "Philip S. Yu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-05T21:15:13+00:00",
+      "link": "https://arxiv.org/pdf/2610.07402v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "semantic ID-based generative recommendation with autoregressive decoding",
+      "llm_evidence_cn": "基于语义ID的生成式推荐与自回归解码",
+      "llm_evidence": "基于语义ID的生成式推荐与自回归解码",
+      "canonical_evidence": "基于语义ID的生成式推荐与自回归解码",
+      "llm_tldr_en": "Semantic-ID generative recommendation suffers from a structural mismatch with autoregressive decoding and rigid discretization. The paper revisits SimHash-based ID construction, arguing hashing is not inherently inferior, and proposes parallel decoding with semantic alignment to close the gap.",
+      "llm_tldr_cn": "语义ID生成式推荐将物品表示为离散token序列，但现有方法普遍认为SimHash等哈希式ID构建天然劣于复杂的学习式量化。本文重新审视这一共识，指出性能差距主要源于哈希ID与自回归解码的结构性不匹配以及刚性离散化带来的信息损失，而非哈希本身的缺陷。作者据此提出结合并行解码与语义对齐的SimHash语义ID构建方案。实验表明该方案能有效缩小与复杂量化方法的差距，为高效、可扩展的生成式推荐ID设计提供了新视角。",
+      "llm_tldr": "语义ID生成式推荐将物品表示为离散token序列，但现有方法普遍认为SimHash等哈希式ID构建天然劣于复杂的学习式量化。本文重新审视这一共识，指出性能差距主要源于哈希ID与自回归解码的结构性不匹配以及刚性离散化带来的信息损失，而非哈希本身的缺陷。作者据此提出结合并行解码与语义对齐的SimHash语义ID构建方案。实验表明该方案能有效缩小与复杂量化方法的差距，为高效、可扩展的生成式推荐ID设计提供了新视角。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2610.08716v1",
+      "source": "arxiv",
+      "title": "Disentangling Paradigm, Identifier, and Decoding in Generative Retrieval",
+      "abstract": "Generative retrieval trains a language model to generate the identifier of a relevant document. Recent work replaces the autoregressive decoder with diffusion, but changes identifiers, training recipe and decoding at once, so differences cannot be credited to the paradigm. On NQ320K and MS300K, we train autoregressive, masked-diffusion and block-diffusion models with residual-quantised, product-quantised and random identifiers. With identifier length and training budget fixed, we decode each model in several ways. Decoding alone moves a diffusion model's Hit@1 by 6.6 to 13.7 points. Our reference diffusion decoding, generate-and-match, generates an identifier, then retrieves the closest corpus identifiers. The generated identifier is right for 14-21% of NQ320K queries. We test one-pass scoring to decode diffusion retrievers: the model reads a fully masked identifier once, and each document is scored by its codes' probabilities. It matches or beats generate-and-match in 11 of 12 settings. Autoregressive models still lead in Hit@1; on NQ320K, the lead comes from the model, not beam search. Starting from one sampled identifier, one-pass scoring removes 46-83% of masked diffusion's deficit to beam search; from generate-and-match, at most a quarter. On NQ320K, every paradigm largely memorises which identifier answers which query: random identifiers keep 83-90% of the Hit@1 of residual-quantised ones. There, product-quantised identifiers lead residual-quantised ones by 3.4 points in the autoregressive model and by -0.7 to +3.6 in diffusion models; across decodings, AR's gap exceeds diffusion's by 1.5-2.3 points, around our 2-point threshold. Paradigm comparisons must report each paradigm at its own recipe and best decoding.",
+      "authors": [
+        "Hicham Randrianarivo",
+        "Logan Renaud",
+        "Alexia Allal"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.CL"
+      ],
+      "published": "2026-10-06T17:23:47+00:00",
+      "link": "https://arxiv.org/pdf/2610.08716v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "generative retrieval generating document identifiers",
+      "llm_evidence_cn": "生成文档标识符的生成式检索",
+      "llm_evidence": "生成文档标识符的生成式检索",
+      "canonical_evidence": "生成文档标识符的生成式检索",
+      "llm_tldr_en": "Generative retrieval trains a model to generate a relevant document identifier, but recent diffusion variants change identifier, training recipe and decoding at once. This work disentangles paradigm, identifier and decoding on NQ320K and MS300K, showing decoding alone shifts Hit@1 by 6.6-13.7 points.",
+      "llm_tldr_cn": "生成式检索通过语言模型直接生成相关文档的标识符，但近期用扩散模型替换自回归解码器时同时改动了标识符、训练配方与解码方式，导致性能差异无法归因。本文在NQ320K与MS300K上系统对比自回归、掩码扩散与块扩散模型，并分别搭配残差量化、乘积量化及随机标识符，在固定标识符长度与训练预算下采用多种解码策略。结果显示仅解码方式变化即可让扩散模型Hit@1波动6.6至13.7个点，并提出generate-and-match参考解码。该工作厘清了范式、标识符与解码对生成式检索的独立贡献。",
+      "llm_tldr": "生成式检索通过语言模型直接生成相关文档的标识符，但近期用扩散模型替换自回归解码器时同时改动了标识符、训练配方与解码方式，导致性能差异无法归因。本文在NQ320K与MS300K上系统对比自回归、掩码扩散与块扩散模型，并分别搭配残差量化、乘积量化及随机标识符，在固定标识符长度与训练预算下采用多种解码策略。结果显示仅解码方式变化即可让扩散模型Hit@1波动6.6至13.7个点，并提出generate-and-match参考解码。该工作厘清了范式、标识符与解码对生成式检索的独立贡献。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative retrieval models that directly generate document identifiers for web search",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2610.08136v1",
+      "source": "arxiv",
+      "title": "Adapting Generative Recommenders for Multi-Turn Interaction",
+      "abstract": "Generative recommenders decode items from a user's interaction history, but offer no way for users to correct a recommendation that misses their current intent. Adding conversation is natural since items and words share same output space, yet training the model to converse may overwrite the history-to-item mapping it relies on. We introduce INTEGER (**INTE**ractive **GE**nerative **R**ecommendation), which extends generative recommendation to multi-turn interaction with a learned routing token that lets the model decide when to recommend, history re-anchoring that conditions each item on both past behavior and the dialogue, and behavioral replay with instruction-data rehearsal that prevents forgetting during adaptation. Users can thus give feedback on recommendations within the dialogue, while recommendations stay grounded in behavioral history and accuracy is not traded for fluency. On Amazon Beauty and Toys, INTEGER matches or exceeds the strongest baselines in accuracy with competitive conversation quality, improving Hit@10 by 13.3% on Amazon Beauty, and significantly outperforms the generative recommender it starts from. Our analyses show that INTEGER learns behaviors that naive adaptation fails to acquire, recommending once the user's intent is clear and staying attentive to behavioral history at the moment of recommendation. INTEGER also learns an intent-agnostic replacement over the item space, which suppresses rejected items but points to attribute-aware feedback as the next step.",
+      "authors": [
+        "Yu-Chen Den",
+        "Zhi Rui Tam",
+        "Yung-Yu Shih",
+        "Shih-Hsin Wang",
+        "Yun-Nung Chen",
+        "Pu-Jen Cheng",
+        "Eugene Yang"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-06T10:51:53+00:00",
+      "link": "https://arxiv.org/pdf/2610.08136v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "generative recommenders decoding items extended to multi-turn interaction",
+      "llm_evidence_cn": "把解码物品的生成式推荐扩展到多轮交互",
+      "llm_evidence": "把解码物品的生成式推荐扩展到多轮交互",
+      "canonical_evidence": "把解码物品的生成式推荐扩展到多轮交互",
+      "llm_tldr_en": "Generative recommenders decode items from history but cannot let users correct mismatched intents; INTEGER extends them to multi-turn interaction with a routing token, history re-anchoring, and behavioral replay to prevent forgetting.",
+      "llm_tldr_cn": "生成式推荐从用户交互历史解码物品，却无法让用户纠正不符合当前意图的推荐，而直接加入对话训练又可能覆盖历史到物品的映射。本文提出INTEGER，通过可学习的路由token让模型决定何时推荐，利用历史重锚定同时以历史行为和对话为条件，并用行为回放与指令数据复述防止适配时遗忘。该方法使生成式推荐具备多轮交互能力，用户可对推荐进行反馈纠正，扩展了生成式推荐的应用形态。",
+      "llm_tldr": "生成式推荐从用户交互历史解码物品，却无法让用户纠正不符合当前意图的推荐，而直接加入对话训练又可能覆盖历史到物品的映射。本文提出INTEGER，通过可学习的路由token让模型决定何时推荐，利用历史重锚定同时以历史行为和对话为条件，并用行为回放与指令数据复述防止适配时遗忘。该方法使生成式推荐具备多轮交互能力，用户可对推荐进行反馈纠正，扩展了生成式推荐的应用形态。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative recommendation systems that autoregressively produce item lists or next item predictions",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.38455v2",
+      "source": "arxiv",
+      "title": "AdaM-Rec: Adaptive Modality Routing for Multimodal Recommendation",
+      "abstract": "While recent multimodal recommender systems have demonstrated the effectiveness of incorporating visual and textual information to improve downstream performance, most existing methods rely on static modality fusion, assuming that the relative importance of textual and visual signals remains stable across recommendation scenarios. This design may not fully account for an important variation across recommendation requests: some queries require fine-grained visual cues, whereas others are better served by textual or functional semantics, in which case indiscriminate modality fusion brings in uninformative cues and impairs recommendation quality. To address this, we propose AdaM-Rec, an LLM-based framework for adaptive modality routing in multimodal recommendation, which enables dynamic calibration of reliance on textual and multimodal evidence for user-specific queries. Built on structured natural-language representations of items and user preferences, it estimates modality reliability using proxy recall tasks. Specifically, it generates pseudo-queries that match the granularity of the actual query while pointing to the user's positively interacted items as verifiable proxy targets, evaluating which modality yields better recall performance in analogous scenarios and optimizing the routing strategy in an agentic manner. It then performs routed recall with optimized strategy, enriches results with collaborative items, and ranks candidates by their relevance to both the query and user preferences. Experiments demonstrate that AdaM-Rec delivers strong performance against state-of-the-art baselines, highlighting the effectiveness and broader potential of adaptive control over modality reliance in multimodal recommendation.",
+      "authors": [
+        "Honghao Fu",
+        "Jiacheng Chen",
+        "Manxi Lin",
+        "Junjun Zheng",
+        "Xiangheng Kong",
+        "Yiwei Wang",
+        "Xin Yu",
+        "Miao Xu",
+        "Yuning Jiang",
+        "Yujun Cai"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-29T19:46:31+00:00",
+      "link": "https://arxiv.org/pdf/2609.38455v2",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based framework for recommendation with adaptive modality routing",
+      "llm_evidence_cn": "基于LLM的推荐框架，采用自适应模态路由",
+      "llm_evidence": "基于LLM的推荐框架，采用自适应模态路由",
+      "canonical_evidence": "基于LLM的推荐框架，采用自适应模态路由",
+      "llm_tldr_en": "Most multimodal recommenders use static fusion, assuming fixed importance of visual and textual signals. AdaM-Rec, an LLM-based framework, adaptively routes and fuses modalities per request, reducing uninformative cues and improving recommendation quality.",
+      "llm_tldr_cn": "现有多模态推荐多采用静态融合，默认视觉与文本信号的重要性固定，难以适应不同请求。论文提出基于LLM的AdaM-Rec框架，针对每个推荐请求自适应路由并融合视觉与文本模态。实验显示该自适应机制可减少无信息模态干扰，提升推荐质量。其意义在于为多模态推荐引入动态模态选择，推动LLM在推荐中的应用。",
+      "llm_tldr": "现有多模态推荐多采用静态融合，默认视觉与文本信号的重要性固定，难以适应不同请求。论文提出基于LLM的AdaM-Rec框架，针对每个推荐请求自适应路由并融合视觉与文本模态。实验显示该自适应机制可减少无信息模态干扰，提升推荐质量。其意义在于为多模态推荐引入动态模态选择，推动LLM在推荐中的应用。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2610.05750v1",
+      "source": "arxiv",
+      "title": "Beyond Semantic Similarity: Performance and Costs of Agentic Retrieval for Complex Tasks",
+      "abstract": "Modern information systems, including many agentic workflows, use dense retrieval to explore large amounts of unstructured data. However, dense retrieval relies on surface-level semantic similarity, which is insufficient for increasingly complex search applications. Here, we investigate agentic retrieval that combines the reasoning capabilities of Large Language Models (LLMs) with the efficient corpus exploration of retrievers in a ReAct agentic loop to solve complex retrieval tasks. In our experiments, we show that agentic retrieval is more effective than standard retrieval, improving nDCG@10 by 8.7 points using the same embedding model. Moreover, while specialized retrieval methods struggle on out-of-domain tasks, agentic retrieval is highly generalizable: the same pipeline achieves competitive results on both the ViDoRe v3 and BRIGHT leaderboards. However, this improvement comes at a cost. On average, agentic retrieval takes 107.4 seconds, compared to 0.67 seconds for standard retrieval, and consumes 764.1K input and 5.8K output tokens per query. In short, our study demonstrates the effectiveness of agentic retrieval in modern data systems and motivates future work on more cost-efficient retrieval agents for large-scale deployment.",
+      "authors": [
+        "Reza Esfandiarpoor",
+        "Radek Osmulski",
+        "Yauhen Babakhin",
+        "Gabriel de Souza P. Moreira",
+        "Oliver Holworthy",
+        "Jie He",
+        "Ronay Ak",
+        "Jiarui Cai",
+        "Ryan Chesler",
+        "Bo Liu",
+        "Even Oldridge"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR",
+        "cs.AI"
+      ],
+      "published": "2026-10-05T03:55:10+00:00",
+      "link": "https://arxiv.org/pdf/2610.05750v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Agentic retrieval combining LLM reasoning with retrievers for complex search tasks",
+      "llm_evidence_cn": "结合大模型推理与检索器的代理式检索用于复杂搜索任务",
+      "llm_evidence": "结合大模型推理与检索器的代理式检索用于复杂搜索任务",
+      "canonical_evidence": "结合大模型推理与检索器的代理式检索用于复杂搜索任务",
+      "llm_tldr_en": "Dense retrieval relies on surface-level semantic similarity and struggles with complex search tasks. This work studies agentic retrieval, combining LLM reasoning with retriever corpus exploration in a ReAct loop; it improves nDCG@10 by 8.7 points with the same embedding model and generalizes better out of domain.",
+      "llm_tldr_cn": "现代信息检索系统依赖稠密检索探索大规模非结构化数据，但其基于表层语义相似度，难以应对日益复杂的搜索任务。本文研究代理式检索，在ReAct循环中结合大语言模型的推理能力与检索器的高效语料探索。实验显示在相同嵌入模型下代理式检索将nDCG@10提升8.7个点，且在跨域任务上更具泛化性，表明其为复杂搜索场景的有效方案。",
+      "llm_tldr": "现代信息检索系统依赖稠密检索探索大规模非结构化数据，但其基于表层语义相似度，难以应对日益复杂的搜索任务。本文研究代理式检索，在ReAct循环中结合大语言模型的推理能力与检索器的高效语料探索。实验显示在相同嵌入模型下代理式检索将nDCG@10提升8.7个点，且在跨域任务上更具泛化性，表明其为复杂搜索场景的有效方案。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2610.06050v1",
+      "source": "arxiv",
+      "title": "MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation",
+      "abstract": "Large language model (LLM)-enhanced recommender systems leverage rich item semantics to support personalized recommendation. However, semantic representations alone do not determine which historical behaviors reflect persistent preferences and which mainly indicate recent interests, leaving an important aspect of user understanding unresolved. Recent advances in LLM inference show that newly available information can be used to refine the internal state during inference, thereby improving subsequent predictions. Inspired by this principle, we propose MATE (Memory Adaptation with Temporal Evidence), an adaptive user modeling framework for LLM-enhanced sequential recommendation. MATE first evaluates each newly observed interaction from two temporal perspectives: whether it is repeatedly supported by historical behaviors and whether it is consistent with recent interactions. The resulting temporal evidence controls the updates of two user-specific memories, where the long-term memory conservatively preserves persistent preferences while the short-term memory rapidly adapts to recent interests. For each recommendation, a recent-context representation dynamically determines how strongly the two memories contribute to the current user representation. During offline training, next-item prediction is jointly optimized with temporal supervision, while during online adaptation, the shared model remains fixed and only the two user memories are updated from newly observed interactions. Experiments on MovieLens-10M, Amazon Luxury Beauty, and KuaiRec show that MATE improves mean NDCG@10 over the strongest external baseline by 7.0--13.2%. Further analyses support its ability to adapt to recent interests while retaining useful information about recurring earlier preferences.",
+      "authors": [
+        "Yu Hou"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-10-05T09:44:24+00:00",
+      "link": "https://arxiv.org/pdf/2610.06050v1",
+      "tags": [
+        "keyword:search-rec",
+        "query:search-rec"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-enhanced sequential recommendation with adaptive user memory",
+      "llm_evidence_cn": "基于LLM的自适应用户记忆序列推荐",
+      "llm_evidence": "基于LLM的自适应用户记忆序列推荐",
+      "canonical_evidence": "基于LLM的自适应用户记忆序列推荐",
+      "llm_tldr_en": "MATE addresses the gap that item semantics alone cannot tell persistent preferences from recent interests in LLM recommenders. It evaluates each new interaction from two temporal views and adapts user memory during inference. Experiments on LLM-enhanced sequential recommendation show improved personalization, advancing LLM-based recommendation modeling.",
+      "llm_tldr_cn": "现有LLM增强推荐系统虽利用丰富物品语义，但仅靠语义难以区分哪些历史行为代表长期偏好、哪些仅反映近期兴趣。为此作者提出MATE框架，从两个时间视角评估每次新交互，并在推理过程中自适应调整用户记忆状态以支撑序列推荐。实验表明该记忆适配机制提升了LLM推荐效果，为用户建模提供了新思路。",
+      "llm_tldr": "现有LLM增强推荐系统虽利用丰富物品语义，但仅靠语义难以区分哪些历史行为代表长期偏好、哪些仅反映近期兴趣。为此作者提出MATE框架，从两个时间视角评估每次新交互，并在推理过程中自适应调整用户记忆状态以支撑序列推荐。实验表明该记忆适配机制提升了LLM推荐效果，为用户建模提供了新思路。",
+      "llm_tags": [
+        "query:search-rec"
+      ],
+      "matched_query_tag": "query:search-rec",
+      "matched_query_text": "generative search, advertising, and recommendation methods based on large language models or generative retrieval",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
