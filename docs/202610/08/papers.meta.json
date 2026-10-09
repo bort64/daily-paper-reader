@@ -1,0 +1,54 @@
+{
+  "label": "2026-10-08",
+  "date": "2026-10-08",
+  "generated_at": "2026-10-09T00:00:17",
+  "count": 3,
+  "papers": [
+    {
+      "paper_id": "202610/08/2610.10124v1-training-with-missed-targets-in-generative-recommendation-separating-supervision-from-probability-competition",
+      "section": "deep",
+      "title_en": "Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition",
+      "authors": "Xuesi Wang, Yangbin Shi, Xiaolin Zheng",
+      "date": "2026-10-07",
+      "pdf": "https://arxiv.org/pdf/2610.10124v1",
+      "score": "8.0",
+      "evidence": "面向生成式推荐器漏检目标的训练策略",
+      "tldr": "生成式推荐只返回有限候选，可能漏掉观测目标；训练时把漏掉目标追加到重排列表，会同时改变权重、增加监督并让两组目标竞争概率。为此构造三个匹配损失，固定已检索目标权重，分别引入追加目标监督与组间竞争，并用中间损失分组归一化以隔离仅训练目标。在 OneRec 与 Amazon 生成器上，去除该竞争使 FT-NDCG 提升 7.8–22.2%，多个区间排除零。结论：候选补全应按生成器评估，不宜自动套用。",
+      "tags": "query:search-rec",
+      "abstract_en": "Generative recommenders return a limited candidate set and may omit observed targets before reranking. A training strategy appends these missed targets to reranker training lists, although inference still ranks only original candidates. This operation simultaneously changes retrieved-target weight, adds supervision over appended targets, and makes the two groups compete for probability. An append/no-append comparison therefore cannot explain changes in returned-item rankings. We construct three matched losses that hold retrieved-target weight fixed while introducing appended-target supervision and group competition separately. The intermediate loss trains within both groups but normalizes them separately, preventing training-only targets from competing with inference candidates. Experiments with a released OneRec model and locally trained Amazon generators show that this competition can harm returned-item ranking. In four prespecified Amazon Video Games comparisons, removing it improved full-target normalized discounted cumulative gain (FT-NDCG) by 7.8--22.2\\%; 95\\% intervals over users and three of four intervals over training runs excluded zero. A conservative development-set rule selected appended-target training for two of three generators in one held-out category and rejected it for all three in another, avoiding a 1.7\\% loss. Candidate completion should therefore be evaluated for each generator rather than applied automatically.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/08/2610.06559v1-mirt-transformers-for-truthful-generative-auctions-with-whole-feed-permutation-externalities",
+      "section": "quick",
+      "title_en": "MIRT: Transformers for Truthful Generative Auctions with Whole-feed Permutation Externalities",
+      "authors": "Ali Elahi, Ermis Soumalias, Jason Cheuk Nam Liang, Daniel Yao, Michael J. Curry",
+      "date": "2026-10-05",
+      "pdf": "https://arxiv.org/pdf/2610.06559v1",
+      "score": "7.0",
+      "evidence": "用Transformer生成广告与自然内容的联合排序信息流",
+      "tldr": "在线平台常分开排序广告与自然内容再混排，忽略点击率受周边内容影响的外部性。现有学习式信息流方法或固定自然内容顺序，或缺乏精确防策略保证。MIRT 用 Transformer 生成广告与自然内容联合排序的候选流范围，再选出福利最大者；其强化学习训练兼顾候选生成与出价感知选择，使与出价无关的生成器学会高产高福利范围。实验显示 MIRT 保持精确防策略性并超越此前非防策略最优模型，证明 Transformer 拍卖可实现外部性感知的全信息流优化。",
+      "tags": "query:search-rec",
+      "abstract_en": "Modern online platforms commonly rank ads and organic content separately before blending them into a feed displayed to the user, overlooking externalities: an item's click-through rate depends on its surrounding content, not only on its own position. Recent learning-based feed generation mechanisms model some of these cross-type interactions to globally optimize for the whole feed's welfare. However, these approaches either fix the ordering of organic content, or lack exact strategyproofness guarantees for bidders. To combat these shortfalls, we introduce the Maximal-in-Range Transformer (MIRT) mechanism class, which uses a transformer to generate a range of candidate feeds that jointly order ads and organic content, and selects the welfare-maximizing feed in the range. However, there is a tension: strategyproofness requires the generated range to be bid-independent, even though a candidate feed's welfare depends linearly on the bids. Our key technical contribution is a reinforcement learning approach that incorporates both candidate generation and bid-aware selection into training, enabling a bid-independent transformer to learn to generate high-welfare ranges by accounting for both individual feed quality and the collective quality of the range. Additionally, we bound the pseudo-dimension of the MIRT class under hard attention, showing that near-optimal expected welfare is learnable with sample complexity polynomial in the transformer size and only logarithmic in the range size. Empirically, MIRT outperforms the previous non-strategyproof state-of-the-art feed models while remaining exactly strategyproof. Our results show that transformer-based auctions can deliver externality-aware whole-feed optimization without sacrificing exact incentive compatibility, removing a major obstacle to their practical deployment.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202610/08/2610.07810v1-sift-search-intent-to-filter-transformer-for-multi-task-personalized-filter-ranking-at-airbnb",
+      "section": "quick",
+      "title_en": "SIFT: Search Intent-to-Filter Transformer for Multi-Task Personalized Filter Ranking at Airbnb",
+      "authors": "Shashank Dabriwal, Tanya Piplani, Hao Li, Yiwei Wang, Ashish Jain, Kedar Bellare, Stephanie Moyerman",
+      "date": "2026-10-06",
+      "pdf": "https://arxiv.org/pdf/2610.07810v1",
+      "score": "6.0",
+      "evidence": "面向生产环境个性化搜索筛选排序的Transformer模型",
+      "tldr": "Airbnb 等双边市场中，搜索过滤器对用户导航和预订转化至关重要，但生产排序系统依赖 ETL 手工特征，维护昂贵且难扩展新过滤器或上下文维度。SIFT 用 Transformer 从原始行为序列学习统一用户表示，并共享给预订、过滤器互动和有序容量阈值等多任务预测。离线预订与设施互动 PR-AUC 分别提升 51.9% 和 62.8%，在线推荐过滤器互动提升 20.0%，整体过滤器使用提升 0.72%。该框架只需新增预测头即可扩展过滤器，已部署服务数百万用户。",
+      "tags": "query:search-rec",
+      "abstract_en": "Search filters help guests navigate vast catalogs in two-sided marketplaces like Airbnb, and recommending the right filters can meaningfully lift booking conversion. Many such production filter-ranking systems, however, represent the guest through hand-engineered, pre-aggregated features generated by ETL pipelines. This makes it expensive to maintain and difficult to extend for new filter types or contextual dimensions (trip length, group size). We present SIFT (Search Intent-to-Filter Transformer), a ranking model built on transformers that learns guest preferences directly from raw behavioral sequences. SIFT replaces manual feature engineering with a unified guest representation that feeds multiple prediction tasks, including booking likelihood, filter engagement, and ordinal capacity thresholds (e.g., 2+ bedrooms) -- a general framework for filter ranking in two-sided marketplaces that accommodates both boolean and numeric-range filter types. Extending SIFT to new filters requires only adding a new head, not a new feature pipeline. To keep serving fast, this guest representation is computed offline on a daily cadence rather than at request time. Offline, SIFT improves booking and amenity-engagement PR-AUC by +51.9% and +62.8% respectively over the production baseline. In online A/B testing, SIFT increased engagement with recommended filters by +20.0%, overall filter usage among searchers by +0.72%, and usage of the newly-supported bedroom, bathroom, and bed filters by +3.9%, +10.7%, and +0.52% respectively. Demonstrating the system's extensibility, we rapidly integrated a novel hotel-intent filter using the same shared representation, driving a +3.8% lift in uncancelled hotel bookings and a +0.76% lift in overall marketplace bookings. SIFT is now fully deployed in production, serving scalable personalization to millions of guests.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-10-07</span>
+      <span class="dpr-home-dashboard-kicker">2026-10-08</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 7 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 3 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>4</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>1</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-10-07 23:29:10 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-10-09 00:00:14 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>2026-10-07 日报精选 7 篇，精读 4 篇速读 3 篇，生成式检索与推荐中的语义 ID 空间研究以 10.0 分领跑。最值得关注的是语义 ID 的系统性对比，以及 SimHash 并行解码加语义对齐的构造思路，两篇高分精读正好互补。普通读者可先读这两篇精读，速读里的多模态路由和 LLM 用户记忆留作后续扫读。</p>
+<p>今日共读3篇（精读1、速读2），主线是生成式推荐与生成式排序/拍卖的落地难题。</p>
+<p>最值得看的是8.0分的《Training with Missed Targets in Generative Recommendation》，它直面漏标目标下&quot;监督信号与概率竞争纠缠&quot;的训练困境；另可顺带看7.0分生成式拍卖的全信息流排列外部性、6.0分Airbnb多任务个性化筛选排序。</p>
+<p>普通读者建议先啃精读这篇的解法思路，再按自己业务（推荐、竞价还是搜索筛选）挑一篇速读对照验证。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">4 篇</strong>
+    <strong class="dpr-home-dashboard-count">1 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="A Systematic Study of Semantic ID Spaces for Generative Information Retrieval">A Systematic Study of Semantic ID Spaces for Generative Information Retrieval</span></li><li><span class="dpr-home-dashboard-paper-title" title="Rethinking Semantic ID Construction for Generative Recommendation: SimHash with Parallel Decoding and Semantic Alignment">Rethinking Semantic ID Construction for Generative Recommendation: SimHash with Parallel Decoding and Semantic Alignment</span></li><li><span class="dpr-home-dashboard-paper-title" title="Disentangling Paradigm, Identifier, and Decoding in Generative Retrieval">Disentangling Paradigm, Identifier, and Decoding in Generative Retrieval</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition">Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>4</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>1</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -91,12 +93,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">3 篇</strong>
+    <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="AdaM-Rec: Adaptive Modality Routing for Multimodal Recommendation">AdaM-Rec: Adaptive Modality Routing for Multimodal Recommendation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Beyond Semantic Similarity: Performance and Costs of Agentic Retrieval for Complex Tasks">Beyond Semantic Similarity: Performance and Costs of Agentic Retrieval for Complex Tasks</span></li><li><span class="dpr-home-dashboard-paper-title" title="MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation">MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="MIRT: Transformers for Truthful Generative Auctions with Whole-feed Permutation Externalities">MIRT: Transformers for Truthful Generative Auctions with Whole-feed Permutation Externalities</span></li><li><span class="dpr-home-dashboard-paper-title" title="SIFT: Search Intent-to-Filter Transformer for Multi-Task Personalized Filter Ranking at Airbnb">SIFT: Search Intent-to-Filter Transformer for Multi-Task Personalized Filter Ranking at Airbnb</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>3</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">search-rec <strong>2</strong></span></div>
 </section>
 </div>
 
